@@ -1746,7 +1746,19 @@ class _MarketHomePageState extends State<MarketHomePage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        MarketHeader(accountName: accountName, onSearchTap: _openSearch),
+        MarketHeader(
+          accountName: accountName,
+          onSearchTap: _openSearch,
+          onNotificationTap: _openNotifications,
+          notificationCount: pendingOrders.length +
+              ipoApplications
+                  .where(
+                    (application) =>
+                        application.status == IpoApplicationStatus.allocated &&
+                        application.remainingAmount > 0,
+                  )
+                  .length,
+        ),
         const SizedBox(height: 14),
         _homeFundsCard(),
         const SizedBox(height: 18),
@@ -1766,6 +1778,65 @@ class _MarketHomePageState extends State<MarketHomePage> {
         const SizedBox(height: 10),
         _popularStocksCard(),
       ],
+    );
+  }
+
+  void _openNotifications() {
+    final outstandingIpos = ipoApplications
+        .where(
+          (application) =>
+              application.status == IpoApplicationStatus.allocated &&
+              application.remainingAmount > 0,
+        )
+        .toList();
+
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Notifications',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 14),
+                if (pendingOrders.isEmpty && outstandingIpos.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 18),
+                    child: Text(
+                      'No pending updates',
+                      style: TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ),
+                ...pendingOrders.take(3).map(
+                  (order) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.schedule_rounded),
+                    title: Text('${order.symbol} order pending'),
+                    subtitle: Text('${order.side.name} ${order.quantity} shares'),
+                  ),
+                ),
+                ...outstandingIpos.take(3).map(
+                  (application) => ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.campaign_outlined),
+                    title: Text('${application.symbol} IPO outstanding'),
+                    subtitle: Text(
+                      'Remaining ${formatPrice(application.remainingAmount)}',
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -48,7 +48,7 @@ export class MarketService {
       include: {
         quote: true,
       },
-      orderBy: [{ exchange: 'asc' }, { symbol: 'asc' }],
+      orderBy: [{ displayOrder: 'asc' }, { exchange: 'asc' }, { symbol: 'asc' }],
     });
 
     return {
@@ -128,6 +128,9 @@ export class MarketService {
           },
         },
         orderBy: [
+          {
+            displayOrder: 'asc',
+          },
           {
             exchange: 'asc',
           },
@@ -212,6 +215,8 @@ export class MarketService {
     const name = dto.name.trim();
     const currency = dto.currency.trim().toUpperCase();
     const isin = dto.isin?.trim().toUpperCase() || null;
+    const logoUrl = dto.logoUrl?.trim() || null;
+    const category = dto.category?.trim() || null;
 
     const tickSize = new Prisma.Decimal(dto.tickSize);
     const lastPrice = new Prisma.Decimal(dto.lastPrice);
@@ -265,6 +270,9 @@ export class MarketService {
               symbol,
               name,
               isin,
+              logoUrl,
+              category,
+              displayOrder: Number(dto.displayOrder ?? 0),
               type: dto.type,
               currency,
               lotSize: dto.lotSize,

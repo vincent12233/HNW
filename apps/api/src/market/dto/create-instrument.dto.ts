@@ -26,6 +26,20 @@ export class CreateInstrumentDto {
   @IsString()
   isin?: string;
 
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1000000)
+  displayOrder: number = 0;
+
   @IsEnum(InstrumentType)
   type: InstrumentType;
 

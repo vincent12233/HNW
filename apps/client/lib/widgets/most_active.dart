@@ -97,7 +97,11 @@ class MostActive extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            StockLogo(symbol: stock.symbol, size: 38),
+                            StockLogo(
+                              symbol: stock.symbol,
+                              size: 38,
+                              logoUrl: stock.logoUrl,
+                            ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

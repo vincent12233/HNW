@@ -92,7 +92,11 @@ class TrendingStocks extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                StockLogo(symbol: stock.symbol, size: 42),
+                                StockLogo(
+                                  symbol: stock.symbol,
+                                  size: 42,
+                                  logoUrl: stock.logoUrl,
+                                ),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(

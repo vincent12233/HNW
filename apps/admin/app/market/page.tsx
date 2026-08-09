@@ -5,6 +5,7 @@ import {
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
+  StockOutlined,
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
@@ -37,6 +38,9 @@ type Instrument = {
   symbol: string;
   name: string;
   isin?: string | null;
+  logoUrl?: string | null;
+  category?: string | null;
+  displayOrder: number;
   type: string;
   currency: string;
   lotSize: number;
@@ -126,6 +130,9 @@ export default function MarketAdminPage() {
         lastPrice: String(values.lastPrice),
         bidPrice: values.bidPrice ? String(values.bidPrice) : undefined,
         askPrice: values.askPrice ? String(values.askPrice) : undefined,
+        logoUrl: values.logoUrl?.trim() || undefined,
+        category: values.category?.trim() || undefined,
+        displayOrder: Number(values.displayOrder ?? 0),
       });
       message.success("股票已添加");
       setCreateOpen(false);
@@ -196,16 +203,40 @@ export default function MarketAdminPage() {
     {
       title: "代码",
       dataIndex: "symbol",
-      width: 130,
+      width: 190,
       fixed: "left",
       render: (value, record) => (
-        <Space orientation="vertical" size={0}>
-          <Text strong>{value}</Text>
-          <Text type="secondary">{record.exchange}</Text>
+        <Space>
+          <span
+            style={{
+              width: 34,
+              height: 34,
+              borderRadius: "50%",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              overflow: "hidden",
+              background: "#eef4ff",
+              border: "1px solid #dbe7f7",
+            }}
+          >
+            {record.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={record.logoUrl} alt={value} style={{ width: 30, height: 30, borderRadius: "50%", objectFit: "cover" }} />
+            ) : (
+              <StockOutlined style={{ color: "#2563eb" }} />
+            )}
+          </span>
+          <Space orientation="vertical" size={0}>
+            <Text strong>{value}</Text>
+            <Text type="secondary">{record.exchange}</Text>
+          </Space>
         </Space>
       ),
     },
     { title: "名称", dataIndex: "name", width: 220 },
+    { title: "分类", dataIndex: "category", width: 130, render: (value) => value || "-" },
+    { title: "排序", dataIndex: "displayOrder", width: 90, align: "right" },
     { title: "类型", dataIndex: "type", width: 110 },
     {
       title: "最新价",
@@ -335,6 +366,7 @@ export default function MarketAdminPage() {
             tickSize: "0.05",
             currency: "INR",
             volume: 0,
+            displayOrder: 0,
           }}
         >
           <Space align="start" style={{ width: "100%" }}>
@@ -361,6 +393,17 @@ export default function MarketAdminPage() {
           <Form.Item name="isin" label="ISIN">
             <Input placeholder="可选" />
           </Form.Item>
+          <Form.Item name="logoUrl" label="公司 Logo URL">
+            <Input placeholder="例如 https://logo.clearbit.com/infosys.com" />
+          </Form.Item>
+          <Space align="start" style={{ width: "100%" }}>
+            <Form.Item name="category" label="分类">
+              <Input style={{ width: 220 }} placeholder="例如 Bank / IT / Energy" />
+            </Form.Item>
+            <Form.Item name="displayOrder" label="显示排序">
+              <InputNumber min={0} style={{ width: 160 }} />
+            </Form.Item>
+          </Space>
           <Space align="start" style={{ width: "100%" }}>
             <Form.Item name="lotSize" label="每手数量">
               <InputNumber min={1} style={{ width: 150 }} />

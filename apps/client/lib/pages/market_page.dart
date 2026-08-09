@@ -3048,7 +3048,11 @@ class StockSearchDelegate extends SearchDelegate<StockQuote?> {
             : AppConfig.neutralColor;
 
         return ListTile(
-          leading: StockLogo(symbol: stock.symbol, size: 40),
+          leading: StockLogo(
+            symbol: stock.symbol,
+            size: 40,
+            logoUrl: stock.logoUrl,
+          ),
           title: Text(
             stock.symbol,
             style: const TextStyle(fontWeight: FontWeight.w700),

@@ -29,7 +29,7 @@ class StockListTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            StockLogo(symbol: stock.symbol, size: 44),
+            StockLogo(symbol: stock.symbol, size: 44, logoUrl: stock.logoUrl),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

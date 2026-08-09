@@ -122,6 +122,9 @@ model Instrument {
   exchange  Exchange
   name      String
   isin      String?
+  logoUrl   String?
+  category  String?
+  displayOrder Int       @default(0)
   type      InstrumentType @default(EQUITY)
   currency  String         @default("INR")
   lotSize   Int            @default(1)
@@ -138,6 +141,7 @@ model Instrument {
   @@index([symbol])
   @@index([isin])
   @@index([isActive])
+  @@index([displayOrder])
   @@map("instruments")
 }
 

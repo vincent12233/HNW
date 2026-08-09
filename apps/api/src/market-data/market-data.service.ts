@@ -24,27 +24,42 @@ export class MarketDataService {
       },
 
       orderBy: {
-        symbol: 'asc',
+        displayOrder: 'asc',
       },
     });
 
-    return instruments.map((item) => ({
-      symbol: item.symbol,
+    return instruments.map((item) => {
+      const lastPrice = Number(item.quote?.lastPrice ?? 0);
+      const previousClose = Number(item.quote?.previousClose ?? 0);
+      const change =
+        previousClose > 0 ? ((lastPrice - previousClose) / previousClose) * 100 : 0;
 
-      exchange: item.exchange,
+      return {
+        symbol: item.symbol,
 
-      name: item.name,
+        exchange: item.exchange,
 
-      price: item.quote?.lastPrice ?? null,
+        name: item.name,
 
-      bid: item.quote?.bidPrice ?? null,
+        logoUrl: item.logoUrl,
 
-      ask: item.quote?.askPrice ?? null,
+        category: item.category,
 
-      volume: item.quote?.volume?.toString() ?? '0',
+        displayOrder: item.displayOrder,
 
-      updatedAt: item.quote?.asOf ?? null,
-    }));
+        price: item.quote?.lastPrice ?? null,
+
+        change,
+
+        bid: item.quote?.bidPrice ?? null,
+
+        ask: item.quote?.askPrice ?? null,
+
+        volume: item.quote?.volume?.toString() ?? '0',
+
+        updatedAt: item.quote?.asOf ?? null,
+      };
+    });
   }
 
   /**

@@ -5,10 +5,12 @@ class StockLogo extends StatelessWidget {
     super.key,
     required this.symbol,
     this.size = 42,
+    this.logoUrl,
   });
 
   final String symbol;
   final double size;
+  final String? logoUrl;
 
   static const Map<String, String> _logoUrls = {
     'RELIANCE': 'https://logo.clearbit.com/ril.com',
@@ -40,7 +42,8 @@ class StockLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final style = _styles[normalizedSymbol] ?? _fallbackStyle(normalizedSymbol);
-    final logoUrl = _logoUrls[normalizedSymbol];
+    final resolvedLogoUrl =
+        logoUrl?.trim().isNotEmpty == true ? logoUrl!.trim() : _logoUrls[normalizedSymbol];
 
     return Container(
       width: size,
@@ -52,10 +55,10 @@ class StockLogo extends StatelessWidget {
         border: Border.all(color: const Color(0xFFE6EAF0)),
       ),
       child: ClipOval(
-        child: logoUrl == null
+        child: resolvedLogoUrl == null
             ? _FallbackLogo(style: style, size: size)
             : Image.network(
-                logoUrl,
+                resolvedLogoUrl,
                 width: size - 6,
                 height: size - 6,
                 fit: BoxFit.cover,

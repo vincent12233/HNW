@@ -6,6 +6,7 @@ class StockQuote {
     this.change,
     this.volume,
     this.updatedAt,
+    {this.logoUrl, this.category},
   );
 
   final String symbol;
@@ -14,6 +15,8 @@ class StockQuote {
   final double change;
   final int volume;
   final DateTime updatedAt;
+  final String? logoUrl;
+  final String? category;
 
   factory StockQuote.fromMarketDataJson(Map<String, dynamic> json) {
     return StockQuote(
@@ -29,6 +32,8 @@ class StockQuote {
           int.tryParse(json['volume']?.toString() ?? '') ??
           0,
       DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now(),
+      logoUrl: json['logoUrl']?.toString(),
+      category: json['category']?.toString(),
     );
   }
 }

@@ -384,29 +384,29 @@ export default function DashboardPage() {
             <Row gutter={[16, 16]}>
               <Col xs={24} md={6}>
                 <QuickAction
-                  title="财务上分"
-                  description="按客户编号、手机号或交易账号搜索并入账"
-                  icon={<DollarOutlined />}
-                  tone="#16a34a"
-                  onClick={() => router.push("/deposits")}
-                />
-              </Col>
-              <Col xs={24} md={6}>
-                <QuickAction
-                  title="提现审核"
-                  description="按提现订单号查找并处理客户申请"
-                  icon={<BankOutlined />}
-                  tone="#dc2626"
-                  onClick={() => router.push("/withdrawals")}
-                />
-              </Col>
-              <Col xs={24} md={6}>
-                <QuickAction
-                  title="在线客服"
-                  description="处理客户入金咨询、标签和翻译辅助"
-                  icon={<SafetyCertificateOutlined />}
+                  title="客户管理"
+                  description="查看客户资料、KYC、账号和登录风险"
+                  icon={<TeamOutlined />}
                   tone="#1f8fff"
-                  onClick={() => router.push("/support-console")}
+                  onClick={() => router.push("/customers")}
+                />
+              </Col>
+              <Col xs={24} md={6}>
+                <QuickAction
+                  title="业务员管理"
+                  description="管理业务员账号、客户归属和邀请码"
+                  icon={<UserAddOutlined />}
+                  tone="#16a34a"
+                  onClick={() => router.push("/business-users")}
+                />
+              </Col>
+              <Col xs={24} md={6}>
+                <QuickAction
+                  title="操作日志"
+                  description="查看账户、资金、IPO、贷款等关键操作"
+                  icon={<SafetyCertificateOutlined />}
+                  tone="#dc2626"
+                  onClick={() => router.push("/audit-logs")}
                 />
               </Col>
               <Col xs={24} md={6}>

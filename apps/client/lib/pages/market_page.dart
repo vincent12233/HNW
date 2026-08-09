@@ -2436,12 +2436,11 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 icon: Icons.lock_outline,
                 title: 'Security',
                 subtitle: 'Password and device access',
-                onTap: () => _showInformation(
-                  'Security',
-                  'Biometric login, OTP verification '
-                      'and device management will be '
-                      'connected to the backend in a '
-                      'later stage.',
+                onTap: () => _openCustomerService(
+                  title: 'Security support',
+                  initialMessage:
+                      'Hello, I need help with password or device access for my account.',
+                  icon: Icons.lock_outline,
                 ),
               ),
               const Divider(height: 1, indent: 56),
@@ -2449,11 +2448,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 icon: Icons.help_outline,
                 title: 'Help & support',
                 subtitle: 'Get help with your account',
-                onTap: () => _showInformation(
-                  'Help & support',
-                  'Support chat and ticket management '
-                      'will be added with the '
-                      'customer-service module.',
+                onTap: () => _openCustomerService(
+                  title: 'Help & support',
+                  initialMessage: 'Hello, I need help with my account.',
+                  icon: Icons.help_outline,
                 ),
               ),
               const Divider(height: 1, indent: 56),

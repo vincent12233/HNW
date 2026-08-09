@@ -42,28 +42,6 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString("zh-CN") : "-";
 }
 
-function translateMessage(content: string) {
-  const lower = content.toLowerCase();
-
-  if (lower.includes("deposit") || lower.includes("recharge")) {
-    return "客户在咨询入金。建议回复：请提供付款凭证，客服确认后转财务上分。";
-  }
-
-  if (lower.includes("withdraw")) {
-    return "客户在咨询提现。建议回复：请提供提现订单号，财务会审核处理。";
-  }
-
-  if (lower.includes("kyc") || lower.includes("aadhaar") || lower.includes("pan")) {
-    return "客户在咨询 KYC。建议回复：请上传清晰的 Aadhaar 或 PAN 文件等待审核。";
-  }
-
-  if (/[\u4e00-\u9fff]/.test(content)) {
-    return "检测到中文消息。可根据客户内容回复英文，或转交会英语的客服处理。";
-  }
-
-  return "暂未匹配到内置翻译。后续可接入真实翻译 API，用于自动中英互译。";
-}
-
 export default function Dashboard() {
   const router = useRouter();
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -202,6 +180,30 @@ export default function Dashboard() {
     } finally {
       setSending(false);
     }
+  }
+
+  async function translateSupportMessage(item: SupportMessage) {
+    const existing = translated[item.id];
+    if (existing) {
+      setTranslated((current) => ({ ...current, [item.id]: "" }));
+      return;
+    }
+
+    const response = await api("/support/translate", {
+      method: "POST",
+      body: JSON.stringify({ content: item.content }),
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      setError(Array.isArray(data.message) ? data.message.join("，") : data.message || "翻译失败");
+      return;
+    }
+
+    setTranslated((current) => ({
+      ...current,
+      [item.id]: data.translatedText || `${data.summary || ""}${data.suggestedReply || ""}` || "翻译结果为空",
+    }));
   }
 
   function logout() {
@@ -407,10 +409,7 @@ export default function Dashboard() {
                           isClient ? "bg-slate-100 text-slate-600" : "bg-blue-500 text-white"
                         }`}
                         onClick={() =>
-                          setTranslated((current) => ({
-                            ...current,
-                            [item.id]: current[item.id] ? "" : translateMessage(item.content),
-                          }))
+                          translateSupportMessage(item)
                         }
                       >
                         翻译辅助

@@ -67,28 +67,6 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString("zh-CN") : "-";
 }
 
-function translateMessage(content: string) {
-  const lower = content.toLowerCase();
-
-  if (lower.includes("deposit")) {
-    return "客户在咨询入金。可回复：请提供付款凭证，客服确认信息后转财务上分。";
-  }
-
-  if (lower.includes("withdraw")) {
-    return "客户在咨询提现。可回复：请提供提现订单号，财务会审核处理。";
-  }
-
-  if (lower.includes("kyc") || lower.includes("aadhaar") || lower.includes("pan")) {
-    return "客户在咨询 KYC。可回复：请上传清晰的 Aadhaar 或 PAN 文件等待审核。";
-  }
-
-  if (/[\u4e00-\u9fff]/.test(content)) {
-    return "检测到中文消息。可根据客户内容回复英文，或转交会英语的客服继续处理。";
-  }
-
-  return "暂未匹配到内置翻译。后续可接入真实翻译 API，用于自动中英互译。";
-}
-
 export default function SupportConsolePage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
@@ -178,6 +156,26 @@ export default function SupportConsolePage() {
     message.success("已发送");
     await loadMessages(selected.id);
     await loadConversations();
+  }
+
+  async function translateSupportMessage(item: SupportMessage) {
+    try {
+      const response = await api.post<{
+        translatedText?: string;
+        summary?: string;
+        suggestedReply?: string;
+      }>("/support/translate", { content: item.content });
+      setTranslated((current) => ({
+        ...current,
+        [item.id]:
+          response.data.translatedText ||
+          `${response.data.summary || ""}${response.data.suggestedReply || ""}` ||
+          "翻译结果为空",
+      }));
+    } catch (requestError: any) {
+      const responseMessage = requestError.response?.data?.message;
+      message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "翻译失败");
+    }
   }
 
   useEffect(() => {
@@ -349,12 +347,7 @@ export default function SupportConsolePage() {
                                 type="text"
                                 size="small"
                                 icon={<TranslationOutlined />}
-                                onClick={() =>
-                                  setTranslated((current) => ({
-                                    ...current,
-                                    [item.id]: translateMessage(item.content),
-                                  }))
-                                }
+                                onClick={() => translateSupportMessage(item)}
                               >
                                 翻译
                               </Button>

@@ -245,4 +245,47 @@ export class SupportService {
       },
     });
   }
+
+  translateMessage(content: string) {
+    const trimmedContent = content.trim();
+
+    if (!trimmedContent) {
+      throw new BadRequestException('翻译内容不能为空');
+    }
+
+    const lower = trimmedContent.toLowerCase();
+    let summary: string;
+    let suggestedReply: string;
+
+    if (lower.includes('deposit') || lower.includes('recharge')) {
+      summary = '客户在咨询入金/充值。';
+      suggestedReply =
+        '请提供付款凭证和充值金额，客服确认后会转交财务为账户上分。';
+    } else if (lower.includes('withdraw')) {
+      summary = '客户在咨询提现。';
+      suggestedReply = '请提供提现订单号，财务会核对并处理。';
+    } else if (
+      lower.includes('kyc') ||
+      lower.includes('aadhaar') ||
+      lower.includes('pan')
+    ) {
+      summary = '客户在咨询 KYC。';
+      suggestedReply =
+        '请上传清晰的 Aadhaar 或 PAN 文件，业务员会尽快审核。';
+    } else if (/[\u4e00-\u9fff]/.test(trimmedContent)) {
+      summary = '检测到中文消息。';
+      suggestedReply = '请根据客户内容回复英文，必要时转交会英语的客服继续处理。';
+    } else {
+      summary = '未匹配到固定业务关键词。';
+      suggestedReply = '请结合客户原文、手机号和客户编号继续核查。';
+    }
+
+    return {
+      sourceText: trimmedContent,
+      summary,
+      suggestedReply,
+      translatedText: `${summary}${suggestedReply}`,
+      provider: 'INTERNAL_RULES',
+    };
+  }
 }

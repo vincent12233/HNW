@@ -80,4 +80,10 @@ export class SupportController {
       body.content,
     );
   }
+
+  @Post('translate')
+  @Roles(UserRole.SUPPORT, UserRole.ADMIN)
+  translateMessage(@Body() body: { content?: string }) {
+    return this.supportService.translateMessage(body.content || '');
+  }
 }

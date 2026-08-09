@@ -1,4 +1,4 @@
-param(
+﻿param(
   [string]$BaseUrl = "http://localhost:3000"
 )
 
@@ -97,7 +97,7 @@ if (-not $submission) {
 Invoke-JsonPatch "/kyc/business/review" @{
   submissionId = $submission.id
   decision = "APPROVED"
-  note = "Smoke test approved"
+  note = "Verification approved"
 } $businessToken | Out-Null
 
 $client = Invoke-JsonPost "/auth/login" @{
@@ -129,12 +129,12 @@ $financeToken = $finance.accessToken
 
 Invoke-JsonPost "/admin/accounts/$accountNumber/credit" @{
   amount = "10000.00"
-  referenceId = "SMOKE$stamp"
-  note = "Smoke test top-up"
+  referenceId = "VERIFY$stamp"
+  note = "Verification top-up"
 } $financeToken | Out-Null
 
 $order = Invoke-JsonPost "/orders" @{
-  clientOrderId = "SMOKE-ORDER-$stamp"
+  clientOrderId = "VERIFY-ORDER-$stamp"
   exchange = "NSE"
   symbol = "RELIANCE"
   side = "BUY"
@@ -147,30 +147,30 @@ $admin = Invoke-JsonPost "/auth/login" @{
   employeeNo = "ADMIN001"
   password = "Admin@123456"
 }
-$adminOrders = Invoke-JsonGet "/admin/orders?pageSize=5&search=SMOKE-ORDER-$stamp" $admin.accessToken
-$financeTrades = Invoke-JsonGet "/admin/trades?pageSize=5&search=SMOKE-ORDER-$stamp" $financeToken
-$businessOrders = Invoke-JsonGet "/business/my-orders?pageSize=5&search=SMOKE-ORDER-$stamp" $businessToken
+$adminOrders = Invoke-JsonGet "/admin/orders?pageSize=5&search=VERIFY-ORDER-$stamp" $admin.accessToken
+$financeTrades = Invoke-JsonGet "/admin/trades?pageSize=5&search=VERIFY-ORDER-$stamp" $financeToken
+$businessOrders = Invoke-JsonGet "/business/my-orders?pageSize=5&search=VERIFY-ORDER-$stamp" $businessToken
 
 $adminCanSeeOrder = [bool](
-  $adminOrders.data | Where-Object { $_.clientOrderId -eq "SMOKE-ORDER-$stamp" }
+  $adminOrders.data | Where-Object { $_.clientOrderId -eq "VERIFY-ORDER-$stamp" }
 )
 $financeCanSeeTrade = [bool](
-  $financeTrades.data | Where-Object { $_.order.clientOrderId -eq "SMOKE-ORDER-$stamp" }
+  $financeTrades.data | Where-Object { $_.order.clientOrderId -eq "VERIFY-ORDER-$stamp" }
 )
 $businessCanSeeOrder = [bool](
-  $businessOrders.data | Where-Object { $_.clientOrderId -eq "SMOKE-ORDER-$stamp" }
+  $businessOrders.data | Where-Object { $_.clientOrderId -eq "VERIFY-ORDER-$stamp" }
 )
 
 if (-not $adminCanSeeOrder) {
-  throw "Admin backend cannot see order SMOKE-ORDER-$stamp."
+  throw "Admin backend cannot see order VERIFY-ORDER-$stamp."
 }
 
 if (-not $financeCanSeeTrade) {
-  throw "Finance backend cannot see trade for order SMOKE-ORDER-$stamp."
+  throw "Finance backend cannot see trade for order VERIFY-ORDER-$stamp."
 }
 
 if (-not $businessCanSeeOrder) {
-  throw "Business backend cannot see own customer order SMOKE-ORDER-$stamp."
+  throw "Business backend cannot see own customer order VERIFY-ORDER-$stamp."
 }
 
 $withdrawal = Invoke-JsonPost "/withdrawal/request" @{
@@ -178,7 +178,7 @@ $withdrawal = Invoke-JsonPost "/withdrawal/request" @{
   bankName = "HDFC Bank"
   accountNumber = "1234567890"
   ifscCode = "HDFC0001234"
-  note = "Smoke withdrawal"
+  note = "Verification withdrawal"
 } $clientToken
 
 $businessWithdrawals = Invoke-JsonGet "/business/my-withdrawals" $businessToken
@@ -205,3 +205,5 @@ Invoke-JsonPatch "/withdrawal/$($withdrawal.id)/approve" @{} $financeToken | Out
   withdrawalOrderNo = $withdrawal.orderNo
   businessCanSeeWithdrawal = $businessCanSeeWithdrawal
 } | ConvertTo-Json -Depth 6
+
+

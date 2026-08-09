@@ -33,7 +33,7 @@ type Account = {
   buyingPower: string | number;
   frozenBalance: string | number;
   currency: string;
-  isSandbox: boolean;
+  isLive: boolean;
 };
 
 type AssignedBusiness = {
@@ -419,17 +419,6 @@ export default function CustomersPage() {
           {status === "ACTIVE" ? "正常" : "已停用"}
         </Tag>
       ),
-    },
-    {
-      title: "环境",
-      key: "environment",
-      width: 100,
-      render: (_, record) =>
-        record.account?.isSandbox ? (
-          <Tag color="blue">沙盒</Tag>
-        ) : (
-          <Tag color="green">真实</Tag>
-        ),
     },
     {
       title: "注册时间",

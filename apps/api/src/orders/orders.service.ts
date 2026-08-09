@@ -45,7 +45,7 @@ export class OrdersService {
               throw new NotFoundException('Trading account not found');
             }
 
-            if (!account.isSandbox) {
+            if (!account.isLive) {
               throw new BadRequestException(
                 'Only Trading Accounts are currently supported',
               );

@@ -96,7 +96,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 快速检查，不跑业务冒烟：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -SkipSmoke
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -SkipVerification
 ```
 
 验证脚本会检查 API、管理后台、独立客服端和客户 App，并覆盖注册、KYC、客服标签、财务上分、交易、提现订单号和角色数据权限。

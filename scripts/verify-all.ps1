@@ -1,6 +1,6 @@
 param(
   [string]$BaseUrl = "http://localhost:3000",
-  [switch]$SkipSmoke
+  [switch]$SkipVerification
 )
 
 $ErrorActionPreference = "Stop"
@@ -93,9 +93,9 @@ Invoke-Step "Client analyze" {
   }
 }
 
-if (-not $SkipSmoke) {
-  Invoke-Step "Business smoke test" {
-    & (Join-Path $root "scripts/smoke-test.ps1") -BaseUrl $BaseUrl
+if (-not $SkipVerification) {
+  Invoke-Step "Business verification test" {
+    & (Join-Path $root "scripts/verification-test.ps1") -BaseUrl $BaseUrl
   }
 }
 

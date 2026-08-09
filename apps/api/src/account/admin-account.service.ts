@@ -1,4 +1,4 @@
-﻿import {
+import {
   BadRequestException,
   ConflictException,
   Injectable,
@@ -127,7 +127,7 @@ export class AdminAccountService {
         id: account.id,
         accountNumber: account.accountNumber,
         currency: account.currency,
-        isSandbox: account.isSandbox,
+        isLive: account.isLive,
         balances: {
           cashBalance: account.cashBalance.toFixed(2),
           buyingPower: account.buyingPower.toFixed(2),
@@ -238,7 +238,7 @@ export class AdminAccountService {
       id: account.id,
       accountNumber: account.accountNumber,
       currency: account.currency,
-      isSandbox: account.isSandbox,
+      isLive: account.isLive,
       user: account.user,
       balances: {
         cashBalance: account.cashBalance.toFixed(2),

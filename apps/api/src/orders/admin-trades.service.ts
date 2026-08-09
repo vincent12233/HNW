@@ -119,7 +119,7 @@ export class AdminTradesService {
               id: true,
               accountNumber: true,
               currency: true,
-              isSandbox: true,
+              isLive: true,
               user: {
                 select: {
                   id: true,
@@ -188,7 +188,7 @@ export class AdminTradesService {
             id: true,
             accountNumber: true,
             currency: true,
-            isSandbox: true,
+            isLive: true,
             user: {
                 select: {
                   id: true,

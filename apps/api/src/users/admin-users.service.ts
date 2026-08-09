@@ -62,7 +62,7 @@ export class AdminUsersService {
               id: true,
               accountNumber: true,
               currency: true,
-              isSandbox: true,
+              isLive: true,
               cashBalance: true,
               buyingPower: true,
               frozenBalance: true,
@@ -100,7 +100,7 @@ export class AdminUsersService {
               id: user.account.id,
               accountNumber: user.account.accountNumber,
               currency: user.account.currency,
-              isSandbox: user.account.isSandbox,
+              isLive: user.account.isLive,
               balances: {
                 cashBalance: user.account.cashBalance.toFixed(2),
                 buyingPower: user.account.buyingPower.toFixed(2),
@@ -198,7 +198,7 @@ export class AdminUsersService {
             id: user.account.id,
             accountNumber: user.account.accountNumber,
             currency: user.account.currency,
-            isSandbox: user.account.isSandbox,
+            isLive: user.account.isLive,
             balances: {
               cashBalance: user.account.cashBalance.toFixed(2),
               buyingPower: user.account.buyingPower.toFixed(2),

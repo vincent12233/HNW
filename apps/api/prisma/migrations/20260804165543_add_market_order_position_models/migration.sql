@@ -43,7 +43,7 @@ CREATE TABLE "market_quotes" (
     "bidPrice" DECIMAL(18,4),
     "askPrice" DECIMAL(18,4),
     "volume" BIGINT NOT NULL DEFAULT 0,
-    "source" TEXT NOT NULL DEFAULT 'SANDBOX',
+    "source" TEXT NOT NULL DEFAULT 'LIVE_FEED',
     "asOf" TIMESTAMP(3) NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,

@@ -824,7 +824,7 @@ export class BusinessService {
             buyingPower: true,
             frozenBalance: true,
             currency: true,
-            isSandbox: true,
+            isLive: true,
           },
         },
 

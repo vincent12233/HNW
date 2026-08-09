@@ -1,7 +1,7 @@
-import { Type } from 'class-transformer';
+﻿import { Type } from 'class-transformer';
 import { IsNumber, IsOptional, IsPositive, Min } from 'class-validator';
 
-export class UpdateSandboxQuoteDto {
+export class UpdateLiveQuoteDto {
   @IsPositive()
   @Type(() => Number)
   lastPrice!: number;
@@ -22,3 +22,4 @@ export class UpdateSandboxQuoteDto {
   @Type(() => Number)
   volume?: number;
 }
+

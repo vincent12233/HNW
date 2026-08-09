@@ -15,7 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Exchange } from '../generated/prisma/client';
-import { UpdateSandboxQuoteDto } from './dto/update-sandbox-quote.dto';
+import { UpdateLiveQuoteDto } from './dto/update-live-quote.dto';
 import { MarketService } from './market.service';
 import { ListAdminInstrumentsQueryDto } from './dto/list-admin-instruments-query.dto';
 import { UpdateInstrumentStatusDto } from './dto/update-instrument-status.dto';
@@ -66,17 +66,17 @@ export class AdminMarketController {
   }
 
   @Post('seed')
-  seedSandboxMarket() {
-    return this.marketService.seedSandboxMarket();
+  seedLiveMarket() {
+    return this.marketService.seedLiveMarket();
   }
 
   @Patch('quotes/:exchange/:symbol')
-  updateSandboxQuote(
+  updateLiveQuote(
     @Param('exchange', new ParseEnumPipe(Exchange))
     exchange: Exchange,
     @Param('symbol') symbol: string,
-    @Body() dto: UpdateSandboxQuoteDto,
+    @Body() dto: UpdateLiveQuoteDto,
   ) {
-    return this.marketService.updateSandboxQuote(exchange, symbol, dto);
+    return this.marketService.updateLiveQuote(exchange, symbol, dto);
   }
 }

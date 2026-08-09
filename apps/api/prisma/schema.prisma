@@ -75,7 +75,7 @@ model Account {
   cashBalance        Decimal              @default(0) @db.Decimal(18, 2)
   buyingPower        Decimal              @default(0) @db.Decimal(18, 2)
   currency           String               @default("INR")
-  isSandbox          Boolean              @default(true)
+  isLive          Boolean              @default(true)
   userId             String               @unique
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -156,7 +156,7 @@ model MarketQuote {
   bidPrice      Decimal?   @db.Decimal(18, 4)
   askPrice      Decimal?   @db.Decimal(18, 4)
   volume        BigInt     @default(0)
-  source        String     @default("SANDBOX")
+  source        String     @default("LIVE_FEED")
   asOf          DateTime
   createdAt     DateTime   @default(now())
   updatedAt     DateTime   @updatedAt

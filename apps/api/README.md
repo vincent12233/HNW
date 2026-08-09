@@ -58,7 +58,7 @@ PORT=3000
 项目根目录提供一键冒烟脚本：
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\smoke-test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verification-test.ps1
 ```
 
 该脚本会覆盖手机号注册、KYC、客服入金咨询、财务上分、提现申请、业务员可见提现记录等核心流程。

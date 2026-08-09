@@ -126,7 +126,7 @@ export class AuthService {
             create: {
               accountNumber,
               currency: 'INR',
-              isSandbox: true,
+              isLive: true,
               cashBalance: 0,
               buyingPower: 0,
             },

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   HistoryOutlined,
@@ -50,7 +50,7 @@ type Account = {
 
   currency: string;
 
-  isSandbox: boolean;
+  isLive: boolean;
 };
 
 type LoginAudit = {

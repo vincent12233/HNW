@@ -61,7 +61,7 @@ model Account {
   buyingPower     Decimal              @default(0) @db.Decimal(18, 2)
   frozenBalance   Decimal              @default(0) @db.Decimal(18, 2)
   currency        String               @default("INR")
-  isSandbox       Boolean              @default(true)
+  isLive       Boolean              @default(true)
   userId          String               @unique
   user            User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions    AccountTransaction[]
@@ -171,7 +171,7 @@ model MarketQuote {
   bidPrice      Decimal? @db.Decimal(18, 4)
   askPrice      Decimal? @db.Decimal(18, 4)
   volume        BigInt   @default(0)
-  source        String   @default("SANDBOX")
+  source        String   @default("LIVE_FEED")
   asOf          DateTime
 
   createdAt DateTime @default(now())

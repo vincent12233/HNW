@@ -20,7 +20,7 @@ export class AccountService {
         buyingPower: true,
         frozenBalance: true,
         currency: true,
-        isSandbox: true,
+        isLive: true,
         createdAt: true,
         updatedAt: true,
         positions: {
@@ -64,7 +64,7 @@ export class AccountService {
       id: account.id,
       accountNumber: account.accountNumber,
       currency: account.currency,
-      isSandbox: account.isSandbox,
+      isLive: account.isLive,
       balances: {
         cashBalance: account.cashBalance.toFixed(2),
         buyingPower: account.buyingPower.toFixed(2),

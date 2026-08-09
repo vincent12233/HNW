@@ -26,7 +26,7 @@ CREATE TABLE "accounts" (
     "cashBalance" DECIMAL(18,2) NOT NULL DEFAULT 0,
     "buyingPower" DECIMAL(18,2) NOT NULL DEFAULT 0,
     "currency" TEXT NOT NULL DEFAULT 'INR',
-    "isSandbox" BOOLEAN NOT NULL DEFAULT true,
+    "isLive" BOOLEAN NOT NULL DEFAULT true,
     "userId" TEXT NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,

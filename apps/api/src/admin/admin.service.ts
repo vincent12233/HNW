@@ -30,7 +30,7 @@ export class AdminService {
             buyingPower: true,
             frozenBalance: true,
             currency: true,
-            isSandbox: true,
+            isLive: true,
             createdAt: true,
             updatedAt: true,
           },

@@ -11,7 +11,7 @@ import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import { ListAdminInstrumentsQueryDto } from './dto/list-admin-instruments-query.dto';
 import { ListInstrumentsQueryDto } from './dto/list-instruments-query.dto';
 import { UpdateInstrumentStatusDto } from './dto/update-instrument-status.dto';
-import { UpdateSandboxQuoteDto } from './dto/update-sandbox-quote.dto';
+import { UpdateLiveQuoteDto } from './dto/update-live-quote.dto';
 @Injectable()
 export class MarketService {
   constructor(
@@ -292,7 +292,7 @@ export class MarketService {
               bidPrice,
               askPrice,
               volume: BigInt(dto.volume),
-              source: 'SANDBOX',
+              source: 'LIVE_FEED',
               asOf: new Date(),
             },
           });
@@ -486,10 +486,10 @@ export class MarketService {
     };
   }
 
-  async updateSandboxQuote(
+  async updateLiveQuote(
     exchange: Exchange,
     symbol: string,
-    dto: UpdateSandboxQuoteDto,
+    dto: UpdateLiveQuoteDto,
   ) {
     const normalizedSymbol = symbol.trim().toUpperCase();
 
@@ -531,7 +531,7 @@ export class MarketService {
               volume: BigInt(dto.volume),
             }
           : {}),
-        source: 'SANDBOX',
+        source: 'LIVE_FEED',
         asOf,
       },
     });
@@ -546,7 +546,7 @@ export class MarketService {
     };
   }
 
-  async seedSandboxMarket() {
+  async seedLiveMarket() {
     const asOf = new Date();
 
     const instruments = [
@@ -641,7 +641,7 @@ export class MarketService {
             bidPrice: item.bidPrice,
             askPrice: item.askPrice,
             volume: item.volume,
-            source: 'SANDBOX',
+            source: 'LIVE_FEED',
             asOf,
           },
           create: {
@@ -654,7 +654,7 @@ export class MarketService {
             bidPrice: item.bidPrice,
             askPrice: item.askPrice,
             volume: item.volume,
-            source: 'SANDBOX',
+            source: 'LIVE_FEED',
             asOf,
           },
         });
@@ -662,9 +662,9 @@ export class MarketService {
     });
 
     return {
-      message: 'Sandbox market initialized',
+      message: 'Market data initialized',
       initialized: instruments.length,
-      source: 'SANDBOX',
+      source: 'LIVE_FEED',
       asOf,
     };
   }

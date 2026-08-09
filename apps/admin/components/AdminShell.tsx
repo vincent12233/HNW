@@ -16,7 +16,7 @@ import {
   UsergroupAddOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { Avatar, Button, Layout, Menu, Space, Typography } from "antd";
+import { Avatar, Button, Layout, Menu, Space, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
@@ -86,6 +86,31 @@ const roleLabels: Record<string, string> = {
   BUSINESS: "业务员",
 };
 
+const pageTitles: Record<string, string> = {
+  "/dashboard": "控制台",
+  "/customers": "客户管理",
+  "/business-users": "业务员管理",
+  "/support-console": "在线客服",
+  "/deposits": "财务上分",
+  "/withdrawals": "提现审核",
+  "/transactions": "资金流水",
+  "/orders": "订单查询",
+  "/trades": "成交查询",
+  "/market": "股票管理",
+  "/watchlist": "自选股",
+  "/block-trades": "大宗交易",
+  "/ipo-debts": "IPO 欠款",
+  "/funds": "基金",
+  "/quant": "量化",
+  "/business-customers": "我的客户",
+  "/business-kyc": "KYC 审核",
+  "/invite-codes": "我的邀请码",
+  "/business-deposits": "客户入金记录",
+  "/business-withdrawals": "客户提现记录",
+  "/business-orders": "客户订单记录",
+  "/business-trades": "客户成交记录",
+};
+
 export default function AdminShell({ children }: AdminShellProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -125,6 +150,8 @@ export default function AdminShell({ children }: AdminShellProps) {
     return "HNW 管理后台";
   }, [user?.role]);
 
+  const pageTitle = pageTitles[pathname] || "工作台";
+
   function logout() {
     localStorage.removeItem("adminAccessToken");
     localStorage.removeItem("adminUser");
@@ -132,20 +159,20 @@ export default function AdminShell({ children }: AdminShellProps) {
   }
 
   return (
-    <Layout style={{ minHeight: "100vh", background: "#f4f6fa" }}>
+    <Layout style={{ minHeight: "100vh", background: "#eef3f8" }}>
       <Sider
         collapsible
         collapsed={collapsed}
         trigger={null}
         width={232}
         style={{
-          background: "#07192d",
-          boxShadow: "4px 0 18px rgba(7,25,45,0.12)",
+          background: "linear-gradient(180deg, #07192d 0%, #0b2038 56%, #0d2a4a 100%)",
+          boxShadow: "6px 0 24px rgba(7,25,45,0.16)",
         }}
       >
         <div
           style={{
-            height: 68,
+            height: 76,
             display: "flex",
             alignItems: "center",
             gap: 10,
@@ -157,13 +184,13 @@ export default function AdminShell({ children }: AdminShellProps) {
         >
           <span
             style={{
-              width: 30,
-              height: 30,
-              borderRadius: 8,
+              width: 34,
+              height: 34,
+              borderRadius: 10,
               display: "inline-flex",
               alignItems: "center",
               justifyContent: "center",
-              background: "#1f8fff",
+              background: "linear-gradient(135deg, #1f8fff, #60a5fa)",
               fontSize: 13,
             }}
           >
@@ -179,7 +206,7 @@ export default function AdminShell({ children }: AdminShellProps) {
           items={menuItems}
           onClick={({ key }) => router.push(key)}
           style={{
-            background: "#07192d",
+            background: "transparent",
             borderInlineEnd: 0,
             paddingInline: 8,
           }}
@@ -190,28 +217,48 @@ export default function AdminShell({ children }: AdminShellProps) {
         <Header
           style={{
             paddingInline: 20,
-            background: "#fff",
+            background: "rgba(255,255,255,0.92)",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
-            borderBottom: "1px solid #f0f0f0",
-            boxShadow: "0 1px 10px rgba(15,23,42,0.04)",
+            borderBottom: "1px solid #e8edf5",
+            boxShadow: "0 8px 24px rgba(15,23,42,0.06)",
+            position: "sticky",
+            top: 0,
+            zIndex: 10,
           }}
         >
-          <Button
-            type="text"
-            icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-            onClick={() => setCollapsed(!collapsed)}
-          />
+          <Space size="middle">
+            <Button
+              type="text"
+              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+              onClick={() => setCollapsed(!collapsed)}
+            />
+            <div style={{ lineHeight: 1.2 }}>
+              <Text type="secondary" style={{ fontSize: 12 }}>
+                HNW Operations
+              </Text>
+              <br />
+              <Text strong style={{ fontSize: 18 }}>
+                {pageTitle}
+              </Text>
+            </div>
+          </Space>
 
           <Space size="middle">
-            <Avatar>{(user?.fullName || "管").charAt(0).toUpperCase()}</Avatar>
+            <Tag color={user?.role === "BUSINESS" ? "green" : user?.role === "FINANCE" ? "gold" : user?.role === "SUPPORT" ? "blue" : "purple"}>
+              {roleLabels[user?.role || "ADMIN"] || user?.role || "管理员"}
+            </Tag>
+
+            <Avatar style={{ background: "#1f8fff" }}>
+              {(user?.fullName || "管").charAt(0).toUpperCase()}
+            </Avatar>
 
             <div style={{ lineHeight: 1.25 }}>
               <Text strong>{user?.fullName || "系统管理员"}</Text>
               <br />
               <Text type="secondary" style={{ fontSize: 12 }}>
-                {roleLabels[user?.role || "ADMIN"] || user?.role || "管理员"}
+                员工编号登录
               </Text>
             </div>
 
@@ -225,7 +272,7 @@ export default function AdminShell({ children }: AdminShellProps) {
           style={{
             margin: 0,
             padding: 24,
-            background: "#f4f6fa",
+            background: "#eef3f8",
             minHeight: 280,
           }}
         >

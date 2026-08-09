@@ -4,13 +4,16 @@ import {
   BankOutlined,
   DollarOutlined,
   GiftOutlined,
+  RightOutlined,
   SafetyCertificateOutlined,
+  StockOutlined,
   TeamOutlined,
   UserAddOutlined,
   WalletOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
 import { Alert, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
+import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
@@ -93,7 +96,58 @@ function MetricCard({
   );
 }
 
+function QuickAction({
+  title,
+  description,
+  icon,
+  tone,
+  onClick,
+}: {
+  title: string;
+  description: string;
+  icon: ReactNode;
+  tone: string;
+  onClick: () => void;
+}) {
+  return (
+    <Card
+      hoverable
+      onClick={onClick}
+      style={{ borderRadius: 8, border: "1px solid #e8edf5" }}
+      styles={{ body: { padding: 18 } }}
+    >
+      <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
+        <Space align="start">
+          <span
+            style={{
+              width: 38,
+              height: 38,
+              borderRadius: 8,
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: tone,
+              color: "#fff",
+              fontSize: 17,
+            }}
+          >
+            {icon}
+          </span>
+          <div>
+            <Text strong>{title}</Text>
+            <Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 3 }}>
+              {description}
+            </Paragraph>
+          </div>
+        </Space>
+        <RightOutlined style={{ color: "#94a3b8", marginTop: 10 }} />
+      </Space>
+    </Card>
+  );
+}
+
 export default function DashboardPage() {
+  const router = useRouter();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [businessData, setBusinessData] = useState<BusinessDashboard | null>(null);
   const [businessRisk, setBusinessRisk] = useState<BusinessRiskDashboard | null>(null);
@@ -221,6 +275,36 @@ export default function DashboardPage() {
                 </Col>
               </Row>
             </Card>
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={8}>
+                <QuickAction
+                  title="审核 KYC"
+                  description="处理自己客户提交的 Aadhaar / PAN 文件"
+                  icon={<SafetyCertificateOutlined />}
+                  tone="#1f8fff"
+                  onClick={() => router.push("/business-kyc")}
+                />
+              </Col>
+              <Col xs={24} md={8}>
+                <QuickAction
+                  title="生成邀请码"
+                  description="为新客户开户准备专属邀请码"
+                  icon={<GiftOutlined />}
+                  tone="#f59e0b"
+                  onClick={() => router.push("/invite-codes")}
+                />
+              </Col>
+              <Col xs={24} md={8}>
+                <QuickAction
+                  title="客户提现记录"
+                  description="查看自己客户提交的提现订单号和状态"
+                  icon={<BankOutlined />}
+                  tone="#dc2626"
+                  onClick={() => router.push("/business-withdrawals")}
+                />
+              </Col>
+            </Row>
           </>
         ) : (
           <>
@@ -265,6 +349,45 @@ export default function DashboardPage() {
                     <Tag color="red">风控：失败登录、共享 IP、共享设备</Tag>
                   </Space>
                 </Card>
+              </Col>
+            </Row>
+
+            <Row gutter={[16, 16]}>
+              <Col xs={24} md={6}>
+                <QuickAction
+                  title="财务上分"
+                  description="按客户编号、手机号或交易账号搜索并入账"
+                  icon={<DollarOutlined />}
+                  tone="#16a34a"
+                  onClick={() => router.push("/deposits")}
+                />
+              </Col>
+              <Col xs={24} md={6}>
+                <QuickAction
+                  title="提现审核"
+                  description="按提现订单号查找并处理客户申请"
+                  icon={<BankOutlined />}
+                  tone="#dc2626"
+                  onClick={() => router.push("/withdrawals")}
+                />
+              </Col>
+              <Col xs={24} md={6}>
+                <QuickAction
+                  title="在线客服"
+                  description="处理客户入金咨询、标签和翻译辅助"
+                  icon={<SafetyCertificateOutlined />}
+                  tone="#1f8fff"
+                  onClick={() => router.push("/support-console")}
+                />
+              </Col>
+              <Col xs={24} md={6}>
+                <QuickAction
+                  title="股票管理"
+                  description="维护可交易股票、价格和启用状态"
+                  icon={<StockOutlined />}
+                  tone="#7c3aed"
+                  onClick={() => router.push("/market")}
+                />
               </Col>
             </Row>
           </>

@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../app_config.dart';
 import '../models/ipo.dart';
 import 'auth_service.dart';
+import 'local_data_cache.dart';
 
 class IpoService {
   final AuthService _authService = AuthService();
@@ -13,25 +14,28 @@ class IpoService {
     final session = await _authService.restoreSession();
     if (session == null || session.accessToken.isEmpty) return <Ipo>[];
 
-    final response = await http
-        .get(
-          Uri.parse('${AppConfig.apiBaseUrl}/ipo/open'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-        )
-        .timeout(const Duration(seconds: 6));
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/ipo/open'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
 
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw IpoException(_apiMessage(decoded, 'Unable to load IPOs'));
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw IpoException(_apiMessage(decoded, 'Unable to load IPOs'));
+      }
+
+      final data = decoded is Map ? decoded['data'] : null;
+      if (data is! List) return _cachedOpenIpos();
+
+      await LocalDataCache.saveJson(LocalDataCache.openIpos, data);
+
+      return _iposFromRows(data);
+    } catch (_) {
+      return _cachedOpenIpos();
     }
-
-    final data = decoded is Map ? decoded['data'] : null;
-    if (data is! List) return <Ipo>[];
-
-    return data
-        .map((item) => Ipo.fromApiJson(Map<String, dynamic>.from(item as Map)))
-        .where((ipo) => ipo.id.isNotEmpty)
-        .toList();
   }
 
   Future<List<IpoApplication>> fetchMyApplications() async {
@@ -40,28 +44,28 @@ class IpoService {
       return <IpoApplication>[];
     }
 
-    final response = await http
-        .get(
-          Uri.parse('${AppConfig.apiBaseUrl}/ipo/applications/me'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-        )
-        .timeout(const Duration(seconds: 6));
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/ipo/applications/me'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
 
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw IpoException(_apiMessage(decoded, 'Unable to load applications'));
+      final decoded = jsonDecode(response.body);
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw IpoException(_apiMessage(decoded, 'Unable to load applications'));
+      }
+
+      final data = decoded is Map ? decoded['data'] : null;
+      if (data is! List) return _cachedApplications();
+
+      await LocalDataCache.saveJson(LocalDataCache.ipoApplications, data);
+
+      return _applicationsFromRows(data);
+    } catch (_) {
+      return _cachedApplications();
     }
-
-    final data = decoded is Map ? decoded['data'] : null;
-    if (data is! List) return <IpoApplication>[];
-
-    return data
-        .map(
-          (item) =>
-              IpoApplication.fromApiJson(Map<String, dynamic>.from(item as Map)),
-        )
-        .where((application) => application.id.isNotEmpty)
-        .toList();
   }
 
   Future<IpoApplication?> apply(String ipoId) async {
@@ -70,10 +74,12 @@ class IpoService {
       throw const IpoException('Please sign in again');
     }
 
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/ipo/$ipoId/apply'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/ipo/$ipoId/apply'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 10));
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -87,6 +93,43 @@ class IpoService {
     await fetchMyApplications();
     return null;
   }
+}
+
+Future<List<Ipo>> _cachedOpenIpos() async {
+  final cached = await LocalDataCache.readJson(LocalDataCache.openIpos);
+
+  if (cached is List) {
+    return _iposFromRows(cached);
+  }
+
+  return <Ipo>[];
+}
+
+Future<List<IpoApplication>> _cachedApplications() async {
+  final cached = await LocalDataCache.readJson(LocalDataCache.ipoApplications);
+
+  if (cached is List) {
+    return _applicationsFromRows(cached);
+  }
+
+  return <IpoApplication>[];
+}
+
+List<Ipo> _iposFromRows(List<dynamic> rows) {
+  return rows
+      .map((item) => Ipo.fromApiJson(Map<String, dynamic>.from(item as Map)))
+      .where((ipo) => ipo.id.isNotEmpty)
+      .toList();
+}
+
+List<IpoApplication> _applicationsFromRows(List<dynamic> rows) {
+  return rows
+      .map(
+        (item) =>
+            IpoApplication.fromApiJson(Map<String, dynamic>.from(item as Map)),
+      )
+      .where((application) => application.id.isNotEmpty)
+      .toList();
 }
 
 class IpoException implements Exception {

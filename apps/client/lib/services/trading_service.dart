@@ -6,6 +6,7 @@ import '../app_config.dart';
 import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import 'auth_service.dart';
+import 'local_data_cache.dart';
 
 class TradingService {
   final AuthService _authService = AuthService();
@@ -17,24 +18,30 @@ class TradingService {
       return null;
     }
 
-    final response = await http
-        .get(
-          Uri.parse('${AppConfig.apiBaseUrl}/account/portfolio'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-        )
-        .timeout(const Duration(seconds: 6));
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/account/portfolio'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
 
-    final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw TradingException(_apiMessage(decoded, 'Unable to load portfolio'));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw TradingException(_apiMessage(decoded, 'Unable to load portfolio'));
+      }
+
+      if (decoded is! Map<String, dynamic>) {
+        return _cachedAccountSnapshot();
+      }
+
+      await LocalDataCache.saveJson(LocalDataCache.accountSnapshot, decoded);
+
+      return TradingAccountSnapshot.fromJson(decoded);
+    } catch (_) {
+      return _cachedAccountSnapshot();
     }
-
-    if (decoded is! Map<String, dynamic>) {
-      return null;
-    }
-
-    return TradingAccountSnapshot.fromJson(decoded);
   }
 
   Future<List<TradingOrder>> fetchOrders() async {
@@ -44,31 +51,32 @@ class TradingService {
       return <TradingOrder>[];
     }
 
-    final response = await http
-        .get(
-          Uri.parse('${AppConfig.apiBaseUrl}/orders?pageSize=50'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-        )
-        .timeout(const Duration(seconds: 6));
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/orders?pageSize=50'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
 
-    final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw TradingException(_apiMessage(decoded, 'Unable to load orders'));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw TradingException(_apiMessage(decoded, 'Unable to load orders'));
+      }
+
+      final data = decoded is Map ? decoded['data'] : null;
+
+      if (data is! List) {
+        return _cachedOrders();
+      }
+
+      await LocalDataCache.saveJson(LocalDataCache.orders, data);
+
+      return _ordersFromRows(data);
+    } catch (_) {
+      return _cachedOrders();
     }
-
-    final data = decoded is Map ? decoded['data'] : null;
-
-    if (data is! List) {
-      return <TradingOrder>[];
-    }
-
-    return data
-        .map(
-          (item) =>
-              TradingOrder.fromApiJson(Map<String, dynamic>.from(item as Map)),
-        )
-        .toList();
   }
 
   Future<TradingOrder> placeMarketOrder(TradingOrder order) async {
@@ -78,23 +86,25 @@ class TradingService {
       throw const TradingException('Please sign in again');
     }
 
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders'),
-      headers: {
-        'Authorization': 'Bearer ${session.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'clientOrderId':
-            'APP-${DateTime.now().microsecondsSinceEpoch}-${order.symbol}',
-        'exchange': 'NSE',
-        'symbol': order.symbol,
-        'side': order.isBuy ? 'BUY' : 'SELL',
-        'type': 'MARKET',
-        'timeInForce': 'DAY',
-        'quantity': order.quantity,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/orders'),
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'clientOrderId':
+                'APP-${DateTime.now().microsecondsSinceEpoch}-${order.symbol}',
+            'exchange': 'NSE',
+            'symbol': order.symbol,
+            'side': order.isBuy ? 'BUY' : 'SELL',
+            'type': 'MARKET',
+            'timeInForce': 'DAY',
+            'quantity': order.quantity,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
 
     final decoded = jsonDecode(response.body);
 
@@ -110,6 +120,35 @@ class TradingService {
 
     return TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder));
   }
+}
+
+Future<TradingAccountSnapshot?> _cachedAccountSnapshot() async {
+  final cached = await LocalDataCache.readJson(LocalDataCache.accountSnapshot);
+
+  if (cached is Map) {
+    return TradingAccountSnapshot.fromJson(Map<String, dynamic>.from(cached));
+  }
+
+  return null;
+}
+
+Future<List<TradingOrder>> _cachedOrders() async {
+  final cached = await LocalDataCache.readJson(LocalDataCache.orders);
+
+  if (cached is List) {
+    return _ordersFromRows(cached);
+  }
+
+  return <TradingOrder>[];
+}
+
+List<TradingOrder> _ordersFromRows(List<dynamic> rows) {
+  return rows
+      .map(
+        (item) =>
+            TradingOrder.fromApiJson(Map<String, dynamic>.from(item as Map)),
+      )
+      .toList();
 }
 
 class TradingAccountSnapshot {

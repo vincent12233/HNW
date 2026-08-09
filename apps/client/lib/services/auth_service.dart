@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../app_config.dart';
 import '../models/auth_session.dart';
 import '../models/withdrawal_request.dart';
+import 'local_data_cache.dart';
 
 class AuthService {
   static const String _sessionKey = 'auth_session';
@@ -27,7 +28,7 @@ class AuthService {
           'phone': _normalizeIndianPhone(phone),
           'password': password,
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',
@@ -74,7 +75,7 @@ class AuthService {
           'password': password,
           'inviteCode': inviteCode.trim().toUpperCase(),
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',
@@ -115,7 +116,7 @@ class AuthService {
           'mimeType': _mimeTypeForFile(file.name),
           'contentBase64': base64Encode(bytes),
         }),
-      );
+      ).timeout(const Duration(seconds: 10));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',
@@ -143,32 +144,32 @@ class AuthService {
       return <WithdrawalRequest>[];
     }
 
-    final response = await http
-        .get(
-          Uri.parse('${AppConfig.apiBaseUrl}/withdrawal/me'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-        )
-        .timeout(const Duration(seconds: 6));
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/withdrawal/me'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
 
-    final decoded = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
 
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw AuthException(
-        _englishApiMessage(decoded, 'Unable to load withdrawals'),
-      );
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw AuthException(
+          _englishApiMessage(decoded, 'Unable to load withdrawals'),
+        );
+      }
+
+      if (decoded is! List) {
+        return _cachedWithdrawals();
+      }
+
+      await LocalDataCache.saveJson(LocalDataCache.withdrawals, decoded);
+
+      return _withdrawalsFromRows(decoded);
+    } catch (_) {
+      return _cachedWithdrawals();
     }
-
-    if (decoded is! List) {
-      return <WithdrawalRequest>[];
-    }
-
-    return decoded
-        .map(
-          (item) => WithdrawalRequest.fromJson(
-            Map<String, dynamic>.from(item as Map),
-          ),
-        )
-        .toList();
   }
 
   Future<WithdrawalRequest> submitWithdrawal({
@@ -184,20 +185,22 @@ class AuthService {
       throw AuthException('Please sign in again');
     }
 
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/withdrawal/request'),
-      headers: {
-        'Authorization': 'Bearer ${session.accessToken}',
-        'Content-Type': 'application/json',
-      },
-      body: jsonEncode({
-        'amount': amount,
-        'bankName': bankName,
-        'accountNumber': accountNumber,
-        'ifscCode': ifscCode,
-        'note': note,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/withdrawal/request'),
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({
+            'amount': amount,
+            'bankName': bankName,
+            'accountNumber': accountNumber,
+            'ifscCode': ifscCode,
+            'note': note,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
 
     final decoded = jsonDecode(response.body);
 
@@ -226,10 +229,12 @@ class AuthService {
       'Content-Type': 'application/json',
     };
 
-    final conversationResponse = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/support/conversations'),
-      headers: headers,
-    );
+    final conversationResponse = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/support/conversations'),
+          headers: headers,
+        )
+        .timeout(const Duration(seconds: 10));
 
     final conversationDecoded = jsonDecode(conversationResponse.body);
 
@@ -250,14 +255,16 @@ class AuthService {
       throw AuthException('Support conversation was not created');
     }
 
-    final messageResponse = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/support/messages'),
-      headers: headers,
-      body: jsonEncode({
-        'conversationId': conversationId,
-        'content': content.trim(),
-      }),
-    );
+    final messageResponse = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/support/messages'),
+          headers: headers,
+          body: jsonEncode({
+            'conversationId': conversationId,
+            'content': content.trim(),
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
 
     final messageDecoded = jsonDecode(messageResponse.body);
 
@@ -299,6 +306,26 @@ class AuthService {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
   }
+}
+
+Future<List<WithdrawalRequest>> _cachedWithdrawals() async {
+  final cached = await LocalDataCache.readJson(LocalDataCache.withdrawals);
+
+  if (cached is List) {
+    return _withdrawalsFromRows(cached);
+  }
+
+  return <WithdrawalRequest>[];
+}
+
+List<WithdrawalRequest> _withdrawalsFromRows(List<dynamic> rows) {
+  return rows
+      .map(
+        (item) => WithdrawalRequest.fromJson(
+          Map<String, dynamic>.from(item as Map),
+        ),
+      )
+      .toList();
 }
 
 String _normalizeIndianPhone(String value) {

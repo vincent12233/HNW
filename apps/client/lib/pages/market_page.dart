@@ -12,13 +12,13 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../models/withdrawal_request.dart';
 import '../services/auth_service.dart';
+import '../services/ipo_service.dart';
 import '../services/market_data_service.dart';
 import '../services/market_socket_service.dart';
 import '../services/trading_service.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/market_header.dart';
 import '../widgets/market_news.dart';
-import '../widgets/most_active.dart';
 import '../widgets/stock_list_tile.dart';
 import '../widgets/stock_logo.dart';
 import 'login_page.dart';
@@ -29,6 +29,7 @@ import 'trading_center_page.dart';
 final marketSocket = MarketSocketService();
 final marketDataService = MarketDataService();
 final tradingService = TradingService();
+final ipoService = IpoService();
 
 class MarketHomePage extends StatefulWidget {
   const MarketHomePage({super.key});
@@ -131,7 +132,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
     StockQuote('ICICIBANK', 'ICICI Bank', 1284.30, 0, 0, DateTime.now()),
   ];
 
-  void _applyIpo(Ipo ipo) {
+  Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
         .where((application) => application.ipoId == ipo.id)
         .length;
@@ -148,226 +149,33 @@ class _MarketHomePageState extends State<MarketHomePage> {
       return;
     }
 
-    final applicationNumber = applicationCount + 1;
+    try {
+      await ipoService.apply(ipo.id);
+      final remoteApplications = await ipoService.fetchMyApplications();
 
-    final application = IpoApplication(
-      id: 'IPO_APP_${ipo.id}_${DateTime.now().microsecondsSinceEpoch}',
-      ipoId: ipo.id,
-      companyName: ipo.companyName,
-      symbol: ipo.symbol,
-      appliedQuantity: 0,
-      allocatedQuantity: 0,
-      subscriptionPrice: ipo.subscriptionPrice,
-      paidAmount: 0,
-      status: IpoApplicationStatus.applied,
-    );
+      if (!mounted) return;
 
-    setState(() {
-      ipoApplications.insert(0, application);
-    });
+      setState(() {
+        ipoApplications
+          ..clear()
+          ..addAll(remoteApplications);
+      });
 
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          '${ipo.companyName} application '
-          '$applicationNumber of 5 submitted',
-        ),
-      ),
-    );
-  }
-
-  void _applyAvailableCashToIpo(String applicationId) {
-    final index = ipoApplications.indexWhere(
-      (application) => application.id == applicationId,
-    );
-
-    if (index < 0) {
-      return;
-    }
-
-    final current = ipoApplications[index];
-
-    if (current.status != IpoApplicationStatus.allocated ||
-        current.allocatedQuantity <= 0 ||
-        current.remainingAmount <= 0) {
-      return;
-    }
-
-    final availableCash = cashBalance > 0 ? cashBalance : 0.0;
-
-    if (availableCash <= 0) {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${current.companyName} allocated. '
-            'Outstanding amount: ${formatPrice(current.remainingAmount)}',
+            '${ipo.companyName} application ${applicationCount + 1} of 5 submitted',
           ),
         ),
       );
-
-      return;
-    }
-
-    final amountToDeduct = availableCash >= current.remainingAmount
-        ? current.remainingAmount
-        : availableCash;
-
-    final newPaidAmount = current.paidAmount + amountToDeduct;
-
-    final isCompleted = newPaidAmount >= current.allocatedAmount;
-
-    final updatedApplication = current.copyWith(
-      paidAmount: isCompleted ? current.allocatedAmount : newPaidAmount,
-      status: isCompleted
-          ? IpoApplicationStatus.completed
-          : IpoApplicationStatus.allocated,
-    );
-
-    setState(() {
-      cashBalance -= amountToDeduct;
-
-      if (cashBalance < 0.01) {
-        cashBalance = 0;
-      }
-
-      ipoApplications[index] = updatedApplication;
-
-      if (isCompleted) {
-        final existing = positions[current.symbol];
-
-        if (existing == null) {
-          positions[current.symbol] = PortfolioPosition(
-            symbol: current.symbol,
-            quantity: current.allocatedQuantity,
-            averageCost: current.subscriptionPrice,
-          );
-        } else {
-          final oldQuantity = existing.quantity;
-
-          final newQuantity = oldQuantity + current.allocatedQuantity;
-
-          final oldCost = existing.averageCost * oldQuantity;
-
-          final ipoCost = current.subscriptionPrice * current.allocatedQuantity;
-
-          positions[current.symbol] = PortfolioPosition(
-            symbol: current.symbol,
-            quantity: newQuantity,
-            averageCost: (oldCost + ipoCost) / newQuantity,
-          );
-        }
-
-        final stockExists = stocks.any(
-          (stock) => stock.symbol == current.symbol,
-        );
-
-        if (!stockExists) {
-          final ipoIndex = ipos.indexWhere((ipo) => ipo.id == current.ipoId);
-
-          if (ipoIndex >= 0) {
-            final ipo = ipos[ipoIndex];
-
-            stocks.add(
-              StockQuote(
-                ipo.symbol,
-                ipo.companyName,
-                ipo.marketPrice,
-                0,
-                0,
-                DateTime.now(),
-              ),
-            );
-          }
-        }
-      }
-    });
-
-    _saveData();
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    if (isCompleted) {
+    } on IpoException catch (error) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${current.companyName} subscription completed. '
-            '${current.allocatedQuantity} shares added to Holdings.',
-          ),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${formatPrice(amountToDeduct)} automatically deducted. '
-            'Outstanding: '
-            '${formatPrice(updatedApplication.remainingAmount)}',
-          ),
-        ),
+        SnackBar(content: Text(error.message)),
       );
     }
-  }
-
-  void applyIpoAllocationUpdate({
-    required String applicationId,
-    required int allocatedQuantity,
-    double? subscriptionPrice,
-  }) {
-    if (allocatedQuantity <= 0) {
-      return;
-    }
-
-    final index = ipoApplications.indexWhere(
-      (application) => application.id == applicationId,
-    );
-
-    if (index < 0) {
-      return;
-    }
-
-    final current = ipoApplications[index];
-
-    if (current.status != IpoApplicationStatus.applied) {
-      return;
-    }
-
-    final updatedApplication = current.copyWith(
-      allocatedQuantity: allocatedQuantity,
-      subscriptionPrice: subscriptionPrice ?? current.subscriptionPrice,
-      paidAmount: 0,
-      status: IpoApplicationStatus.allocated,
-    );
-
-    setState(() {
-      ipoApplications[index] = updatedApplication;
-    });
-
-    _applyAvailableCashToIpo(applicationId);
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) {
-        return;
-      }
-
-      final latestIndex = ipoApplications.indexWhere(
-        (application) => application.id == applicationId,
-      );
-
-      if (latestIndex < 0) {
-        return;
-      }
-
-      final latestApplication = ipoApplications[latestIndex];
-
-      if (latestApplication.status == IpoApplicationStatus.allocated &&
-          latestApplication.remainingAmount > 0) {
-        _showIpoAllocationDialog(latestApplication);
-      }
-    });
   }
 
   void _showPendingIpoAllocationIfNeeded() {
@@ -707,6 +515,20 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
 
     try {
+      final remoteIpos = await ipoService.fetchOpenIpos();
+      final remoteApplications = await ipoService.fetchMyApplications();
+
+      ipos
+        ..clear()
+        ..addAll(remoteIpos);
+      ipoApplications
+        ..clear()
+        ..addAll(remoteApplications);
+    } catch (_) {
+      // Keep bundled IPO records if the API is temporarily unavailable.
+    }
+
+    try {
       final snapshot = await tradingService.fetchAccountSnapshot();
 
       if (snapshot != null) {
@@ -858,9 +680,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
       case 1:
         return MarketsPage(
           stocks: stocks,
-          favoriteSymbols: favoriteSymbols,
           onStockTap: _openStock,
-          onFavoriteToggle: _toggleFavorite,
         );
 
       case 2:
@@ -874,12 +694,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ipoApplications: ipoApplications,
           onTrade: _openStock,
           onApplyIpo: _applyIpo,
-          onAllocateIpo: (applicationId, allocatedQuantity) {
-            applyIpoAllocationUpdate(
-              applicationId: applicationId,
-              allocatedQuantity: allocatedQuantity,
-            );
-          },
+          onAlertsTap: _openNotifications,
         );
 
       case 3:
@@ -1807,18 +1622,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
       MaterialPageRoute<void>(
         builder: (_) => StockDetailPage(
           stock: stock,
-          isFavorite: favoriteSymbols.contains(stock.symbol),
-          onFavoriteChanged: (isFavorite) {
-            setState(() {
-              if (isFavorite) {
-                favoriteSymbols.add(stock.symbol);
-              } else {
-                favoriteSymbols.remove(stock.symbol);
-              }
-            });
-
-            _saveData();
-          },
           onOrderPlaced: _placeOrder,
         ),
       ),
@@ -1886,28 +1689,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   void _toggleFavorite(StockQuote stock) {
-    final wasFavorite = favoriteSymbols.contains(stock.symbol);
-
-    setState(() {
-      if (wasFavorite) {
-        favoriteSymbols.remove(stock.symbol);
-      } else {
-        favoriteSymbols.add(stock.symbol);
-      }
-    });
-
-    _saveData();
-
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          wasFavorite
-              ? '${stock.symbol} removed from Watchlist'
-              : '${stock.symbol} added to Watchlist',
-        ),
-        duration: const Duration(seconds: 1),
+      const SnackBar(
+        content: Text('Watchlist sync is being connected to the server.'),
       ),
     );
   }
@@ -2039,9 +1824,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
               ),
             ),
             TextButton.icon(
-              onPressed: _confirmClearOrders,
-              icon: const Icon(Icons.delete_outline),
-              label: const Text('Clear'),
+              onPressed: _refreshRemoteTradingData,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Refresh'),
             ),
           ],
         ),
@@ -2139,32 +1924,38 @@ class _MarketHomePageState extends State<MarketHomePage> {
     );
   }
 
-  void _confirmClearOrders() {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Clear order history?'),
-        content: const Text('All Orders from this session will be removed.'),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-
-              setState(orders.clear);
-
-              _saveData();
-            },
-            child: const Text('Clear'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _refreshRemoteTradingData() async {
+    try {
+      final snapshot = await tradingService.fetchAccountSnapshot();
+      final remoteOrders = await tradingService.fetchOrders();
+      if (!mounted) return;
+      setState(() {
+        if (snapshot != null) {
+          cashBalance = snapshot.cashBalance;
+          realizedProfitLoss = snapshot.realizedProfitLoss;
+          positions
+            ..clear()
+            ..addEntries(
+              snapshot.positions.map(
+                (position) => MapEntry(position.symbol, position),
+              ),
+            );
+        }
+        orders
+          ..clear()
+          ..addAll(remoteOrders);
+      });
+      await _saveData();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trading data refreshed')),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
   }
 
   // ignore: unused_element
@@ -2668,8 +2459,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.restart_alt,
-                title: 'Reset Trading Account',
-                subtitle: 'Clear saved orders, holdings and preferences',
+                title: 'Account support',
+                subtitle: 'Request account data assistance',
                 onTap: _confirmResetAccount,
               ),
             ],
@@ -2711,80 +2502,12 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   void _editProfile() {
-    final nameController = TextEditingController(text: accountName);
-
-    final phoneController = TextEditingController(text: accountPhone);
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Edit profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(
-                labelText: 'Display name',
-                border: OutlineInputBorder(),
-              ),
-            ),
-            const SizedBox(height: 14),
-            TextField(
-              controller: phoneController,
-              keyboardType: TextInputType.phone,
-              decoration: const InputDecoration(
-                labelText: 'Mobile number',
-                prefixText: '+91 ',
-                border: OutlineInputBorder(),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-
-              final phone = phoneController.text.trim().replaceAll(
-                RegExp(r'\D'),
-                '',
-              );
-
-              if (name.isEmpty || !RegExp(r'^[6-9]\d{9}$').hasMatch(phone)) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Enter a valid name and Indian mobile number',
-                    ),
-                  ),
-                );
-                return;
-              }
-
-              setState(() {
-                accountName = name;
-                accountPhone = phone;
-              });
-
-              _saveData();
-
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    ).whenComplete(() {
-      nameController.dispose();
-      phoneController.dispose();
-    });
+    _openCustomerService(
+      title: 'Profile support',
+      initialMessage:
+          'Hello, I need to update my profile information for +91 $accountPhone.',
+      icon: Icons.manage_accounts_outlined,
+    );
   }
 
   void _showInformation(String title, String message) {
@@ -2856,49 +2579,11 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   void _confirmResetAccount() {
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Reset Trading Account?'),
-        content: const Text(
-          'This permanently clears saved account '
-          'orders, holdings, watchlist, profile '
-          'changes and profit/loss on this device.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-
-              setState(() {
-                cashBalance = initialCash;
-                realizedProfitLoss = 0;
-                orderNotificationsEnabled = true;
-                accountName = 'Sonal Naik';
-                accountPhone = '9876543210';
-                favoriteSymbols.clear();
-                orders.clear();
-                positions.clear();
-                withdrawalRequests.clear();
-              });
-
-              _saveData();
-
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Trading Account reset')),
-              );
-            },
-            style: FilledButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Reset'),
-          ),
-        ],
-      ),
+    _openCustomerService(
+      title: 'Account support',
+      initialMessage:
+          'Hello, I need help checking or correcting my trading account records.',
+      icon: Icons.support_agent_outlined,
     );
   }
 }

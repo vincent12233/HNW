@@ -6,7 +6,7 @@ class StockQuote {
     this.change,
     this.volume,
     this.updatedAt,
-    {this.logoUrl, this.category},
+    {this.logoUrl, this.category}
   );
 
   final String symbol;

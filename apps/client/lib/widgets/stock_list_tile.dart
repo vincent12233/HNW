@@ -9,15 +9,15 @@ class StockListTile extends StatelessWidget {
   const StockListTile({
     super.key,
     required this.stock,
-    required this.isFavorite,
     required this.onTap,
-    required this.onFavorite,
+    this.isFavorite = false,
+    this.onFavorite,
   });
 
   final StockQuote stock;
   final bool isFavorite;
   final VoidCallback onTap;
-  final VoidCallback onFavorite;
+  final VoidCallback? onFavorite;
 
   @override
   Widget build(BuildContext context) {
@@ -84,13 +84,14 @@ class StockListTile extends StatelessWidget {
                 ),
               ],
             ),
-            IconButton(
-              onPressed: onFavorite,
-              icon: Icon(
-                isFavorite ? Icons.star : Icons.star_border,
-                color: isFavorite ? Colors.amber : Colors.grey,
+            if (onFavorite != null)
+              IconButton(
+                onPressed: onFavorite,
+                icon: Icon(
+                  isFavorite ? Icons.star : Icons.star_border,
+                  color: isFavorite ? Colors.amber : Colors.grey,
+                ),
               ),
-            ),
           ],
         ),
       ),

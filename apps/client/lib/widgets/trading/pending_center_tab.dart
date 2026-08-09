@@ -12,14 +12,10 @@ class PendingCenterTab extends StatefulWidget {
     super.key,
     required this.pendingOrders,
     required this.ipoApplications,
-    required this.onAllocateIpo,
   });
 
   final List<PendingOrder> pendingOrders;
   final List<IpoApplication> ipoApplications;
-
-  final void Function(String applicationId, int allocatedQuantity)
-  onAllocateIpo;
 
   @override
   State<PendingCenterTab> createState() => _PendingCenterTabState();

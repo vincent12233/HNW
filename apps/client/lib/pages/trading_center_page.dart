@@ -27,7 +27,7 @@ class TradingCenterPage extends StatefulWidget {
     required this.ipoApplications,
     required this.onTrade,
     required this.onApplyIpo,
-    required this.onAllocateIpo,
+    required this.onAlertsTap,
   });
 
   final List<StockQuote> stocks;
@@ -40,9 +40,7 @@ class TradingCenterPage extends StatefulWidget {
 
   final ValueChanged<StockQuote> onTrade;
   final ValueChanged<Ipo> onApplyIpo;
-
-  final void Function(String applicationId, int allocatedQuantity)
-  onAllocateIpo;
+  final VoidCallback onAlertsTap;
 
   @override
   State<TradingCenterPage> createState() => _TradingCenterPageState();
@@ -96,7 +94,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                   ),
                   IconButton(
                     tooltip: 'Alerts',
-                    onPressed: () {},
+                    onPressed: widget.onAlertsTap,
                     icon: const Icon(Icons.notifications_none_rounded),
                   ),
                 ],
@@ -175,7 +173,6 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
         return PendingCenterTab(
           pendingOrders: widget.pendingOrders,
           ipoApplications: widget.ipoApplications,
-          onAllocateIpo: widget.onAllocateIpo,
         );
 
       case 3:

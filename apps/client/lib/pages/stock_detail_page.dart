@@ -9,14 +9,10 @@ class StockDetailPage extends StatefulWidget {
   const StockDetailPage({
     super.key,
     required this.stock,
-    required this.isFavorite,
-    required this.onFavoriteChanged,
     required this.onOrderPlaced,
   });
 
   final StockQuote stock;
-  final bool isFavorite;
-  final ValueChanged<bool> onFavoriteChanged;
   final Future<String?> Function(TradingOrder) onOrderPlaced;
 
   @override
@@ -28,13 +24,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   bool isBuy = true;
   bool isSubmitting = false;
-  late bool isFavorite;
-
-  @override
-  void initState() {
-    super.initState();
-    isFavorite = widget.isFavorite;
-  }
 
   double get estimatedAmount {
     final quantity = int.tryParse(quantityController.text) ?? 0;
@@ -136,17 +125,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
         backgroundColor: AppConfig.primaryColor,
         foregroundColor: Colors.white,
         title: Text(widget.stock.symbol),
-        actions: [
-          IconButton(
-            tooltip: isFavorite ? 'Remove from watchlist' : 'Add to watchlist',
-            onPressed: () {
-              setState(() => isFavorite = !isFavorite);
-
-              widget.onFavoriteChanged(isFavorite);
-            },
-            icon: Icon(isFavorite ? Icons.star : Icons.star_border),
-          ),
-        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

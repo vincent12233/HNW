@@ -10,15 +10,11 @@ class MarketsPage extends StatefulWidget {
   const MarketsPage({
     super.key,
     required this.stocks,
-    required this.favoriteSymbols,
     required this.onStockTap,
-    required this.onFavoriteToggle,
   });
 
   final List<StockQuote> stocks;
-  final Set<String> favoriteSymbols;
   final ValueChanged<StockQuote> onStockTap;
-  final ValueChanged<StockQuote> onFavoriteToggle;
 
   @override
   State<MarketsPage> createState() => _MarketsPageState();
@@ -30,7 +26,6 @@ class _MarketsPageState extends State<MarketsPage> {
 
   final tabs = const [
     'Stocks',
-    'Watchlist',
     'Gainers',
     'Losers',
     'Sectors',
@@ -123,31 +118,20 @@ class _MarketsPageState extends State<MarketsPage> {
         return _stockList(_filteredStocks, emptyTitle: 'No stocks found');
 
       case 1:
-        final watchlist = _filteredStocks
-            .where((stock) => widget.favoriteSymbols.contains(stock.symbol))
-            .toList();
-
-        return _stockList(
-          watchlist,
-          emptyTitle: 'Your watchlist is empty',
-          emptySubtitle: 'Tap the star beside a stock to save it here.',
-        );
-
-      case 2:
         final gainers =
             _filteredStocks.where((stock) => stock.change > 0).toList()
               ..sort((a, b) => b.change.compareTo(a.change));
 
         return _stockList(gainers, emptyTitle: 'No gainers right now');
 
-      case 3:
+      case 2:
         final losers =
             _filteredStocks.where((stock) => stock.change < 0).toList()
               ..sort((a, b) => a.change.compareTo(b.change));
 
         return _stockList(losers, emptyTitle: 'No losers right now');
 
-      case 4:
+      case 3:
         return ListView(
           padding: const EdgeInsets.all(16),
           children: [
@@ -157,7 +141,7 @@ class _MarketsPageState extends State<MarketsPage> {
           ],
         );
 
-      case 5:
+      case 4:
         return _etfList();
 
       default:
@@ -183,12 +167,8 @@ class _MarketsPageState extends State<MarketsPage> {
 
         return StockListTile(
           stock: stock,
-          isFavorite: widget.favoriteSymbols.contains(stock.symbol),
           onTap: () {
             widget.onStockTap(stock);
-          },
-          onFavorite: () {
-            widget.onFavoriteToggle(stock);
           },
         );
       },

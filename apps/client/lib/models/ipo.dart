@@ -37,6 +37,23 @@ class Ipo {
     return ((marketPrice - subscriptionPrice) / marketPrice) * 100;
   }
 
+  factory Ipo.fromApiJson(Map<String, dynamic> json) {
+    final rawStatus = json['status']?.toString().toUpperCase() ?? 'OPEN';
+    return Ipo(
+      id: json['id']?.toString() ?? '',
+      companyName: json['companyName']?.toString() ?? '',
+      symbol: json['symbol']?.toString() ?? '',
+      status: rawStatus == 'OPEN'
+          ? IpoStatus.open
+          : rawStatus == 'CLOSED' || rawStatus == 'ALLOTMENT_DONE'
+          ? IpoStatus.closed
+          : IpoStatus.upcoming,
+      marketPrice: _doubleValue(json['marketPrice'] ?? json['issuePrice']),
+      subscriptionPrice: _doubleValue(json['issuePrice']),
+      lotSize: _intValue(json['lotSize']),
+    );
+  }
+
   String get statusLabel {
     switch (status) {
       case IpoStatus.open:
@@ -156,4 +173,53 @@ class IpoApplication {
         return 'Cancelled';
     }
   }
+
+  factory IpoApplication.fromApiJson(Map<String, dynamic> json) {
+    final ipo = (json['ipo'] as Map?)?.cast<String, dynamic>() ?? {};
+    final rawStatus = json['status']?.toString().toUpperCase() ?? 'PENDING';
+    final rawPaymentStatus =
+        json['paymentStatus']?.toString().toUpperCase() ?? 'PENDING';
+    final allocatedQuantity = _intValue(json['allocatedQuantity']);
+    final subscriptionPrice =
+        _doubleValue(json['allocatedPrice'] ?? ipo['issuePrice']);
+    final allocatedAmount =
+        _doubleValue(json['allocatedAmount']) > 0
+            ? _doubleValue(json['allocatedAmount'])
+            : allocatedQuantity * subscriptionPrice;
+    final debt = (json['debt'] as Map?)?.cast<String, dynamic>();
+    final outstandingDebt = _doubleValue(debt?['amount']) -
+        _doubleValue(debt?['paidAmount']);
+    final paidAmount = allocatedAmount > 0
+        ? (allocatedAmount - (outstandingDebt > 0 ? outstandingDebt : 0))
+        : 0.0;
+
+    return IpoApplication(
+      id: json['id']?.toString() ?? '',
+      ipoId: (ipo['id'] ?? json['ipoId'] ?? '').toString(),
+      companyName: ipo['companyName']?.toString() ?? '',
+      symbol: ipo['symbol']?.toString() ?? '',
+      appliedQuantity: _intValue(json['quantity']),
+      allocatedQuantity: allocatedQuantity,
+      subscriptionPrice: subscriptionPrice,
+      paidAmount: rawPaymentStatus == 'PAID' ? allocatedAmount : paidAmount,
+      status: rawStatus == 'ALLOTTED'
+          ? rawPaymentStatus == 'PAID'
+          ? IpoApplicationStatus.completed
+          : IpoApplicationStatus.allocated
+          : rawStatus == 'REJECTED'
+          ? IpoApplicationStatus.notAllotted
+          : IpoApplicationStatus.applied,
+    );
+  }
+}
+
+int _intValue(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double _doubleValue(dynamic value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '') ?? 0;
 }

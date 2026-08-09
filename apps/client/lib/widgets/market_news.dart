@@ -34,10 +34,6 @@ class MarketNews extends StatelessWidget {
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
               ),
             ),
-            TextButton(
-              onPressed: () {},
-              child: const Text('View All'),
-            ),
           ],
         ),
         const SizedBox(height: 8),

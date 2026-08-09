@@ -46,6 +46,44 @@ export class BusinessService {
     return `HNW-${suffix}`;
   }
 
+  private normalizePositionCategory(value?: string) {
+    const normalized = value?.trim().toUpperCase();
+
+    if (normalized === 'IPO' || normalized === 'OTC') {
+      return normalized;
+    }
+
+    if (normalized === 'INSTITUTIONAL' || normalized === 'LIMIT_UP') {
+      return 'INSTITUTIONAL';
+    }
+
+    return null;
+  }
+
+  private positionCategory(instrument: {
+    symbol: string;
+    name: string;
+    category: string | null;
+  }) {
+    const text = [
+      instrument.symbol,
+      instrument.name,
+      instrument.category ?? '',
+    ]
+      .join(' ')
+      .toUpperCase();
+
+    if (text.includes('IPO')) {
+      return 'IPO';
+    }
+
+    if (text.includes('OTC') || text.includes('BLOCK')) {
+      return 'OTC';
+    }
+
+    return 'INSTITUTIONAL';
+  }
+
   async myDashboard(businessUserId: string) {
     const startOfToday = new Date();
     startOfToday.setHours(0, 0, 0, 0);
@@ -1220,6 +1258,134 @@ export class BusinessService {
       total,
       totalPages: Math.ceil(total / query.pageSize),
       data,
+    };
+  }
+
+  async myPositions(
+    businessUserId: string,
+    query: { category?: string; search?: string },
+  ) {
+    const category = this.normalizePositionCategory(query.category);
+    const search = query.search?.trim();
+
+    const positions = await this.prisma.position.findMany({
+      where: {
+        quantity: { gt: 0 },
+        account: {
+          user: {
+            role: UserRole.CLIENT,
+            assignedBusinessId: businessUserId,
+          },
+        },
+        ...(search
+          ? {
+              OR: [
+                { account: { accountNumber: { contains: search, mode: 'insensitive' } } },
+                { account: { user: { customerNo: { contains: search, mode: 'insensitive' } } } },
+                { account: { user: { fullName: { contains: search, mode: 'insensitive' } } } },
+                { account: { user: { phone: { contains: search, mode: 'insensitive' } } } },
+                { instrument: { symbol: { contains: search, mode: 'insensitive' } } },
+                { instrument: { name: { contains: search, mode: 'insensitive' } } },
+                { instrument: { category: { contains: search, mode: 'insensitive' } } },
+              ],
+            }
+          : {}),
+      },
+      include: {
+        account: {
+          select: {
+            accountNumber: true,
+            currency: true,
+            user: {
+              select: {
+                id: true,
+                customerNo: true,
+                fullName: true,
+                phone: true,
+                status: true,
+              },
+            },
+          },
+        },
+        instrument: {
+          include: {
+            quote: true,
+          },
+        },
+      },
+      orderBy: {
+        updatedAt: 'desc',
+      },
+    });
+
+    const rows = positions
+      .map((position) => {
+        const positionCategory = this.positionCategory(position.instrument);
+        const lastPrice =
+          position.instrument.quote?.lastPrice ?? new Prisma.Decimal(0);
+        const marketValue = lastPrice.mul(position.quantity).toDecimalPlaces(2);
+        const unrealizedPnl = lastPrice
+          .sub(position.averagePrice)
+          .mul(position.quantity)
+          .toDecimalPlaces(2);
+
+        return {
+          id: position.id,
+          category: positionCategory,
+          account: position.account,
+          instrument: {
+            id: position.instrument.id,
+            exchange: position.instrument.exchange,
+            symbol: position.instrument.symbol,
+            name: position.instrument.name,
+            logoUrl: position.instrument.logoUrl,
+            category: position.instrument.category,
+            currency: position.instrument.currency,
+          },
+          quantity: position.quantity,
+          frozenQuantity: position.frozenQuantity,
+          availableQuantity: position.quantity - position.frozenQuantity,
+          averagePrice: position.averagePrice.toFixed(4),
+          lastPrice: lastPrice.toFixed(4),
+          marketValue: marketValue.toFixed(2),
+          unrealizedPnl: unrealizedPnl.toFixed(2),
+          realizedPnl: position.realizedPnl.toFixed(2),
+          updatedAt: position.updatedAt,
+        };
+      })
+      .filter((row) => !category || row.category === category);
+
+    const summary = rows.reduce(
+      (total, row) => {
+        total.quantity += row.quantity;
+        total.marketValue = total.marketValue.add(row.marketValue);
+        total.unrealizedPnl = total.unrealizedPnl.add(row.unrealizedPnl);
+        total[row.category as 'INSTITUTIONAL' | 'IPO' | 'OTC'] += 1;
+        return total;
+      },
+      {
+        quantity: 0,
+        marketValue: new Prisma.Decimal(0),
+        unrealizedPnl: new Prisma.Decimal(0),
+        INSTITUTIONAL: 0,
+        IPO: 0,
+        OTC: 0,
+      },
+    );
+
+    return {
+      summary: {
+        count: rows.length,
+        quantity: summary.quantity,
+        marketValue: summary.marketValue.toFixed(2),
+        unrealizedPnl: summary.unrealizedPnl.toFixed(2),
+        categories: {
+          INSTITUTIONAL: summary.INSTITUTIONAL,
+          IPO: summary.IPO,
+          OTC: summary.OTC,
+        },
+      },
+      data: rows,
     };
   }
 

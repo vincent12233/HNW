@@ -164,6 +164,24 @@ export class BusinessController {
     return this.businessService.myTrades(req.user.userId, query);
   }
 
+  @Get('my-positions')
+  @Roles(UserRole.BUSINESS)
+  myPositions(
+    @Req()
+    req: any,
+
+    @Query('category')
+    category?: string,
+
+    @Query('search')
+    search?: string,
+  ) {
+    return this.businessService.myPositions(req.user.userId, {
+      category,
+      search,
+    });
+  }
+
   // ===============================
   // 我的客户
   // ===============================

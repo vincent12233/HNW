@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AppConfig {
-  static const String appName = 'India Trading';
+  static const String appName = 'India Trading App';
   static const String shortName = 'IT';
   static const String slogan = 'Professional. Fast. Simple.';
   static const String apiBaseUrl = String.fromEnvironment(

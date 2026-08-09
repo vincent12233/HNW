@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../models/stock_quote.dart';
+import 'stock_logo.dart';
 
 class MostActive extends StatelessWidget {
   const MostActive({super.key, required this.stocks, required this.onStockTap});
@@ -96,16 +97,7 @@ class MostActive extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            CircleAvatar(
-                              radius: 19,
-                              backgroundColor: const Color(0xFFE8EEFA),
-                              child: Text(
-                                stock.symbol.substring(0, 1),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
+                            StockLogo(symbol: stock.symbol, size: 38),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(

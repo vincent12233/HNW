@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../app_config.dart';
 import '../../models/ipo.dart';
 import '../../utils/number_formatters.dart';
+import '../stock_logo.dart';
 
 class IpoTab extends StatefulWidget {
   const IpoTab({
@@ -120,23 +121,7 @@ class _IpoTabState extends State<IpoTab> {
             children: [
               Row(
                 children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE8EEFA),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      ipo.symbol.substring(0, 1),
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppConfig.primaryColor,
-                      ),
-                    ),
-                  ),
+                  StockLogo(symbol: ipo.symbol, size: 46),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

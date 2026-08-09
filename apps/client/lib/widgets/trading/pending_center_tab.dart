@@ -4,6 +4,7 @@ import '../../app_config.dart';
 import '../../models/ipo.dart';
 import '../../models/pending_order.dart';
 import '../../utils/number_formatters.dart';
+import '../stock_logo.dart';
 import 'pending_orders_tab.dart';
 
 class PendingCenterTab extends StatefulWidget {
@@ -118,16 +119,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFFE8EEFA),
-                    child: Text(
-                      application.symbol.substring(0, 1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppConfig.primaryColor,
-                      ),
-                    ),
-                  ),
+                  StockLogo(symbol: application.symbol, size: 42),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

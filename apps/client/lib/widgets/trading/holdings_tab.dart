@@ -4,6 +4,7 @@ import '../../app_config.dart';
 import '../../models/portfolio_position.dart';
 import '../../models/stock_quote.dart';
 import '../../utils/number_formatters.dart';
+import '../stock_logo.dart';
 
 class HoldingsTab extends StatelessWidget {
   const HoldingsTab({
@@ -94,13 +95,7 @@ class HoldingsTab extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      CircleAvatar(
-                        backgroundColor: const Color(0xFFE8EEFA),
-                        child: Text(
-                          position.symbol.substring(0, 1),
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                      ),
+                      StockLogo(symbol: position.symbol, size: 42),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(

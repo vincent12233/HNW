@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/stock_quote.dart';
 import '../utils/number_formatters.dart';
+import 'stock_logo.dart';
 
 class StockListTile extends StatelessWidget {
   const StockListTile({
@@ -28,14 +29,7 @@ class StockListTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 22,
-              backgroundColor: const Color(0xFFE8EEFA),
-              child: Text(
-                stock.symbol.substring(0, 1),
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
+            StockLogo(symbol: stock.symbol, size: 44),
             const SizedBox(width: 12),
             Expanded(
               child: Column(

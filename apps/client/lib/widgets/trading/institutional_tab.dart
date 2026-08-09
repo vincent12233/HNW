@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/institutional_opportunity.dart';
 import '../../utils/number_formatters.dart';
+import '../stock_logo.dart';
 
 class InstitutionalTab extends StatelessWidget {
   const InstitutionalTab({super.key, required this.stocks, this.onOpen});
@@ -59,16 +59,7 @@ class InstitutionalTab extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFFE8EEFA),
-                    child: Text(
-                      stock.symbol.substring(0, 1),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppConfig.primaryColor,
-                      ),
-                    ),
-                  ),
+                  StockLogo(symbol: stock.symbol, size: 42),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(

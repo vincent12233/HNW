@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/stock_quote.dart';
 import '../utils/number_formatters.dart';
+import 'stock_logo.dart';
 
 class TrendingStocks extends StatelessWidget {
   const TrendingStocks({
@@ -91,16 +92,7 @@ class TrendingStocks extends StatelessWidget {
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                CircleAvatar(
-                                  radius: 21,
-                                  backgroundColor: const Color(0xFFE8EEFA),
-                                  child: Text(
-                                    stock.symbol.substring(0, 1),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
+                                StockLogo(symbol: stock.symbol, size: 42),
                                 const SizedBox(width: 12),
                                 Expanded(
                                   child: Column(

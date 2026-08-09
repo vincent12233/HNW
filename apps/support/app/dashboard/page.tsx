@@ -8,6 +8,8 @@ import { api } from "@/lib/api";
 type Conversation = {
   id: string;
   tags?: string[];
+  status?: string;
+  createdAt?: string;
   updatedAt: string;
   client?: {
     fullName?: string | null;
@@ -27,8 +29,39 @@ type SupportMessage = {
   createdAt: string;
 };
 
+const presetTags = ["入金咨询", "提现问题", "KYC", "交易问题", "账户问题", "紧急", "已跟进"];
+
+const quickReplies = [
+  "您好，客户入金请先确认付款凭证和到账信息，财务确认后会为账户上分。",
+  "您的提现申请已收到，请提供提现订单号，财务会核对并处理。",
+  "请上传清晰的 Aadhaar 或 PAN 文件，业务员会尽快审核 KYC。",
+  "请提供手机号、客户姓名和问题截图，我们马上为您核查。",
+];
+
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString("zh-CN") : "-";
+}
+
+function translateMessage(content: string) {
+  const lower = content.toLowerCase();
+
+  if (lower.includes("deposit") || lower.includes("recharge")) {
+    return "客户在咨询入金。建议回复：请提供付款凭证，客服确认后转财务上分。";
+  }
+
+  if (lower.includes("withdraw")) {
+    return "客户在咨询提现。建议回复：请提供提现订单号，财务会审核处理。";
+  }
+
+  if (lower.includes("kyc") || lower.includes("aadhaar") || lower.includes("pan")) {
+    return "客户在咨询 KYC。建议回复：请上传清晰的 Aadhaar 或 PAN 文件等待审核。";
+  }
+
+  if (/[\u4e00-\u9fff]/.test(content)) {
+    return "检测到中文消息。可根据客户内容回复英文，或转交会英语的客服处理。";
+  }
+
+  return "暂未匹配到内置翻译。后续可接入真实翻译 API，用于自动中英互译。";
 }
 
 export default function Dashboard() {
@@ -37,6 +70,9 @@ export default function Dashboard() {
   const [selected, setSelected] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [content, setContent] = useState("");
+  const [keyword, setKeyword] = useState("");
+  const [tagInput, setTagInput] = useState("");
+  const [translated, setTranslated] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -47,6 +83,28 @@ export default function Dashboard() {
     const phone = selected.client?.phone ? `+91 ${selected.client.phone}` : "-";
     return `${name} / ${phone}`;
   }, [selected]);
+
+  const filteredConversations = useMemo(() => {
+    const query = keyword.trim().toLowerCase();
+    if (!query) return conversations;
+
+    return conversations.filter((item) => {
+      const haystack = [
+        item.client?.fullName,
+        item.client?.phone,
+        item.client?.customerNo,
+        item.messages?.[0]?.content,
+        ...(item.tags || []),
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(query);
+    });
+  }, [conversations, keyword]);
+
+  const selectedTags = useMemo(() => selected?.tags || [], [selected]);
 
   async function loadConversations() {
     setLoading(true);
@@ -82,6 +140,41 @@ export default function Dashboard() {
     const response = await api(`/support/conversations/${conversationId}/messages`);
     const data = await response.json();
     setMessages(Array.isArray(data) ? data : data.data || []);
+  }
+
+  async function updateTags(nextTags: string[]) {
+    if (!selected) return;
+
+    const normalizedTags = Array.from(
+      new Set(nextTags.map((tag) => tag.trim()).filter(Boolean).map((tag) => tag.slice(0, 24))),
+    ).slice(0, 12);
+
+    const response = await api(`/support/conversations/${selected.id}/tags`, {
+      method: "POST",
+      body: JSON.stringify({ tags: normalizedTags }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json();
+      setError(Array.isArray(data.message) ? data.message.join("，") : data.message || "标签更新失败");
+      return;
+    }
+
+    const nextSelected = { ...selected, tags: normalizedTags };
+    setSelected(nextSelected);
+    setConversations((items) =>
+      items.map((item) => (item.id === selected.id ? { ...item, tags: normalizedTags } : item)),
+    );
+  }
+
+  async function addTag(tag: string) {
+    if (!tag.trim()) return;
+    await updateTags([...selectedTags, tag]);
+    setTagInput("");
+  }
+
+  async function removeTag(tag: string) {
+    await updateTags(selectedTags.filter((item) => item !== tag));
   }
 
   async function sendMessage() {
@@ -143,6 +236,12 @@ export default function Dashboard() {
         {error && <div className="m-3 rounded bg-red-50 px-3 py-2 text-sm text-red-600">{error}</div>}
 
         <div className="p-3">
+          <input
+            className="mb-2 w-full rounded border border-slate-300 px-3 py-2 text-sm outline-none focus:border-blue-600"
+            placeholder="搜索客户、手机号、编号、标签或消息"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+          />
           <button
             className="w-full rounded border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50"
             onClick={loadConversations}
@@ -153,13 +252,13 @@ export default function Dashboard() {
         </div>
 
         <div className="flex-1 overflow-y-auto px-3 pb-3">
-          {conversations.length === 0 && (
+          {filteredConversations.length === 0 && (
             <div className="rounded border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
               暂无会话
             </div>
           )}
 
-          {conversations.map((conversation) => (
+          {filteredConversations.map((conversation) => (
             <button
               key={conversation.id}
               onClick={() => {
@@ -206,7 +305,82 @@ export default function Dashboard() {
             <h2 className="font-bold text-slate-900">{customerTitle}</h2>
             <p className="text-xs text-slate-500">标签只在客服后台显示，客户不可见</p>
           </div>
+          <button
+            className="rounded border border-slate-300 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+            disabled={!selected}
+            onClick={() => selected && loadMessages(selected.id)}
+          >
+            刷新消息
+          </button>
         </header>
+
+        {selected && (
+          <div className="border-b border-slate-200 bg-white px-6 py-4">
+            <div className="grid grid-cols-4 gap-3 text-sm">
+              <div>
+                <p className="text-xs text-slate-500">客户姓名</p>
+                <p className="font-medium text-slate-900">{selected.client?.fullName || "未命名客户"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">手机号</p>
+                <p className="font-medium text-slate-900">
+                  {selected.client?.phone ? `+91 ${selected.client.phone}` : "-"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">客户编号</p>
+                <p className="font-medium text-slate-900">{selected.client?.customerNo || "-"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-slate-500">更新时间</p>
+                <p className="font-medium text-slate-900">{formatDate(selected.updatedAt)}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center gap-2">
+              <span className="text-sm font-medium text-slate-700">内部标签</span>
+              {selectedTags.map((tag) => (
+                <button
+                  key={tag}
+                  className={`rounded px-2 py-1 text-xs ${
+                    tag === "紧急" ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"
+                  }`}
+                  onClick={() => removeTag(tag)}
+                  title="点击移除标签"
+                >
+                  {tag} ×
+                </button>
+              ))}
+              {presetTags
+                .filter((tag) => !selectedTags.includes(tag))
+                .map((tag) => (
+                  <button
+                    key={tag}
+                    className="rounded border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50"
+                    onClick={() => addTag(tag)}
+                  >
+                    + {tag}
+                  </button>
+                ))}
+              <input
+                className="w-40 rounded border border-slate-300 px-2 py-1 text-xs outline-none focus:border-blue-600"
+                placeholder="自定义备注标签"
+                value={tagInput}
+                onChange={(event) => setTagInput(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addTag(tagInput);
+                }}
+              />
+              <button
+                className="rounded bg-slate-900 px-2 py-1 text-xs text-white disabled:opacity-50"
+                disabled={!tagInput.trim()}
+                onClick={() => addTag(tagInput)}
+              >
+                添加
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {!selected && (
@@ -227,6 +401,38 @@ export default function Dashboard() {
                   >
                     <div className="mb-1 text-xs opacity-70">{isClient ? "客户" : "客服"} · {formatDate(item.createdAt)}</div>
                     <p className="whitespace-pre-wrap">{item.content}</p>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        className={`rounded px-2 py-1 text-xs ${
+                          isClient ? "bg-slate-100 text-slate-600" : "bg-blue-500 text-white"
+                        }`}
+                        onClick={() =>
+                          setTranslated((current) => ({
+                            ...current,
+                            [item.id]: current[item.id] ? "" : translateMessage(item.content),
+                          }))
+                        }
+                      >
+                        翻译辅助
+                      </button>
+                      {isClient && (
+                        <button
+                          className="rounded bg-slate-100 px-2 py-1 text-xs text-slate-600"
+                          onClick={() => setContent(`您好，关于“${item.content.slice(0, 30)}”，我们正在为您核查。`)}
+                        >
+                          引用回复
+                        </button>
+                      )}
+                    </div>
+                    {translated[item.id] && (
+                      <p
+                        className={`mt-2 rounded px-3 py-2 text-xs ${
+                          isClient ? "bg-amber-50 text-amber-700" : "bg-white/15 text-white"
+                        }`}
+                      >
+                        {translated[item.id]}
+                      </p>
+                    )}
                   </div>
                 </div>
               );
@@ -234,6 +440,18 @@ export default function Dashboard() {
         </div>
 
         <footer className="bg-white border-t border-slate-200 p-4">
+          <div className="mb-3 flex flex-wrap gap-2">
+            {quickReplies.map((reply) => (
+              <button
+                key={reply}
+                className="rounded border border-slate-300 px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                disabled={!selected}
+                onClick={() => setContent(reply)}
+              >
+                {reply.slice(0, 18)}...
+              </button>
+            ))}
+          </div>
           <div className="flex gap-3">
             <textarea
               className="min-h-16 flex-1 rounded border border-slate-300 px-3 py-2 outline-none focus:border-blue-600 disabled:bg-slate-100"

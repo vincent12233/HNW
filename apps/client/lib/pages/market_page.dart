@@ -24,6 +24,7 @@ import '../widgets/market_status_card.dart';
 import '../widgets/most_active.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_list_tile.dart';
+import '../widgets/stock_logo.dart';
 import '../widgets/trending_stocks.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
@@ -2170,10 +2171,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    backgroundColor: const Color(0xFFE8EEFA),
-                    child: Text(position.symbol.substring(0, 1)),
-                  ),
+                  StockLogo(symbol: position.symbol, size: 42),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
@@ -2747,6 +2745,7 @@ class StockSearchDelegate extends SearchDelegate<StockQuote?> {
             : AppConfig.neutralColor;
 
         return ListTile(
+          leading: StockLogo(symbol: stock.symbol, size: 40),
           title: Text(
             stock.symbol,
             style: const TextStyle(fontWeight: FontWeight.w700),

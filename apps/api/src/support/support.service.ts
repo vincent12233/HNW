@@ -6,10 +6,14 @@ import {
 } from '@nestjs/common';
 import { UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class SupportService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   async createConversation(clientId: string) {
     const existing = await this.prisma.supportConversation.findFirst({
@@ -108,6 +112,7 @@ export class SupportService {
   async updateMeta(
     conversationId: string,
     body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
+    actorId?: string,
   ) {
     const updated = await this.prisma.supportConversation.updateMany({
       where: {
@@ -126,11 +131,22 @@ export class SupportService {
       throw new NotFoundException('未找到客服会话');
     }
 
-    return this.prisma.supportConversation.findUnique({
+    const conversation = await this.prisma.supportConversation.findUnique({
       where: {
         id: conversationId,
       },
     });
+
+    await this.auditService.createLog({
+      actorId,
+      action: 'SUPPORT_CONVERSATION_META_UPDATE',
+      resource: 'support_conversation',
+      resourceId: conversationId,
+      description: '更新客服会话备注/优先级/状态',
+      metadata: body,
+    });
+
+    return conversation;
   }
 
   async sendMessage(

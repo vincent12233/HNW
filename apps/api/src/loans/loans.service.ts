@@ -2,10 +2,14 @@ import { BadRequestException, ForbiddenException, Injectable, NotFoundException 
 import { Prisma } from '../generated/prisma/client';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class LoansService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
+  ) {}
 
   private generateOrderNo() {
     const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -105,7 +109,7 @@ export class LoansService {
       throw new ForbiddenException('只能为自己名下客户创建贷款申请');
     }
 
-    return this.prisma.loanApplication.create({
+    const loan = await this.prisma.loanApplication.create({
       data: {
         orderNo: this.generateOrderNo(),
         accountId: account.id,
@@ -116,6 +120,17 @@ export class LoansService {
       },
       include: this.includeCustomer(),
     });
+
+    await this.auditService.createLog({
+      actorId: userId,
+      action: 'LOAN_CREATE',
+      resource: 'loan',
+      resourceId: loan.id,
+      description: `创建贷款申请 ${loan.orderNo}`,
+      metadata: { orderNo: loan.orderNo, amount },
+    });
+
+    return loan;
   }
 
   async approve(
@@ -135,7 +150,7 @@ export class LoansService {
     if (!loan) throw new NotFoundException('贷款申请不存在');
     if (loan.status !== LoanStatus.PENDING) throw new BadRequestException('只有待审核贷款可以批准');
 
-    return this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       const before = loan.account.cashBalance;
       const after = before.add(approvedAmount);
 
@@ -177,6 +192,17 @@ export class LoansService {
         include: this.includeCustomer(),
       });
     });
+
+    await this.auditService.createLog({
+      actorId: operatorId,
+      action: 'LOAN_APPROVE_AUTO_CREDIT',
+      resource: 'loan',
+      resourceId: result.id,
+      description: `贷款审核通过并自动到账 ${result.orderNo}`,
+      metadata: { orderNo: result.orderNo, approvedAmount },
+    });
+
+    return result;
   }
 
   async reject(id: string, operatorId: string, note?: string) {
@@ -184,7 +210,7 @@ export class LoansService {
     if (!loan) throw new NotFoundException('贷款申请不存在');
     if (loan.status !== LoanStatus.PENDING) throw new BadRequestException('只有待审核贷款可以拒绝');
 
-    return this.prisma.loanApplication.update({
+    const result = await this.prisma.loanApplication.update({
       where: { id },
       data: {
         status: LoanStatus.REJECTED,
@@ -194,6 +220,17 @@ export class LoansService {
       },
       include: this.includeCustomer(),
     });
+
+    await this.auditService.createLog({
+      actorId: operatorId,
+      action: 'LOAN_REJECT',
+      resource: 'loan',
+      resourceId: result.id,
+      description: `拒绝贷款申请 ${result.orderNo}`,
+      metadata: { orderNo: result.orderNo, note },
+    });
+
+    return result;
   }
 
   async disburse(id: string, operatorId: string, note?: string) {
@@ -262,7 +299,7 @@ export class LoansService {
     const outstanding = Number(loan.outstandingAmount);
     const nextOutstanding = Math.max(outstanding - repayment, 0);
 
-    return this.prisma.loanApplication.update({
+    const result = await this.prisma.loanApplication.update({
       where: { id },
       data: {
         outstandingAmount: nextOutstanding,
@@ -273,6 +310,17 @@ export class LoansService {
       },
       include: this.includeCustomer(),
     });
+
+    await this.auditService.createLog({
+      actorId: operatorId,
+      action: 'LOAN_REPAY_RECORD',
+      resource: 'loan',
+      resourceId: result.id,
+      description: `登记贷款还款 ${result.orderNo}`,
+      metadata: { orderNo: result.orderNo, repayment, outstandingAmount: nextOutstanding },
+    });
+
+    return result;
   }
 
   async markOverdue(id: string) {
@@ -285,12 +333,22 @@ export class LoansService {
       throw new BadRequestException('当前贷款状态不能标记逾期');
     }
 
-    return this.prisma.loanApplication.update({
+    const result = await this.prisma.loanApplication.update({
       where: { id },
       data: {
         status: LoanStatus.OVERDUE,
       },
       include: this.includeCustomer(),
     });
+
+    await this.auditService.createLog({
+      action: 'LOAN_MARK_OVERDUE',
+      resource: 'loan',
+      resourceId: result.id,
+      description: `标记贷款逾期 ${result.orderNo}`,
+      metadata: { orderNo: result.orderNo },
+    });
+
+    return result;
   }
 }

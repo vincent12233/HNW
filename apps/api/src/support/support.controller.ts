@@ -47,10 +47,11 @@ export class SupportController {
   @Post('conversations/:id/meta')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
   updateMeta(
+    @Req() req: any,
     @Param('id') id: string,
     @Body() body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
   ) {
-    return this.supportService.updateMeta(id, body);
+    return this.supportService.updateMeta(id, body, req.user.userId);
   }
 
   @Get('conversations/:id/messages')

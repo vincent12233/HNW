@@ -16,6 +16,7 @@ import { ListAdminOrdersQueryDto } from '../orders/dto/list-admin-orders-query.d
 import { ListAdminTradesQueryDto } from '../orders/dto/list-admin-trades-query.dto';
 import { IpoService } from '../ipo/ipo.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 type CreateBusinessInput = {
   password: string;
@@ -30,6 +31,7 @@ export class BusinessService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ipoService: IpoService,
+    private readonly auditService: AuditService,
   ) {}
 
   private generateInviteCode() {
@@ -839,7 +841,7 @@ export class BusinessService {
       throw new NotFoundException('客户不存在或不属于当前业务员');
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: {
         id: customerId,
       },
@@ -863,6 +865,17 @@ export class BusinessService {
         },
       },
     });
+
+    await this.auditService.createLog({
+      actorId: businessUserId,
+      action: 'BUSINESS_CUSTOMER_STATUS_UPDATE',
+      resource: 'customer',
+      resourceId: customerId,
+      description: `业务员更新客户账户状态为 ${status}`,
+      metadata: { status },
+    });
+
+    return updated;
   }
 
   async myIpoApplications(businessUserId: string) {
@@ -953,7 +966,18 @@ export class BusinessService {
       throw new NotFoundException('IPO 申请不存在或不属于当前业务员');
     }
 
-    return this.ipoService.allocate(applicationId, quantity, price);
+    const result = await this.ipoService.allocate(applicationId, quantity, price);
+
+    await this.auditService.createLog({
+      actorId: businessUserId,
+      action: 'BUSINESS_IPO_ALLOCATE',
+      resource: 'ipo_application',
+      resourceId: applicationId,
+      description: `业务员分配 IPO 申请`,
+      metadata: { quantity, price, debtAmount: result.debtAmount },
+    });
+
+    return result;
   }
 
   async myOrders(businessUserId: string, query: ListAdminOrdersQueryDto) {

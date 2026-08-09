@@ -11,5 +11,6 @@ import { AdminIpoController } from './admin-ipo.controller';
   imports: [PrismaModule, AuthModule],
   providers: [IpoService, RolesGuard],
   controllers: [AdminIpoController, ClientIpoController],
+  exports: [IpoService],
 })
 export class IpoModule {}

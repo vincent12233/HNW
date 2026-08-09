@@ -33,6 +33,16 @@ type BusinessDashboard = {
   todayCustomers: number;
   pendingDeposits: number;
   pendingWithdrawals: number;
+  pendingKyc: number;
+  totalDepositAmount: string;
+  totalDepositCount: number;
+  totalWithdrawalAmount: string;
+  totalWithdrawalCount: number;
+  pendingIpoApplications: number;
+  ipoDebtCustomers: number;
+  ipoDebtAmount: number;
+  loanOutstandingAmount: string;
+  loanOutstandingCount: number;
   totalAssets: number;
   unusedInviteCodes: number;
 };
@@ -252,7 +262,19 @@ export default function DashboardPage() {
                 <MetricCard title="客户资产" value={formatMoney(businessData?.totalAssets ?? 0)} icon={<WalletOutlined />} tone="#7c3aed" />
               </Col>
               <Col xs={24} md={8}>
+                <MetricCard title="待 KYC" value={businessData?.pendingKyc ?? 0} icon={<SafetyCertificateOutlined />} tone="#0ea5e9" />
+              </Col>
+              <Col xs={24} md={8}>
                 <MetricCard title="待处理提现" value={businessData?.pendingWithdrawals ?? 0} icon={<BankOutlined />} tone="#dc2626" />
+              </Col>
+              <Col xs={24} md={8}>
+                <MetricCard title="IPO 待分配" value={businessData?.pendingIpoApplications ?? 0} icon={<StockOutlined />} tone="#2563eb" />
+              </Col>
+              <Col xs={24} md={8}>
+                <MetricCard title="IPO 欠款" value={formatMoney(Number(businessData?.ipoDebtAmount ?? 0))} icon={<WarningOutlined />} tone="#ef4444" />
+              </Col>
+              <Col xs={24} md={8}>
+                <MetricCard title="贷款未还" value={formatMoney(Number(businessData?.loanOutstandingAmount ?? 0))} icon={<DollarOutlined />} tone="#ea580c" />
               </Col>
               <Col xs={24} md={8}>
                 <MetricCard title="未使用邀请码" value={businessData?.unusedInviteCodes ?? 0} icon={<GiftOutlined />} tone="#f59e0b" />
@@ -268,10 +290,10 @@ export default function DashboardPage() {
                   <Statistic title="24小时失败登录" value={businessRisk?.failedLogin24h ?? 0} />
                 </Col>
                 <Col xs={24} md={8}>
-                  <Statistic title="共享 IP 客户" value={businessRisk?.sharedIpCustomers ?? 0} />
+                  <Statistic title="客户累计入金" value={formatMoney(Number(businessData?.totalDepositAmount ?? 0))} />
                 </Col>
                 <Col xs={24} md={8}>
-                  <Statistic title="共享设备客户" value={businessRisk?.sharedDeviceCustomers ?? 0} />
+                  <Statistic title="客户累计提现" value={formatMoney(Number(businessData?.totalWithdrawalAmount ?? 0))} />
                 </Col>
               </Row>
             </Card>

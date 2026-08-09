@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { UserRole } from '../generated/prisma/enums';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
 import { UpdateIpoStatusDto } from './dto/update-ipo-status.dto';
@@ -100,6 +101,80 @@ export class IpoService {
         updatedAt: ipo.updatedAt,
       })),
     };
+  }
+
+  async listDebts(userId: string, role: UserRole, search?: string) {
+    const keyword = search?.trim();
+    const debts = await this.prisma.ipoDebt.findMany({
+      where: {
+        ...(role === UserRole.BUSINESS
+          ? {
+              account: {
+                user: {
+                  assignedBusinessId: userId,
+                },
+              },
+            }
+          : {}),
+        ...(keyword
+          ? {
+              OR: [
+                { account: { accountNumber: { contains: keyword, mode: 'insensitive' } } },
+                { account: { user: { fullName: { contains: keyword, mode: 'insensitive' } } } },
+                { account: { user: { phone: { contains: keyword, mode: 'insensitive' } } } },
+                { account: { user: { customerNo: { contains: keyword, mode: 'insensitive' } } } },
+                { ipoApplication: { ipo: { symbol: { contains: keyword, mode: 'insensitive' } } } },
+                { ipoApplication: { ipo: { companyName: { contains: keyword, mode: 'insensitive' } } } },
+              ],
+            }
+          : {}),
+      },
+      include: {
+        account: {
+          select: {
+            accountNumber: true,
+            user: {
+              select: {
+                customerNo: true,
+                fullName: true,
+                phone: true,
+              },
+            },
+          },
+        },
+        ipoApplication: {
+          include: {
+            ipo: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return debts.map((debt) => ({
+      id: debt.id,
+      amount: debt.amount.toFixed(2),
+      paidAmount: debt.paidAmount.toFixed(2),
+      outstandingAmount: debt.amount.sub(debt.paidAmount).toFixed(2),
+      status: debt.status,
+      createdAt: debt.createdAt,
+      updatedAt: debt.updatedAt,
+      account: debt.account,
+      application: {
+        id: debt.ipoApplication.id,
+        allocatedQuantity: debt.ipoApplication.allocatedQuantity,
+        allocatedPrice: debt.ipoApplication.allocatedPrice?.toFixed(2) ?? null,
+        paymentStatus: debt.ipoApplication.paymentStatus,
+        status: debt.ipoApplication.status,
+      },
+      ipo: {
+        symbol: debt.ipoApplication.ipo.symbol,
+        companyName: debt.ipoApplication.ipo.companyName,
+        issuePrice: debt.ipoApplication.ipo.issuePrice.toFixed(2),
+      },
+    }));
   }
 
   async findOne(id: string) {

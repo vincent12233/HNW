@@ -83,6 +83,7 @@ model Account {
   depositRequests    DepositRequest[]
   ipoApplications    IpoApplication[]
   transactions       AccountTransaction[]
+  loanApplications    LoanApplication[]
   user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
   ipoDebts           IpoDebt[]
   orders             Order[]
@@ -324,14 +325,17 @@ model LoginAudit {
 }
 
 model SupportConversation {
-  id        String           @id @default(uuid())
-  clientId  String
-  status    SupportStatus    @default(OPEN)
-  tags      String[]         @default([])
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
-  client    User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  messages  SupportMessage[]
+  id          String           @id @default(uuid())
+  clientId    String
+  status      SupportStatus    @default(OPEN)
+  tags        String[]         @default([])
+  internalNote String?
+  priority    String           @default("普通")
+  assignedToId String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  client      User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  messages    SupportMessage[]
 
   @@index([clientId])
   @@index([status])
@@ -480,6 +484,8 @@ enum AccountTransactionType {
   ORDER_RELEASE
   TRADE_SETTLEMENT
   IPO_REPAYMENT
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT
 }
 
 enum AccountTransactionStatus {
@@ -579,4 +585,39 @@ enum DepositStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+model LoanApplication {
+  id             String     @id @default(uuid())
+  orderNo        String     @unique
+  accountId      String
+  requestedAmount Decimal   @db.Decimal(18, 2)
+  approvedAmount  Decimal?  @db.Decimal(18, 2)
+  outstandingAmount Decimal @default(0) @db.Decimal(18, 2)
+  interestRate   Decimal    @default(0) @db.Decimal(8, 2)
+  dueDate        DateTime?
+  status         LoanStatus @default(PENDING)
+  note           String?
+  approvedById   String?
+  approvedAt     DateTime?
+  disbursedAt    DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  account        Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([orderNo])
+  @@index([status])
+  @@map("loan_applications")
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISBURSED
+  PARTIAL_REPAID
+  REPAID
+  OVERDUE
 }

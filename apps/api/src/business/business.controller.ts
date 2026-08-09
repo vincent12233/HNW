@@ -16,6 +16,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole, UserStatus } from '../generated/prisma/enums';
 import { ListAdminOrdersQueryDto } from '../orders/dto/list-admin-orders-query.dto';
 import { ListAdminTradesQueryDto } from '../orders/dto/list-admin-trades-query.dto';
+import { AllocateIpoDto } from '../ipo/dto/allocate-ipo.dto';
 
 import { BusinessService } from './business.service';
 
@@ -128,6 +129,27 @@ export class BusinessController {
     query: ListAdminOrdersQueryDto,
   ) {
     return this.businessService.myOrders(req.user.userId, query);
+  }
+
+  @Get('my-ipo-applications')
+  @Roles(UserRole.BUSINESS)
+  myIpoApplications(@Req() req: any) {
+    return this.businessService.myIpoApplications(req.user.userId);
+  }
+
+  @Patch('my-ipo-applications/:applicationId/allocate')
+  @Roles(UserRole.BUSINESS)
+  allocateMyIpoApplication(
+    @Req() req: any,
+    @Param('applicationId') applicationId: string,
+    @Body() dto: AllocateIpoDto,
+  ) {
+    return this.businessService.allocateMyIpoApplication(
+      req.user.userId,
+      applicationId,
+      dto.quantity,
+      dto.price,
+    );
   }
 
   @Get('my-trades')

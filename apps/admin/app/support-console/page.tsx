@@ -39,6 +39,8 @@ type Conversation = {
   id: string;
   status: string;
   tags?: string[];
+  internalNote?: string | null;
+  priority?: string | null;
   createdAt: string;
   updatedAt: string;
   client?: {
@@ -154,6 +156,16 @@ export default function SupportConsolePage() {
     message.success("标签已更新");
   }
 
+  async function updateMeta(patch: Partial<Pick<Conversation, "internalNote" | "priority" | "status">>) {
+    if (!selected) return;
+
+    await api.post(`/support/conversations/${selected.id}/meta`, patch);
+    const next = { ...selected, ...patch };
+    setSelected(next);
+    setConversations((items) => items.map((item) => (item.id === selected.id ? { ...item, ...patch } : item)));
+    message.success("会话信息已更新");
+  }
+
   async function sendMessage() {
     if (!selected || !content.trim()) return;
 
@@ -262,6 +274,39 @@ export default function SupportConsolePage() {
                   placeholder="选择或输入自定义备注标签"
                   style={{ width: "100%" }}
                   options={supportTags.map((tag) => ({ value: tag, label: tag }))}
+                />
+
+                <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
+                  <Space wrap>
+                    <Select
+                      value={selected.priority || "普通"}
+                      style={{ width: 130 }}
+                      onChange={(priority) => updateMeta({ priority })}
+                      options={[
+                        { value: "普通", label: "普通" },
+                        { value: "重要", label: "重要" },
+                        { value: "紧急", label: "紧急" },
+                      ]}
+                    />
+                    <Tag color={selected.status === "OPEN" ? "green" : "default"}>
+                      {selected.status === "OPEN" ? "进行中" : "已关闭"}
+                    </Tag>
+                  </Space>
+                  <Space>
+                    <Button size="small" onClick={() => updateMeta({ status: "OPEN" })}>
+                      重开
+                    </Button>
+                    <Button size="small" danger onClick={() => updateMeta({ status: "CLOSED" })}>
+                      关闭
+                    </Button>
+                  </Space>
+                </Space>
+
+                <Input.TextArea
+                  value={selected.internalNote || ""}
+                  placeholder="内部备注，客户不可见"
+                  autoSize={{ minRows: 2, maxRows: 3 }}
+                  onBlur={(event) => updateMeta({ internalNote: event.target.value })}
                 />
 
                 <Space wrap>

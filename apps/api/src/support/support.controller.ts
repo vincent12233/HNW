@@ -44,6 +44,15 @@ export class SupportController {
     return this.supportService.updateTags(id, body.tags || []);
   }
 
+  @Post('conversations/:id/meta')
+  @Roles(UserRole.SUPPORT, UserRole.ADMIN)
+  updateMeta(
+    @Param('id') id: string,
+    @Body() body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
+  ) {
+    return this.supportService.updateMeta(id, body);
+  }
+
   @Get('conversations/:id/messages')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN, UserRole.CLIENT)
   getMessages(@Req() req: any, @Param('id') id: string) {

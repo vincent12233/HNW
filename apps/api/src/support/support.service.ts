@@ -49,9 +49,6 @@ export class SupportService {
 
   async listOpenConversations() {
     return this.prisma.supportConversation.findMany({
-      where: {
-        status: 'OPEN',
-      },
       include: {
         client: {
           select: {
@@ -94,6 +91,34 @@ export class SupportService {
       },
       data: {
         tags: normalizedTags,
+      },
+    });
+
+    if (updated.count !== 1) {
+      throw new NotFoundException('未找到客服会话');
+    }
+
+    return this.prisma.supportConversation.findUnique({
+      where: {
+        id: conversationId,
+      },
+    });
+  }
+
+  async updateMeta(
+    conversationId: string,
+    body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
+  ) {
+    const updated = await this.prisma.supportConversation.updateMany({
+      where: {
+        id: conversationId,
+      },
+      data: {
+        ...(body.internalNote !== undefined
+          ? { internalNote: body.internalNote.trim().slice(0, 1000) }
+          : {}),
+        ...(body.priority ? { priority: body.priority.trim().slice(0, 16) } : {}),
+        ...(body.status ? { status: body.status } : {}),
       },
     });
 

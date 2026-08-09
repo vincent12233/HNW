@@ -5,6 +5,8 @@ import {
   Param,
   Patch,
   Post,
+  Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 
@@ -20,36 +22,47 @@ import { IpoService } from './ipo.service';
 
 @Controller('admin/ipo')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles('ADMIN')
 export class AdminIpoController {
   constructor(private readonly ipoService: IpoService) {}
 
   @Post()
+  @Roles('ADMIN')
   create(@Body() dto: CreateIpoDto) {
     return this.ipoService.create(dto);
   }
 
   @Get()
+  @Roles('ADMIN')
   list() {
     return this.ipoService.list();
   }
 
+  @Get('debts')
+  @Roles('ADMIN', 'FINANCE', 'BUSINESS')
+  listDebts(@Req() req: any, @Query('search') search?: string) {
+    return this.ipoService.listDebts(req.user.userId, req.user.role, search);
+  }
+
   @Get(':id')
+  @Roles('ADMIN')
   findOne(@Param('id') id: string) {
     return this.ipoService.findOne(id);
   }
 
   @Patch(':id/status')
+  @Roles('ADMIN')
   updateStatus(@Param('id') id: string, @Body() dto: UpdateIpoStatusDto) {
     return this.ipoService.updateStatus(id, dto);
   }
 
   @Patch(':id/instrument')
+  @Roles('ADMIN')
   setInstrument(@Param('id') id: string, @Body() dto: SetIpoInstrumentDto) {
     return this.ipoService.setInstrument(id, dto.instrumentId);
   }
 
   @Patch('application/:id/allocate')
+  @Roles('ADMIN')
   allocate(@Param('id') id: string, @Body() dto: AllocateIpoDto) {
     return this.ipoService.allocate(id, dto.quantity, dto.price);
   }

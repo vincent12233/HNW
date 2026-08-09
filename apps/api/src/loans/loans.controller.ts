@@ -1,0 +1,68 @@
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { LoanStatus, UserRole } from '../generated/prisma/enums';
+import { LoansService } from './loans.service';
+
+@Controller('loans')
+@UseGuards(JwtAuthGuard, RolesGuard)
+export class LoansController {
+  constructor(private readonly loansService: LoansService) {}
+
+  @Get()
+  @Roles(UserRole.ADMIN, UserRole.FINANCE, UserRole.BUSINESS)
+  list(@Req() req: any, @Query('search') search?: string, @Query('status') status?: LoanStatus) {
+    return this.loansService.list(req.user.userId, req.user.role, { search, status });
+  }
+
+  @Post()
+  @Roles(UserRole.ADMIN, UserRole.FINANCE, UserRole.BUSINESS)
+  create(
+    @Req() req: any,
+    @Body()
+    body: {
+      accountNumber: string;
+      amount: number;
+      interestRate?: number;
+      dueDate?: string;
+      note?: string;
+    },
+  ) {
+    return this.loansService.create(req.user.userId, req.user.role, body);
+  }
+
+  @Patch(':id/approve')
+  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  approve(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { approvedAmount: number; interestRate?: number; dueDate?: string; note?: string },
+  ) {
+    return this.loansService.approve(id, req.user.userId, body);
+  }
+
+  @Patch(':id/reject')
+  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  reject(@Req() req: any, @Param('id') id: string, @Body() body: { note?: string }) {
+    return this.loansService.reject(id, req.user.userId, body.note);
+  }
+
+  @Patch(':id/disburse')
+  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  disburse(@Req() req: any, @Param('id') id: string, @Body() body: { note?: string }) {
+    return this.loansService.disburse(id, req.user.userId, body.note);
+  }
+
+  @Patch(':id/repay')
+  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  repay(@Req() req: any, @Param('id') id: string, @Body() body: { amount: number; note?: string }) {
+    return this.loansService.repay(id, req.user.userId, body.amount, body.note);
+  }
+
+  @Patch(':id/overdue')
+  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  overdue(@Param('id') id: string) {
+    return this.loansService.markOverdue(id);
+  }
+}

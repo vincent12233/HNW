@@ -14,6 +14,7 @@ import {
 import { Prisma } from '../generated/prisma/client';
 import { ListAdminOrdersQueryDto } from '../orders/dto/list-admin-orders-query.dto';
 import { ListAdminTradesQueryDto } from '../orders/dto/list-admin-trades-query.dto';
+import { IpoService } from '../ipo/ipo.service';
 import { PrismaService } from '../prisma/prisma.service';
 
 type CreateBusinessInput = {
@@ -26,7 +27,10 @@ type CreateBusinessInput = {
 
 @Injectable()
 export class BusinessService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ipoService: IpoService,
+  ) {}
 
   private generateInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -49,6 +53,11 @@ export class BusinessService {
       todayCustomers,
       pendingDeposits,
       pendingWithdrawals,
+      depositTotals,
+      withdrawalTotals,
+      pendingIpoApplications,
+      openIpoDebts,
+      loanOutstanding,
       accounts,
       businessProfile,
     ] = await this.prisma.$transaction([
@@ -91,6 +100,82 @@ export class BusinessService {
         },
       }),
 
+      this.prisma.accountTransaction.aggregate({
+        where: {
+          type: 'ADMIN_CREDIT',
+          status: 'COMPLETED',
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      }),
+
+      this.prisma.withdrawalRequest.aggregate({
+        where: {
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      }),
+
+      this.prisma.ipoApplication.count({
+        where: {
+          status: 'PENDING',
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+      }),
+
+      this.prisma.ipoDebt.aggregate({
+        where: {
+          status: {
+            in: ['OPEN', 'PARTIAL'],
+          },
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+        _sum: {
+          amount: true,
+          paidAmount: true,
+        },
+        _count: true,
+      }),
+
+      this.prisma.loanApplication.aggregate({
+        where: {
+          status: {
+            in: ['DISBURSED', 'PARTIAL_REPAID', 'OVERDUE'],
+          },
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+        _sum: {
+          outstandingAmount: true,
+        },
+        _count: true,
+      }),
+
       this.prisma.account.findMany({
         where: {
           user: {
@@ -119,6 +204,14 @@ export class BusinessService {
       0,
     );
 
+    const pendingKycRows = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*)::bigint AS count
+      FROM "kyc_submissions" k
+      JOIN "users" u ON u."id" = k."userId"
+      WHERE u."assignedBusinessId" = ${businessUserId}
+        AND k."status" = 'PENDING'
+    `;
+
     let unusedInviteCodes = 0;
 
     if (businessProfile) {
@@ -135,6 +228,18 @@ export class BusinessService {
       todayCustomers,
       pendingDeposits,
       pendingWithdrawals,
+      pendingKyc: Number(pendingKycRows[0]?.count ?? 0),
+      totalDepositAmount: depositTotals._sum.amount?.toFixed(2) ?? '0.00',
+      totalDepositCount: depositTotals._count,
+      totalWithdrawalAmount: withdrawalTotals._sum.amount?.toFixed(2) ?? '0.00',
+      totalWithdrawalCount: withdrawalTotals._count,
+      pendingIpoApplications,
+      ipoDebtCustomers: openIpoDebts._count,
+      ipoDebtAmount:
+        Number(openIpoDebts._sum.amount ?? 0) -
+        Number(openIpoDebts._sum.paidAmount ?? 0),
+      loanOutstandingAmount: loanOutstanding._sum.outstandingAmount?.toFixed(2) ?? '0.00',
+      loanOutstandingCount: loanOutstanding._count,
       totalAssets,
       unusedInviteCodes,
     };
@@ -758,6 +863,97 @@ export class BusinessService {
         },
       },
     });
+  }
+
+  async myIpoApplications(businessUserId: string) {
+    const applications = await this.prisma.ipoApplication.findMany({
+      where: {
+        account: {
+          user: {
+            assignedBusinessId: businessUserId,
+          },
+        },
+      },
+      include: {
+        ipo: true,
+        ipoDebt: true,
+        account: {
+          select: {
+            accountNumber: true,
+            cashBalance: true,
+            user: {
+              select: {
+                id: true,
+                customerNo: true,
+                fullName: true,
+                phone: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return applications.map((application) => ({
+      id: application.id,
+      quantity: application.quantity,
+      amount: application.amount.toFixed(2),
+      status: application.status,
+      paymentStatus: application.paymentStatus,
+      allocatedQuantity: application.allocatedQuantity,
+      allocatedPrice: application.allocatedPrice?.toFixed(2) ?? null,
+      allocatedAmount: application.allocatedAmount?.toFixed(2) ?? null,
+      createdAt: application.createdAt,
+      ipo: {
+        id: application.ipo.id,
+        symbol: application.ipo.symbol,
+        companyName: application.ipo.companyName,
+        issuePrice: application.ipo.issuePrice.toFixed(2),
+        status: application.ipo.status,
+      },
+      account: {
+        ...application.account,
+        cashBalance: application.account.cashBalance.toFixed(2),
+      },
+      debt: application.ipoDebt
+        ? {
+            amount: application.ipoDebt.amount.toFixed(2),
+            paidAmount: application.ipoDebt.paidAmount.toFixed(2),
+            status: application.ipoDebt.status,
+          }
+        : null,
+    }));
+  }
+
+  async allocateMyIpoApplication(
+    businessUserId: string,
+    applicationId: string,
+    quantity: number,
+    price: number,
+  ) {
+    const application = await this.prisma.ipoApplication.findFirst({
+      where: {
+        id: applicationId,
+        account: {
+          user: {
+            assignedBusinessId: businessUserId,
+          },
+        },
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!application) {
+      throw new NotFoundException('IPO 申请不存在或不属于当前业务员');
+    }
+
+    return this.ipoService.allocate(applicationId, quantity, price);
   }
 
   async myOrders(businessUserId: string, query: ListAdminOrdersQueryDto) {

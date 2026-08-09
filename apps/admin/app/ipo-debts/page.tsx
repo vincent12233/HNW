@@ -1,207 +1,128 @@
-﻿"use client";
+"use client";
 
-import {
-  ExclamationCircleOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-} from "@ant-design/icons";
-import { Button, Card, Col, Input, Row, Space, Statistic, Table, Tag, Typography } from "antd";
-import { useMemo, useState } from "react";
+import { ExclamationCircleOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Col, Input, Row, Space, Statistic, Table, Tag, Typography } from "antd";
+import type { ColumnsType } from "antd/es/table";
+import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 
 type IpoDebt = {
-  orderNo: string;
-  customerNo: string;
-  customerName: string;
-  phone: string;
-  ipoName: string;
-  symbol: string;
-  allocatedQty: number;
-  paidAmount: number;
-  outstandingAmount: number;
-  status: "待补款" | "已提醒" | "已逾期";
-  dueDate: string;
+  id: string;
+  amount: string;
+  paidAmount: string;
+  outstandingAmount: string;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+  account: {
+    accountNumber: string;
+    user: { customerNo?: string | null; fullName: string; phone?: string | null };
+  };
+  application: {
+    id: string;
+    allocatedQuantity?: number | null;
+    allocatedPrice?: string | null;
+    paymentStatus: string;
+    status: string;
+  };
+  ipo: { symbol: string; companyName: string; issuePrice: string };
 };
 
-const rows: IpoDebt[] = [
-  {
-    orderNo: "IPO20260809A101",
-    customerNo: "HNW005F7F5779",
-    customerName: "Sonal Naik",
-    phone: "9722242100",
-    ipoName: "Tata Capital Limited",
-    symbol: "TATACAP",
-    allocatedQty: 100,
-    paidAmount: 52000,
-    outstandingAmount: 50000,
-    status: "待补款",
-    dueDate: "2026-08-12",
-  },
-  {
-    orderNo: "IPO20260809B208",
-    customerNo: "HNW6C0A3C0A2A",
-    customerName: "Aarav Sharma",
-    phone: "9876543210",
-    ipoName: "National Securities Depository",
-    symbol: "NSDL",
-    allocatedQty: 50,
-    paidAmount: 0,
-    outstandingAmount: 42250,
-    status: "已提醒",
-    dueDate: "2026-08-11",
-  },
-  {
-    orderNo: "IPO20260809C309",
-    customerNo: "HNW21A8F4071",
-    customerName: "Priya Mehta",
-    phone: "9811122233",
-    ipoName: "Laxmi Dental Ltd",
-    symbol: "LAXMI",
-    allocatedQty: 33,
-    paidAmount: 0,
-    outstandingAmount: 13761,
-    status: "已逾期",
-    dueDate: "2026-08-08",
-  },
-];
+function formatMoney(value?: string | number | null) {
+  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value ?? 0));
+}
 
-function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(value);
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleString("zh-CN") : "-";
 }
 
 export default function IpoDebtsPage() {
+  const [rows, setRows] = useState<IpoDebt[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function loadRows() {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await api.get<IpoDebt[]>("/admin/ipo/debts");
+      setRows(Array.isArray(response.data) ? response.data : []);
+    } catch (requestError: any) {
+      const responseMessage = requestError.response?.data?.message;
+      setError(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "IPO 欠款加载失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    loadRows();
+  }, []);
 
   const filteredRows = useMemo(() => {
     const query = keyword.trim().toLowerCase();
     if (!query) return rows;
+    return rows.filter((row) => [row.account.accountNumber, row.account.user.customerNo, row.account.user.fullName, row.account.user.phone, row.ipo.symbol, row.ipo.companyName, row.status].some((value) => String(value ?? "").toLowerCase().includes(query)));
+  }, [keyword, rows]);
 
-    return rows.filter((row) =>
-      [
-        row.orderNo,
-        row.customerNo,
-        row.customerName,
-        row.phone,
-        row.ipoName,
-        row.symbol,
-        row.status,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(query),
-    );
-  }, [keyword]);
+  const totalOutstanding = filteredRows.reduce((sum, row) => sum + Number(row.outstandingAmount), 0);
+  const overdueCount = filteredRows.filter((row) => row.status === "DEFAULTED").length;
 
-  const totalOutstanding = filteredRows.reduce((sum, row) => sum + row.outstandingAmount, 0);
-  const overdueCount = filteredRows.filter((row) => row.status === "已逾期").length;
+  const columns: ColumnsType<IpoDebt> = [
+    {
+      title: "客户",
+      width: 250,
+      fixed: "left",
+      render: (_, row) => (
+        <Space orientation="vertical" size={0}>
+          <Text strong>{row.account.user.fullName || "未命名客户"}</Text>
+          <Text type="secondary">{row.account.user.customerNo || "-"} / +91 {row.account.user.phone || "-"}</Text>
+        </Space>
+      ),
+    },
+    { title: "交易账号", width: 160, render: (_, row) => row.account.accountNumber },
+    {
+      title: "IPO",
+      width: 240,
+      render: (_, row) => (
+        <Space orientation="vertical" size={0}>
+          <Text strong>{row.ipo.symbol}</Text>
+          <Text type="secondary">{row.ipo.companyName}</Text>
+        </Space>
+      ),
+    },
+    { title: "中签数量", width: 120, render: (_, row) => row.application.allocatedQuantity ? `${row.application.allocatedQuantity} 股` : "-" },
+    { title: "已付金额", dataIndex: "paidAmount", width: 140, align: "right", render: formatMoney },
+    { title: "欠款金额", dataIndex: "outstandingAmount", width: 140, align: "right", render: (value) => <Text type={Number(value) > 0 ? "danger" : undefined}>{formatMoney(value)}</Text> },
+    { title: "付款状态", width: 120, render: (_, row) => <Tag color={row.application.paymentStatus === "PAID" ? "green" : "orange"}>{row.application.paymentStatus}</Tag> },
+    { title: "欠款状态", dataIndex: "status", width: 120, render: (value) => <Tag color={value === "PAID" ? "green" : value === "DEFAULTED" ? "red" : "orange"}>{value}</Tag> },
+    { title: "更新时间", dataIndex: "updatedAt", width: 180, render: formatDate },
+  ];
 
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>IPO 欠款</Title>
-          <Paragraph type="secondary">
-            用于跟进 IPO 中签后未完成补款的客户。当前页面为后台运营模块，后续可接入真实 IPO 分配和扣款数据。
-          </Paragraph>
+          <Paragraph type="secondary">显示 IPO 分配后未补足的真实欠款。客户补款由财务上分自动抵扣，补足后系统自动转入持仓。</Paragraph>
         </div>
-
+        {error && <Alert type="error" title={error} showIcon />}
         <Row gutter={[16, 16]}>
-          <Col xs={24} md={8}>
-            <Card style={{ borderRadius: 8 }}>
-              <Statistic title="欠款总额" value={formatMoney(totalOutstanding)} />
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card style={{ borderRadius: 8 }}>
-              <Statistic title="待跟进订单" value={filteredRows.length} />
-            </Card>
-          </Col>
-          <Col xs={24} md={8}>
-            <Card style={{ borderRadius: 8 }}>
-              <Statistic title="逾期订单" value={overdueCount} prefix={<ExclamationCircleOutlined />} />
-            </Card>
-          </Col>
+          <Col xs={24} md={8}><Card><Statistic title="欠款总额" value={formatMoney(totalOutstanding)} /></Card></Col>
+          <Col xs={24} md={8}><Card><Statistic title="待跟进订单" value={filteredRows.filter((row) => row.status !== "PAID").length} /></Card></Col>
+          <Col xs={24} md={8}><Card><Statistic title="逾期订单" value={overdueCount} prefix={<ExclamationCircleOutlined />} /></Card></Col>
         </Row>
-
-        <Card
-          title="欠款列表"
-          extra={
-            <Space>
-              <Input
-                prefix={<SearchOutlined />}
-                allowClear
-                placeholder="搜索订单号、客户编号、手机号或 IPO"
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-                style={{ width: 340 }}
-              />
-              <Button icon={<ReloadOutlined />}>刷新</Button>
-            </Space>
-          }
-          style={{ borderRadius: 8 }}
-        >
-          <Table<IpoDebt>
-            rowKey="orderNo"
-            dataSource={filteredRows}
-            pagination={{ pageSize: 10 }}
-            columns={[
-              {
-                title: "订单号",
-                dataIndex: "orderNo",
-                render: (value) => <Text strong>{value}</Text>,
-              },
-              {
-                title: "客户",
-                render: (_, row) => (
-                  <Space orientation="vertical" size={0}>
-                    <Text>{row.customerName}</Text>
-                    <Text type="secondary">{row.customerNo} / +91 {row.phone}</Text>
-                  </Space>
-                ),
-              },
-              {
-                title: "IPO",
-                render: (_, row) => (
-                  <Space orientation="vertical" size={0}>
-                    <Text>{row.ipoName}</Text>
-                    <Text type="secondary">{row.symbol}</Text>
-                  </Space>
-                ),
-              },
-              { title: "中签数量", dataIndex: "allocatedQty", render: (value) => `${value} 股` },
-              { title: "已付金额", dataIndex: "paidAmount", render: formatMoney },
-              {
-                title: "欠款金额",
-                dataIndex: "outstandingAmount",
-                render: (value) => <Text type="danger">{formatMoney(value)}</Text>,
-              },
-              { title: "补款截止", dataIndex: "dueDate" },
-              {
-                title: "状态",
-                dataIndex: "status",
-                render: (value: IpoDebt["status"]) => {
-                  const color = value === "已逾期" ? "red" : value === "已提醒" ? "orange" : "blue";
-                  return <Tag color={color}>{value}</Tag>;
-                },
-              },
-              {
-                title: "操作",
-                render: () => (
-                  <Space>
-                    <Button size="small">提醒客户</Button>
-                    <Button size="small" type="primary">标记已跟进</Button>
-                  </Space>
-                ),
-              },
-            ]}
-          />
+        <Card>
+          <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
+            <Input prefix={<SearchOutlined />} allowClear placeholder="搜索客户、手机号、交易账号或 IPO" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 380 }} />
+            <Button icon={<ReloadOutlined />} onClick={loadRows} loading={loading}>刷新</Button>
+          </Space>
+          <Table<IpoDebt> rowKey="id" dataSource={filteredRows} columns={columns} loading={loading} scroll={{ x: 1480 }} pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条欠款记录` }} />
         </Card>
       </Space>
     </AdminShell>

@@ -24,6 +24,7 @@ import { MarketDataController } from './market-data/market-data.controller';
 import { MarketDataModule } from './market-data/market-data.module';
 import { KycModule } from './kyc/kyc.module';
 import { AdminProductsModule } from './admin-products/admin-products.module';
+import { LoansModule } from './loans/loans.module';
 import { ScheduleModule } from '@nestjs/schedule';
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     StocksModule,
     KycModule,
     AdminProductsModule,
+    LoansModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

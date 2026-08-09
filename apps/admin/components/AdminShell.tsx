@@ -69,14 +69,16 @@ const supportMenuItems = [
 ];
 
 const businessMenuItems = [
-  { key: "/dashboard", icon: <DashboardOutlined />, label: "我的首页" },
-  { key: "/business-customers", icon: <TeamOutlined />, label: "我的客户" },
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "控制台" },
+  { key: "/business-customers", icon: <TeamOutlined />, label: "客户管理" },
+  { key: "/business-accounts", icon: <BankOutlined />, label: "账户管理" },
+  { key: "/business-funds", icon: <DollarOutlined />, label: "资金管理" },
   { key: "/business-kyc", icon: <SafetyCertificateOutlined />, label: "KYC 审核" },
   { key: "/invite-codes", icon: <GiftOutlined />, label: "我的邀请码" },
-  { key: "/business-deposits", icon: <DollarOutlined />, label: "客户入金记录" },
-  { key: "/business-withdrawals", icon: <BankOutlined />, label: "客户提现记录" },
   { key: "/business-orders", icon: <StockOutlined />, label: "客户订单记录" },
   { key: "/business-trades", icon: <TransactionOutlined />, label: "客户成交记录" },
+  { key: "/business-institutional", icon: <StockOutlined />, label: "涨停股" },
+  { key: "/business-otc", icon: <BankOutlined />, label: "OTC" },
 ];
 
 const roleLabels: Record<string, string> = {
@@ -102,13 +104,17 @@ const pageTitles: Record<string, string> = {
   "/ipo-debts": "IPO 欠款",
   "/funds": "基金",
   "/quant": "量化",
-  "/business-customers": "我的客户",
+  "/business-customers": "客户管理",
+  "/business-accounts": "账户管理",
+  "/business-funds": "资金管理",
   "/business-kyc": "KYC 审核",
   "/invite-codes": "我的邀请码",
   "/business-deposits": "客户入金记录",
   "/business-withdrawals": "客户提现记录",
   "/business-orders": "客户订单记录",
   "/business-trades": "客户成交记录",
+  "/business-institutional": "涨停股",
+  "/business-otc": "OTC",
 };
 
 export default function AdminShell({ children }: AdminShellProps) {

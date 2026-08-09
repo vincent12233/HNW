@@ -7,106 +7,125 @@ import { AdminProductsService } from './admin-products.service';
 
 @Controller('admin-products')
 @UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.ADMIN)
 export class AdminProductsController {
   constructor(private readonly service: AdminProductsService) {}
 
   @Get('watchlist')
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
   watchlist() {
     return this.service.listWatchlist();
   }
 
   @Post('watchlist')
+  @Roles(UserRole.ADMIN)
   createWatchlist(@Body() body: any) {
     return this.service.createWatchlist(body);
   }
 
   @Patch('watchlist/:id/status')
+  @Roles(UserRole.ADMIN)
   updateWatchlistStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.service.updateWatchlistStatus(id, body.status);
   }
 
   @Patch('watchlist/:id')
+  @Roles(UserRole.ADMIN)
   updateWatchlist(@Param('id') id: string, @Body() body: any) {
     return this.service.updateWatchlist(id, body);
   }
 
   @Delete('watchlist/:id')
+  @Roles(UserRole.ADMIN)
   deleteWatchlist(@Param('id') id: string) {
     return this.service.deleteWatchlist(id);
   }
 
   @Get('block-trades')
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
   blockTrades() {
     return this.service.listBlockTrades();
   }
 
   @Post('block-trades')
+  @Roles(UserRole.ADMIN)
   createBlockTrade(@Body() body: any) {
     return this.service.createBlockTrade(body);
   }
 
   @Patch('block-trades/:id/status')
+  @Roles(UserRole.ADMIN)
   updateBlockTradeStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.service.updateBlockTradeStatus(id, body.status);
   }
 
   @Patch('block-trades/:id')
+  @Roles(UserRole.ADMIN)
   updateBlockTrade(@Param('id') id: string, @Body() body: any) {
     return this.service.updateBlockTrade(id, body);
   }
 
   @Delete('block-trades/:id')
+  @Roles(UserRole.ADMIN)
   deleteBlockTrade(@Param('id') id: string) {
     return this.service.deleteBlockTrade(id);
   }
 
   @Get('funds')
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
   funds() {
     return this.service.listFunds();
   }
 
   @Post('funds')
+  @Roles(UserRole.ADMIN)
   createFund(@Body() body: any) {
     return this.service.createFund(body);
   }
 
   @Patch('funds/:id/status')
+  @Roles(UserRole.ADMIN)
   updateFundStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.service.updateFundStatus(id, body.status);
   }
 
   @Patch('funds/:id')
+  @Roles(UserRole.ADMIN)
   updateFund(@Param('id') id: string, @Body() body: any) {
     return this.service.updateFund(id, body);
   }
 
   @Delete('funds/:id')
+  @Roles(UserRole.ADMIN)
   deleteFund(@Param('id') id: string) {
     return this.service.deleteFund(id);
   }
 
   @Get('quant')
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
   quant() {
     return this.service.listQuant();
   }
 
   @Post('quant')
+  @Roles(UserRole.ADMIN)
   createQuant(@Body() body: any) {
     return this.service.createQuant(body);
   }
 
   @Patch('quant/:id/status')
+  @Roles(UserRole.ADMIN)
   updateQuantStatus(@Param('id') id: string, @Body() body: { status: string }) {
     return this.service.updateQuantStatus(id, body.status);
   }
 
   @Patch('quant/:id')
+  @Roles(UserRole.ADMIN)
   updateQuant(@Param('id') id: string, @Body() body: any) {
     return this.service.updateQuant(id, body);
   }
 
   @Delete('quant/:id')
+  @Roles(UserRole.ADMIN)
   deleteQuant(@Param('id') id: string) {
     return this.service.deleteQuant(id);
   }

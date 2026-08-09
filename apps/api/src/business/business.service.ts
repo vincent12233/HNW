@@ -660,6 +660,7 @@ export class BusinessService {
       },
       select: {
         id: true,
+        customerNo: true,
         fullName: true,
         phone: true,
         status: true,
@@ -701,6 +702,60 @@ export class BusinessService {
 
       orderBy: {
         createdAt: 'desc',
+      },
+    });
+  }
+
+  async updateMyCustomerStatus(
+    businessUserId: string,
+    customerId: string,
+    status: UserStatus,
+  ) {
+    if (
+      status !== UserStatus.ACTIVE &&
+      status !== UserStatus.SUSPENDED &&
+      status !== UserStatus.DISABLED
+    ) {
+      throw new BadRequestException('账户状态不正确');
+    }
+
+    const customer = await this.prisma.user.findFirst({
+      where: {
+        id: customerId,
+        role: UserRole.CLIENT,
+        assignedBusinessId: businessUserId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('客户不存在或不属于当前业务员');
+    }
+
+    return this.prisma.user.update({
+      where: {
+        id: customerId,
+      },
+      data: {
+        status,
+      },
+      select: {
+        id: true,
+        customerNo: true,
+        fullName: true,
+        phone: true,
+        status: true,
+        account: {
+          select: {
+            accountNumber: true,
+            cashBalance: true,
+            buyingPower: true,
+            frozenBalance: true,
+            currency: true,
+          },
+        },
       },
     });
   }

@@ -13,7 +13,7 @@ import {
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
-import { UserRole } from '../generated/prisma/enums';
+import { UserRole, UserStatus } from '../generated/prisma/enums';
 import { ListAdminOrdersQueryDto } from '../orders/dto/list-admin-orders-query.dto';
 import { ListAdminTradesQueryDto } from '../orders/dto/list-admin-trades-query.dto';
 
@@ -209,6 +209,25 @@ export class BusinessController {
     customerId: string,
   ) {
     return this.businessService.customerLoginRisk(req.user.userId, customerId);
+  }
+
+  @Patch('customers/:customerId/status')
+  @Roles(UserRole.BUSINESS)
+  updateMyCustomerStatus(
+    @Req()
+    req: any,
+
+    @Param('customerId')
+    customerId: string,
+
+    @Body()
+    body: { status: UserStatus },
+  ) {
+    return this.businessService.updateMyCustomerStatus(
+      req.user.userId,
+      customerId,
+      body.status,
+    );
   }
 
   // ===============================

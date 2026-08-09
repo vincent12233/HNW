@@ -471,7 +471,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
       backgroundColor: AppConfig.backgroundColor,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : _selectedBody(),
+          : SafeArea(
+              bottom: false,
+              child: _selectedBody(),
+            ),
       bottomNavigationBar: NavigationBar(
         height: 78,
         elevation: 0,
@@ -1381,34 +1384,41 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   Widget _marketBody() {
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        MarketHeader(
-          accountName: accountName,
-          onNotificationTap: _openNotifications,
-          notificationCount: pendingOrders.length +
-              ipoApplications
-                  .where(
-                    (application) =>
-                        application.status == IpoApplicationStatus.allocated &&
-                        application.remainingAmount > 0,
-                  )
-                  .length,
-        ),
-        const SizedBox(height: 14),
-        _homeFundsCard(),
-        const SizedBox(height: 10),
-        _homeQuickActions(),
-        const SizedBox(height: 18),
-        _sectionTitle('Market Overview', onViewAll: () => setState(() => selectedIndex = 1)),
-        const SizedBox(height: 10),
-        _marketOverviewGrid(),
-        const SizedBox(height: 18),
-        _compactMovers(),
-        const SizedBox(height: 18),
-        const MarketNews(),
-      ],
+    return Container(
+      color: AppConfig.backgroundColor,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          MarketHeader(
+            accountName: accountName,
+            onNotificationTap: _openNotifications,
+            notificationCount: pendingOrders.length +
+                ipoApplications
+                    .where(
+                      (application) =>
+                          application.status ==
+                              IpoApplicationStatus.allocated &&
+                          application.remainingAmount > 0,
+                    )
+                    .length,
+          ),
+          const SizedBox(height: 14),
+          _homeFundsCard(),
+          const SizedBox(height: 10),
+          _homeQuickActions(),
+          const SizedBox(height: 18),
+          _sectionTitle(
+            'Market Overview',
+            onViewAll: () => setState(() => selectedIndex = 1),
+          ),
+          const SizedBox(height: 10),
+          _marketOverviewGrid(),
+          const SizedBox(height: 18),
+          _compactMovers(),
+          const SizedBox(height: 18),
+          const MarketNews(),
+        ],
+      ),
     );
   }
 

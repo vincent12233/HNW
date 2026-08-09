@@ -9,6 +9,38 @@ import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorWidget.builder = (details) {
+    return const Material(
+      color: AppConfig.backgroundColor,
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.dashboard_customize_outlined,
+                color: AppConfig.primaryColor,
+                size: 48,
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Content is temporarily unavailable',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 6),
+              Text(
+                'Please refresh or switch tabs.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppConfig.neutralColor),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  };
 
   runApp(const IndiaTradingApp());
 }

@@ -795,20 +795,18 @@ class _MarketHomePageState extends State<MarketHomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppConfig.primaryColor,
-        foregroundColor: Colors.white,
-        title: Text(
-          '${AppConfig.appName} v7',
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-      ),
+      backgroundColor: AppConfig.backgroundColor,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : _selectedBody(),
       bottomNavigationBar: NavigationBar(
-        backgroundColor: const Color(0xFFF2F4FA),
-        indicatorColor: const Color(0xFFDCE6FF),
+        height: 78,
+        elevation: 0,
+        backgroundColor: const Color(0xFFF3F5FA),
+        indicatorColor: const Color(0xFFDDE8FF),
+        surfaceTintColor: Colors.transparent,
+        shadowColor: Colors.transparent,
+        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
           setState(() {
@@ -937,7 +935,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
               end: Alignment.bottomRight,
               colors: [Color(0xFF0B5CFF), Color(0xFF0648D8)],
             ),
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(8),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x220B5CFF),
@@ -1042,6 +1040,13 @@ class _MarketHomePageState extends State<MarketHomePage> {
           children: [
             Expanded(
               child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppConfig.primaryColor,
+                  side: const BorderSide(color: Color(0xFFD8E2F4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 onPressed: _openDepositSupport,
                 icon: const Icon(Icons.support_agent_outlined),
                 label: const Text('Deposit Support'),
@@ -1050,6 +1055,13 @@ class _MarketHomePageState extends State<MarketHomePage> {
             const SizedBox(width: 10),
             Expanded(
               child: OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: const Color(0xFF334155),
+                  side: const BorderSide(color: Color(0xFFD8E2F4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 onPressed: _openWithdrawalRequest,
                 icon: const Icon(Icons.account_balance_wallet_outlined),
                 label: const Text('Withdraw'),
@@ -1108,8 +1120,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: const Color(0xFFE8EDF5)),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.035),
+                    blurRadius: 10,
+                    offset: const Offset(0, 5),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -1177,7 +1196,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: const Color(0xFFE8EDF5)),
       ),
       child: Column(

@@ -12,7 +12,7 @@ class TradeList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
       children: [
         _OverviewCard(
           icon: Icons.swap_horiz_rounded,
@@ -50,10 +50,6 @@ class TradeList extends StatelessWidget {
           color: const Color(0xFFF59E0B),
         ),
         const SizedBox(height: 12),
-        const Text(
-          'Regular stocks are managed from Markets. New institutional stocks, OTC opportunities and IPO allocations will be listed in their own modules.',
-          style: TextStyle(color: Colors.black54, height: 1.45),
-        ),
       ],
     );
   }
@@ -78,11 +74,18 @@ class _OverviewCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(15),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFFE8EDF5)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -134,7 +137,11 @@ class _OverviewCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 13,
+                    height: 1.25,
+                  ),
                 ),
               ],
             ),

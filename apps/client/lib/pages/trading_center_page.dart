@@ -77,11 +77,12 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FB),
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 0),
+              padding: const EdgeInsets.fromLTRB(18, 16, 16, 0),
               child: Row(
                 children: [
                   const Expanded(
@@ -107,7 +108,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
             SizedBox(
               height: 86,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
                 scrollDirection: Axis.horizontal,
                 itemCount: tabs.length,
                 separatorBuilder: (_, _) => const SizedBox(width: 10),
@@ -230,24 +231,24 @@ class _TradingModuleButton extends StatelessWidget {
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 180),
-        width: 72,
+        width: 78,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: selected ? Colors.white : const Color(0xFFFBFCFF),
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
             color: selected ? module.color : const Color(0xFFE2E8F0),
-            width: selected ? 1.6 : 1,
+            width: selected ? 1.8 : 1,
           ),
-          boxShadow: selected
-              ? [
-                  BoxShadow(
-                    color: module.color.withValues(alpha: 0.16),
-                    blurRadius: 14,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : const [],
+          boxShadow: [
+            BoxShadow(
+              color: selected
+                  ? module.color.withValues(alpha: 0.16)
+                  : const Color(0xFF0F172A).withValues(alpha: 0.04),
+              blurRadius: selected ? 16 : 8,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

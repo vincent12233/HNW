@@ -25,11 +25,17 @@ class StockListTile extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE8EDF5)),
+        ),
         child: Row(
           children: [
-            StockLogo(symbol: stock.symbol, size: 44, logoUrl: stock.logoUrl),
+            StockLogo(symbol: stock.symbol, size: 42, logoUrl: stock.logoUrl),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -38,20 +44,26 @@ class StockListTile extends StatelessWidget {
                   Text(
                     stock.symbol,
                     style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 15,
                     ),
                   ),
                   Text(
                     stock.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 13,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Volume ${formatVolume(stock.volume)}',
-                    style: const TextStyle(color: Colors.black45, fontSize: 12),
+                    style: const TextStyle(
+                      color: Color(0xFF94A3B8),
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),

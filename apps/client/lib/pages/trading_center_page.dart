@@ -14,7 +14,6 @@ import '../widgets/trading/orders_tab.dart';
 import '../widgets/trading/otc_tab.dart';
 import '../widgets/trading/pending_center_tab.dart';
 import '../widgets/trading/trade_list.dart';
-import '../widgets/stock_logo.dart';
 
 class TradingCenterPage extends StatefulWidget {
   const TradingCenterPage({
@@ -93,11 +92,6 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: 'Search',
-                    onPressed: _openTradingSearch,
-                    icon: const Icon(Icons.search_rounded),
                   ),
                   IconButton(
                     tooltip: 'Alerts',
@@ -207,15 +201,6 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
     }
   }
 
-  void _openTradingSearch() {
-    showSearch<StockQuote?>(
-      context: context,
-      delegate: _TradingStockSearchDelegate(
-        stocks: widget.stocks,
-        onSelected: widget.onTrade,
-      ),
-    );
-  }
 }
 
 class _TradingModule {
@@ -226,94 +211,6 @@ class _TradingModule {
   final Color color;
 }
 
-class _TradingStockSearchDelegate extends SearchDelegate<StockQuote?> {
-  _TradingStockSearchDelegate({
-    required this.stocks,
-    required this.onSelected,
-  });
-
-  final List<StockQuote> stocks;
-  final ValueChanged<StockQuote> onSelected;
-
-  List<StockQuote> get filteredStocks {
-    final text = query.trim().toLowerCase();
-
-    if (text.isEmpty) {
-      return stocks;
-    }
-
-    return stocks.where((stock) {
-      return stock.symbol.toLowerCase().contains(text) ||
-          stock.name.toLowerCase().contains(text);
-    }).toList();
-  }
-
-  @override
-  String get searchFieldLabel => 'Search stocks';
-
-  @override
-  List<Widget>? buildActions(BuildContext context) {
-    return [
-      if (query.isNotEmpty)
-        IconButton(
-          onPressed: () {
-            query = '';
-          },
-          icon: const Icon(Icons.close_rounded),
-        ),
-    ];
-  }
-
-  @override
-  Widget? buildLeading(BuildContext context) {
-    return IconButton(
-      onPressed: () {
-        close(context, null);
-      },
-      icon: const Icon(Icons.arrow_back_rounded),
-    );
-  }
-
-  @override
-  Widget buildResults(BuildContext context) {
-    return _buildList();
-  }
-
-  @override
-  Widget buildSuggestions(BuildContext context) {
-    return _buildList();
-  }
-
-  Widget _buildList() {
-    final results = filteredStocks;
-
-    if (results.isEmpty) {
-      return const Center(child: Text('No stocks found'));
-    }
-
-    return ListView.separated(
-      itemCount: results.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) {
-        final stock = results[index];
-
-        return ListTile(
-          leading: StockLogo(symbol: stock.symbol, size: 40),
-          title: Text(
-            stock.symbol,
-            style: const TextStyle(fontWeight: FontWeight.w800),
-          ),
-          subtitle: Text(stock.name),
-          trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () {
-            close(context, stock);
-            onSelected(stock);
-          },
-        );
-      },
-    );
-  }
-}
 
 class _TradingModuleButton extends StatelessWidget {
   const _TradingModuleButton({

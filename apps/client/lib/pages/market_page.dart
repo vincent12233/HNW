@@ -807,6 +807,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ? const Center(child: CircularProgressIndicator())
           : _selectedBody(),
       bottomNavigationBar: NavigationBar(
+        backgroundColor: const Color(0xFFF2F4FA),
+        indicatorColor: const Color(0xFFDCE6FF),
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {
           setState(() {
@@ -826,27 +828,30 @@ class _MarketHomePageState extends State<MarketHomePage> {
         destinations: const [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            selectedIcon: Icon(Icons.home, color: AppConfig.primaryColor),
             label: 'Home',
           ),
           NavigationDestination(
             icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart),
+            selectedIcon: Icon(Icons.show_chart, color: AppConfig.primaryColor),
             label: 'Markets',
           ),
           NavigationDestination(
             icon: Icon(Icons.swap_horiz_outlined),
-            selectedIcon: Icon(Icons.swap_horiz),
+            selectedIcon: Icon(Icons.swap_horiz, color: AppConfig.primaryColor),
             label: 'Trading',
           ),
           NavigationDestination(
             icon: Icon(Icons.account_balance_wallet_outlined),
-            selectedIcon: Icon(Icons.account_balance_wallet),
+            selectedIcon: Icon(
+              Icons.account_balance_wallet,
+              color: AppConfig.primaryColor,
+            ),
             label: 'Portfolio',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            selectedIcon: Icon(Icons.person, color: AppConfig.primaryColor),
             label: 'Account',
           ),
         ],
@@ -909,13 +914,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
 
     for (final position in positions.values) {
-      holdingsValue += position.marketValue(_stockFor(position.symbol).price);
+      final stock = _stockForOrNull(position.symbol);
+      holdingsValue += position.marketValue(stock?.price ?? position.averageCost);
     }
 
     final totalPortfolioValue = cashBalance + holdingsValue;
     final todayPnl = positions.values.fold<double>(0, (total, position) {
-      final stock = _stockFor(position.symbol);
-      return total + position.unrealizedProfitLoss(stock.price);
+      final stock = _stockForOrNull(position.symbol);
+      return total +
+          position.unrealizedProfitLoss(stock?.price ?? position.averageCost);
     });
     final pnlPositive = todayPnl >= 0;
 
@@ -2399,6 +2406,16 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
   StockQuote _stockFor(String symbol) {
     return stocks.firstWhere((stock) => stock.symbol == symbol);
+  }
+
+  StockQuote? _stockForOrNull(String symbol) {
+    for (final stock in stocks) {
+      if (stock.symbol == symbol) {
+        return stock;
+      }
+    }
+
+    return null;
   }
 
   Widget _accountBody() {

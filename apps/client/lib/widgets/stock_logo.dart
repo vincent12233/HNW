@@ -47,25 +47,18 @@ class StockLogo extends StatelessWidget {
       height: size,
       alignment: Alignment.center,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFF1F5F9),
         shape: BoxShape.circle,
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x140F172A),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
+        border: Border.all(color: const Color(0xFFE6EAF0)),
       ),
       child: ClipOval(
         child: logoUrl == null
             ? _FallbackLogo(style: style, size: size)
             : Image.network(
                 logoUrl,
-                width: size - 8,
-                height: size - 8,
-                fit: BoxFit.contain,
+                width: size - 6,
+                height: size - 6,
+                fit: BoxFit.cover,
                 errorBuilder: (_, _, _) =>
                     _FallbackLogo(style: style, size: size),
               ),
@@ -111,7 +104,7 @@ class _FallbackLogo extends StatelessWidget {
         color: style.color,
         shape: BoxShape.circle,
       ),
-      child: Icon(style.icon, color: Colors.white, size: size * 0.44),
+      child: Icon(style.icon, color: Colors.white, size: size * 0.48),
     );
   }
 }

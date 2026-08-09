@@ -26,34 +26,70 @@ class MarketNews extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Market News',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Market News',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+              ),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: const Text('View All'),
+            ),
+          ],
         ),
-
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
 
         Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: const BorderSide(color: Color(0xFFE8EDF5)),
+          ),
           child: Column(
-            children: news.asMap().entries.map((entry) {
+            children: news.take(2).toList().asMap().entries.map((entry) {
               final index = entry.key;
               final item = entry.value;
 
               return Column(
                 children: [
                   ListTile(
-                    leading: const CircleAvatar(
-                      child: Icon(Icons.article_outlined),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
+                    leading: Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(8),
+                        gradient: const LinearGradient(
+                          colors: [Color(0xFF0EA5E9), Color(0xFF143D8D)],
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.show_chart_rounded,
+                        color: Colors.white,
+                      ),
                     ),
                     title: Text(
                       item.title,
-                      style: const TextStyle(fontWeight: FontWeight.w600),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                    subtitle: Text('${item.source} • ${item.time}'),
-                    trailing: const Icon(Icons.chevron_right),
+                    subtitle: Text(
+                      '${item.source} • ${item.time}',
+                      style: const TextStyle(fontSize: 12),
+                    ),
                   ),
 
-                  if (index != news.length - 1) const Divider(height: 1),
+                  if (index != 1) const Divider(height: 1),
                 ],
               );
             }).toList(),

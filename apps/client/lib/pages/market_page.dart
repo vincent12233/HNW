@@ -600,13 +600,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
     super.dispose();
   }
 
-  void _openSearch() {
-    showSearch<StockQuote?>(
-      context: context,
-      delegate: StockSearchDelegate(stocks: stocks, onSelected: _openStock),
-    );
-  }
-
   Future<void> _loadSavedData() async {
     final preferences = await SharedPreferences.getInstance();
 
@@ -1036,38 +1029,29 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ],
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppConfig.primaryColor,
-                  side: const BorderSide(color: Color(0xFFD8E2F4)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: _openDepositSupport,
-                icon: const Icon(Icons.support_agent_outlined),
-                label: const Text('Deposit Support'),
-              ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: const Color(0xFF334155),
-                  side: const BorderSide(color: Color(0xFFD8E2F4)),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                onPressed: _openWithdrawalRequest,
-                icon: const Icon(Icons.account_balance_wallet_outlined),
-                label: const Text('Withdraw'),
-              ),
-            ),
-          ],
+      ],
+    );
+  }
+
+  Widget _homeQuickActions() {
+    return Row(
+      children: [
+        Expanded(
+          child: _HomeActionButton(
+            label: 'Deposit',
+            icon: Icons.support_agent_outlined,
+            color: AppConfig.primaryColor,
+            onTap: _openDepositSupport,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: _HomeActionButton(
+            label: 'Withdraw',
+            icon: Icons.account_balance_wallet_outlined,
+            color: const Color(0xFF0F766E),
+            onTap: _openWithdrawalRequest,
+          ),
         ),
       ],
     );
@@ -1225,6 +1209,16 @@ class _MarketHomePageState extends State<MarketHomePage> {
                         ),
                       ),
                     ),
+                    const SizedBox(width: 4),
+                    Text(
+                      formatPrice(stock.price),
+                      style: const TextStyle(
+                        color: Color(0xFF0F172A),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
                     Text(
                       '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
                       style: TextStyle(
@@ -1239,32 +1233,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _popularStocksCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
-      ),
-      child: Column(
-        children: stocks.take(5).map((stock) {
-          return Column(
-            children: [
-              StockListTile(
-                stock: stock,
-                isFavorite: favoriteSymbols.contains(stock.symbol),
-                onTap: () => _openStock(stock),
-                onFavorite: () => _toggleFavorite(stock),
-              ),
-              if (stock != stocks.take(5).last)
-                const Divider(height: 1, indent: 16, endIndent: 16),
-            ],
-          );
-        }).toList(),
       ),
     );
   }
@@ -1748,7 +1716,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
       children: [
         MarketHeader(
           accountName: accountName,
-          onSearchTap: _openSearch,
           onNotificationTap: _openNotifications,
           notificationCount: pendingOrders.length +
               ipoApplications
@@ -1761,6 +1728,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
         ),
         const SizedBox(height: 14),
         _homeFundsCard(),
+        const SizedBox(height: 10),
+        _homeQuickActions(),
         const SizedBox(height: 18),
         _sectionTitle('Market Overview', onViewAll: () => setState(() => selectedIndex = 1)),
         const SizedBox(height: 10),
@@ -1768,15 +1737,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
         const SizedBox(height: 18),
         _compactMovers(),
         const SizedBox(height: 18),
-        _sectionTitle('Most Active'),
-        const SizedBox(height: 10),
-        MostActive(stocks: stocks, onStockTap: _openStock),
-        const SizedBox(height: 18),
         const MarketNews(),
-        const SizedBox(height: 18),
-        _sectionTitle('Popular Stocks', onViewAll: () => setState(() => selectedIndex = 1)),
-        const SizedBox(height: 10),
-        _popularStocksCard(),
       ],
     );
   }
@@ -3019,6 +2980,59 @@ class _HomeMoneyCard extends StatelessWidget {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class _HomeActionButton extends StatelessWidget {
+  const _HomeActionButton({
+    required this.label,
+    required this.icon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(8),
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: const Color(0xFFE8EDF5)),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x080F172A),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 19),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF0F172A),
+                fontSize: 13,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

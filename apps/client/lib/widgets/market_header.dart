@@ -1,18 +1,14 @@
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
-
 class MarketHeader extends StatelessWidget {
   const MarketHeader({
     super.key,
     required this.accountName,
-    required this.onSearchTap,
     required this.onNotificationTap,
     this.notificationCount = 0,
   });
 
   final String accountName;
-  final VoidCallback onSearchTap;
   final VoidCallback onNotificationTap;
   final int notificationCount;
 
@@ -96,30 +92,6 @@ class MarketHeader extends StatelessWidget {
               ],
             ),
           ],
-        ),
-        const SizedBox(height: 18),
-        InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onSearchTap,
-          child: Container(
-            height: 52,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.search, color: Colors.black45),
-                SizedBox(width: 10),
-                Text(
-                  'Search stocks, ETFs, indices...',
-                  style: TextStyle(color: Colors.black45),
-                ),
-              ],
-            ),
-          ),
         ),
       ],
     );

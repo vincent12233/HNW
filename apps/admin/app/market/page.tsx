@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   EditOutlined,
@@ -199,7 +199,7 @@ export default function MarketAdminPage() {
       width: 130,
       fixed: "left",
       render: (value, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{value}</Text>
           <Text type="secondary">{record.exchange}</Text>
         </Space>
@@ -264,7 +264,7 @@ export default function MarketAdminPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>股票管理</Title>
           <Paragraph type="secondary">

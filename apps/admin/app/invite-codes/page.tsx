@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   CopyOutlined,
@@ -200,7 +200,7 @@ export default function InviteCodesPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>我的邀请码</Title>
           <Paragraph type="secondary">
@@ -255,7 +255,7 @@ export default function InviteCodesPage() {
           okText="生成"
           cancelText="取消"
         >
-          <Space direction="vertical" style={{ width: "100%" }}>
+          <Space orientation="vertical" style={{ width: "100%" }}>
             <Typography.Text>生成数量</Typography.Text>
             <InputNumber
               min={1}

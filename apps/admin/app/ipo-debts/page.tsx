@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   ExclamationCircleOutlined,
@@ -104,7 +104,7 @@ export default function IpoDebtsPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>IPO 欠款</Title>
           <Paragraph type="secondary">
@@ -160,7 +160,7 @@ export default function IpoDebtsPage() {
               {
                 title: "客户",
                 render: (_, row) => (
-                  <Space direction="vertical" size={0}>
+                  <Space orientation="vertical" size={0}>
                     <Text>{row.customerName}</Text>
                     <Text type="secondary">{row.customerNo} / +91 {row.phone}</Text>
                   </Space>
@@ -169,7 +169,7 @@ export default function IpoDebtsPage() {
               {
                 title: "IPO",
                 render: (_, row) => (
-                  <Space direction="vertical" size={0}>
+                  <Space orientation="vertical" size={0}>
                     <Text>{row.ipoName}</Text>
                     <Text type="secondary">{row.symbol}</Text>
                   </Space>

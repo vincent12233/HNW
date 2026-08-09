@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   BankOutlined,
@@ -217,7 +217,7 @@ export default function DashboardPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div
           style={{
             borderRadius: 8,
@@ -226,7 +226,7 @@ export default function DashboardPage() {
             color: "#fff",
           }}
         >
-          <Space direction="vertical" size={4}>
+          <Space orientation="vertical" size={4}>
             <Tag color="blue">{isBusiness ? "业务工作台" : "运营控制台"}</Tag>
             <Title level={2} style={{ color: "#fff", margin: 0 }}>
               {isBusiness ? "我的客户运营" : "平台实时概览"}
@@ -326,7 +326,7 @@ export default function DashboardPage() {
             <Row gutter={[16, 16]}>
               <Col xs={24} lg={14}>
                 <Card title="运营优先级" style={{ borderRadius: 8 }}>
-                  <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+                  <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                     <div>
                       <Text strong>高风险客户占比</Text>
                       <Progress percent={adminRiskPercent} strokeColor="#dc2626" />
@@ -342,7 +342,7 @@ export default function DashboardPage() {
               </Col>
               <Col xs={24} lg={10}>
                 <Card title="今日工作流" style={{ borderRadius: 8 }}>
-                  <Space direction="vertical" size="middle">
+                  <Space orientation="vertical" size="middle">
                     <Tag color="blue">客户开户：手机号注册 + 邀请码 + KYC</Tag>
                     <Tag color="green">充值：在线客服沟通，财务手动上分</Tag>
                     <Tag color="orange">提现：后台审核后扣款出金</Tag>

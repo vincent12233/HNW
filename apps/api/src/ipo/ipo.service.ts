@@ -537,100 +537,14 @@ export class IpoService {
         });
       }
 
-      // 创建系统 IPO BUY Order
-
-      const order = await tx.order.create({
-        data: {
-          clientOrderId: `IPO-${application.id}`,
-
+      if (debtAmount <= 0) {
+        await this.settleIpoApplication(tx, {
+          applicationId: application.id,
           accountId: account.id,
-
           instrumentId,
-
-          side: 'BUY',
-
-          type: 'MARKET',
-
-          status: 'FILLED',
-
           quantity,
-
-          filledQuantity: quantity,
-
-          limitPrice: price,
-
-          averageFillPrice: price,
-
-          completedAt: new Date(),
-        },
-      });
-
-      // 创建 Trade
-
-      await tx.trade.create({
-        data: {
-          executionId: `IPO-EXEC-${application.id}`,
-
-          orderId: order.id,
-
-          accountId: account.id,
-
-          instrumentId,
-
-          quantity,
-
           price,
-
-          grossAmount: totalAmount,
-
-          fees: 0,
-
-          netAmount: totalAmount,
-        },
-      });
-
-      // 增加 Position
-
-      const position = await tx.position.findUnique({
-        where: {
-          accountId_instrumentId: {
-            accountId: account.id,
-
-            instrumentId,
-          },
-        },
-      });
-
-      if (position) {
-        const oldQty = position.quantity;
-
-        const newQty = oldQty + quantity;
-
-        const avgPrice =
-          (Number(position.averagePrice) * oldQty + price * quantity) / newQty;
-
-        await tx.position.update({
-          where: {
-            id: position.id,
-          },
-
-          data: {
-            quantity: newQty,
-
-            averagePrice: avgPrice,
-          },
-        });
-      } else {
-        await tx.position.create({
-          data: {
-            accountId: account.id,
-
-            instrumentId,
-
-            quantity,
-
-            averagePrice: price,
-          },
+          totalAmount,
         });
       }
 
@@ -661,6 +575,100 @@ export class IpoService {
             : 'IPO allocated and settled successfully',
       };
     });
+  }
+
+  async settleIpoApplication(
+    tx: any,
+    input: {
+      applicationId: string;
+      accountId: string;
+      instrumentId: string;
+      quantity: number;
+      price: number;
+      totalAmount: number;
+    },
+  ) {
+    const existingOrder = await tx.order.findUnique({
+      where: {
+        accountId_clientOrderId: {
+          accountId: input.accountId,
+          clientOrderId: `IPO-${input.applicationId}`,
+        },
+      },
+    });
+
+    if (existingOrder) {
+      return existingOrder;
+    }
+
+    const order = await tx.order.create({
+      data: {
+        clientOrderId: `IPO-${input.applicationId}`,
+        accountId: input.accountId,
+        instrumentId: input.instrumentId,
+        side: 'BUY',
+        type: 'MARKET',
+        status: 'FILLED',
+        quantity: input.quantity,
+        filledQuantity: input.quantity,
+        limitPrice: input.price,
+        averageFillPrice: input.price,
+        completedAt: new Date(),
+      },
+    });
+
+    await tx.trade.create({
+      data: {
+        executionId: `IPO-EXEC-${input.applicationId}`,
+        orderId: order.id,
+        accountId: input.accountId,
+        instrumentId: input.instrumentId,
+        quantity: input.quantity,
+        price: input.price,
+        grossAmount: input.totalAmount,
+        fees: 0,
+        netAmount: input.totalAmount,
+      },
+    });
+
+    const position = await tx.position.findUnique({
+      where: {
+        accountId_instrumentId: {
+          accountId: input.accountId,
+          instrumentId: input.instrumentId,
+        },
+      },
+    });
+
+    if (position) {
+      const oldQty = position.quantity;
+      const newQty = oldQty + input.quantity;
+      const avgPrice =
+        (Number(position.averagePrice) * oldQty +
+          input.price * input.quantity) /
+        newQty;
+
+      await tx.position.update({
+        where: {
+          id: position.id,
+        },
+        data: {
+          quantity: newQty,
+          averagePrice: avgPrice,
+        },
+      });
+    } else {
+      await tx.position.create({
+        data: {
+          accountId: input.accountId,
+          instrumentId: input.instrumentId,
+          quantity: input.quantity,
+          averagePrice: input.price,
+        },
+      });
+    }
+
+    return order;
   }
 
   async getApplicationLimit(userId: string, ipoId: string) {

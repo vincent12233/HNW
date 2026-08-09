@@ -117,6 +117,13 @@ export class DepositService {
           in: ['OPEN', 'PARTIAL'],
         },
       },
+      include: {
+        ipoApplication: {
+          include: {
+            ipo: true,
+          },
+        },
+      },
 
       orderBy: {
         createdAt: 'asc',
@@ -167,6 +174,33 @@ export class DepositService {
             status: payment >= remainingDebt ? 'PAID' : 'PARTIAL',
           },
         });
+
+        if (payment >= remainingDebt) {
+          await tx.ipoApplication.update({
+            where: {
+              id: debt.ipoApplicationId,
+            },
+            data: {
+              paymentStatus: 'PAID',
+            },
+          });
+
+          if (debt.ipoApplication.ipo.instrumentId) {
+            await this.settleIpoApplication(tx, {
+              applicationId: debt.ipoApplication.id,
+              accountId: deposit.accountId,
+              instrumentId: debt.ipoApplication.ipo.instrumentId,
+              quantity: debt.ipoApplication.allocatedQuantity ?? 0,
+              price: Number(
+                debt.ipoApplication.allocatedPrice ??
+                  debt.ipoApplication.ipo.issuePrice,
+              ),
+              totalAmount: Number(
+                debt.ipoApplication.allocatedAmount ?? debt.amount,
+              ),
+            });
+          }
+        }
 
         await tx.accountTransaction.create({
           data: {
@@ -312,5 +346,101 @@ export class DepositService {
       message: 'Deposit rejected',
       depositId,
     };
+  }
+
+  private async settleIpoApplication(
+    tx: any,
+    input: {
+      applicationId: string;
+      accountId: string;
+      instrumentId: string;
+      quantity: number;
+      price: number;
+      totalAmount: number;
+    },
+  ) {
+    if (input.quantity <= 0) {
+      return;
+    }
+
+    const existingOrder = await tx.order.findUnique({
+      where: {
+        accountId_clientOrderId: {
+          accountId: input.accountId,
+          clientOrderId: `IPO-${input.applicationId}`,
+        },
+      },
+    });
+
+    if (existingOrder) {
+      return;
+    }
+
+    const order = await tx.order.create({
+      data: {
+        clientOrderId: `IPO-${input.applicationId}`,
+        accountId: input.accountId,
+        instrumentId: input.instrumentId,
+        side: 'BUY',
+        type: 'MARKET',
+        status: 'FILLED',
+        quantity: input.quantity,
+        filledQuantity: input.quantity,
+        limitPrice: input.price,
+        averageFillPrice: input.price,
+        completedAt: new Date(),
+      },
+    });
+
+    await tx.trade.create({
+      data: {
+        executionId: `IPO-EXEC-${input.applicationId}`,
+        orderId: order.id,
+        accountId: input.accountId,
+        instrumentId: input.instrumentId,
+        quantity: input.quantity,
+        price: input.price,
+        grossAmount: input.totalAmount,
+        fees: 0,
+        netAmount: input.totalAmount,
+      },
+    });
+
+    const position = await tx.position.findUnique({
+      where: {
+        accountId_instrumentId: {
+          accountId: input.accountId,
+          instrumentId: input.instrumentId,
+        },
+      },
+    });
+
+    if (position) {
+      const oldQty = position.quantity;
+      const newQty = oldQty + input.quantity;
+      const avgPrice =
+        (Number(position.averagePrice) * oldQty +
+          input.price * input.quantity) /
+        newQty;
+
+      await tx.position.update({
+        where: {
+          id: position.id,
+        },
+        data: {
+          quantity: newQty,
+          averagePrice: avgPrice,
+        },
+      });
+    } else {
+      await tx.position.create({
+        data: {
+          accountId: input.accountId,
+          instrumentId: input.instrumentId,
+          quantity: input.quantity,
+          averagePrice: input.price,
+        },
+      });
+    }
   }
 }

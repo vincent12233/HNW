@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
@@ -111,7 +111,7 @@ export default function QuantPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>量化后台</Title>
           <Paragraph type="secondary">仅后台管理量化策略、授权规模、收益指标和风控状态，不在客户 App 单独展示。</Paragraph>

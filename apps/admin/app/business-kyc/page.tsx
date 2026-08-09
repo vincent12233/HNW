@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   CheckOutlined,
@@ -151,7 +151,7 @@ export default function BusinessKycPage() {
     {
       title: "客户",
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.fullName || "未命名客户"}</Text>
           <Text type="secondary">+91 {record.phone || "-"}</Text>
         </Space>
@@ -188,7 +188,7 @@ export default function BusinessKycPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>KYC 审核</Title>
           <Paragraph type="secondary">
@@ -233,8 +233,8 @@ export default function BusinessKycPage() {
         ]}
       >
         {reviewing && (
-          <Space direction="vertical" style={{ width: "100%" }} size="middle">
-            <Space direction="vertical" size={4}>
+          <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+            <Space orientation="vertical" size={4}>
               <div>客户：{reviewing.fullName || "未命名客户"}</div>
               <div>手机号：+91 {reviewing.phone || "-"}</div>
               <div>文件：{reviewing.fileName}</div>
@@ -244,7 +244,7 @@ export default function BusinessKycPage() {
             <Card size="small" title="证件预览">
               {fileLoading && <Spin />}
               {!fileLoading && previewFile && (
-                <Space direction="vertical" style={{ width: "100%" }}>
+                <Space orientation="vertical" style={{ width: "100%" }}>
                   <Button icon={<DownloadOutlined />} href={previewUrl} download={previewFile.fileName}>
                     下载文件
                   </Button>

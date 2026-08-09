@@ -28,7 +28,7 @@ class PendingCenterTab extends StatefulWidget {
 class _PendingCenterTabState extends State<PendingCenterTab> {
   int selectedSection = 0;
 
-  final List<String> sections = const ['Open Orders', 'IPO'];
+  final List<String> sections = const ['Orders', 'IPO Applications'];
 
   @override
   Widget build(BuildContext context) {
@@ -192,21 +192,8 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                 const SizedBox(height: 14),
 
                 const Text(
-                  'Application submitted. Allocation is pending.',
+                  'Application submitted. Allocation is pending relationship manager review.',
                   style: TextStyle(color: Colors.black54),
-                ),
-
-                const SizedBox(height: 16),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      _showAllocationDialog(application);
-                    },
-                    icon: const Icon(Icons.assignment_turned_in_outlined),
-                    label: const Text('Allocate for Testing'),
-                  ),
                 ),
               ],
 
@@ -279,8 +266,8 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
-                            'Available account funds have been automatically applied. '
-                            'The remaining amount is outstanding.',
+                            'Available account cash has been automatically deducted. '
+                            'The remaining amount is IPO debt. Shares will move to Holdings only after the subscription is fully settled.',
                             style: TextStyle(
                               color: Color(0xFF92400E),
                               height: 1.4,
@@ -351,83 +338,6 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
         );
       },
     );
-  }
-
-  Future<void> _showAllocationDialog(IpoApplication application) async {
-    final controller = TextEditingController();
-
-    final quantity = await showDialog<int>(
-      context: context,
-      builder: (dialogContext) {
-        String? errorText;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Allocate IPO Shares'),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    application.companyName,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    application.symbol,
-                    style: const TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: controller,
-                    keyboardType: TextInputType.number,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      labelText: 'Allocated Quantity',
-                      suffixText: 'Shares',
-                      border: const OutlineInputBorder(),
-                      errorText: errorText,
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext);
-                  },
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    final value = int.tryParse(controller.text.trim());
-
-                    if (value == null || value <= 0) {
-                      setDialogState(() {
-                        errorText = 'Enter a valid quantity';
-                      });
-                      return;
-                    }
-
-                    Navigator.pop(dialogContext, value);
-                  },
-                  child: const Text('Allocate'),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-
-    controller.dispose();
-
-    if (quantity == null || quantity <= 0) {
-      return;
-    }
-
-    widget.onAllocateIpo(application.id, quantity);
   }
 
   int _applicationNumberFor(IpoApplication application) {

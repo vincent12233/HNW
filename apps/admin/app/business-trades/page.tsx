@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
@@ -105,7 +105,7 @@ export default function BusinessTradesPage() {
       fixed: "left",
       width: 250,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.account.user.fullName || "未命名客户"}</Text>
           <Text type="secondary">
             {record.account.user.customerNo || "-"} / +91 {record.account.user.phone || "-"}
@@ -118,7 +118,7 @@ export default function BusinessTradesPage() {
       title: "股票",
       width: 190,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.instrument.symbol}</Text>
           <Text type="secondary">{record.instrument.exchange} / {record.instrument.name}</Text>
         </Space>
@@ -145,7 +145,7 @@ export default function BusinessTradesPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>客户成交记录</Title>
           <Paragraph type="secondary">

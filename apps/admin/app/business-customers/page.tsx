@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   HistoryOutlined,
@@ -796,7 +796,7 @@ export default function BusinessCustomersPage() {
         confirmLoading={riskLoading}
       >
         {selectedRisk && (
-          <Space direction="vertical" size="large" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <Space size="large" wrap>
               <Card>
                 <Statistic
@@ -815,7 +815,7 @@ export default function BusinessCustomersPage() {
 
             <Card title="最近失败登录">
               {selectedRisk.lastFailedLogin ? (
-                <Space direction="vertical">
+                <Space orientation="vertical">
                   <Text>
                     时间：
                     {formatDate(selectedRisk.lastFailedLogin.createdAt)}

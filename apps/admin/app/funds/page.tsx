@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
@@ -130,7 +130,7 @@ export default function FundsPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>基金后台</Title>
           <Paragraph type="secondary">仅后台管理基金产品、净值、风险等级和申购状态，不在客户 App 单独展示。</Paragraph>

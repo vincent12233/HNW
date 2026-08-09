@@ -24,7 +24,7 @@ class IpoTab extends StatefulWidget {
 class _IpoTabState extends State<IpoTab> {
   int selectedSection = 0;
 
-  final List<String> sections = const ['Open', 'Upcoming'];
+  final List<String> sections = const ['Upcoming', 'Open', 'Closed', 'All'];
 
   int _applicationCount(String ipoId) {
     return widget.applications
@@ -57,17 +57,18 @@ class _IpoTabState extends State<IpoTab> {
           ),
         ),
         const SizedBox(height: 12),
-        Expanded(
-          child: selectedSection == 0
-              ? _buildIpoList(IpoStatus.open)
-              : _buildIpoList(IpoStatus.upcoming),
-        ),
+        Expanded(child: _buildIpoList()),
       ],
     );
   }
 
-  Widget _buildIpoList(IpoStatus status) {
-    final filtered = widget.ipos.where((ipo) => ipo.status == status).toList();
+  Widget _buildIpoList() {
+    final filtered = widget.ipos.where((ipo) {
+      if (selectedSection == 0) return ipo.status == IpoStatus.upcoming;
+      if (selectedSection == 1) return ipo.status == IpoStatus.open;
+      if (selectedSection == 2) return ipo.status == IpoStatus.closed;
+      return true;
+    }).toList();
 
     if (filtered.isEmpty) {
       return Center(
@@ -83,9 +84,9 @@ class _IpoTabState extends State<IpoTab> {
               ),
               const SizedBox(height: 16),
               Text(
-                status == IpoStatus.open
-                    ? 'No IPOs open for subscription'
-                    : 'No upcoming IPOs',
+                selectedSection == 1
+                    ? 'No IPOs open for application'
+                    : 'No IPO records',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 20,
@@ -190,7 +191,7 @@ class _IpoTabState extends State<IpoTab> {
                 ],
               ),
 
-              if (status == IpoStatus.open) ...[
+              if (ipo.status == IpoStatus.open) ...[
                 const SizedBox(height: 18),
 
                 if (applicationCount > 0)
@@ -213,7 +214,9 @@ class _IpoTabState extends State<IpoTab> {
                         : () {
                             _confirmApply(ipo);
                           },
-                    child: Text(reachedLimit ? 'Applied 5/5' : 'Apply'),
+                    child: Text(
+                      reachedLimit ? 'Applied 5/5' : 'Apply Now',
+                    ),
                   ),
                 ),
               ],
@@ -267,7 +270,13 @@ class _IpoTabState extends State<IpoTab> {
               const SizedBox(height: 4),
               Text(ipo.symbol, style: const TextStyle(color: Colors.black54)),
               const SizedBox(height: 18),
-              Text('Submit IPO application ${currentCount + 1} of 5?'),
+              Text(
+                'Submit IPO application ${currentCount + 1} of 5?\n\n'
+                'No quantity is required now. Allocation will be assigned '
+                'by your relationship manager. After allocation, the system '
+                'will automatically deduct available cash. Any shortfall '
+                'will stay pending as IPO debt until fully settled.',
+              ),
             ],
           ),
           actions: [

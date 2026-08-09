@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, StarOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
@@ -121,7 +121,7 @@ export default function WatchlistPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>自选股后台池</Title>
           <Paragraph type="secondary">仅后台管理使用，用于维护推荐股票池、分类、风险标记和展示状态。</Paragraph>

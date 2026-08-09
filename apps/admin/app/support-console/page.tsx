@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import {
   MessageOutlined,
@@ -174,7 +174,7 @@ export default function SupportConsolePage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>在线客服后台</Title>
           <Paragraph type="secondary">
@@ -216,7 +216,7 @@ export default function SupportConsolePage() {
                       </Space>
                     }
                     description={
-                      <Space direction="vertical" size={4}>
+                      <Space orientation="vertical" size={4}>
                         <Text type="secondary" ellipsis>
                           {item.messages?.[0]?.content || formatDate(item.updatedAt)}
                         </Text>
@@ -252,7 +252,7 @@ export default function SupportConsolePage() {
             {!selected ? (
               <Empty description="请选择一个客户会话" />
             ) : (
-              <Space direction="vertical" style={{ width: "100%" }} size="middle">
+              <Space orientation="vertical" style={{ width: "100%" }} size="middle">
                 <Select
                   mode="tags"
                   allowClear

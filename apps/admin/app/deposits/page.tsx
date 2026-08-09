@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DollarOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import {
@@ -152,7 +152,7 @@ export default function DepositsPage() {
       fixed: "left",
       width: 240,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.user.fullName || "未命名客户"}</Text>
           <Text type="secondary">
             {record.user.customerNo || "-"} / +91 {record.user.phone || "-"}
@@ -207,7 +207,7 @@ export default function DepositsPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>财务上分</Title>
           <Paragraph type="secondary">
@@ -254,7 +254,7 @@ export default function DepositsPage() {
         cancelText="取消"
       >
         {selected && (
-          <Space direction="vertical" size="middle" style={{ width: "100%" }}>
+          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
             <Alert
               type="info"
               showIcon

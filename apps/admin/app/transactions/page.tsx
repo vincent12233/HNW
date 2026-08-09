@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
@@ -128,7 +128,7 @@ export default function TransactionsPage() {
       fixed: "left",
       width: 250,
       render: (_, record) => (
-        <Space direction="vertical" size={0}>
+        <Space orientation="vertical" size={0}>
           <Text strong>{record.account.user.fullName || "未命名客户"}</Text>
           <Text type="secondary">
             {record.account.user.customerNo || "-"} / +91 {record.account.user.phone || "-"}
@@ -193,7 +193,7 @@ export default function TransactionsPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>资金流水</Title>
           <Paragraph type="secondary">

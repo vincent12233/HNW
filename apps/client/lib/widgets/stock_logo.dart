@@ -10,24 +10,37 @@ class StockLogo extends StatelessWidget {
   final String symbol;
   final double size;
 
+  static const Map<String, String> _logoUrls = {
+    'RELIANCE': 'https://logo.clearbit.com/ril.com',
+    'TCS': 'https://logo.clearbit.com/tcs.com',
+    'HDFCBANK': 'https://logo.clearbit.com/hdfcbank.com',
+    'INFY': 'https://logo.clearbit.com/infosys.com',
+    'ICICIBANK': 'https://logo.clearbit.com/icicibank.com',
+    'ITC': 'https://logo.clearbit.com/itcportal.com',
+    'HINDUNILVR': 'https://logo.clearbit.com/hul.co.in',
+    'NESTLEIND': 'https://logo.clearbit.com/nestle.in',
+    'TATACAP': 'https://logo.clearbit.com/tatacapital.com',
+    'NSDL': 'https://logo.clearbit.com/nsdl.co.in',
+  };
+
   static const Map<String, _LogoStyle> _styles = {
-    'RELIANCE': _LogoStyle(Color(0xFF123B8A), 'R'),
-    'TCS': _LogoStyle(Color(0xFF0A6FB7), 'T'),
-    'HDFCBANK': _LogoStyle(Color(0xFF174EA6), 'H'),
-    'INFY': _LogoStyle(Color(0xFF2563EB), 'I'),
-    'ICICIBANK': _LogoStyle(Color(0xFFE85D04), 'I'),
-    'ITC': _LogoStyle(Color(0xFF1D4ED8), 'ITC'),
-    'HINDUNILVR': _LogoStyle(Color(0xFF0EA5E9), 'H'),
-    'NESTLEIND': _LogoStyle(Color(0xFF9D174D), 'N'),
-    'TATACAP': _LogoStyle(Color(0xFF1D4ED8), 'T'),
-    'NSDL': _LogoStyle(Color(0xFF475569), 'N'),
+    'RELIANCE': _LogoStyle(Color(0xFF123B8A), Icons.energy_savings_leaf),
+    'TCS': _LogoStyle(Color(0xFF0A6FB7), Icons.hub_outlined),
+    'HDFCBANK': _LogoStyle(Color(0xFF174EA6), Icons.account_balance),
+    'INFY': _LogoStyle(Color(0xFF2563EB), Icons.memory),
+    'ICICIBANK': _LogoStyle(Color(0xFFE85D04), Icons.account_balance_wallet),
+    'ITC': _LogoStyle(Color(0xFF1D4ED8), Icons.apartment),
+    'HINDUNILVR': _LogoStyle(Color(0xFF0EA5E9), Icons.water_drop),
+    'NESTLEIND': _LogoStyle(Color(0xFF9D174D), Icons.local_cafe),
+    'TATACAP': _LogoStyle(Color(0xFF1D4ED8), Icons.business),
+    'NSDL': _LogoStyle(Color(0xFF475569), Icons.security),
   };
 
   @override
   Widget build(BuildContext context) {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final style = _styles[normalizedSymbol] ?? _fallbackStyle(normalizedSymbol);
-    final fontSize = size <= 34 ? 12.0 : 14.0;
+    final logoUrl = _logoUrls[normalizedSymbol];
 
     return Container(
       width: size,
@@ -45,25 +58,17 @@ class StockLogo extends StatelessWidget {
           ),
         ],
       ),
-      child: Container(
-        width: size - 8,
-        height: size - 8,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: style.color,
-          shape: BoxShape.circle,
-        ),
-        child: Text(
-          style.label,
-          maxLines: 1,
-          overflow: TextOverflow.clip,
-          style: TextStyle(
-            color: Colors.white,
-            fontSize: fontSize,
-            fontWeight: FontWeight.w800,
-            letterSpacing: 0,
-          ),
-        ),
+      child: ClipOval(
+        child: logoUrl == null
+            ? _FallbackLogo(style: style, size: size)
+            : Image.network(
+                logoUrl,
+                width: size - 8,
+                height: size - 8,
+                fit: BoxFit.contain,
+                errorBuilder: (_, _, _) =>
+                    _FallbackLogo(style: style, size: size),
+              ),
       ),
     );
   }
@@ -79,19 +84,34 @@ class StockLogo extends StatelessWidget {
     ];
 
     final seed = symbol.codeUnits.fold<int>(0, (total, code) => total + code);
-    final label = symbol.isEmpty
-        ? '?'
-        : symbol.length <= 3
-            ? symbol
-            : symbol.substring(0, 1);
-
-    return _LogoStyle(palette[seed % palette.length], label);
+    return _LogoStyle(palette[seed % palette.length], Icons.show_chart);
   }
 }
 
 class _LogoStyle {
-  const _LogoStyle(this.color, this.label);
+  const _LogoStyle(this.color, this.icon);
 
   final Color color;
-  final String label;
+  final IconData icon;
+}
+
+class _FallbackLogo extends StatelessWidget {
+  const _FallbackLogo({required this.style, required this.size});
+
+  final _LogoStyle style;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size - 8,
+      height: size - 8,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: style.color,
+        shape: BoxShape.circle,
+      ),
+      child: Icon(style.icon, color: Colors.white, size: size * 0.44),
+    );
+  }
 }

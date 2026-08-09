@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
@@ -105,7 +105,7 @@ export default function BlockTradesPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>大宗交易后台</Title>
           <Paragraph type="secondary">仅后台维护大宗交易机会、报价、额度和状态，不在客户 App 公开展示。</Paragraph>

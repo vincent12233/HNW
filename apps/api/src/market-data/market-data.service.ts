@@ -51,6 +51,8 @@ export class MarketDataService {
 
         change,
 
+        previousClose: item.quote?.previousClose ?? null,
+
         bid: item.quote?.bidPrice ?? null,
 
         ask: item.quote?.askPrice ?? null,

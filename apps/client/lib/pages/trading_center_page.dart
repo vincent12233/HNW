@@ -52,6 +52,11 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   final List<_TradingModule> tabs = const [
     _TradingModule('Trades', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
     _TradingModule(
+      'Inst.',
+      Icons.account_balance_outlined,
+      Color(0xFF1D4ED8),
+    ),
+    _TradingModule(
       'Holdings',
       Icons.account_balance_wallet_outlined,
       Color(0xFF059669),
@@ -64,11 +69,6 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
     ),
     _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
     _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
-    _TradingModule(
-      'Inst.',
-      Icons.account_balance_outlined,
-      Color(0xFF1D4ED8),
-    ),
     _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
   ];
 
@@ -163,33 +163,33 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
         return TradeList(stocks: widget.stocks, onTrade: widget.onTrade);
 
       case 1:
+        return InstitutionalTab(stocks: widget.institutionalStocks);
+
+      case 2:
         return HoldingsTab(
           positions: widget.positions,
           stocks: widget.stocks,
           onStockTap: widget.onTrade,
         );
 
-      case 2:
+      case 3:
         return PendingCenterTab(
           pendingOrders: widget.pendingOrders,
           ipoApplications: widget.ipoApplications,
         );
 
-      case 3:
+      case 4:
         return OrdersTab(orders: widget.orders);
 
-      case 4:
+      case 5:
         return IpoTab(
           ipos: widget.ipos,
           applications: widget.ipoApplications,
           onApply: widget.onApplyIpo,
         );
 
-      case 5:
-        return OtcTab(opportunities: widget.institutionalStocks);
-
       case 6:
-        return InstitutionalTab(stocks: widget.institutionalStocks);
+        return OtcTab(opportunities: widget.institutionalStocks);
 
       case 7:
         return HistoryTab(orders: widget.orders);

@@ -443,11 +443,11 @@ class _MarketHomePageState extends State<MarketHomePage> {
   List<StockQuote> _fallbackStocks() {
     final now = DateTime.now();
     return <StockQuote>[
-      StockQuote('RELIANCE', 'Reliance Industries', 1334.8, 0, 9880895, now),
-      StockQuote('TCS', 'Tata Consultancy Services', 2452.7, 0, 4547325, now),
-      StockQuote('HDFCBANK', 'HDFC Bank', 731, 0, 19372672, now),
-      StockQuote('INFY', 'Infosys', 1928.60, 0, 0, now),
-      StockQuote('ICICIBANK', 'ICICI Bank', 1284.30, 0, 0, now),
+      StockQuote('RELIANCE', 'Reliance Industries', 1334.8, 1.82, 9880895, now),
+      StockQuote('TCS', 'Tata Consultancy Services', 2452.7, 1.65, 4547325, now),
+      StockQuote('HDFCBANK', 'HDFC Bank', 731, 2.45, 19372672, now),
+      StockQuote('INFY', 'Infosys', 1928.60, -0.85, 0, now),
+      StockQuote('ICICIBANK', 'ICICI Bank', 1284.30, 1.18, 0, now),
     ];
   }
 

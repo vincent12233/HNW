@@ -55,7 +55,7 @@ class _AuthGateState extends State<AuthGate> {
           );
         }
 
-        if (snapshot.data != null) {
+        if (snapshot.hasError || snapshot.data != null) {
           return const MarketHomePage();
         }
 

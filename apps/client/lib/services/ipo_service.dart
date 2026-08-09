@@ -13,10 +13,12 @@ class IpoService {
     final session = await _authService.restoreSession();
     if (session == null || session.accessToken.isEmpty) return <Ipo>[];
 
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/ipo/open'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/ipo/open'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -38,10 +40,12 @@ class IpoService {
       return <IpoApplication>[];
     }
 
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/ipo/applications/me'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/ipo/applications/me'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {

@@ -7,9 +7,9 @@ import '../models/stock_quote.dart';
 
 class MarketDataService {
   Future<List<StockQuote>> fetchSnapshot() async {
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/market-data'),
-    );
+    final response = await http
+        .get(Uri.parse('${AppConfig.apiBaseUrl}/market-data'))
+        .timeout(const Duration(seconds: 6));
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const MarketDataException('Unable to load market data');

@@ -143,10 +143,12 @@ class AuthService {
       return <WithdrawalRequest>[];
     }
 
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/withdrawal/me'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/withdrawal/me'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
 
     final decoded = jsonDecode(response.body);
 

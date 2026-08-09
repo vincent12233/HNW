@@ -17,10 +17,12 @@ class TradingService {
       return null;
     }
 
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/account/portfolio'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/account/portfolio'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
 
     final decoded = jsonDecode(response.body);
 
@@ -42,10 +44,12 @@ class TradingService {
       return <TradingOrder>[];
     }
 
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/orders?pageSize=50'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/orders?pageSize=50'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
 
     final decoded = jsonDecode(response.body);
 

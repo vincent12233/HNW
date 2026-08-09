@@ -1,7 +1,4 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_config.dart';
 import '../models/institutional_opportunity.dart';
@@ -19,7 +16,6 @@ import '../services/trading_service.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/market_header.dart';
 import '../widgets/market_news.dart';
-import '../widgets/stock_list_tile.dart';
 import '../widgets/stock_logo.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
@@ -39,28 +35,12 @@ class MarketHomePage extends StatefulWidget {
 }
 
 class _MarketHomePageState extends State<MarketHomePage> {
-  static const double initialCash = 1000000;
-  static const String _legacyCashKey = 'sandbox_cash';
-  static const String _cashKey = 'account_cash';
-  static const String _legacyRealizedProfitLossKey =
-      'sandbox_realized_profit_loss';
-  static const String _realizedProfitLossKey = 'account_realized_profit_loss';
-  static const String _notificationsKey = 'order_notifications';
-  static const String _accountNameKey = 'account_name';
-  static const String _accountPhoneKey = 'account_phone';
-  static const String _favoritesKey = 'favorite_symbols';
-  static const String _legacyOrdersKey = 'sandbox_orders';
-  static const String _ordersKey = 'trading_orders';
-  static const String _positionsKey = 'portfolio_positions';
-  static const String _withdrawalRequestsKey = 'withdrawal_requests';
-
   int selectedIndex = 0;
   bool isLoading = true;
   bool _ipoAllocationDialogOpen = false;
 
-  double cashBalance = initialCash;
+  double cashBalance = 0;
   double realizedProfitLoss = 0;
-  bool orderNotificationsEnabled = true;
 
   double nifty50Price = 0;
   double nifty50Change = 0;
@@ -71,10 +51,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
   double bankNiftyPrice = 0;
   double bankNiftyChange = 0;
 
-  String accountName = 'Sonal Naik';
-  String accountPhone = '9876543210';
-
-  final Set<String> favoriteSymbols = <String>{};
+  String accountName = 'Client';
+  String accountPhone = '';
 
   final List<TradingOrder> orders = <TradingOrder>[];
 
@@ -84,53 +62,14 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
   final List<InstitutionalStock> institutionalStocks = <InstitutionalStock>[];
 
-  final List<Ipo> ipos = <Ipo>[
-    Ipo(
-      id: 'IPO001',
-      symbol: 'TATACAP',
-      companyName: 'Tata Capital Limited',
-      marketPrice: 1185.60,
-      subscriptionPrice: 1020.00,
-      lotSize: 100,
-      status: IpoStatus.open,
-    ),
-    Ipo(
-      id: 'IPO002',
-      symbol: 'NSDL',
-      companyName: 'National Securities Depository',
-      marketPrice: 920.00,
-      subscriptionPrice: 845.00,
-      lotSize: 50,
-      status: IpoStatus.upcoming,
-    ),
-  ];
+  final List<Ipo> ipos = <Ipo>[];
 
   final List<IpoApplication> ipoApplications = <IpoApplication>[];
 
   final Map<String, PortfolioPosition> positions =
       <String, PortfolioPosition>{};
 
-  final List<StockQuote> stocks = [
-    StockQuote(
-      'RELIANCE',
-      'Reliance Industries',
-      1334.8,
-      0,
-      9880895,
-      DateTime.now(),
-    ),
-    StockQuote(
-      'TCS',
-      'Tata Consultancy Services',
-      2452.7,
-      0,
-      4547325,
-      DateTime.now(),
-    ),
-    StockQuote('HDFCBANK', 'HDFC Bank', 731, 0, 19372672, DateTime.now()),
-    StockQuote('INFY', 'Infosys', 1928.60, 0, 0, DateTime.now()),
-    StockQuote('ICICIBANK', 'ICICI Bank', 1284.30, 0, 0, DateTime.now()),
-  ];
+  final List<StockQuote> stocks = <StockQuote>[];
 
   Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
@@ -399,7 +338,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
       });
     };
 
-    _loadSavedData();
+    _loadAppData();
   }
 
   @override
@@ -408,129 +347,34 @@ class _MarketHomePageState extends State<MarketHomePage> {
     super.dispose();
   }
 
-  Future<void> _loadSavedData() async {
-    final preferences = await SharedPreferences.getInstance();
+  Future<void> _loadAppData() async {
+    final session = await AuthService().restoreSession();
 
-    final savedOrders =
-        preferences.getString(_ordersKey) ??
-        preferences.getString(_legacyOrdersKey);
+    accountName = session?.fullName.isNotEmpty == true
+        ? session!.fullName
+        : 'Client';
+    accountPhone = session?.phone ?? '';
 
-    final savedPositions = preferences.getString(_positionsKey);
-
-    final savedWithdrawalRequests = preferences.getString(
-      _withdrawalRequestsKey,
-    );
-
-    try {
-      if (savedOrders != null) {
-        final decodedOrders = jsonDecode(savedOrders) as List<dynamic>;
-
-        orders
-          ..clear()
-          ..addAll(
-            decodedOrders.map(
-              (item) =>
-                  TradingOrder.fromJson(Map<String, dynamic>.from(item as Map)),
-            ),
-          );
-      }
-
-      if (savedPositions != null) {
-        final decodedPositions = jsonDecode(savedPositions) as List<dynamic>;
-
-        positions
-          ..clear()
-          ..addEntries(
-            decodedPositions.map((item) {
-              final position = PortfolioPosition.fromJson(
-                Map<String, dynamic>.from(item as Map),
-              );
-
-              return MapEntry(position.symbol, position);
-            }),
-          );
-      }
-
-      if (savedWithdrawalRequests != null) {
-        final decodedWithdrawalRequests =
-            jsonDecode(savedWithdrawalRequests) as List<dynamic>;
-
-        withdrawalRequests
-          ..clear()
-          ..addAll(
-            decodedWithdrawalRequests.map(
-              (item) => WithdrawalRequest.fromJson(
-                Map<String, dynamic>.from(item as Map),
-              ),
-            ),
-          );
-      }
-    } catch (_) {
-      orders.clear();
-      positions.clear();
-    }
-
-    cashBalance =
-        preferences.getDouble(_cashKey) ??
-        preferences.getDouble(_legacyCashKey) ??
-        initialCash;
-
-    realizedProfitLoss =
-        preferences.getDouble(_realizedProfitLossKey) ??
-        preferences.getDouble(_legacyRealizedProfitLossKey) ??
-        0;
-
-    orderNotificationsEnabled = preferences.getBool(_notificationsKey) ?? true;
-
-    accountName = preferences.getString(_accountNameKey) ?? 'Sonal Naik';
-
-    accountPhone = preferences.getString(_accountPhoneKey) ?? '9876543210';
-
-    favoriteSymbols
+    stocks
       ..clear()
-      ..addAll(preferences.getStringList(_favoritesKey) ?? const <String>[]);
+      ..addAll(_fallbackStocks());
+    ipos
+      ..clear()
+      ..addAll(_fallbackIpos());
 
     try {
       final remoteStocks = await marketDataService.fetchSnapshot();
-
       if (remoteStocks.isNotEmpty) {
         stocks
           ..clear()
           ..addAll(remoteStocks);
       }
     } catch (_) {
-      // Keep the bundled market list if the API is temporarily unavailable.
-    }
-
-    try {
-      final remoteWithdrawals = await AuthService().fetchWithdrawals();
-
-      if (remoteWithdrawals.isNotEmpty) {
-        withdrawalRequests
-          ..clear()
-          ..addAll(remoteWithdrawals);
-      }
-    } catch (_) {
-      // Keep locally cached requests if the network is unavailable.
-    }
-
-    try {
-      final remoteIpos = await ipoService.fetchOpenIpos();
-      final remoteApplications = await ipoService.fetchMyApplications();
-
-      ipos
-        ..clear()
-        ..addAll(remoteIpos);
-      ipoApplications
-        ..clear()
-        ..addAll(remoteApplications);
-    } catch (_) {
-      // Keep bundled IPO records if the API is temporarily unavailable.
+      // Read-only fallback market list stays visible if the API is unavailable.
     }
 
     try {
       final snapshot = await tradingService.fetchAccountSnapshot();
-
       if (snapshot != null) {
         cashBalance = snapshot.cashBalance;
         realizedProfitLoss = snapshot.realizedProfitLoss;
@@ -542,16 +386,43 @@ class _MarketHomePageState extends State<MarketHomePage> {
             ),
           );
       }
-
-      final remoteOrders = await tradingService.fetchOrders();
-
-      if (remoteOrders.isNotEmpty) {
-        orders
-          ..clear()
-          ..addAll(remoteOrders);
-      }
     } catch (_) {
-      // Keep local portfolio data if the trading API is temporarily unavailable.
+      cashBalance = 0;
+      realizedProfitLoss = 0;
+      positions.clear();
+    }
+
+    try {
+      final remoteOrders = await tradingService.fetchOrders();
+      orders
+        ..clear()
+        ..addAll(remoteOrders);
+    } catch (_) {
+      orders.clear();
+    }
+
+    try {
+      final remoteWithdrawals = await AuthService().fetchWithdrawals();
+      withdrawalRequests
+        ..clear()
+        ..addAll(remoteWithdrawals);
+    } catch (_) {
+      withdrawalRequests.clear();
+    }
+
+    try {
+      final remoteIpos = await ipoService.fetchOpenIpos();
+      final remoteApplications = await ipoService.fetchMyApplications();
+      if (remoteIpos.isNotEmpty) {
+        ipos
+          ..clear()
+          ..addAll(remoteIpos);
+      }
+      ipoApplications
+        ..clear()
+        ..addAll(remoteApplications);
+    } catch (_) {
+      ipoApplications.clear();
     }
 
     if (mounted) {
@@ -569,42 +440,29 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
   }
 
-  Future<void> _saveData() async {
-    final preferences = await SharedPreferences.getInstance();
+  List<StockQuote> _fallbackStocks() {
+    final now = DateTime.now();
+    return <StockQuote>[
+      StockQuote('RELIANCE', 'Reliance Industries', 1334.8, 0, 9880895, now),
+      StockQuote('TCS', 'Tata Consultancy Services', 2452.7, 0, 4547325, now),
+      StockQuote('HDFCBANK', 'HDFC Bank', 731, 0, 19372672, now),
+      StockQuote('INFY', 'Infosys', 1928.60, 0, 0, now),
+      StockQuote('ICICIBANK', 'ICICI Bank', 1284.30, 0, 0, now),
+    ];
+  }
 
-    await preferences.setDouble(_cashKey, cashBalance);
-
-    await preferences.setDouble(_realizedProfitLossKey, realizedProfitLoss);
-
-    await preferences.setBool(_notificationsKey, orderNotificationsEnabled);
-
-    await preferences.setString(_accountNameKey, accountName);
-
-    await preferences.setString(_accountPhoneKey, accountPhone);
-
-    await preferences.setStringList(
-      _favoritesKey,
-      favoriteSymbols.toList()..sort(),
-    );
-
-    await preferences.setString(
-      _ordersKey,
-      jsonEncode(orders.map((order) => order.toJson()).toList()),
-    );
-
-    await preferences.setString(
-      _positionsKey,
-      jsonEncode(
-        positions.values.map((position) => position.toJson()).toList(),
+  List<Ipo> _fallbackIpos() {
+    return <Ipo>[
+      Ipo(
+        id: 'FALLBACK_TATACAP',
+        symbol: 'TATACAP',
+        companyName: 'Tata Capital Limited',
+        marketPrice: 1185.60,
+        subscriptionPrice: 1020.00,
+        lotSize: 100,
+        status: IpoStatus.upcoming,
       ),
-    );
-
-    await preferences.setString(
-      _withdrawalRequestsKey,
-      jsonEncode(
-        withdrawalRequests.map((request) => request.toJson()).toList(),
-      ),
-    );
+    ];
   }
 
   @override
@@ -1197,7 +1055,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
                                   ..addAll(latest);
                               });
                               setDialogState(() {});
-                              await _saveData();
                             } on AuthException catch (error) {
                               if (!dialogContext.mounted) return;
                               ScaffoldMessenger.of(
@@ -1305,8 +1162,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
     setState(() {
       withdrawalRequests.insert(0, request);
     });
-
-    await _saveData();
 
     if (!mounted) {
       return;
@@ -1667,8 +1522,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
             );
         });
 
-        _saveData();
-
         return null;
       }
 
@@ -1680,97 +1533,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ..insert(0, confirmedOrder);
       });
 
-      _saveData();
-
       return null;
     } catch (error) {
       return error.toString();
     }
-  }
-
-  void _toggleFavorite(StockQuote stock) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Watchlist sync is being connected to the server.'),
-      ),
-    );
-  }
-
-  // ignore: unused_element
-  Widget _watchlistBody() {
-    final favoriteStocks = stocks
-        .where((stock) => favoriteSymbols.contains(stock.symbol))
-        .toList();
-
-    if (favoriteStocks.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.star_border, size: 72, color: Colors.grey.shade400),
-              const SizedBox(height: 16),
-              const Text(
-                'Your watchlist is empty',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Tap the star beside a stock to add it here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: () {
-                  setState(() {
-                    selectedIndex = 0;
-                  });
-                },
-                icon: const Icon(Icons.show_chart),
-                label: const Text('Browse stocks'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'My Watchlist',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '${favoriteStocks.length} saved stock'
-          '${favoriteStocks.length == 1 ? '' : 's'}',
-          style: const TextStyle(color: Colors.black54),
-        ),
-        const SizedBox(height: 12),
-        Card(
-          color: Colors.white,
-          child: Column(
-            children: favoriteStocks.map((stock) {
-              return StockListTile(
-                stock: stock,
-                isFavorite: true,
-                onTap: () {
-                  _openStock(stock);
-                },
-                onFavorite: () {
-                  _toggleFavorite(stock);
-                },
-              );
-            }).toList(),
-          ),
-        ),
-      ],
-    );
   }
 
   // ignore: unused_element
@@ -1945,7 +1711,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ..clear()
           ..addAll(remoteOrders);
       });
-      await _saveData();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Trading data refreshed')),
@@ -2418,18 +2183,16 @@ class _MarketHomePageState extends State<MarketHomePage> {
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
-              SwitchListTile(
-                secondary: const Icon(Icons.notifications_outlined),
-                title: const Text('Order notifications'),
-                subtitle: const Text('Order Execution confirmations'),
-                value: orderNotificationsEnabled,
-                onChanged: (value) {
-                  setState(() {
-                    orderNotificationsEnabled = value;
-                  });
-
-                  _saveData();
-                },
+              _accountTile(
+                icon: Icons.notifications_outlined,
+                title: 'Order notifications',
+                subtitle: 'Ask support to update notification preferences',
+                onTap: () => _openCustomerService(
+                  title: 'Notification support',
+                  initialMessage:
+                      'Hello, I need help with order notification preferences.',
+                  icon: Icons.notifications_outlined,
+                ),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(

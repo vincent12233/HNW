@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../services/auth_service.dart';
+import '../utils/client_error_message.dart';
 import 'kyc_upload_page.dart';
 
 class RegisterPage extends StatefulWidget {
@@ -194,7 +195,10 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       setState(() {
-        errorText = error.toString();
+        errorText = clientErrorMessage(
+          error,
+          fallback: 'Unable to register. Please try again.',
+        );
       });
     } finally {
       if (mounted) {

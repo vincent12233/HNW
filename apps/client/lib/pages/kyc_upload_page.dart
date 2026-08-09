@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../services/auth_service.dart';
+import '../utils/client_error_message.dart';
 
 class KycUploadPage extends StatefulWidget {
   const KycUploadPage({super.key, required this.phone});
@@ -196,7 +197,10 @@ class _KycUploadPageState extends State<KycUploadPage> {
       }
 
       setState(() {
-        errorText = error.toString();
+        errorText = clientErrorMessage(
+          error,
+          fallback: 'Unable to submit KYC. Please try again.',
+        );
       });
     } finally {
       if (mounted) {

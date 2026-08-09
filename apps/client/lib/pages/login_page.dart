@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/auth_session.dart';
 import '../services/auth_service.dart';
+import '../utils/client_error_message.dart';
 import 'register_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -197,7 +198,10 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       setState(() {
-        errorText = error.toString();
+        errorText = clientErrorMessage(
+          error,
+          fallback: 'Unable to sign in. Please try again.',
+        );
       });
     } finally {
       if (mounted) {

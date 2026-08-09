@@ -38,6 +38,10 @@ type BusinessDashboard = {
   totalDepositCount: number;
   totalWithdrawalAmount: string;
   totalWithdrawalCount: number;
+  todayDepositAmount: string;
+  todayDepositCount: number;
+  todayWithdrawalAmount: string;
+  todayWithdrawalCount: number;
   pendingIpoApplications: number;
   ipoDebtCustomers: number;
   ipoDebtAmount: number;
@@ -284,15 +288,18 @@ export default function DashboardPage() {
               </Col>
             </Row>
 
-            <Card title="风控观察" style={{ borderRadius: 8 }}>
+            <Card title="资金观察" style={{ borderRadius: 8 }}>
               <Row gutter={[16, 16]}>
-                <Col xs={24} md={8}>
-                  <Statistic title="24小时失败登录" value={businessRisk?.failedLogin24h ?? 0} />
+                <Col xs={24} md={6}>
+                  <Statistic title="当日总提现" value={formatMoney(Number(businessData?.todayWithdrawalAmount ?? 0))} />
                 </Col>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={6}>
+                  <Statistic title="当日总充值" value={formatMoney(Number(businessData?.todayDepositAmount ?? 0))} />
+                </Col>
+                <Col xs={24} md={6}>
                   <Statistic title="客户累计入金" value={formatMoney(Number(businessData?.totalDepositAmount ?? 0))} />
                 </Col>
-                <Col xs={24} md={8}>
+                <Col xs={24} md={6}>
                   <Statistic title="客户累计提现" value={formatMoney(Number(businessData?.totalWithdrawalAmount ?? 0))} />
                 </Col>
               </Row>

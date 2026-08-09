@@ -57,6 +57,8 @@ export class BusinessService {
       pendingWithdrawals,
       depositTotals,
       withdrawalTotals,
+      todayDepositTotals,
+      todayWithdrawalTotals,
       pendingIpoApplications,
       openIpoDebts,
       loanOutstanding,
@@ -120,6 +122,42 @@ export class BusinessService {
 
       this.prisma.withdrawalRequest.aggregate({
         where: {
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      }),
+
+      this.prisma.accountTransaction.aggregate({
+        where: {
+          type: 'ADMIN_CREDIT',
+          status: 'COMPLETED',
+          createdAt: {
+            gte: startOfToday,
+          },
+          account: {
+            user: {
+              assignedBusinessId: businessUserId,
+            },
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      }),
+
+      this.prisma.withdrawalRequest.aggregate({
+        where: {
+          createdAt: {
+            gte: startOfToday,
+          },
           account: {
             user: {
               assignedBusinessId: businessUserId,
@@ -235,6 +273,11 @@ export class BusinessService {
       totalDepositCount: depositTotals._count,
       totalWithdrawalAmount: withdrawalTotals._sum.amount?.toFixed(2) ?? '0.00',
       totalWithdrawalCount: withdrawalTotals._count,
+      todayDepositAmount: todayDepositTotals._sum.amount?.toFixed(2) ?? '0.00',
+      todayDepositCount: todayDepositTotals._count,
+      todayWithdrawalAmount:
+        todayWithdrawalTotals._sum.amount?.toFixed(2) ?? '0.00',
+      todayWithdrawalCount: todayWithdrawalTotals._count,
       pendingIpoApplications,
       ipoDebtCustomers: openIpoDebts._count,
       ipoDebtAmount:

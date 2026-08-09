@@ -17,14 +17,22 @@ class AuthService {
   }) async {
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/login');
 
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': _normalizeIndianPhone(phone),
-        'password': password,
-      }),
-    );
+    final http.Response response;
+
+    try {
+      response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phone': _normalizeIndianPhone(phone),
+          'password': password,
+        }),
+      );
+    } catch (_) {
+      throw const AuthException(
+        'Unable to connect. Please check your network and try again.',
+      );
+    }
 
     final decoded = jsonDecode(response.body);
 
@@ -55,15 +63,23 @@ class AuthService {
   }) async {
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/register');
 
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': _normalizeIndianPhone(phone),
-        'password': password,
-        'inviteCode': inviteCode.trim().toUpperCase(),
-      }),
-    );
+    final http.Response response;
+
+    try {
+      response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phone': _normalizeIndianPhone(phone),
+          'password': password,
+          'inviteCode': inviteCode.trim().toUpperCase(),
+        }),
+      );
+    } catch (_) {
+      throw const AuthException(
+        'Unable to connect. Please check your network and try again.',
+      );
+    }
 
     final decoded = jsonDecode(response.body);
 
@@ -86,17 +102,25 @@ class AuthService {
 
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/kyc/submit');
 
-    final response = await http.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'phone': _normalizeIndianPhone(phone),
-        'documentType': documentType,
-        'fileName': file.name,
-        'mimeType': _mimeTypeForFile(file.name),
-        'contentBase64': base64Encode(bytes),
-      }),
-    );
+    final http.Response response;
+
+    try {
+      response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'phone': _normalizeIndianPhone(phone),
+          'documentType': documentType,
+          'fileName': file.name,
+          'mimeType': _mimeTypeForFile(file.name),
+          'contentBase64': base64Encode(bytes),
+        }),
+      );
+    } catch (_) {
+      throw const AuthException(
+        'Unable to connect. Please check your network and try again.',
+      );
+    }
 
     final decoded = jsonDecode(response.body);
 

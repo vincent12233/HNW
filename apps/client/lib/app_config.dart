@@ -1,13 +1,30 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class AppConfig {
   static const String appName = 'India Trading App';
   static const String shortName = 'IT';
   static const String slogan = 'Professional. Fast. Simple.';
-  static const String apiBaseUrl = String.fromEnvironment(
+  static const String _configuredApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://localhost:3000',
+    defaultValue: '',
   );
+
+  static String get apiBaseUrl {
+    if (_configuredApiBaseUrl.isNotEmpty) {
+      return _configuredApiBaseUrl;
+    }
+
+    if (kIsWeb) {
+      return 'http://localhost:3000';
+    }
+
+    if (defaultTargetPlatform == TargetPlatform.android) {
+      return 'http://10.0.2.2:3000';
+    }
+
+    return 'http://localhost:3000';
+  }
 
   static const Color primaryColor = Color(0xFF1769FF);
   static const Color primaryDarkColor = Color(0xFF123D8A);

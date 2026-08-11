@@ -76,6 +76,11 @@ class _AuthGateState extends State<AuthGate> {
     sessionFuture = authService.restoreSession();
   }
 
+  Widget _marketHome() {
+    marketSocket.connect();
+    return const MarketHomePage();
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<AuthSession?>(
@@ -88,13 +93,13 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         if (snapshot.hasError || snapshot.data != null) {
-          return const MarketHomePage();
+          return _marketHome();
         }
 
         return LoginPage(
           onSignedIn: (_) {
             Navigator.of(context).pushReplacement(
-              MaterialPageRoute<void>(builder: (_) => const MarketHomePage()),
+              MaterialPageRoute<void>(builder: (_) => _marketHome()),
             );
           },
         );

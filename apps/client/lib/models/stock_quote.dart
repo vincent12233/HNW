@@ -1,13 +1,53 @@
 class StockQuote {
-  const StockQuote(
+  factory StockQuote(
+    String symbol,
+    String name,
+    double price,
+    double change,
+    int volume,
+    DateTime updatedAt, {
+    String? logoUrl,
+    String? category,
+  }) {
+    final normalizedSymbol = symbol.trim().toUpperCase();
+    final previous = _metadata[normalizedSymbol];
+    final resolvedName = name.isNotEmpty ? name : previous?.name ?? '';
+    final resolvedLogoUrl = logoUrl ?? previous?.logoUrl;
+    final resolvedCategory = category ?? previous?.category;
+
+    if (normalizedSymbol.isNotEmpty) {
+      _metadata[normalizedSymbol] = _StockMetadata(
+        resolvedName,
+        resolvedLogoUrl,
+        resolvedCategory,
+      );
+    }
+
+    return StockQuote._(
+      normalizedSymbol,
+      resolvedName,
+      price,
+      change,
+      volume,
+      updatedAt,
+      logoUrl: resolvedLogoUrl,
+      category: resolvedCategory,
+    );
+  }
+
+  const StockQuote._(
     this.symbol,
     this.name,
     this.price,
     this.change,
     this.volume,
-    this.updatedAt,
-    {this.logoUrl, this.category}
-  );
+    this.updatedAt, {
+    this.logoUrl,
+    this.category,
+  });
+
+  static final Map<String, _StockMetadata> _metadata =
+      <String, _StockMetadata>{};
 
   final String symbol;
   final String name;
@@ -47,4 +87,12 @@ class StockQuote {
       category: json['category']?.toString(),
     );
   }
+}
+
+class _StockMetadata {
+  const _StockMetadata(this.name, this.logoUrl, this.category);
+
+  final String name;
+  final String? logoUrl;
+  final String? category;
 }

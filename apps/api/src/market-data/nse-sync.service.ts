@@ -1,124 +1,59 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
-
 import { PrismaService } from '../prisma/prisma.service';
-
-import { YahooProvider } from './providers/yahoo.provider';
-
-import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
+import { MarketDataHealthService } from './market-data-health.service';
+import { MarketDataProviderService } from './providers/market-data-provider.service';
+import { QuoteIngestionService } from './quote-ingestion.service';
 
 @Injectable()
 export class NseSyncService {
   private readonly logger = new Logger(NseSyncService.name);
-
-  private readonly symbols = ['RELIANCE', 'TCS', 'HDFCBANK'];
-
   private readonly indices = ['NIFTY50', 'SENSEX', 'BANKNIFTY'];
 
   constructor(
+    private readonly config: ConfigService,
     private readonly prisma: PrismaService,
-
-    private readonly yahooProvider: YahooProvider,
-
-    private readonly marketDataGateway: MarketDataGateway,
+    private readonly provider: MarketDataProviderService,
+    private readonly ingestion: QuoteIngestionService,
+    private readonly health: MarketDataHealthService,
   ) {}
 
   @Cron('*/30 * * * * *')
   async sync() {
-    this.logger.log('Updating market quotes...');
+    if (this.streamingEnabled() && !this.health.getStatus().stale) {
+      return;
+    }
 
+    this.logger.log(
+      `Updating market quotes via polling fallback ${this.provider.providerName}...`,
+    );
     await this.syncStocks();
-
     await this.syncIndices();
   }
 
   private async syncStocks() {
-    for (const symbol of this.symbols) {
+    const instruments = await this.prisma.instrument.findMany({
+      where: {
+        isActive: true,
+        exchange: { in: ['NSE', 'BSE'] },
+      },
+      select: { symbol: true, exchange: true },
+      orderBy: [{ displayOrder: 'asc' }, { symbol: 'asc' }],
+    });
+
+    for (const instrument of instruments) {
       try {
-        const quote = await this.yahooProvider.getQuote(symbol);
-
-        const instrument = await this.prisma.instrument.findFirst({
-          where: {
-            symbol,
-            exchange: 'NSE',
-          },
-        });
-
-        if (!instrument) {
-          this.logger.warn(`${symbol} instrument not found`);
-
-          continue;
-        }
-
-        const now = new Date();
-
-        await this.prisma.marketQuote.update({
-          where: {
-            instrumentId: instrument.id,
-          },
-
-          data: {
-            lastPrice: quote.price,
-
-            previousClose: quote.previousClose,
-
-            ...(quote.openPrice !== null
-              ? {
-                  openPrice: quote.openPrice,
-                }
-              : {}),
-
-            ...(quote.highPrice !== null
-              ? {
-                  highPrice: quote.highPrice,
-                }
-              : {}),
-
-            ...(quote.lowPrice !== null
-              ? {
-                  lowPrice: quote.lowPrice,
-                }
-              : {}),
-
-            bidPrice: quote.price,
-
-            askPrice: quote.price,
-
-            volume: BigInt(quote.volume || 0),
-
-            source: 'MARKET',
-
-            asOf: now,
-          },
-        });
-
-        this.logger.log(
-          `${symbol} updated ${quote.price} change ${quote.change.toFixed(2)}%`,
+        const quote = await this.provider.getQuote(
+          instrument.symbol,
+          instrument.exchange,
         );
-
-        this.marketDataGateway.emitQuoteUpdate({
-          type: 'STOCK',
-
-          symbol,
-
-          price: Number(quote.price),
-
-          change: quote.change,
-
-          volume: quote.volume,
-
-          previousClose: Number(quote.previousClose),
-
-          openPrice: quote.openPrice !== null ? Number(quote.openPrice) : null,
-
-          highPrice: quote.highPrice !== null ? Number(quote.highPrice) : null,
-
-          lowPrice: quote.lowPrice !== null ? Number(quote.lowPrice) : null,
-
-          updatedAt: now,
-        });
-      } catch (error) {
-        this.logger.error(`${symbol} update failed`);
+        await this.ingestion.ingest(instrument.exchange, quote, 'STOCK');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(
+          `${instrument.exchange}:${instrument.symbol} update failed: ${message}`,
+        );
       }
     }
   }
@@ -126,38 +61,20 @@ export class NseSyncService {
   private async syncIndices() {
     for (const symbol of this.indices) {
       try {
-        const quote = await this.yahooProvider.getQuote(symbol);
-
-        const now = new Date();
-
-        this.logger.log(
-          `${symbol} index updated ${quote.price} change ${quote.change.toFixed(2)}%`,
-        );
-
-        this.marketDataGateway.emitQuoteUpdate({
-          type: 'INDEX',
-
-          symbol,
-
-          price: Number(quote.price),
-
-          change: quote.change,
-
-          previousClose: Number(quote.previousClose),
-
-          openPrice: quote.openPrice !== null ? Number(quote.openPrice) : null,
-
-          highPrice: quote.highPrice !== null ? Number(quote.highPrice) : null,
-
-          lowPrice: quote.lowPrice !== null ? Number(quote.lowPrice) : null,
-
-          volume: quote.volume,
-
-          updatedAt: now,
-        });
-      } catch (error) {
-        this.logger.error(`${symbol} index update failed`);
+        const quote = await this.provider.getQuote(symbol, 'NSE');
+        await this.ingestion.ingest('NSE', quote, 'INDEX');
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(`${symbol} index update failed: ${message}`);
       }
     }
+  }
+
+  private streamingEnabled() {
+    return (
+      (this.config.get<string>('MARKET_DATA_STREAMING_ENABLED') ?? 'false')
+        .trim()
+        .toLowerCase() === 'true'
+    );
   }
 }

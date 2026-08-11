@@ -1,4 +1,4 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
@@ -7,9 +7,11 @@ import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
+import 'session_expiry_service.dart';
 
 class TradingService {
   final AuthService _authService = AuthService();
+  final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
   Future<TradingAccountSnapshot?> fetchAccountSnapshot() async {
     final session = await _authService.restoreSession();
@@ -25,6 +27,11 @@ class TradingService {
             headers: {'Authorization': 'Bearer ${session.accessToken}'},
           )
           .timeout(const Duration(seconds: 6));
+
+      if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+        await _sessionExpiry.expire();
+        return null;
+      }
 
       final decoded = jsonDecode(response.body);
 
@@ -58,6 +65,11 @@ class TradingService {
             headers: {'Authorization': 'Bearer ${session.accessToken}'},
           )
           .timeout(const Duration(seconds: 6));
+
+      if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+        await _sessionExpiry.expire();
+        return <TradingOrder>[];
+      }
 
       final decoded = jsonDecode(response.body);
 
@@ -105,6 +117,11 @@ class TradingService {
           }),
         )
         .timeout(const Duration(seconds: 10));
+
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw const TradingException('Please sign in again');
+    }
 
     final decoded = jsonDecode(response.body);
 

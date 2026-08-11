@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/auth_session.dart';
 import '../services/auth_service.dart';
+import '../services/market_socket_service.dart';
 import '../utils/client_error_message.dart';
 import 'register_page.dart';
 
@@ -191,6 +192,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
+      MarketSocketService().connect();
       widget.onSignedIn(session);
     } catch (error) {
       if (!mounted) {

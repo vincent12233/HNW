@@ -8,9 +8,11 @@ import '../app_config.dart';
 import '../models/auth_session.dart';
 import '../models/withdrawal_request.dart';
 import 'local_data_cache.dart';
+import 'session_expiry_service.dart';
 
 class AuthService {
   static const String _sessionKey = 'auth_session';
+  final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
   Future<AuthSession> login({
     required String phone,
@@ -152,6 +154,11 @@ class AuthService {
           )
           .timeout(const Duration(seconds: 6));
 
+      if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+        await _sessionExpiry.expire();
+        return <WithdrawalRequest>[];
+      }
+
       final decoded = jsonDecode(response.body);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -202,6 +209,11 @@ class AuthService {
         )
         .timeout(const Duration(seconds: 10));
 
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw AuthException('Please sign in again');
+    }
+
     final decoded = jsonDecode(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -236,6 +248,11 @@ class AuthService {
         )
         .timeout(const Duration(seconds: 10));
 
+    if (_sessionExpiry.isUnauthorized(conversationResponse.statusCode)) {
+      await _sessionExpiry.expire();
+      throw AuthException('Please sign in again');
+    }
+
     final conversationDecoded = jsonDecode(conversationResponse.body);
 
     if (conversationResponse.statusCode < 200 ||
@@ -265,6 +282,11 @@ class AuthService {
           }),
         )
         .timeout(const Duration(seconds: 10));
+
+    if (_sessionExpiry.isUnauthorized(messageResponse.statusCode)) {
+      await _sessionExpiry.expire();
+      throw AuthException('Please sign in again');
+    }
 
     final messageDecoded = jsonDecode(messageResponse.body);
 

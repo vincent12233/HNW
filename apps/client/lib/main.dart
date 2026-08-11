@@ -5,10 +5,15 @@ import 'models/auth_session.dart';
 import 'pages/login_page.dart';
 import 'pages/market_page.dart';
 import 'services/auth_service.dart';
+import 'services/session_expiry_service.dart';
 import 'theme/app_theme.dart';
+
+final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  SessionExpiryService().onExpired = _showExpiredSessionLogin;
+
   ErrorWidget.builder = (details) {
     return const Material(
       color: AppConfig.backgroundColor,
@@ -45,12 +50,32 @@ void main() {
   runApp(const IndiaTradingApp());
 }
 
+void _showExpiredSessionLogin() {
+  final navigator = appNavigatorKey.currentState;
+  if (navigator == null) return;
+
+  navigator.pushAndRemoveUntil(
+    MaterialPageRoute<void>(
+      builder: (_) => LoginPage(
+        onSignedIn: (_) {
+          marketSocket.connect();
+          navigator.pushReplacement(
+            MaterialPageRoute<void>(builder: (_) => const MarketHomePage()),
+          );
+        },
+      ),
+    ),
+    (_) => false,
+  );
+}
+
 class IndiaTradingApp extends StatelessWidget {
   const IndiaTradingApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: AppConfig.appName,
       theme: AppTheme.light(),

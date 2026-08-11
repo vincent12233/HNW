@@ -6,9 +6,11 @@ import '../app_config.dart';
 import '../models/ipo.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
+import 'session_expiry_service.dart';
 
 class IpoService {
   final AuthService _authService = AuthService();
+  final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
   Future<List<Ipo>> fetchOpenIpos() async {
     final session = await _authService.restoreSession();
@@ -21,6 +23,11 @@ class IpoService {
             headers: {'Authorization': 'Bearer ${session.accessToken}'},
           )
           .timeout(const Duration(seconds: 6));
+
+      if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+        await _sessionExpiry.expire();
+        return <Ipo>[];
+      }
 
       final decoded = jsonDecode(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -52,6 +59,11 @@ class IpoService {
           )
           .timeout(const Duration(seconds: 6));
 
+      if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+        await _sessionExpiry.expire();
+        return <IpoApplication>[];
+      }
+
       final decoded = jsonDecode(response.body);
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw IpoException(_apiMessage(decoded, 'Unable to load applications'));
@@ -80,6 +92,11 @@ class IpoService {
           headers: {'Authorization': 'Bearer ${session.accessToken}'},
         )
         .timeout(const Duration(seconds: 10));
+
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw const IpoException('Please sign in again');
+    }
 
     final decoded = jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {

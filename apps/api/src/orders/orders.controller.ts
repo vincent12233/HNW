@@ -13,8 +13,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { ListTradesQueryDto } from './dto/list-trades-query.dto';
-import { OrdersService } from './orders.service';
 import { ListPositionsQueryDto } from './dto/list-positions-query.dto';
+import { TradingOrdersService } from './trading-orders.service';
+
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
@@ -26,7 +27,7 @@ interface AuthenticatedRequest extends Request {
 @Controller('orders')
 @UseGuards(JwtAuthGuard)
 export class OrdersController {
-  constructor(private readonly ordersService: OrdersService) {}
+  constructor(private readonly ordersService: TradingOrdersService) {}
 
   @Post()
   createOrder(

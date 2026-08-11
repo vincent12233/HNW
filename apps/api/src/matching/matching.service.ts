@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
@@ -18,10 +18,7 @@ export class MatchingService {
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
-    this.batchSize = this.positiveInteger(
-      config.get('MATCHING_BATCH_SIZE'),
-      100,
-    );
+    this.batchSize = this.positiveInteger(config.get('MATCHING_BATCH_SIZE'), 100);
     this.maxFillQuantity = this.positiveInteger(
       config.get('MATCHING_MAX_FILL_QUANTITY'),
       1000,
@@ -57,10 +54,7 @@ export class MatchingService {
                 instrument: { include: { quote: true } },
               },
             });
-            if (
-              !order ||
-              !['OPEN', 'PARTIALLY_FILLED'].includes(order.status)
-            ) {
+            if (!order || !['OPEN', 'PARTIALLY_FILLED'].includes(order.status)) {
               return order;
             }
             const remaining = order.quantity - order.filledQuantity;
@@ -79,14 +73,10 @@ export class MatchingService {
                 (order.side === 'SELL' && order.limitPrice?.lte(price)));
 
             if (!marketable || price === null) {
-              if (order.timeInForce !== 'DAY')
-                await this.cancelRemainder(tx, order);
+              if (order.timeInForce !== 'DAY') await this.cancelRemainder(tx, order);
               return tx.order.findUnique({ where: { id: order.id } });
             }
-            if (
-              order.timeInForce === 'FOK' &&
-              remaining > this.maxFillQuantity
-            ) {
+            if (order.timeInForce === 'FOK' && remaining > this.maxFillQuantity) {
               await this.cancelRemainder(tx, order);
               return tx.order.findUnique({ where: { id: order.id } });
             }
@@ -130,7 +120,7 @@ export class MatchingService {
     const grossAmount = price.mul(quantity).toDecimalPlaces(2);
     const fees = new Prisma.Decimal(0);
     const netAmount = grossAmount.add(fees);
-    const executionId = `SBX-${randomUUID()}`;
+    const executionId = `INT-${randomUUID()}`;
     const newFilledQuantity = order.filledQuantity + quantity;
     const averageFillPrice = (order.averageFillPrice ?? new Prisma.Decimal(0))
       .mul(order.filledQuantity)
@@ -150,6 +140,19 @@ export class MatchingService {
         frozenRelease = frozenRelease.add(frozenAmountAfter);
         frozenAmountAfter = new Prisma.Decimal(0);
       }
+
+      const currentAccount = await tx.account.findUniqueOrThrow({
+        where: { id: order.accountId },
+      });
+      if (currentAccount.frozenBalance.lessThan(frozenRelease)) {
+        throw new ConflictException(
+          'Account frozen balance is inconsistent with the order',
+        );
+      }
+      if (currentAccount.cashBalance.lessThan(netAmount)) {
+        throw new ConflictException('Insufficient cash balance during settlement');
+      }
+
       const updatedAccount = await tx.account.update({
         where: { id: order.accountId },
         data: {
@@ -165,6 +168,7 @@ export class MatchingService {
         quantity,
         price,
         netAmount.negated(),
+        currentAccount.cashBalance,
         updatedAccount.cashBalance,
       );
 
@@ -209,11 +213,19 @@ export class MatchingService {
           },
         },
       });
+      if (position.quantity < quantity || position.frozenQuantity < quantity) {
+        throw new ConflictException(
+          'Position quantity is inconsistent with the SELL order',
+        );
+      }
       const newQuantity = position.quantity - quantity;
       const realizedPnl = price
         .sub(position.averagePrice)
         .mul(quantity)
         .toDecimalPlaces(2);
+      const currentAccount = await tx.account.findUniqueOrThrow({
+        where: { id: order.accountId },
+      });
       const updatedAccount = await tx.account.update({
         where: { id: order.accountId },
         data: {
@@ -238,6 +250,7 @@ export class MatchingService {
         quantity,
         price,
         netAmount,
+        currentAccount.cashBalance,
         updatedAccount.cashBalance,
       );
     }
@@ -274,6 +287,7 @@ export class MatchingService {
     quantity: number,
     price: Prisma.Decimal,
     amount: Prisma.Decimal,
+    balanceBefore: Prisma.Decimal,
     balanceAfter: Prisma.Decimal,
   ): Promise<void> {
     await tx.accountTransaction.create({
@@ -282,7 +296,7 @@ export class MatchingService {
         type: 'TRADE_SETTLEMENT',
         status: 'COMPLETED',
         amount,
-        balanceBefore: order.account.cashBalance,
+        balanceBefore,
         balanceAfter,
         referenceId: `EXECUTION:${executionId}:SETTLEMENT`,
         note: `${order.side} ${quantity} ${order.instrument.exchange}:${order.instrument.symbol} at ${price.toFixed(4)}`,
@@ -296,6 +310,14 @@ export class MatchingService {
   ): Promise<void> {
     const remaining = order.quantity - order.filledQuantity;
     if (order.side === 'BUY' && order.frozenAmount.gt(0)) {
+      const account = await tx.account.findUniqueOrThrow({
+        where: { id: order.accountId },
+      });
+      if (account.frozenBalance.lessThan(order.frozenAmount)) {
+        throw new ConflictException(
+          'Account frozen balance is inconsistent with the order',
+        );
+      }
       await tx.account.update({
         where: { id: order.accountId },
         data: {
@@ -309,20 +331,28 @@ export class MatchingService {
           type: 'ORDER_RELEASE',
           status: 'COMPLETED',
           amount: order.frozenAmount,
-          balanceBefore: order.account.cashBalance,
-          balanceAfter: order.account.cashBalance,
+          balanceBefore: account.cashBalance,
+          balanceAfter: account.cashBalance,
           referenceId: `ORDER:${order.id}:RELEASE`,
           note: 'Released funds for unfilled order quantity',
         },
       });
     } else if (order.side === 'SELL' && remaining > 0) {
-      await tx.position.update({
+      const position = await tx.position.findUniqueOrThrow({
         where: {
           accountId_instrumentId: {
             accountId: order.accountId,
             instrumentId: order.instrumentId,
           },
         },
+      });
+      if (position.frozenQuantity < remaining) {
+        throw new ConflictException(
+          'Frozen position quantity is inconsistent with the order',
+        );
+      }
+      await tx.position.update({
+        where: { id: position.id },
         data: { frozenQuantity: { decrement: remaining } },
       });
     }

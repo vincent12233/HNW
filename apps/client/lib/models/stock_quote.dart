@@ -9,6 +9,12 @@ class StockQuote {
     String? logoUrl,
     String? category,
     bool quoteFresh = true,
+    double? previousClose,
+    double? open,
+    double? high,
+    double? low,
+    double? bid,
+    double? ask,
   }) {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final previous = _metadata[normalizedSymbol];
@@ -34,6 +40,12 @@ class StockQuote {
       logoUrl: resolvedLogoUrl,
       category: resolvedCategory,
       quoteFresh: quoteFresh,
+      previousClose: previousClose,
+      open: open,
+      high: high,
+      low: low,
+      bid: bid,
+      ask: ask,
     );
   }
 
@@ -47,6 +59,12 @@ class StockQuote {
     this.logoUrl,
     this.category,
     this.quoteFresh = true,
+    this.previousClose,
+    this.open,
+    this.high,
+    this.low,
+    this.bid,
+    this.ask,
   });
 
   static final Map<String, _StockMetadata> _metadata =
@@ -61,19 +79,19 @@ class StockQuote {
   final String? logoUrl;
   final String? category;
   final bool quoteFresh;
+  final double? previousClose;
+  final double? open;
+  final double? high;
+  final double? low;
+  final double? bid;
+  final double? ask;
 
   factory StockQuote.fromMarketDataJson(Map<String, dynamic> json) {
-    final price = (json['price'] as num?)?.toDouble() ??
-        double.tryParse(json['price']?.toString() ?? '') ??
+    final price = _doubleValue(json['price']) ?? 0;
+    final rawChange = _doubleValue(json['change']) ??
+        _doubleValue(json['changePercent']) ??
         0;
-    final rawChange = (json['change'] as num?)?.toDouble() ??
-        double.tryParse(json['change']?.toString() ?? '') ??
-        (json['changePercent'] as num?)?.toDouble() ??
-        double.tryParse(json['changePercent']?.toString() ?? '') ??
-        0;
-    final previousClose = (json['previousClose'] as num?)?.toDouble() ??
-        double.tryParse(json['previousClose']?.toString() ?? '') ??
-        0;
+    final previousClose = _doubleValue(json['previousClose']) ?? 0;
     final change = rawChange != 0 || previousClose <= 0
         ? rawChange
         : ((price - previousClose) / previousClose) * 100;
@@ -85,13 +103,17 @@ class StockQuote {
       json['name']?.toString() ?? '',
       price,
       change,
-      (json['volume'] as num?)?.toInt() ??
-          int.tryParse(json['volume']?.toString() ?? '') ??
-          0,
+      _intValue(json['volume']),
       updatedAt,
       logoUrl: json['logoUrl']?.toString(),
       category: json['category']?.toString(),
       quoteFresh: json['quoteFresh'] == true,
+      previousClose: previousClose > 0 ? previousClose : null,
+      open: _positiveDoubleValue(json['open']),
+      high: _positiveDoubleValue(json['high']),
+      low: _positiveDoubleValue(json['low']),
+      bid: _positiveDoubleValue(json['bid']),
+      ask: _positiveDoubleValue(json['ask']),
     );
   }
 }
@@ -102,4 +124,20 @@ class _StockMetadata {
   final String name;
   final String? logoUrl;
   final String? category;
+}
+
+double? _doubleValue(dynamic value) {
+  if (value is num) return value.toDouble();
+  return double.tryParse(value?.toString() ?? '');
+}
+
+int _intValue(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+double? _positiveDoubleValue(dynamic value) {
+  final parsed = _doubleValue(value);
+  return parsed != null && parsed > 0 ? parsed : null;
 }

@@ -56,4 +56,30 @@ void main() {
     expect(quote.updatedAt.millisecondsSinceEpoch, 0);
     expect(quote.quoteFresh, isFalse);
   });
+
+  test('parses bid ask and day session statistics', () {
+    final quote = StockQuote.fromMarketDataJson({
+      'symbol': 'SBIN',
+      'name': 'State Bank of India',
+      'price': '812.40',
+      'change': 1.2,
+      'volume': '1250000',
+      'previousClose': '802.75',
+      'open': '805.10',
+      'high': '818.20',
+      'low': '799.50',
+      'bid': '812.35',
+      'ask': '812.45',
+      'updatedAt': '2026-08-12T09:30:00Z',
+      'quoteFresh': true,
+    });
+
+    expect(quote.previousClose, 802.75);
+    expect(quote.open, 805.10);
+    expect(quote.high, 818.20);
+    expect(quote.low, 799.50);
+    expect(quote.bid, 812.35);
+    expect(quote.ask, 812.45);
+    expect(quote.volume, 1250000);
+  });
 }

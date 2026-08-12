@@ -104,8 +104,13 @@ export class OrderCancellationService {
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
       } catch (error: unknown) {
-        if (this.hasPrismaCode(error, 'P2034') && attempt < 3) {
-          continue;
+        if (this.hasPrismaCode(error, 'P2034')) {
+          if (attempt < 3) {
+            continue;
+          }
+          throw new ConflictException(
+            'Concurrent order update detected; please retry',
+          );
         }
         throw error;
       }

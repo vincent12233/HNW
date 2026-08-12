@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketQuoteResult } from './providers/market-data-provider.interface';
@@ -72,12 +73,57 @@ export class QuoteIngestionService {
       },
     });
 
+    await this.persistMinuteHistory(instrument.id, quote);
+
     this.health.recordQuote(quote.source, quote.updatedAt);
     this.gateway.emitQuoteUpdate(payload);
   }
 
   getIndexSnapshot() {
     return Array.from(this.latestIndices.values()).map((item) => ({ ...item }));
+  }
+
+  private async persistMinuteHistory(
+    instrumentId: string,
+    quote: MarketQuoteResult,
+  ) {
+    const bucketAt = new Date(quote.updatedAt);
+    bucketAt.setUTCSeconds(0, 0);
+    const price = Number(quote.price);
+    const volume = BigInt(quote.volume || 0);
+
+    await this.prisma.$executeRaw`
+      INSERT INTO "market_quote_history" (
+        "id",
+        "instrumentId",
+        "bucketAt",
+        "openPrice",
+        "highPrice",
+        "lowPrice",
+        "closePrice",
+        "volume",
+        "source"
+      )
+      VALUES (
+        ${randomUUID()},
+        ${instrumentId},
+        ${bucketAt},
+        ${price},
+        ${price},
+        ${price},
+        ${price},
+        ${volume},
+        ${quote.source}
+      )
+      ON CONFLICT ("instrumentId", "bucketAt")
+      DO UPDATE SET
+        "highPrice" = GREATEST("market_quote_history"."highPrice", EXCLUDED."highPrice"),
+        "lowPrice" = LEAST("market_quote_history"."lowPrice", EXCLUDED."lowPrice"),
+        "closePrice" = EXCLUDED."closePrice",
+        "volume" = GREATEST("market_quote_history"."volume", EXCLUDED."volume"),
+        "source" = EXCLUDED."source",
+        "updatedAt" = CURRENT_TIMESTAMP
+    `;
   }
 
   private toPayload(

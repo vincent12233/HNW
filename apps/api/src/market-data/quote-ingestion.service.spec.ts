@@ -1,7 +1,7 @@
 import { QuoteIngestionService } from './quote-ingestion.service';
 
 describe('QuoteIngestionService', () => {
-  it('persists stock quotes, records health and broadcasts client-safe payloads', async () => {
+  it('persists stock quotes, records minute history, health and broadcasts client-safe payloads', async () => {
     const prisma = {
       instrument: {
         findUnique: jest.fn().mockResolvedValue({ id: 'instrument-1' }),
@@ -9,11 +9,12 @@ describe('QuoteIngestionService', () => {
       marketQuote: {
         upsert: jest.fn(),
       },
+      $executeRaw: jest.fn().mockResolvedValue(1),
     } as any;
     const gateway = { emitQuoteUpdate: jest.fn() } as any;
     const health = { recordQuote: jest.fn() } as any;
     const service = new QuoteIngestionService(prisma, gateway, health);
-    const updatedAt = new Date('2026-08-11T12:00:00Z');
+    const updatedAt = new Date('2026-08-11T12:00:37Z');
 
     await service.ingest(
       'NSE',
@@ -39,6 +40,7 @@ describe('QuoteIngestionService', () => {
         update: expect.objectContaining({ source: 'INDIA_STOCK_MCP' }),
       }),
     );
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(1);
     expect(health.recordQuote).toHaveBeenCalledWith(
       'INDIA_STOCK_MCP',
       updatedAt,

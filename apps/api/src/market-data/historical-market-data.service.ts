@@ -14,6 +14,15 @@ type HistoryWindow = {
   interval: '5m' | '1h' | '1d';
 };
 
+type LocalHistoryRow = {
+  bucketAt: Date;
+  openPrice: unknown;
+  highPrice: unknown;
+  lowPrice: unknown;
+  closePrice: unknown;
+  volume: bigint | number | string;
+};
+
 @Injectable()
 export class HistoricalMarketDataService {
   private readonly logger = new Logger(HistoricalMarketDataService.name);
@@ -36,7 +45,7 @@ export class HistoricalMarketDataService {
         exchange: { in: ['NSE', 'BSE'] },
         type: 'EQUITY',
       },
-      select: { symbol: true, exchange: true },
+      select: { id: true, symbol: true, exchange: true },
       orderBy: { exchange: 'desc' },
     });
     if (!instrument) {
@@ -45,6 +54,15 @@ export class HistoricalMarketDataService {
 
     const normalizedRange = this.normalizeRange(range);
     const window = this.window(normalizedRange);
+    const localHistory = await this.getLocalHistory(
+      instrument.id,
+      instrument.symbol,
+      normalizedRange,
+    );
+
+    if (this.localCoverageIsSufficient(localHistory.data, normalizedRange)) {
+      return localHistory;
+    }
 
     if (instrument.exchange === 'NSE' && normalizedRange !== '1D') {
       const mcpHistory = await this.tryMcpHistory(
@@ -60,11 +78,128 @@ export class HistoricalMarketDataService {
       }
     }
 
-    return this.getYahooHistory(
-      instrument.symbol,
-      instrument.exchange,
-      window,
+    try {
+      return await this.getYahooHistory(
+        instrument.symbol,
+        instrument.exchange,
+        window,
+      );
+    } catch (error) {
+      if (localHistory.data.length > 1) return localHistory;
+      throw error;
+    }
+  }
+
+  private async getLocalHistory(
+    instrumentId: string,
+    symbol: string,
+    range: HistoryRange,
+  ): Promise<MarketHistoryResult> {
+    const cutoff = new Date(
+      Date.now() -
+        (range === '1D'
+          ? 24 * 60 * 60 * 1000
+          : range === '1W'
+            ? 7 * 24 * 60 * 60 * 1000
+            : 31 * 24 * 60 * 60 * 1000),
     );
+
+    try {
+      const rows = await this.prisma.$queryRaw<LocalHistoryRow[]>`
+        SELECT
+          "bucketAt",
+          "openPrice",
+          "highPrice",
+          "lowPrice",
+          "closePrice",
+          "volume"
+        FROM "market_quote_history"
+        WHERE "instrumentId" = ${instrumentId}
+          AND "bucketAt" >= ${cutoff}
+        ORDER BY "bucketAt" ASC
+      `;
+
+      return {
+        symbol,
+        interval: this.window(range).interval,
+        data: this.aggregateLocalRows(rows, range),
+      };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.debug(`Local history unavailable for ${symbol}: ${message}`);
+      return {
+        symbol,
+        interval: this.window(range).interval,
+        data: [],
+      };
+    }
+  }
+
+  private aggregateLocalRows(
+    rows: LocalHistoryRow[],
+    range: HistoryRange,
+  ): MarketHistoryPoint[] {
+    const bucketMs =
+      range === '1D'
+        ? 5 * 60 * 1000
+        : range === '1W'
+          ? 60 * 60 * 1000
+          : 24 * 60 * 60 * 1000;
+    const buckets = new Map<number, MarketHistoryPoint>();
+
+    for (const row of rows) {
+      const time = new Date(row.bucketAt).getTime();
+      if (!Number.isFinite(time)) continue;
+      const key = Math.floor(time / bucketMs) * bucketMs;
+      const open = this.number(row.openPrice);
+      const high = this.number(row.highPrice);
+      const low = this.number(row.lowPrice);
+      const close = this.number(row.closePrice);
+      const volume = this.number(row.volume) ?? 0;
+      if (
+        open === null ||
+        high === null ||
+        low === null ||
+        close === null ||
+        close <= 0
+      ) {
+        continue;
+      }
+
+      const existing = buckets.get(key);
+      if (!existing) {
+        buckets.set(key, {
+          date: new Date(key).toISOString(),
+          open,
+          high,
+          low,
+          close,
+          volume,
+        });
+        continue;
+      }
+
+      existing.high = Math.max(existing.high, high);
+      existing.low = Math.min(existing.low, low);
+      existing.close = close;
+      existing.volume = Math.max(existing.volume, volume);
+    }
+
+    return [...buckets.values()];
+  }
+
+  private localCoverageIsSufficient(
+    data: MarketHistoryPoint[],
+    range: HistoryRange,
+  ) {
+    if (data.length < 2) return false;
+    if (range === '1D') return true;
+
+    const first = Date.parse(data[0].date);
+    const last = Date.parse(data[data.length - 1].date);
+    if (!Number.isFinite(first) || !Number.isFinite(last)) return false;
+    const spanDays = (last - first) / (24 * 60 * 60 * 1000);
+    return range === '1W' ? spanDays >= 4 : spanDays >= 20;
   }
 
   private async tryMcpHistory(symbol: string, range: '1W' | '1M') {
@@ -202,6 +337,11 @@ export class HistoricalMarketDataService {
 
   private number(value: unknown): number | null {
     if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+    if (typeof value === 'bigint') return Number(value);
+    if (value && typeof value === 'object' && 'toString' in value) {
+      const parsed = Number(String(value).replace(/,/g, '').trim());
+      return Number.isFinite(parsed) ? parsed : null;
+    }
     if (typeof value !== 'string') return null;
     const parsed = Number(value.replace(/,/g, '').trim());
     return Number.isFinite(parsed) ? parsed : null;

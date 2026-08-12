@@ -55,7 +55,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   final Map<String, PortfolioPosition> _positions = <String, PortfolioPosition>{};
 
   Timer? _refreshTimer;
-  bool _refreshing = false;
+  Future<void>? _refreshInFlight;
   int selectedTab = 0;
 
   final List<_TradingModule> tabs = const [
@@ -103,34 +103,52 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
       ..addAll(widget.positions);
   }
 
-  Future<void> _refreshTradingData() async {
-    if (_refreshing) return;
-    _refreshing = true;
-    try {
-      final results = await Future.wait<dynamic>([
-        _tradingService.fetchOrders(),
-        _tradingService.fetchAccountSnapshot(),
-      ]);
-      if (!mounted) return;
-
-      final latestOrders = results[0] as List<TradingOrder>;
-      final snapshot = results[1] as TradingAccountSnapshot?;
-
-      setState(() {
-        _orders
-          ..clear()
-          ..addAll(latestOrders);
-        if (snapshot != null) {
-          _positions
-            ..clear()
-            ..addEntries(
-              snapshot.positions.map((position) => MapEntry(position.symbol, position)),
-            );
-        }
-      });
-    } finally {
-      _refreshing = false;
+  Future<void> _refreshTradingData({bool ensureAfterCurrent = false}) async {
+    final current = _refreshInFlight;
+    if (current != null) {
+      await current;
+      if (!ensureAfterCurrent) return;
     }
+
+    final afterWait = _refreshInFlight;
+    if (afterWait != null) {
+      await afterWait;
+      return;
+    }
+
+    final refresh = _performTradingRefresh();
+    _refreshInFlight = refresh;
+    try {
+      await refresh;
+    } finally {
+      if (identical(_refreshInFlight, refresh)) {
+        _refreshInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _performTradingRefresh() async {
+    final results = await Future.wait<dynamic>([
+      _tradingService.fetchOrders(),
+      _tradingService.fetchAccountSnapshot(),
+    ]);
+    if (!mounted) return;
+
+    final latestOrders = results[0] as List<TradingOrder>;
+    final snapshot = results[1] as TradingAccountSnapshot?;
+
+    setState(() {
+      _orders
+        ..clear()
+        ..addAll(latestOrders);
+      if (snapshot != null) {
+        _positions
+          ..clear()
+          ..addEntries(
+            snapshot.positions.map((position) => MapEntry(position.symbol, position)),
+          );
+      }
+    });
   }
 
   Future<String?> _cancelStandardOrder(TradingOrder order) async {
@@ -141,7 +159,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
 
     try {
       await _tradingService.cancelOrder(orderId);
-      await _refreshTradingData();
+      await _refreshTradingData(ensureAfterCurrent: true);
       return null;
     } on TradingException catch (error) {
       return error.message;
@@ -245,7 +263,9 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
         return PendingCenterTab(
           activeOrders: _activeOrders,
           ipoApplications: widget.ipoApplications,
-          onOrderCancelled: () => unawaited(_refreshTradingData()),
+          onOrderCancelled: () => unawaited(
+            _refreshTradingData(ensureAfterCurrent: true),
+          ),
         );
       case 4:
         return OrdersTab(orders: _orders, onCancel: _cancelStandardOrder);

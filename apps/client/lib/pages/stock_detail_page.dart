@@ -22,21 +22,32 @@ class StockDetailPage extends StatefulWidget {
 
 class _StockDetailPageState extends State<StockDetailPage> {
   final quantityController = TextEditingController(text: '1');
+  final limitPriceController = TextEditingController();
   final marketSocket = MarketSocketService();
 
   late StockQuote liveStock;
   bool isBuy = true;
   bool isSubmitting = false;
+  String orderType = 'MARKET';
+  String timeInForce = 'DAY';
+
+  bool get isLimit => orderType == 'LIMIT';
+
+  double get selectedOrderPrice {
+    if (!isLimit) return liveStock.price;
+    return double.tryParse(limitPriceController.text.trim()) ?? 0;
+  }
 
   double get estimatedAmount {
     final quantity = int.tryParse(quantityController.text) ?? 0;
-    return quantity * liveStock.price;
+    return quantity * selectedOrderPrice;
   }
 
   @override
   void initState() {
     super.initState();
     liveStock = widget.stock;
+    limitPriceController.text = liveStock.price.toStringAsFixed(2);
     marketSocket.addQuoteListener(_handleQuoteUpdate);
   }
 
@@ -65,34 +76,42 @@ class _StockDetailPageState extends State<StockDetailPage> {
   void dispose() {
     marketSocket.removeQuoteListener(_handleQuoteUpdate);
     quantityController.dispose();
+    limitPriceController.dispose();
     super.dispose();
   }
 
   void placeOrder() {
     final quantity = int.tryParse(quantityController.text) ?? 0;
+    final limitPrice = isLimit
+        ? double.tryParse(limitPriceController.text.trim())
+        : null;
 
     if (quantity <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a valid quantity')),
-      );
+      _showMessage('Please enter a valid quantity');
       return;
     }
+    if (isLimit && (limitPrice == null || limitPrice <= 0)) {
+      _showMessage('Please enter a valid limit price');
+      return;
+    }
+
+    final priceLabel = isLimit
+        ? 'Limit price: ${formatPrice(limitPrice!)}'
+        : 'Market price: ${formatPrice(liveStock.price)}';
 
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: Text(isBuy ? 'Confirm Buy Order' : 'Confirm Sell Order'),
         content: Text(
-          '${isBuy ? 'Buy' : 'Sell'} $quantity shares '
-          'of ${liveStock.symbol}\n\n'
-          'Estimated amount: '
-          '${formatPrice(estimatedAmount)}',
+          '${isBuy ? 'Buy' : 'Sell'} $quantity shares of ${liveStock.symbol}\n\n'
+          '${isLimit ? 'Limit' : 'Market'} • $timeInForce\n'
+          '$priceLabel\n\n'
+          'Estimated amount: ${formatPrice(estimatedAmount)}',
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-            },
+            onPressed: () => Navigator.pop(dialogContext),
             child: const Text('Cancel'),
           ),
           FilledButton(
@@ -107,29 +126,25 @@ class _StockDetailPageState extends State<StockDetailPage> {
                       quantity: quantity,
                       price: liveStock.price,
                       placedAt: DateTime.now(),
+                      type: orderType,
+                      timeInForce: timeInForce,
+                      limitPrice: limitPrice,
                     );
 
                     final errorMessage = await widget.onOrderPlaced(order);
 
-                    if (!mounted || !dialogContext.mounted) {
-                      return;
-                    }
-
+                    if (!mounted || !dialogContext.mounted) return;
                     setState(() => isSubmitting = false);
 
                     if (errorMessage != null) {
                       Navigator.pop(dialogContext);
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text(errorMessage)));
+                      _showMessage(errorMessage);
                       return;
                     }
 
                     Navigator.pop(dialogContext);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('${isBuy ? 'Buy' : 'Sell'} order placed'),
-                      ),
+                    _showMessage(
+                      '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order placed',
                     );
                   },
             child: Text(isSubmitting ? 'Submitting...' : 'Confirm'),
@@ -137,6 +152,13 @@ class _StockDetailPageState extends State<StockDetailPage> {
         ],
       ),
     );
+  }
+
+  void _showMessage(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
@@ -173,8 +195,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     ),
                   ),
                   Text(
-                    '${liveStock.change > 0 ? '+' : ''}'
-                    '${liveStock.change.toStringAsFixed(2)}%',
+                    '${liveStock.change > 0 ? '+' : ''}${liveStock.change.toStringAsFixed(2)}%',
                     style: TextStyle(
                       color: changeColor,
                       fontSize: 17,
@@ -201,6 +222,23 @@ class _StockDetailPageState extends State<StockDetailPage> {
               setState(() => isBuy = selection.first);
             },
           ),
+          const SizedBox(height: 14),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment<String>(value: 'MARKET', label: Text('Market')),
+              ButtonSegment<String>(value: 'LIMIT', label: Text('Limit')),
+            ],
+            selected: {orderType},
+            onSelectionChanged: (selection) {
+              setState(() {
+                orderType = selection.first;
+                if (orderType == 'LIMIT' &&
+                    limitPriceController.text.trim().isEmpty) {
+                  limitPriceController.text = liveStock.price.toStringAsFixed(2);
+                }
+              });
+            },
+          ),
           const SizedBox(height: 16),
           TextField(
             controller: quantityController,
@@ -212,12 +250,46 @@ class _StockDetailPageState extends State<StockDetailPage> {
               prefixIcon: Icon(Icons.numbers),
             ),
           ),
+          if (isLimit) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: limitPriceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Limit Price',
+                prefixText: '₹ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          const Text(
+            'Validity',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: ['DAY', 'IOC', 'FOK']
+                .map(
+                  (value) => ChoiceChip(
+                    label: Text(value),
+                    selected: timeInForce == value,
+                    onSelected: (_) => setState(() => timeInForce = value),
+                  ),
+                )
+                .toList(),
+          ),
           const SizedBox(height: 16),
           Card(
             child: ListTile(
               title: const Text('Estimated amount'),
+              subtitle: Text(
+                isLimit ? 'Based on limit price' : 'Based on current market price',
+              ),
               trailing: Text(
-                formatPrice(estimatedAmount),
+                selectedOrderPrice > 0 ? formatPrice(estimatedAmount) : '--',
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),

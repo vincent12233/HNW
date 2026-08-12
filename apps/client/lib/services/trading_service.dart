@@ -91,11 +91,25 @@ class TradingService {
     }
   }
 
-  Future<TradingOrder> placeMarketOrder(TradingOrder order) async {
+  Future<TradingOrder> placeOrder(TradingOrder order) async {
     final session = await _authService.restoreSession();
 
     if (session == null || session.accessToken.isEmpty) {
       throw const TradingException('Please sign in again');
+    }
+
+    final body = <String, dynamic>{
+      'clientOrderId':
+          'APP-${DateTime.now().microsecondsSinceEpoch}-${order.symbol}',
+      'exchange': 'NSE',
+      'symbol': order.symbol,
+      'side': order.isBuy ? 'BUY' : 'SELL',
+      'type': order.type,
+      'timeInForce': order.timeInForce,
+      'quantity': order.quantity,
+    };
+    if (order.isLimit && order.limitPrice != null) {
+      body['limitPrice'] = order.limitPrice!.toStringAsFixed(4);
     }
 
     final response = await http
@@ -105,16 +119,7 @@ class TradingService {
             'Authorization': 'Bearer ${session.accessToken}',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({
-            'clientOrderId':
-                'APP-${DateTime.now().microsecondsSinceEpoch}-${order.symbol}',
-            'exchange': 'NSE',
-            'symbol': order.symbol,
-            'side': order.isBuy ? 'BUY' : 'SELL',
-            'type': 'MARKET',
-            'timeInForce': 'DAY',
-            'quantity': order.quantity,
-          }),
+          body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 10));
 
@@ -136,6 +141,40 @@ class TradingService {
     }
 
     return TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder));
+  }
+
+  Future<TradingOrder> placeMarketOrder(TradingOrder order) {
+    return placeOrder(order);
+  }
+
+  Future<void> cancelOrder(String orderId) async {
+    final session = await _authService.restoreSession();
+    if (session == null || session.accessToken.isEmpty) {
+      throw const TradingException('Please sign in again');
+    }
+
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/orders/$orderId/cancel'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw const TradingException('Please sign in again');
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      decoded = null;
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw TradingException(_apiMessage(decoded, 'Order cancellation failed'));
+    }
   }
 }
 

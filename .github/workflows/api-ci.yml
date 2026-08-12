@@ -36,6 +36,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify TrueData SDK preflight
+        env:
+          MARKET_DATA_STREAMING_ENABLED: 'true'
+          MARKET_DATA_STREAMING_PROVIDER: TRUEDATA
+          TRUEDATA_USER: ci-placeholder
+          TRUEDATA_PASSWORD: ci-placeholder
+        run: npm run truedata:preflight
+
       - name: Generate Prisma client
         run: npm run db:generate
 

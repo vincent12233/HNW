@@ -20,12 +20,13 @@ import { WithdrawalModule } from './withdrawal/withdrawal.module';
 import { AdminModule } from './admin/admin.module';
 import { BusinessModule } from './business/business.module';
 import { StocksModule } from './stocks/stocks.module';
-import { MarketDataController } from './market-data/market-data.controller';
 import { MarketDataModule } from './market-data/market-data.module';
 import { KycModule } from './kyc/kyc.module';
 import { AdminProductsModule } from './admin-products/admin-products.module';
 import { LoansModule } from './loans/loans.module';
+import { InstrumentMasterModule } from './instrument-master/instrument-master.module';
 import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -55,6 +56,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     KycModule,
     AdminProductsModule,
     LoansModule,
+    InstrumentMasterModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

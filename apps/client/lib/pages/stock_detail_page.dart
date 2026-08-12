@@ -4,6 +4,7 @@ import '../app_config.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../services/market_socket_service.dart';
+import '../services/trading_service.dart';
 import '../utils/number_formatters.dart';
 
 class StockDetailPage extends StatefulWidget {
@@ -131,7 +132,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
                       limitPrice: limitPrice,
                     );
 
+                    TradingService.clearLastPlacedOrder();
                     final errorMessage = await widget.onOrderPlaced(order);
+                    final confirmedOrder = TradingService.takeLastPlacedOrder();
 
                     if (!mounted || !dialogContext.mounted) return;
                     setState(() => isSubmitting = false);
@@ -144,7 +147,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
                     Navigator.pop(dialogContext);
                     _showMessage(
-                      '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order placed',
+                      confirmedOrder == null
+                          ? '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order submitted'
+                          : orderResultMessage(confirmedOrder),
                     );
                   },
             child: Text(isSubmitting ? 'Submitting...' : 'Confirm'),
@@ -310,5 +315,37 @@ class _StockDetailPageState extends State<StockDetailPage> {
         ],
       ),
     );
+  }
+}
+
+String orderResultMessage(TradingOrder order) {
+  final filled = order.filledQuantity;
+  final remaining = order.remainingQuantity;
+  final fillPrice = order.averageFillPrice;
+  final fillPriceText = fillPrice == null
+      ? ''
+      : ' • Avg. ${formatPrice(fillPrice)}';
+
+  switch (order.status) {
+    case 'FILLED':
+      return 'Completed • Filled $filled/${order.quantity}$fillPriceText';
+    case 'OPEN':
+      return 'Order open • Filled $filled/${order.quantity} • Remaining $remaining';
+    case 'PARTIALLY_FILLED':
+      return 'Partially filled • Filled $filled/${order.quantity} • Remaining $remaining$fillPriceText';
+    case 'CANCELLED':
+      if (filled > 0) {
+        return 'Partially filled • Filled $filled/${order.quantity} • Remaining $remaining cancelled$fillPriceText';
+      }
+      return 'Order cancelled • No shares filled';
+    case 'REJECTED':
+      final reason = order.rejectionReason?.trim();
+      return reason == null || reason.isEmpty
+          ? 'Order rejected'
+          : 'Order rejected • $reason';
+    case 'PENDING':
+      return 'Order submitted';
+    default:
+      return 'Order ${order.status.toLowerCase().replaceAll('_', ' ')}';
   }
 }

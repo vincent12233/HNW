@@ -6,6 +6,8 @@ class TradingOrder {
     this.type = 'MARKET',
     this.timeInForce = 'DAY',
     this.limitPrice,
+    this.averageFillPrice,
+    this.rejectionReason,
     this.filledQuantity = 0,
     required this.symbol,
     required this.isBuy,
@@ -20,6 +22,8 @@ class TradingOrder {
   final String type;
   final String timeInForce;
   final double? limitPrice;
+  final double? averageFillPrice;
+  final String? rejectionReason;
   final int filledQuantity;
   final String symbol;
   final bool isBuy;
@@ -41,6 +45,8 @@ class TradingOrder {
       type: json['type']?.toString() ?? 'MARKET',
       timeInForce: json['timeInForce']?.toString() ?? 'DAY',
       limitPrice: _nullableDoubleValue(json['limitPrice']),
+      averageFillPrice: _nullableDoubleValue(json['averageFillPrice']),
+      rejectionReason: json['rejectionReason']?.toString(),
       filledQuantity: _intValue(json['filledQuantity']),
       symbol: json['symbol'] as String,
       isBuy: json['isBuy'] as bool,
@@ -69,6 +75,8 @@ class TradingOrder {
       type: json['type']?.toString() ?? 'MARKET',
       timeInForce: json['timeInForce']?.toString() ?? 'DAY',
       limitPrice: limitPrice,
+      averageFillPrice: averageFillPrice,
+      rejectionReason: json['rejectionReason']?.toString(),
       filledQuantity: filledQuantity,
       symbol: (instrument?['symbol'] ?? json['symbol'] ?? '').toString(),
       isBuy: json['side']?.toString() != 'SELL',
@@ -91,6 +99,8 @@ class TradingOrder {
       'type': type,
       'timeInForce': timeInForce,
       'limitPrice': limitPrice,
+      'averageFillPrice': averageFillPrice,
+      'rejectionReason': rejectionReason,
       'filledQuantity': filledQuantity,
       'isBuy': isBuy,
       'quantity': quantity,

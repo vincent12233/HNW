@@ -27,6 +27,7 @@ void main() {
     expect(order.filledQuantity, 4);
     expect(order.remainingQuantity, 6);
     expect(order.limitPrice, 1250.50);
+    expect(order.averageFillPrice, 1248.25);
     expect(order.price, 1248.25);
     expect(order.isActive, isTrue);
   });
@@ -51,5 +52,36 @@ void main() {
     expect(order.price, 900);
     expect(order.isBuy, isFalse);
     expect(order.isLimit, isTrue);
+  });
+
+  test('preserves terminal cancellation and rejection details', () {
+    final cancelled = TradingOrder.fromApiJson({
+      'id': 'order-3',
+      'status': 'CANCELLED',
+      'side': 'BUY',
+      'type': 'LIMIT',
+      'timeInForce': 'IOC',
+      'quantity': 10,
+      'filledQuantity': 3,
+      'limitPrice': '101.00',
+      'averageFillPrice': '100.75',
+      'instrument': {'symbol': 'SBIN'},
+    });
+    final rejected = TradingOrder.fromApiJson({
+      'id': 'order-4',
+      'status': 'REJECTED',
+      'side': 'BUY',
+      'type': 'LIMIT',
+      'timeInForce': 'FOK',
+      'quantity': 5,
+      'filledQuantity': 0,
+      'limitPrice': '500.00',
+      'rejectionReason': 'Insufficient liquidity',
+      'instrument': {'symbol': 'INFY'},
+    });
+
+    expect(cancelled.remainingQuantity, 7);
+    expect(cancelled.averageFillPrice, 100.75);
+    expect(rejected.rejectionReason, 'Insufficient liquidity');
   });
 }

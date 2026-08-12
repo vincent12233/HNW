@@ -13,6 +13,18 @@ class TradingService {
   final AuthService _authService = AuthService();
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
+  static TradingOrder? _lastPlacedOrder;
+
+  static void clearLastPlacedOrder() {
+    _lastPlacedOrder = null;
+  }
+
+  static TradingOrder? takeLastPlacedOrder() {
+    final order = _lastPlacedOrder;
+    _lastPlacedOrder = null;
+    return order;
+  }
+
   Future<TradingAccountSnapshot?> fetchAccountSnapshot() async {
     final session = await _authService.restoreSession();
 
@@ -135,12 +147,12 @@ class TradingService {
     }
 
     final apiOrder = decoded is Map ? decoded['order'] : null;
+    final confirmedOrder = apiOrder is Map
+        ? TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder))
+        : order;
 
-    if (apiOrder is! Map) {
-      return order;
-    }
-
-    return TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder));
+    _lastPlacedOrder = confirmedOrder;
+    return confirmedOrder;
   }
 
   Future<TradingOrder> placeMarketOrder(TradingOrder order) {

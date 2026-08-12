@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Patch, Query } from '@nestjs/common';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
 
@@ -12,6 +12,19 @@ export class MarketDataController {
   @Get()
   getSnapshot() {
     return this.marketDataService.getMarketSnapshot();
+  }
+
+  @Get('search')
+  searchSnapshot(
+    @Query('q') query = '',
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '50',
+  ) {
+    return this.marketDataService.searchMarketSnapshot(
+      query,
+      Number(page),
+      Number(pageSize),
+    );
   }
 
   @Get('indices')

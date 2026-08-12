@@ -6,6 +6,22 @@ import '../app_config.dart';
 import '../models/stock_quote.dart';
 import 'local_data_cache.dart';
 
+class MarketSearchPage {
+  const MarketSearchPage({
+    required this.data,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.hasMore,
+  });
+
+  final List<StockQuote> data;
+  final int total;
+  final int page;
+  final int pageSize;
+  final bool hasMore;
+}
+
 class MarketDataService {
   static final Map<String, String> _preferredExchangeBySymbol =
       <String, String>{};
@@ -44,6 +60,39 @@ class MarketDataService {
     } catch (_) {
       return _cachedSnapshot();
     }
+  }
+
+  Future<MarketSearchPage> searchSnapshot({
+    String query = '',
+    int page = 1,
+    int pageSize = 50,
+  }) async {
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/market-data/search').replace(
+      queryParameters: {
+        'q': query.trim(),
+        'page': '$page',
+        'pageSize': '$pageSize',
+      },
+    );
+    final response = await http.get(uri).timeout(const Duration(seconds: 6));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw const MarketDataException('Unable to search market data');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const MarketDataException('Unable to search market data');
+    }
+    final json = Map<String, dynamic>.from(decoded);
+    final rows = json['data'];
+
+    return MarketSearchPage(
+      data: rows is List ? _fromRows(rows) : <StockQuote>[],
+      total: (json['total'] as num?)?.toInt() ?? 0,
+      page: (json['page'] as num?)?.toInt() ?? page,
+      pageSize: (json['pageSize'] as num?)?.toInt() ?? pageSize,
+      hasMore: json['hasMore'] == true,
+    );
   }
 
   Future<List<Map<String, dynamic>>> fetchIndexSnapshot() async {

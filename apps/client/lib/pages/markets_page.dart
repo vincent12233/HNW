@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../models/stock_quote.dart';
+import '../services/market_data_service.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_list_tile.dart';
@@ -21,8 +24,15 @@ class MarketsPage extends StatefulWidget {
 }
 
 class _MarketsPageState extends State<MarketsPage> {
+  final MarketDataService _marketDataService = MarketDataService();
   int selectedTab = 0;
   String query = '';
+  Timer? _searchDebounce;
+  List<StockQuote> _remoteSearchResults = <StockQuote>[];
+  bool _searchLoading = false;
+  bool _searchHasMore = false;
+  int _searchPage = 1;
+  int _searchGeneration = 0;
 
   final tabs = const [
     'Stocks',
@@ -33,16 +43,84 @@ class _MarketsPageState extends State<MarketsPage> {
   ];
 
   List<StockQuote> get _filteredStocks {
-    final normalizedQuery = query.trim().toLowerCase();
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty) return widget.stocks;
+    return _remoteSearchResults;
+  }
 
-    if (normalizedQuery.isEmpty) {
-      return widget.stocks;
+  @override
+  void dispose() {
+    _searchDebounce?.cancel();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _searchGeneration++;
+    setState(() {
+      query = value;
+      if (value.trim().isEmpty) {
+        _remoteSearchResults = <StockQuote>[];
+        _searchHasMore = false;
+        _searchLoading = false;
+      }
+    });
+
+    _searchDebounce?.cancel();
+    if (value.trim().isEmpty) return;
+    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
+      _searchStocks(reset: true);
+    });
+  }
+
+  Future<void> _searchStocks({required bool reset}) async {
+    final normalizedQuery = query.trim();
+    if (normalizedQuery.isEmpty || _searchLoading) return;
+
+    final generation = reset ? ++_searchGeneration : _searchGeneration;
+    final nextPage = reset ? 1 : _searchPage + 1;
+    setState(() {
+      _searchLoading = true;
+    });
+
+    try {
+      final result = await _marketDataService.searchSnapshot(
+        query: normalizedQuery,
+        page: nextPage,
+        pageSize: 50,
+      );
+      if (!mounted || generation != _searchGeneration) return;
+
+      setState(() {
+        if (reset) {
+          _remoteSearchResults = result.data;
+        } else {
+          final existing = _remoteSearchResults.map((item) => item.symbol).toSet();
+          _remoteSearchResults.addAll(
+            result.data.where((item) => !existing.contains(item.symbol)),
+          );
+        }
+        _searchPage = result.page;
+        _searchHasMore = result.hasMore;
+      });
+    } catch (_) {
+      if (!mounted || generation != _searchGeneration) return;
+      if (reset) {
+        final normalized = normalizedQuery.toLowerCase();
+        setState(() {
+          _remoteSearchResults = widget.stocks.where((stock) {
+            return stock.symbol.toLowerCase().contains(normalized) ||
+                stock.name.toLowerCase().contains(normalized);
+          }).toList();
+          _searchHasMore = false;
+        });
+      }
+    } finally {
+      if (mounted && generation == _searchGeneration) {
+        setState(() {
+          _searchLoading = false;
+        });
+      }
     }
-
-    return widget.stocks.where((stock) {
-      return stock.symbol.toLowerCase().contains(normalizedQuery) ||
-          stock.name.toLowerCase().contains(normalizedQuery);
-    }).toList();
   }
 
   @override
@@ -72,11 +150,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       padding: const WidgetStatePropertyAll(
                         EdgeInsets.symmetric(horizontal: 12),
                       ),
-                      onChanged: (value) {
-                        setState(() {
-                          query = value;
-                        });
-                      },
+                      onChanged: _onSearchChanged,
                     ),
                   ),
                 ],
@@ -154,17 +228,38 @@ class _MarketsPageState extends State<MarketsPage> {
     required String emptyTitle,
     String emptySubtitle = 'Try a different search or market filter.',
   }) {
+    if (_searchLoading && query.trim().isNotEmpty && stocks.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
     if (stocks.isEmpty) {
       return _emptyState(Icons.search_off, emptyTitle, emptySubtitle);
     }
 
+    final showMore = query.trim().isNotEmpty && _searchHasMore;
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: stocks.length,
+      itemCount: stocks.length + (showMore ? 1 : 0),
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, index) {
-        final stock = stocks[index];
+        if (index == stocks.length) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            child: Center(
+              child: OutlinedButton(
+                onPressed: _searchLoading ? null : () => _searchStocks(reset: false),
+                child: _searchLoading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Load more'),
+              ),
+            ),
+          );
+        }
 
+        final stock = stocks[index];
         return StockListTile(
           stock: stock,
           onTap: () {

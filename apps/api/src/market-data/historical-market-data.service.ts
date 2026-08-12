@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import axios from 'axios';
 import { PrismaService } from '../prisma/prisma.service';
+import { IndiaStockMcpProvider } from './providers/india-stock-mcp.provider';
 import {
   MarketHistoryPoint,
   MarketHistoryResult,
@@ -17,7 +18,10 @@ type HistoryWindow = {
 export class HistoricalMarketDataService {
   private readonly logger = new Logger(HistoricalMarketDataService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly indiaStockMcp: IndiaStockMcpProvider,
+  ) {}
 
   async getHistory(symbol: string, range: string): Promise<MarketHistoryResult> {
     const normalizedSymbol = symbol.trim().toUpperCase().replace(/\.(NS|BO)$/i, '');
@@ -41,7 +45,51 @@ export class HistoricalMarketDataService {
 
     const normalizedRange = this.normalizeRange(range);
     const window = this.window(normalizedRange);
-    const yahooSymbol = `${instrument.symbol}.${instrument.exchange === 'BSE' ? 'BO' : 'NS'}`;
+
+    if (instrument.exchange === 'NSE' && normalizedRange !== '1D') {
+      const mcpHistory = await this.tryMcpHistory(
+        instrument.symbol,
+        normalizedRange,
+      );
+      if (mcpHistory.length > 1) {
+        return {
+          symbol: instrument.symbol,
+          interval: '1d',
+          data: mcpHistory,
+        };
+      }
+    }
+
+    return this.getYahooHistory(
+      instrument.symbol,
+      instrument.exchange,
+      window,
+    );
+  }
+
+  private async tryMcpHistory(symbol: string, range: '1W' | '1M') {
+    try {
+      if (!(await this.indiaStockMcp.supportsHistorical())) return [];
+      const { from, to } = this.dateWindow(range);
+      return await this.indiaStockMcp.getHistorical(
+        symbol,
+        from,
+        to,
+        '1d',
+      );
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.warn(`MCP history fallback for NSE:${symbol}: ${message}`);
+      return [];
+    }
+  }
+
+  private async getYahooHistory(
+    symbol: string,
+    exchange: string,
+    window: HistoryWindow,
+  ): Promise<MarketHistoryResult> {
+    const yahooSymbol = `${symbol}.${exchange === 'BSE' ? 'BO' : 'NS'}`;
 
     try {
       const response = await axios.get(
@@ -62,11 +110,7 @@ export class HistoricalMarketDataService {
       const timestamps = Array.isArray(result?.timestamp) ? result.timestamp : [];
       const quote = result?.indicators?.quote?.[0];
       if (!quote || timestamps.length === 0) {
-        return {
-          symbol: instrument.symbol,
-          interval: window.interval,
-          data: [],
-        };
+        return { symbol, interval: window.interval, data: [] };
       }
 
       const data: MarketHistoryPoint[] = [];
@@ -82,20 +126,29 @@ export class HistoricalMarketDataService {
         if (point) data.push(point);
       }
 
-      return {
-        symbol: instrument.symbol,
-        interval: window.interval,
-        data,
-      };
+      return { symbol, interval: window.interval, data };
     } catch (error: unknown) {
       const status = (error as { response?: { status?: number } })?.response?.status;
       const message = error instanceof Error ? error.message : String(error);
-      this.logger.error(
-        `History failed for ${instrument.exchange}:${instrument.symbol}: ${message}`,
-      );
-      if (status === 404) return { symbol: instrument.symbol, interval: window.interval, data: [] };
+      this.logger.error(`History failed for ${exchange}:${symbol}: ${message}`);
+      if (status === 404) return { symbol, interval: window.interval, data: [] };
       throw error;
     }
+  }
+
+  private dateWindow(range: '1W' | '1M') {
+    const nowIst = new Date(Date.now() + 5.5 * 60 * 60 * 1000);
+    const to = this.dateOnly(nowIst);
+    const fromDate = new Date(nowIst);
+    fromDate.setUTCDate(fromDate.getUTCDate() - (range === '1W' ? 7 : 31));
+    return { from: this.dateOnly(fromDate), to };
+  }
+
+  private dateOnly(value: Date) {
+    const year = value.getUTCFullYear();
+    const month = `${value.getUTCMonth() + 1}`.padStart(2, '0');
+    const day = `${value.getUTCDate()}`.padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private normalizeRange(value: string): HistoryRange {

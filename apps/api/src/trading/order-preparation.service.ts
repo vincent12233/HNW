@@ -4,6 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Prisma } from '../generated/prisma/client';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
@@ -14,6 +15,8 @@ type OrderWithDetails = Prisma.OrderGetPayload<{
 
 @Injectable()
 export class OrderPreparationService {
+  constructor(private readonly config: ConfigService) {}
+
   validateOrderRequest(dto: CreateOrderDto) {
     if (dto.type === 'LIMIT' && !dto.limitPrice) {
       throw new BadRequestException('limitPrice is required for LIMIT orders');
@@ -87,6 +90,8 @@ export class OrderPreparationService {
       throw new BadRequestException('Market quote is unavailable');
     }
 
+    this.assertQuoteFresh(instrument.quote.asOf);
+
     if (instrument.currency !== account.currency) {
       throw new BadRequestException(
         'Instrument and account currencies do not match',
@@ -151,6 +156,27 @@ export class OrderPreparationService {
 
     this.assertSameOrderRequest(existing, dto);
     return { idempotentReplay: true, order: existing };
+  }
+
+  private assertQuoteFresh(asOf: Date | null) {
+    if (!asOf) {
+      throw new BadRequestException('Market quote is unavailable');
+    }
+
+    const maxAgeMs = this.positiveInteger(
+      this.config.get<string>('ORDER_QUOTE_MAX_AGE_MS'),
+      120000,
+    );
+    const ageMs = Date.now() - asOf.getTime();
+
+    if (ageMs < 0 || ageMs > maxAgeMs) {
+      throw new BadRequestException('Market quote is temporarily unavailable');
+    }
+  }
+
+  private positiveInteger(value: string | undefined, fallback: number) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
   }
 
   private assertSameOrderRequest(

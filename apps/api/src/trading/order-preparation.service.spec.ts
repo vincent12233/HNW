@@ -2,7 +2,8 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { OrderPreparationService } from './order-preparation.service';
 
 describe('OrderPreparationService', () => {
-  const service = new OrderPreparationService();
+  const config = { get: jest.fn().mockReturnValue(undefined) } as any;
+  const service = new OrderPreparationService(config);
 
   it('requires limitPrice for LIMIT orders', () => {
     expect(() =>
@@ -31,6 +32,20 @@ describe('OrderPreparationService', () => {
         limitPrice: '100.00',
       } as any),
     ).toThrow(BadRequestException);
+  });
+
+  it('rejects stale quotes before execution pricing', () => {
+    expect(() =>
+      (service as any).assertQuoteFresh(
+        new Date(Date.now() - 120001),
+      ),
+    ).toThrow('Market quote is temporarily unavailable');
+  });
+
+  it('accepts a recent quote', () => {
+    expect(() =>
+      (service as any).assertQuoteFresh(new Date(Date.now() - 30000)),
+    ).not.toThrow();
   });
 
   it('rejects reuse of clientOrderId for a different order', async () => {

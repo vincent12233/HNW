@@ -2,19 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/ipo.dart';
-import '../../models/pending_order.dart';
+import '../../models/trading_order.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
-import 'pending_orders_tab.dart';
+import 'orders_tab.dart';
 
 class PendingCenterTab extends StatefulWidget {
   const PendingCenterTab({
     super.key,
-    required this.pendingOrders,
+    required this.activeOrders,
     required this.ipoApplications,
   });
 
-  final List<PendingOrder> pendingOrders;
+  final List<TradingOrder> activeOrders;
   final List<IpoApplication> ipoApplications;
 
   @override
@@ -53,7 +53,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
         const SizedBox(height: 12),
         Expanded(
           child: selectedSection == 0
-              ? PendingOrdersTab(orders: widget.pendingOrders)
+              ? OrdersTab(orders: widget.activeOrders)
               : _buildIpoApplications(),
         ),
       ],
@@ -92,7 +92,6 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final application = widget.ipoApplications[index];
-
         final applicationNumber = _applicationNumberFor(application);
 
         final statusColor = switch (application.status) {
@@ -156,9 +155,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 14),
-
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(
@@ -183,19 +180,15 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                   ],
                 ),
               ),
-
               if (application.status == IpoApplicationStatus.applied) ...[
                 const SizedBox(height: 14),
-
                 const Text(
                   'Application submitted. Allocation is pending relationship manager review.',
                   style: TextStyle(color: Colors.black54),
                 ),
               ],
-
               if (application.status == IpoApplicationStatus.allocated) ...[
                 const Divider(height: 26),
-
                 Row(
                   children: [
                     Expanded(
@@ -212,9 +205,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 14),
-
                 Row(
                   children: [
                     Expanded(
@@ -232,53 +223,15 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 14),
-
                 _value(
                   'Outstanding Amount',
                   formatPrice(application.remainingAmount),
                   valueColor: AppConfig.lossColor,
                 ),
-
-                if (application.remainingAmount > 0) ...[
-                  const SizedBox(height: 14),
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFFF7ED),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFFED7AA)),
-                    ),
-                    child: const Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 18,
-                          color: Color(0xFFB45309),
-                        ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Available account cash has been automatically deducted. '
-                            'The remaining amount is IPO debt. Shares will move to Holdings only after the subscription is fully settled.',
-                            style: TextStyle(
-                              color: Color(0xFF92400E),
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
               ],
-
               if (application.status == IpoApplicationStatus.completed) ...[
                 const SizedBox(height: 14),
-
                 const Row(
                   children: [
                     Icon(Icons.check_circle, size: 18, color: Colors.green),
@@ -292,28 +245,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                     ),
                   ],
                 ),
-
-                const SizedBox(height: 12),
-
-                Row(
-                  children: [
-                    Expanded(
-                      child: _value(
-                        'Shares',
-                        '${application.allocatedQuantity}',
-                      ),
-                    ),
-                    Expanded(
-                      child: _value(
-                        'Paid Amount',
-                        formatPrice(application.paidAmount),
-                        valueColor: AppConfig.gainColor,
-                      ),
-                    ),
-                  ],
-                ),
               ],
-
               if (application.status == IpoApplicationStatus.notAllotted) ...[
                 const SizedBox(height: 14),
                 const Text(
@@ -321,7 +253,6 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                   style: TextStyle(color: Colors.black54),
                 ),
               ],
-
               if (application.status == IpoApplicationStatus.cancelled) ...[
                 const SizedBox(height: 14),
                 const Text(
@@ -347,11 +278,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
       (item) => item.id == application.id,
     );
 
-    if (index < 0) {
-      return 1;
-    }
-
-    return index + 1;
+    return index < 0 ? 1 : index + 1;
   }
 
   Widget _value(String label, String value, {Color? valueColor}) {

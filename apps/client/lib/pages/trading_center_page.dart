@@ -1,4 +1,6 @@
-﻿import 'package:flutter/material.dart';
+import 'dart:async';
+
+import 'package:flutter/material.dart';
 
 import '../models/institutional_opportunity.dart';
 import '../models/ipo.dart';
@@ -6,6 +8,7 @@ import '../models/pending_order.dart';
 import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
+import '../services/trading_service.dart';
 import '../widgets/trading/history_tab.dart';
 import '../widgets/trading/holdings_tab.dart';
 import '../widgets/trading/institutional_tab.dart';
@@ -47,6 +50,13 @@ class TradingCenterPage extends StatefulWidget {
 }
 
 class _TradingCenterPageState extends State<TradingCenterPage> {
+  final TradingService _tradingService = TradingService();
+  final List<TradingOrder> _orders = <TradingOrder>[];
+  final Map<String, PortfolioPosition> _positions =
+      <String, PortfolioPosition>{};
+
+  Timer? _refreshTimer;
+  bool _refreshing = false;
   int selectedTab = 0;
 
   final List<_TradingModule> tabs = const [
@@ -71,6 +81,80 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
     _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
     _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _syncFromWidget();
+    unawaited(_refreshTradingData());
+    _refreshTimer = Timer.periodic(
+      const Duration(seconds: 10),
+      (_) => unawaited(_refreshTradingData()),
+    );
+  }
+
+  @override
+  void didUpdateWidget(covariant TradingCenterPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.orders != widget.orders ||
+        oldWidget.positions != widget.positions) {
+      _syncFromWidget();
+    }
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
+  }
+
+  void _syncFromWidget() {
+    _orders
+      ..clear()
+      ..addAll(widget.orders);
+    _positions
+      ..clear()
+      ..addAll(widget.positions);
+  }
+
+  Future<void> _refreshTradingData() async {
+    if (_refreshing) return;
+    _refreshing = true;
+    try {
+      final results = await Future.wait<dynamic>([
+        _tradingService.fetchOrders(),
+        _tradingService.fetchAccountSnapshot(),
+      ]);
+      if (!mounted) return;
+
+      final latestOrders = results[0] as List<TradingOrder>;
+      final snapshot = results[1] as TradingAccountSnapshot?;
+
+      setState(() {
+        _orders
+          ..clear()
+          ..addAll(latestOrders);
+        if (snapshot != null) {
+          _positions
+            ..clear()
+            ..addEntries(
+              snapshot.positions.map(
+                (position) => MapEntry(position.symbol, position),
+              ),
+            );
+        }
+      });
+    } finally {
+      _refreshing = false;
+    }
+  }
+
+  List<TradingOrder> get _activeOrders => _orders
+      .where(
+        (order) =>
+            order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED',
+      )
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -100,9 +184,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                 ],
               ),
             ),
-
             const SizedBox(height: 12),
-
             SizedBox(
               height: 86,
               child: ListView.separated(
@@ -121,14 +203,15 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                       setState(() {
                         selectedTab = index;
                       });
+                      if (index == 2 || index == 3 || index == 4 || index == 7) {
+                        unawaited(_refreshTradingData());
+                      }
                     },
                   );
                 },
               ),
             ),
-
             const SizedBox(height: 10),
-
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: List.generate(
@@ -147,9 +230,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                 ),
               ),
             ),
-
             const SizedBox(height: 14),
-
             Expanded(child: _buildContent()),
           ],
         ),
@@ -161,44 +242,35 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
     switch (selectedTab) {
       case 0:
         return TradeList(stocks: widget.stocks, onTrade: widget.onTrade);
-
       case 1:
         return InstitutionalTab(stocks: widget.institutionalStocks);
-
       case 2:
         return HoldingsTab(
-          positions: widget.positions,
+          positions: _positions,
           stocks: widget.stocks,
           onStockTap: widget.onTrade,
         );
-
       case 3:
         return PendingCenterTab(
-          pendingOrders: widget.pendingOrders,
+          activeOrders: _activeOrders,
           ipoApplications: widget.ipoApplications,
         );
-
       case 4:
-        return OrdersTab(orders: widget.orders);
-
+        return OrdersTab(orders: _orders);
       case 5:
         return IpoTab(
           ipos: widget.ipos,
           applications: widget.ipoApplications,
           onApply: widget.onApplyIpo,
         );
-
       case 6:
         return OtcTab(opportunities: widget.institutionalStocks);
-
       case 7:
-        return HistoryTab(orders: widget.orders);
-
+        return HistoryTab(orders: _orders);
       default:
         return const SizedBox.shrink();
     }
   }
-
 }
 
 class _TradingModule {
@@ -208,7 +280,6 @@ class _TradingModule {
   final IconData icon;
   final Color color;
 }
-
 
 class _TradingModuleButton extends StatelessWidget {
   const _TradingModuleButton({

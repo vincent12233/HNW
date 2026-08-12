@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/trading_order.dart';
@@ -11,9 +11,16 @@ class HistoryTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final soldOrders = orders.where((order) => !order.isBuy).toList();
+    final history = orders
+        .where(
+          (order) =>
+              order.status == 'FILLED' ||
+              order.status == 'CANCELLED' ||
+              order.status == 'REJECTED',
+        )
+        .toList();
 
-    if (soldOrders.isEmpty) {
+    if (history.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32),
@@ -23,12 +30,12 @@ class HistoryTab extends StatelessWidget {
               Icon(Icons.history, size: 64, color: Colors.black38),
               SizedBox(height: 16),
               Text(
-                'No sell history',
+                'No order history',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
               Text(
-                'Positions you sell will appear here.',
+                'Completed and cancelled orders will appear here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
               ),
@@ -40,10 +47,19 @@ class HistoryTab extends StatelessWidget {
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: soldOrders.length,
+      itemCount: history.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final order = soldOrders[index];
+        final order = history[index];
+        final sideColor = order.isBuy
+            ? AppConfig.gainColor
+            : AppConfig.lossColor;
+        final statusColor = switch (order.status) {
+          'FILLED' => AppConfig.gainColor,
+          'CANCELLED' => AppConfig.neutralColor,
+          'REJECTED' => AppConfig.lossColor,
+          _ => AppConfig.neutralColor,
+        };
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -62,13 +78,13 @@ class HistoryTab extends StatelessWidget {
                       vertical: 5,
                     ),
                     decoration: BoxDecoration(
-                      color: AppConfig.lossColor.withValues(alpha: 0.10),
+                      color: sideColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
-                      'SOLD',
+                    child: Text(
+                      order.isBuy ? 'BUY' : 'SELL',
                       style: TextStyle(
-                        color: AppConfig.lossColor,
+                        color: sideColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
                       ),
@@ -85,8 +101,12 @@ class HistoryTab extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    order.formattedTime,
-                    style: const TextStyle(color: Colors.black45, fontSize: 12),
+                    _statusLabel(order.status),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -94,17 +114,36 @@ class HistoryTab extends StatelessWidget {
               Row(
                 children: [
                   Expanded(child: _value('Quantity', '${order.quantity}')),
-                  Expanded(
-                    child: _value('Sell Price', formatPrice(order.price)),
-                  ),
+                  Expanded(child: _value('Price', formatPrice(order.price))),
                   Expanded(child: _value('Amount', formatPrice(order.amount))),
                 ],
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  order.formattedTime,
+                  style: const TextStyle(color: Colors.black45, fontSize: 12),
+                ),
               ),
             ],
           ),
         );
       },
     );
+  }
+
+  String _statusLabel(String status) {
+    switch (status) {
+      case 'FILLED':
+        return 'Completed';
+      case 'CANCELLED':
+        return 'Cancelled';
+      case 'REJECTED':
+        return 'Rejected';
+      default:
+        return status;
+    }
   }
 
   Widget _value(String label, String value) {

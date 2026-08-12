@@ -7,6 +7,7 @@ export interface MarketSubscription {
 
 export interface StreamingMarketDataProvider {
   readonly name: string;
+  readonly providerSymbolCount?: number;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   subscribe(subscriptions: MarketSubscription[]): Promise<void>;

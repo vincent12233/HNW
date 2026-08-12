@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import { MarketDataHealthService } from './market-data-health.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 import { StreamingProviderRegistryService } from './providers/streaming-provider-registry.service';
 import {
@@ -27,17 +28,23 @@ export class StreamingMarketDataService
     private readonly prisma: PrismaService,
     private readonly ingestion: QuoteIngestionService,
     private readonly registry: StreamingProviderRegistryService,
+    private readonly health: MarketDataHealthService,
   ) {}
 
   async onModuleInit() {
     if (!this.isEnabled()) {
+      this.health.setStreamingStatus('NONE', false, {
+        subscriptionCount: 0,
+        providerSymbolCount: 0,
+        lastConnectionError: null,
+      });
       this.logger.log(
         'Streaming market data is disabled; polling fallback remains active',
       );
       return;
     }
 
-    await this.start();
+    await this.start(true);
   }
 
   async onModuleDestroy() {
@@ -53,28 +60,57 @@ export class StreamingMarketDataService
         this.logger.warn(`Streaming provider disconnect failed: ${message}`);
       }
     }
+    this.health.setStreamingStatus(provider?.name ?? 'NONE', false);
   }
 
-  async start() {
+  async start(failFast = false) {
     if (this.connecting || this.stopped) return;
 
     const provider = this.registry.provider;
     if (!provider) {
-      this.logger.warn(
-        'Streaming market data is enabled but no streaming provider is configured; polling fallback remains active',
-      );
+      this.health.setStreamingStatus('NONE', false, {
+        subscriptionCount: 0,
+        providerSymbolCount: 0,
+        lastConnectionError:
+          'Streaming market data is enabled but no streaming provider is configured',
+      });
+      const message =
+        'Streaming market data is enabled but no streaming provider is configured';
+      if (failFast) throw new Error(message);
+      this.logger.warn(`${message}; polling fallback remains active`);
       return;
     }
 
+    this.health.setStreamingStatus(provider.name, false, {
+      lastConnectionError: null,
+    });
     this.connecting = true;
     try {
       this.bindQuotes(provider);
-      await provider.subscribe(await this.loadSubscriptions());
+      const subscriptions = await this.loadSubscriptions();
+      await provider.subscribe(subscriptions);
+      this.health.setStreamingStatus(provider.name, false, {
+        subscriptionCount: subscriptions.length,
+        providerSymbolCount:
+          provider.providerSymbolCount ?? subscriptions.length,
+        lastConnectionError: null,
+      });
       await provider.connect();
+      this.health.setStreamingStatus(provider.name, true, {
+        subscriptionCount: subscriptions.length,
+        providerSymbolCount:
+          provider.providerSymbolCount ?? subscriptions.length,
+        lastConnectionError: null,
+      });
       this.logger.log(`Streaming market data connected via ${provider.name}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
+      this.health.setStreamingStatus(provider.name, false, {
+        providerSymbolCount: provider.providerSymbolCount ?? 0,
+        lastConnectionError: message,
+      });
       this.logger.error(`Streaming market data connection failed: ${message}`);
+      if (failFast) throw error;
       this.scheduleReconnect();
     } finally {
       this.connecting = false;
@@ -84,7 +120,12 @@ export class StreamingMarketDataService
   async restoreSubscriptions() {
     const provider = this.registry.provider;
     if (!provider) return;
-    await provider.subscribe(await this.loadSubscriptions());
+    const subscriptions = await this.loadSubscriptions();
+    await provider.subscribe(subscriptions);
+    this.health.setStreamingStatus(provider.name, undefined, {
+      subscriptionCount: subscriptions.length,
+      providerSymbolCount: provider.providerSymbolCount ?? subscriptions.length,
+    });
   }
 
   private bindQuotes(provider: StreamingMarketDataProvider) {
@@ -118,12 +159,10 @@ export class StreamingMarketDataService
 
   private scheduleReconnect() {
     if (this.stopped || this.reconnectTimer) return;
-
     const reconnectMs = this.positiveInteger(
       this.config.get<string>('MARKET_DATA_RECONNECT_MS'),
       5000,
     );
-
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = undefined;
       void this.start();

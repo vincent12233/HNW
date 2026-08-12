@@ -81,6 +81,10 @@ export class TrueDataProvider implements StreamingMarketDataProvider {
     return [...this.subscriptions];
   }
 
+  get providerSymbolCount() {
+    return this.subscriptions.length;
+  }
+
   get subscribeBatches() {
     return this.subscriptionBatches.map((batch) => [...batch]);
   }

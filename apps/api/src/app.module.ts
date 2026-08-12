@@ -25,6 +25,7 @@ import { KycModule } from './kyc/kyc.module';
 import { AdminProductsModule } from './admin-products/admin-products.module';
 import { LoansModule } from './loans/loans.module';
 import { InstrumentMasterModule } from './instrument-master/instrument-master.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -57,6 +58,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AdminProductsModule,
     LoansModule,
     InstrumentMasterModule,
+    WatchlistModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

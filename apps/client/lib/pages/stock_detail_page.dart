@@ -5,6 +5,7 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../services/market_socket_service.dart';
 import '../services/trading_service.dart';
+import '../services/watchlist_service.dart';
 import '../utils/number_formatters.dart';
 
 class StockDetailPage extends StatefulWidget {
@@ -25,10 +26,14 @@ class _StockDetailPageState extends State<StockDetailPage> {
   final quantityController = TextEditingController(text: '1');
   final limitPriceController = TextEditingController();
   final marketSocket = MarketSocketService();
+  final watchlistService = WatchlistService();
 
   late StockQuote liveStock;
   bool isBuy = true;
   bool isSubmitting = false;
+  bool isWatched = false;
+  bool watchlistLoading = true;
+  bool watchlistSaving = false;
   String orderType = 'MARKET';
   String timeInForce = 'DAY';
 
@@ -50,6 +55,48 @@ class _StockDetailPageState extends State<StockDetailPage> {
     liveStock = widget.stock;
     limitPriceController.text = liveStock.price.toStringAsFixed(2);
     marketSocket.addQuoteListener(_handleQuoteUpdate);
+    _loadWatchlistState();
+  }
+
+  Future<void> _loadWatchlistState() async {
+    try {
+      final symbols = await watchlistService.fetchSymbols();
+      if (!mounted) return;
+      setState(() {
+        isWatched = symbols.contains(liveStock.symbol);
+        watchlistLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => watchlistLoading = false);
+    }
+  }
+
+  Future<void> _toggleWatchlist() async {
+    if (watchlistLoading || watchlistSaving) return;
+    final next = !isWatched;
+    setState(() {
+      isWatched = next;
+      watchlistSaving = true;
+    });
+
+    try {
+      if (next) {
+        await watchlistService.add(liveStock.symbol);
+      } else {
+        await watchlistService.remove(liveStock.symbol);
+      }
+      if (!mounted) return;
+      setState(() => watchlistSaving = false);
+      _showMessage(next ? 'Added to watchlist' : 'Removed from watchlist');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        isWatched = !next;
+        watchlistSaving = false;
+      });
+      _showMessage('Unable to update watchlist');
+    }
   }
 
   double? _socketDouble(Map<String, dynamic> data, String key, double? fallback) {
@@ -160,10 +207,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     final message = confirmedOrder == null
                         ? '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order submitted'
                         : orderResultMessage(confirmedOrder);
-                    _showMessage(
-                      message,
-                      order: confirmedOrder,
-                    );
+                    _showMessage(message, order: confirmedOrder);
                   },
             child: Text(isSubmitting ? 'Submitting...' : 'Confirm'),
           ),
@@ -259,6 +303,22 @@ class _StockDetailPageState extends State<StockDetailPage> {
         backgroundColor: AppConfig.primaryColor,
         foregroundColor: Colors.white,
         title: Text(liveStock.symbol),
+        actions: [
+          IconButton(
+            tooltip: isWatched ? 'Remove from watchlist' : 'Add to watchlist',
+            onPressed: watchlistLoading || watchlistSaving ? null : _toggleWatchlist,
+            icon: watchlistSaving
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Icon(isWatched ? Icons.star : Icons.star_border),
+          ),
+        ],
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),

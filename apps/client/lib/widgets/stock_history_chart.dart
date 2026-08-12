@@ -6,11 +6,7 @@ import '../services/market_data_service.dart';
 import '../utils/number_formatters.dart';
 
 class StockHistoryChart extends StatefulWidget {
-  const StockHistoryChart({
-    super.key,
-    required this.symbol,
-  });
-
+  const StockHistoryChart({super.key, required this.symbol});
   final String symbol;
 
   @override
@@ -23,6 +19,12 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
   bool _loading = true;
   String? _error;
   List<MarketHistoryPoint> _points = <MarketHistoryPoint>[];
+  int? _selectedIndex;
+
+  MarketHistoryPoint? get _selectedPoint =>
+      _selectedIndex == null || _selectedIndex! >= _points.length
+          ? null
+          : _points[_selectedIndex!];
 
   @override
   void initState() {
@@ -34,8 +36,8 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
     setState(() {
       _loading = true;
       _error = null;
+      _selectedIndex = null;
     });
-
     try {
       final series = await _marketData.fetchHistory(
         symbol: widget.symbol,
@@ -55,10 +57,19 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
     }
   }
 
+  void _selectAt(Offset position, double width) {
+    if (_points.length < 2 || width <= 0) return;
+    final ratio = (position.dx / width).clamp(0.0, 1.0);
+    final index = (ratio * (_points.length - 1)).round();
+    if (index == _selectedIndex) return;
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final selected = _selectedPoint;
     final first = _points.isEmpty ? null : _points.first.close;
-    final last = _points.isEmpty ? null : _points.last.close;
+    final last = selected?.close ?? (_points.isEmpty ? null : _points.last.close);
     final change = first == null || first <= 0 || last == null
         ? null
         : ((last - first) / first) * 100;
@@ -89,10 +100,16 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
               Text(
                 '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
                 style: TextStyle(
-                  color: change >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+                  color: change >= 0
+                      ? AppConfig.gainColor
+                      : AppConfig.lossColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
+            ],
+            if (selected != null) ...[
+              const SizedBox(height: 10),
+              _SelectedPointSummary(point: selected, range: _range),
             ],
             const SizedBox(height: 14),
             SegmentedButton<String>(
@@ -111,17 +128,15 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 180,
+              height: 190,
               width: double.infinity,
               child: _chartBody(),
             ),
             const SizedBox(height: 8),
             Text(
-              _range == '1D'
-                  ? 'Intraday • 5 min'
-                  : _range == '1W'
-                      ? 'Recent trading week • 1 hour'
-                      : 'Recent month • daily',
+              selected == null
+                  ? 'Drag across the chart to inspect OHLC and volume'
+                  : 'Tap or drag to inspect another point',
               style: const TextStyle(color: Colors.black54, fontSize: 12),
             ),
           ],
@@ -131,9 +146,7 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
   }
 
   Widget _chartBody() {
-    if (_loading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_loading) return const Center(child: CircularProgressIndicator());
     if (_error != null) {
       return Center(
         child: TextButton.icon(
@@ -147,17 +160,86 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
       return const Center(child: Text('No history available'));
     }
 
-    return CustomPaint(
-      painter: _HistoryPainter(_points),
-      child: const SizedBox.expand(),
+    return LayoutBuilder(
+      builder: (context, constraints) => GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTapDown: (details) =>
+            _selectAt(details.localPosition, constraints.maxWidth),
+        onHorizontalDragStart: (details) =>
+            _selectAt(details.localPosition, constraints.maxWidth),
+        onHorizontalDragUpdate: (details) =>
+            _selectAt(details.localPosition, constraints.maxWidth),
+        child: CustomPaint(
+          painter: _HistoryPainter(
+            _points,
+            selectedIndex: _selectedIndex,
+          ),
+          child: const SizedBox.expand(),
+        ),
+      ),
     );
   }
 }
 
-class _HistoryPainter extends CustomPainter {
-  const _HistoryPainter(this.points);
+class _SelectedPointSummary extends StatelessWidget {
+  const _SelectedPointSummary({required this.point, required this.range});
+  final MarketHistoryPoint point;
+  final String range;
 
+  @override
+  Widget build(BuildContext context) {
+    final local = point.date.toLocal();
+    final date =
+        '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}';
+    final time =
+        '${local.hour.toString().padLeft(2, '0')}:${local.minute.toString().padLeft(2, '0')}';
+    final stamp = range == '1M' ? date : '$date $time';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.black.withAlpha(10),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            stamp,
+            style: const TextStyle(fontSize: 12, color: Colors.black54),
+          ),
+          const SizedBox(height: 5),
+          Wrap(
+            spacing: 12,
+            runSpacing: 5,
+            children: [
+              Text('O ${formatPrice(point.open)}'),
+              Text('H ${formatPrice(point.high)}'),
+              Text('L ${formatPrice(point.low)}'),
+              Text('C ${formatPrice(point.close)}'),
+              Text('Vol ${_formatVolume(point.volume)}'),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatVolume(int volume) {
+    if (volume >= 10000000) {
+      return '${(volume / 10000000).toStringAsFixed(2)} Cr';
+    }
+    if (volume >= 100000) {
+      return '${(volume / 100000).toStringAsFixed(2)} L';
+    }
+    if (volume >= 1000) return '${(volume / 1000).toStringAsFixed(1)} K';
+    return '$volume';
+  }
+}
+
+class _HistoryPainter extends CustomPainter {
+  const _HistoryPainter(this.points, {this.selectedIndex});
   final List<MarketHistoryPoint> points;
+  final int? selectedIndex;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -176,11 +258,14 @@ class _HistoryPainter extends CustomPainter {
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
 
+    final offsets = <Offset>[];
     final path = Path();
     for (var i = 0; i < closes.length; i++) {
-      final x = closes.length == 1 ? 0.0 : size.width * i / (closes.length - 1);
+      final x = size.width * i / (closes.length - 1);
       final normalized = (closes[i] - minValue) / span;
       final y = size.height - normalized * (size.height - 12) - 6;
+      final offset = Offset(x, y);
+      offsets.add(offset);
       if (i == 0) {
         path.moveTo(x, y);
       } else {
@@ -196,10 +281,27 @@ class _HistoryPainter extends CustomPainter {
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
     canvas.drawPath(path, linePaint);
+
+    if (selectedIndex != null &&
+        selectedIndex! >= 0 &&
+        selectedIndex! < offsets.length) {
+      final selected = offsets[selectedIndex!];
+      final markerPaint = Paint()..color = linePaint.color;
+      final crosshairPaint = Paint()
+        ..color = Colors.black26
+        ..strokeWidth = 1;
+      canvas.drawLine(
+        Offset(selected.dx, 0),
+        Offset(selected.dx, size.height),
+        crosshairPaint,
+      );
+      canvas.drawCircle(selected, 4.5, markerPaint);
+      final haloPaint = Paint()..color = markerPaint.color.withAlpha(46);
+      canvas.drawCircle(selected, 7, haloPaint);
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _HistoryPainter oldDelegate) {
-    return oldDelegate.points != points;
-  }
+  bool shouldRepaint(covariant _HistoryPainter oldDelegate) =>
+      oldDelegate.points != points || oldDelegate.selectedIndex != selectedIndex;
 }

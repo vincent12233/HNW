@@ -113,10 +113,11 @@ describe('MarketDataService', () => {
     expect(snapshot[1].quoteFresh).toBe(false);
   });
 
-  it('merges user holdings and active-order symbols into the compact home list', async () => {
+  it('merges holdings, active orders and watchlist stocks into the compact home list', async () => {
     const featured = instrument('featured', 'RELIANCE', 0);
     const holding = instrument('holding', 'SMALLCAP', 80);
     const activeOrder = instrument('order', 'ORDERSTOCK', 90);
+    const watched = instrument('watched', 'WATCHED', 95);
 
     const prisma = {
       instrument: {
@@ -124,10 +125,12 @@ describe('MarketDataService', () => {
           if (args.where?.positions) return Promise.resolve([holding]);
           if (args.where?.orders) return Promise.resolve([activeOrder]);
           if (args.where?.symbol) return Promise.resolve([]);
+          if (args.where?.id?.in) return Promise.resolve([watched]);
           return Promise.resolve([featured]);
         }),
         findFirst: jest.fn(),
       },
+      $queryRaw: jest.fn().mockResolvedValue([{ instrumentId: 'watched' }]),
       $transaction: jest.fn((operations: Promise<unknown>[]) =>
         Promise.all(operations),
       ),
@@ -153,6 +156,7 @@ describe('MarketDataService', () => {
       'RELIANCE',
       'SMALLCAP',
       'ORDERSTOCK',
+      'WATCHED',
     ]);
 
     expect(prisma.instrument.findMany).toHaveBeenCalledWith(
@@ -164,6 +168,13 @@ describe('MarketDataService', () => {
               account: { userId: 'user-1' },
             },
           },
+        }),
+      }),
+    );
+    expect(prisma.instrument.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          id: { in: ['watched'] },
         }),
       }),
     );

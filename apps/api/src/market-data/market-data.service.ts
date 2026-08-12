@@ -37,48 +37,71 @@ export class MarketDataService {
       quote: { is: { lastPrice: { gt: 0 } } },
     };
 
-    const [featured, requested, holdings, activeOrders] = await this.prisma.$transaction([
-      this.prisma.instrument.findMany({
-        where: ordinaryStockWhere,
-        include: { quote: true },
-        orderBy: [{ displayOrder: 'asc' }, { symbol: 'asc' }],
-        take: safeLimit,
-      }),
-      requestedSymbols.length === 0
-        ? this.prisma.instrument.findMany({ where: { id: { in: [] } } })
-        : this.prisma.instrument.findMany({
-            where: { ...ordinaryStockWhere, symbol: { in: requestedSymbols } },
-            include: { quote: true },
-          }),
-      this.prisma.instrument.findMany({
-        where: {
-          ...ordinaryStockWhere,
-          positions: { some: { quantity: { not: 0 }, account: { userId } } },
-        },
-        include: { quote: true },
-      }),
-      this.prisma.instrument.findMany({
-        where: {
-          ...ordinaryStockWhere,
-          orders: {
-            some: {
-              status: {
-                in: [
-                  OrderStatus.PENDING,
-                  OrderStatus.OPEN,
-                  OrderStatus.PARTIALLY_FILLED,
-                ],
+    const watchlistRows = await this.prisma.$queryRaw<Array<{ instrumentId: string }>>`
+      SELECT "instrumentId"
+      FROM "user_watchlist_items"
+      WHERE "userId" = ${userId}
+      ORDER BY "createdAt" DESC
+      LIMIT 100
+    `;
+    const watchlistInstrumentIds = watchlistRows.map((row) => row.instrumentId);
+
+    const [featured, requested, holdings, activeOrders, watchlist] =
+      await this.prisma.$transaction([
+        this.prisma.instrument.findMany({
+          where: ordinaryStockWhere,
+          include: { quote: true },
+          orderBy: [{ displayOrder: 'asc' }, { symbol: 'asc' }],
+          take: safeLimit,
+        }),
+        requestedSymbols.length === 0
+          ? this.prisma.instrument.findMany({ where: { id: { in: [] } } })
+          : this.prisma.instrument.findMany({
+              where: { ...ordinaryStockWhere, symbol: { in: requestedSymbols } },
+              include: { quote: true },
+            }),
+        this.prisma.instrument.findMany({
+          where: {
+            ...ordinaryStockWhere,
+            positions: { some: { quantity: { not: 0 }, account: { userId } } },
+          },
+          include: { quote: true },
+        }),
+        this.prisma.instrument.findMany({
+          where: {
+            ...ordinaryStockWhere,
+            orders: {
+              some: {
+                status: {
+                  in: [
+                    OrderStatus.PENDING,
+                    OrderStatus.OPEN,
+                    OrderStatus.PARTIALLY_FILLED,
+                  ],
+                },
+                account: { userId },
               },
-              account: { userId },
             },
           },
-        },
-        include: { quote: true },
-      }),
-    ]);
+          include: { quote: true },
+        }),
+        this.prisma.instrument.findMany({
+          where: {
+            ...ordinaryStockWhere,
+            id: { in: watchlistInstrumentIds },
+          },
+          include: { quote: true },
+        }),
+      ]);
 
     const byInstrument = new Map<string, any>();
-    for (const instrument of [...featured, ...requested, ...holdings, ...activeOrders]) {
+    for (const instrument of [
+      ...featured,
+      ...requested,
+      ...holdings,
+      ...activeOrders,
+      ...watchlist,
+    ]) {
       byInstrument.set(instrument.id, instrument);
     }
     return this.mapSnapshot([...byInstrument.values()]);

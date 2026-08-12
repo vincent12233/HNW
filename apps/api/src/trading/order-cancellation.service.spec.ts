@@ -80,4 +80,47 @@ describe('OrderCancellationService', () => {
       'Released funds after order cancellation',
     );
   });
+
+  it('releases only the unfilled SELL quantity after a partial fill', async () => {
+    const order = {
+      id: 'sell-partial',
+      status: 'PARTIALLY_FILLED',
+      side: 'SELL',
+      quantity: 8,
+      filledQuantity: 5,
+      accountId: 'account-1',
+      instrumentId: 'instrument-1',
+      frozenAmount: new Prisma.Decimal('0'),
+      account: { cashBalance: new Prisma.Decimal('1500') },
+    };
+
+    const { service, tx } = createService(order);
+    tx.position.findUnique.mockResolvedValue({
+      id: 'position-1',
+      quantity: 5,
+      frozenQuantity: 3,
+    });
+    tx.order.update.mockResolvedValue({
+      id: order.id,
+      status: 'CANCELLED',
+      filledQuantity: 5,
+    });
+
+    await service.cancel('user-1', order.id);
+
+    expect(freezeService.releaseSell).toHaveBeenCalledWith(
+      tx,
+      'position-1',
+      3,
+    );
+    expect(freezeService.releaseBuy).not.toHaveBeenCalled();
+    expect(tx.order.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: 'CANCELLED',
+          frozenAmount: new Prisma.Decimal(0),
+        }),
+      }),
+    );
+  });
 });

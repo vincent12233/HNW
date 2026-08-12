@@ -8,9 +8,28 @@ describe('MatchingScanService', () => {
       return undefined;
     }),
   } as any;
+  const openSession = { isNormalMarketOpen: jest.fn().mockReturnValue(true) } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    openSession.isNormalMarketOpen.mockReturnValue(true);
+  });
+
+  it('does not scan or match while the normal market is closed', async () => {
+    const prisma = { order: { findMany: jest.fn() } } as any;
+    const matchingService = { matchOrder: jest.fn() } as any;
+    const marketSession = { isNormalMarketOpen: jest.fn().mockReturnValue(false) } as any;
+    const service = new MatchingScanService(
+      prisma,
+      matchingService,
+      marketSession,
+      config,
+    );
+
+    await service.scanOpenOrders();
+
+    expect(prisma.order.findMany).not.toHaveBeenCalled();
+    expect(matchingService.matchOrder).not.toHaveBeenCalled();
   });
 
   it('continues from the previous page on the next scheduler tick', async () => {
@@ -33,7 +52,12 @@ describe('MatchingScanService', () => {
       },
     } as any;
     const matchingService = { matchOrder: jest.fn().mockResolvedValue(null) } as any;
-    const service = new MatchingScanService(prisma, matchingService, config);
+    const service = new MatchingScanService(
+      prisma,
+      matchingService,
+      openSession,
+      config,
+    );
 
     await service.scanOpenOrders();
     await service.scanOpenOrders();
@@ -72,7 +96,12 @@ describe('MatchingScanService', () => {
         .mockRejectedValueOnce(new Error('settlement conflict'))
         .mockResolvedValueOnce(null),
     } as any;
-    const service = new MatchingScanService(prisma, matchingService, config);
+    const service = new MatchingScanService(
+      prisma,
+      matchingService,
+      openSession,
+      config,
+    );
 
     await expect(service.scanOpenOrders()).resolves.toBeUndefined();
 
@@ -86,16 +115,17 @@ describe('MatchingScanService', () => {
       order: {
         findMany: jest
           .fn()
-          .mockResolvedValueOnce([
-            { id: 'order-a', placedAt },
-          ])
-          .mockResolvedValueOnce([
-            { id: 'order-a', placedAt },
-          ]),
+          .mockResolvedValueOnce([{ id: 'order-a', placedAt }])
+          .mockResolvedValueOnce([{ id: 'order-a', placedAt }]),
       },
     } as any;
     const matchingService = { matchOrder: jest.fn().mockResolvedValue(null) } as any;
-    const service = new MatchingScanService(prisma, matchingService, config);
+    const service = new MatchingScanService(
+      prisma,
+      matchingService,
+      openSession,
+      config,
+    );
 
     await service.scanOpenOrders();
     await service.scanOpenOrders();

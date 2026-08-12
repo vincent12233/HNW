@@ -7,6 +7,7 @@ describe('OrderSubmissionService', () => {
     tradingService?: any;
     orderPreparation?: any;
     limitOrderService?: any;
+    marketSession?: any;
   }) {
     const prisma =
       overrides?.prisma ??
@@ -25,6 +26,9 @@ describe('OrderSubmissionService', () => {
     const limitOrderService =
       overrides?.limitOrderService ??
       ({ createOpenLimitOrder: jest.fn() } as any);
+    const marketSession =
+      overrides?.marketSession ??
+      ({ isNormalMarketOpen: jest.fn().mockReturnValue(true) } as any);
 
     return {
       service: new OrderSubmissionService(
@@ -33,18 +37,20 @@ describe('OrderSubmissionService', () => {
         tradingService,
         orderPreparation,
         limitOrderService,
+        marketSession,
       ),
       prisma,
       matchingService,
       tradingService,
       orderPreparation,
       limitOrderService,
+      marketSession,
     };
   }
 
   beforeEach(() => jest.clearAllMocks());
 
-  it('replays idempotent result from preparation without executing again', async () => {
+  it('replays idempotent result from preparation even while market is closed', async () => {
     const order = { id: 'order-1', status: 'OPEN', timeInForce: 'DAY' };
     const orderPreparation = {
       validateOrderRequest: jest.fn(),
@@ -54,15 +60,45 @@ describe('OrderSubmissionService', () => {
       }),
       getIdempotentOrder: jest.fn(),
     } as any;
+    const marketSession = { isNormalMarketOpen: jest.fn().mockReturnValue(false) } as any;
     const { service, tradingService, limitOrderService, matchingService } =
-      createService({ orderPreparation });
+      createService({ orderPreparation, marketSession });
 
     const result = await service.submit('user-1', {} as any);
 
     expect(result).toEqual({ idempotentReplay: true, order });
+    expect(marketSession.isNormalMarketOpen).not.toHaveBeenCalled();
     expect(tradingService.executeImmediately).not.toHaveBeenCalled();
     expect(limitOrderService.createOpenLimitOrder).not.toHaveBeenCalled();
     expect(matchingService.matchOrder).not.toHaveBeenCalled();
+  });
+
+  it('rejects a new normal order while the market is closed', async () => {
+    const prepared = {
+      idempotentReplay: false,
+      account: {},
+      instrument: {},
+      clientOrderId: 'client-1',
+      limitPrice: null,
+      marketPrice: null,
+      shouldExecuteImmediately: false,
+    };
+    const orderPreparation = {
+      validateOrderRequest: jest.fn(),
+      prepare: jest.fn().mockResolvedValue(prepared),
+      getIdempotentOrder: jest.fn(),
+    } as any;
+    const marketSession = { isNormalMarketOpen: jest.fn().mockReturnValue(false) } as any;
+    const { service, tradingService, limitOrderService } = createService({
+      orderPreparation,
+      marketSession,
+    });
+
+    await expect(service.submit('user-1', {} as any)).rejects.toThrow(
+      'Market is closed',
+    );
+    expect(tradingService.executeImmediately).not.toHaveBeenCalled();
+    expect(limitOrderService.createOpenLimitOrder).not.toHaveBeenCalled();
   });
 
   it('restarts preparation inside a fresh transaction after P2034', async () => {

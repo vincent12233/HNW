@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { MarketSessionService } from '../market-session/market-session.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { MatchingService } from './matching.service';
 
@@ -14,6 +15,7 @@ export class MatchingScanService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly matchingService: MatchingService,
+    private readonly marketSession: MarketSessionService,
     config: ConfigService,
   ) {
     this.batchSize = this.positiveInteger(
@@ -27,6 +29,10 @@ export class MatchingScanService {
   }
 
   async scanOpenOrders(): Promise<void> {
+    if (!this.marketSession.isNormalMarketOpen()) {
+      return;
+    }
+
     let batches = 0;
 
     while (batches < this.maxBatchesPerScan) {

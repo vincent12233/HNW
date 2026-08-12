@@ -4,6 +4,7 @@ import { MarketDataController } from './market-data.controller';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
 import { NseSyncService } from './nse-sync.service';
+import { IndiaStockMcpProvider } from './providers/india-stock-mcp.provider';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
 import { StreamingProviderRegistryService } from './providers/streaming-provider-registry.service';
 import { TrueDataNodeTransportService } from './providers/truedata-node-transport.service';
@@ -23,6 +24,7 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
     MarketDataService,
     MarketDataHealthService,
     MarketDataProviderService,
+    IndiaStockMcpProvider,
     StreamingProviderRegistryService,
     TrueDataSymbolMapperService,
     TrueDataTickNormalizerService,

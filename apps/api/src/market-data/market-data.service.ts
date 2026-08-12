@@ -43,6 +43,10 @@ export class MarketDataService {
     });
   }
 
+  getIndexSnapshot() {
+    return this.ingestion.getIndexSnapshot();
+  }
+
   async updateQuote(symbol: string, price: string, volume?: string) {
     const instrument = await this.prisma.instrument.findFirst({
       where: { symbol },

@@ -14,6 +14,11 @@ export class MarketDataController {
     return this.marketDataService.getMarketSnapshot();
   }
 
+  @Get('indices')
+  getIndexSnapshot() {
+    return this.marketDataService.getIndexSnapshot();
+  }
+
   @Get('health')
   getHealth() {
     return this.marketDataHealth.getStatus();

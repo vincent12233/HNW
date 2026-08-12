@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
+import '../services/market_socket_service.dart';
 import '../utils/number_formatters.dart';
 
 class StockDetailPage extends StatefulWidget {
@@ -21,17 +22,48 @@ class StockDetailPage extends StatefulWidget {
 
 class _StockDetailPageState extends State<StockDetailPage> {
   final quantityController = TextEditingController(text: '1');
+  final marketSocket = MarketSocketService();
 
+  late StockQuote liveStock;
   bool isBuy = true;
   bool isSubmitting = false;
 
   double get estimatedAmount {
     final quantity = int.tryParse(quantityController.text) ?? 0;
-    return quantity * widget.stock.price;
+    return quantity * liveStock.price;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    liveStock = widget.stock;
+    marketSocket.addQuoteListener(_handleQuoteUpdate);
+  }
+
+  void _handleQuoteUpdate(Map<String, dynamic> data) {
+    final symbol = data['symbol']?.toString().trim().toUpperCase();
+    if (symbol != liveStock.symbol) return;
+
+    final price = double.tryParse(data['price']?.toString() ?? '');
+    if (price == null || price <= 0 || !mounted) return;
+
+    setState(() {
+      liveStock = StockQuote(
+        liveStock.symbol,
+        liveStock.name,
+        price,
+        double.tryParse(data['change']?.toString() ?? '') ?? liveStock.change,
+        int.tryParse(data['volume']?.toString() ?? '') ?? liveStock.volume,
+        DateTime.tryParse(data['updatedAt']?.toString() ?? '') ?? DateTime.now(),
+        logoUrl: liveStock.logoUrl,
+        category: liveStock.category,
+      );
+    });
   }
 
   @override
   void dispose() {
+    marketSocket.removeQuoteListener(_handleQuoteUpdate);
     quantityController.dispose();
     super.dispose();
   }
@@ -52,11 +84,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
         title: Text(isBuy ? 'Confirm Buy Order' : 'Confirm Sell Order'),
         content: Text(
           '${isBuy ? 'Buy' : 'Sell'} $quantity shares '
-          'of ${widget.stock.symbol}\n\n'
+          'of ${liveStock.symbol}\n\n'
           'Estimated amount: '
-          '${formatPrice(estimatedAmount)}\n\n'
-          'Your order will be processed securely '
-          'will be used.',
+          '${formatPrice(estimatedAmount)}',
         ),
         actions: [
           TextButton(
@@ -72,10 +102,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     setState(() => isSubmitting = true);
 
                     final order = TradingOrder(
-                      symbol: widget.stock.symbol,
+                      symbol: liveStock.symbol,
                       isBuy: isBuy,
                       quantity: quantity,
-                      price: widget.stock.price,
+                      price: liveStock.price,
                       placedAt: DateTime.now(),
                     );
 
@@ -89,16 +119,13 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
                     if (errorMessage != null) {
                       Navigator.pop(dialogContext);
-
                       ScaffoldMessenger.of(
                         context,
                       ).showSnackBar(SnackBar(content: Text(errorMessage)));
-
                       return;
                     }
 
                     Navigator.pop(dialogContext);
-
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
                         content: Text('${isBuy ? 'Buy' : 'Sell'} order placed'),
@@ -114,9 +141,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final changeColor = widget.stock.change > 0
+    final changeColor = liveStock.change > 0
         ? AppConfig.gainColor
-        : widget.stock.change < 0
+        : liveStock.change < 0
         ? AppConfig.lossColor
         : AppConfig.neutralColor;
 
@@ -124,7 +151,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
       appBar: AppBar(
         backgroundColor: AppConfig.primaryColor,
         foregroundColor: Colors.white,
-        title: Text(widget.stock.symbol),
+        title: Text(liveStock.symbol),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
@@ -136,18 +163,18 @@ class _StockDetailPageState extends State<StockDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(widget.stock.name),
+                  Text(liveStock.name),
                   const SizedBox(height: 12),
                   Text(
-                    formatPrice(widget.stock.price),
+                    formatPrice(liveStock.price),
                     style: const TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   Text(
-                    '${widget.stock.change > 0 ? '+' : ''}'
-                    '${widget.stock.change.toStringAsFixed(2)}%',
+                    '${liveStock.change > 0 ? '+' : ''}'
+                    '${liveStock.change.toStringAsFixed(2)}%',
                     style: TextStyle(
                       color: changeColor,
                       fontSize: 17,

@@ -10,6 +10,7 @@ import { QuoteIngestionService } from './quote-ingestion.service';
 export class NseSyncService {
   private readonly logger = new Logger(NseSyncService.name);
   private readonly indices = ['NIFTY50', 'SENSEX', 'BANKNIFTY'];
+  private syncing = false;
 
   constructor(
     private readonly config: ConfigService,
@@ -21,15 +22,24 @@ export class NseSyncService {
 
   @Cron('*/30 * * * * *')
   async sync() {
+    if (this.syncing) {
+      this.logger.debug('Market polling cycle still running; skipping overlap');
+      return;
+    }
     if (this.streamingEnabled() && !this.health.getStatus().stale) {
       return;
     }
 
-    this.logger.log(
-      `Updating market quotes via polling fallback ${this.provider.providerName}...`,
-    );
-    await this.syncStocks();
-    await this.syncIndices();
+    this.syncing = true;
+    try {
+      this.logger.log(
+        `Updating market quotes via polling fallback ${this.provider.providerName}...`,
+      );
+      await this.syncStocks();
+      await this.syncIndices();
+    } finally {
+      this.syncing = false;
+    }
   }
 
   private async syncStocks() {

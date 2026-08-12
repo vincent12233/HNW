@@ -6,6 +6,8 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
 
 @Injectable()
 export class QuoteIngestionService {
+  private readonly latestIndices = new Map<string, Record<string, unknown>>();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: MarketDataGateway,
@@ -17,9 +19,12 @@ export class QuoteIngestionService {
     quote: MarketQuoteResult,
     type: 'STOCK' | 'INDEX' = 'STOCK',
   ) {
+    const payload = this.toPayload(exchange, quote, type);
+
     if (type === 'INDEX') {
+      this.latestIndices.set(quote.symbol, payload);
       this.health.recordQuote(quote.source, quote.updatedAt);
-      this.gateway.emitQuoteUpdate(this.toPayload(exchange, quote, type));
+      this.gateway.emitQuoteUpdate(payload);
       return;
     }
 
@@ -68,7 +73,11 @@ export class QuoteIngestionService {
     });
 
     this.health.recordQuote(quote.source, quote.updatedAt);
-    this.gateway.emitQuoteUpdate(this.toPayload(exchange, quote, type));
+    this.gateway.emitQuoteUpdate(payload);
+  }
+
+  getIndexSnapshot() {
+    return Array.from(this.latestIndices.values()).map((item) => ({ ...item }));
   }
 
   private toPayload(
@@ -89,7 +98,6 @@ export class QuoteIngestionService {
       lowPrice: quote.lowPrice !== null ? Number(quote.lowPrice) : null,
       bidPrice: quote.bidPrice !== null ? Number(quote.bidPrice) : null,
       askPrice: quote.askPrice !== null ? Number(quote.askPrice) : null,
-      source: quote.source,
       updatedAt: quote.updatedAt,
     };
   }

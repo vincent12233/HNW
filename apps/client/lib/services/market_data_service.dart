@@ -46,6 +46,28 @@ class MarketDataService {
     }
   }
 
+  Future<List<Map<String, dynamic>>> fetchIndexSnapshot() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/market-data/indices'))
+          .timeout(const Duration(seconds: 6));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        return <Map<String, dynamic>>[];
+      }
+
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List) return <Map<String, dynamic>>[];
+
+      return decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .where((item) => item['symbol']?.toString().isNotEmpty == true)
+          .toList();
+    } catch (_) {
+      return <Map<String, dynamic>>[];
+    }
+  }
+
   Future<List<StockQuote>> _cachedSnapshot() async {
     final cached = await LocalDataCache.readJson(LocalDataCache.marketSnapshot);
 

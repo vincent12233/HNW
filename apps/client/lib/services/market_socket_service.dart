@@ -5,6 +5,8 @@ import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../app_config.dart';
 import 'market_data_service.dart';
 
+typedef MarketQuoteListener = void Function(Map<String, dynamic> quote);
+
 class MarketSocketService with WidgetsBindingObserver {
   factory MarketSocketService() => _instance;
 
@@ -17,12 +19,21 @@ class MarketSocketService with WidgetsBindingObserver {
   bool _observingLifecycle = false;
   Future<void>? _snapshotRefreshInFlight;
   DateTime? _lastResumeAt;
+  final Set<MarketQuoteListener> _quoteListeners = <MarketQuoteListener>{};
 
   Function(Map<String, dynamic>)? onQuoteUpdate;
   VoidCallback? onConnected;
   VoidCallback? onDisconnected;
 
   bool get isConnected => _socket?.connected == true;
+
+  void addQuoteListener(MarketQuoteListener listener) {
+    _quoteListeners.add(listener);
+  }
+
+  void removeQuoteListener(MarketQuoteListener listener) {
+    _quoteListeners.remove(listener);
+  }
 
   void connect() {
     _ensureLifecycleObserver();
@@ -63,7 +74,7 @@ class MarketSocketService with WidgetsBindingObserver {
           return;
         }
         _debugLog('Market update $quote');
-        onQuoteUpdate?.call(quote);
+        _emitQuote(quote);
       }
     });
 
@@ -130,9 +141,16 @@ class MarketSocketService with WidgetsBindingObserver {
 
   Future<void> _performSnapshotRefresh() async {
     try {
-      final stocks = await MarketDataService().fetchSnapshot();
+      final service = MarketDataService();
+      final results = await Future.wait<dynamic>([
+        service.fetchSnapshot(),
+        service.fetchIndexSnapshot(),
+      ]);
+      final stocks = results[0] as List;
+      final indices = results[1] as List<Map<String, dynamic>>;
+
       for (final stock in stocks) {
-        onQuoteUpdate?.call({
+        _emitQuote({
           'type': 'STOCK',
           'symbol': stock.symbol,
           'price': stock.price,
@@ -141,9 +159,19 @@ class MarketSocketService with WidgetsBindingObserver {
           'updatedAt': stock.updatedAt.toIso8601String(),
         });
       }
+      for (final index in indices) {
+        _emitQuote(index);
+      }
       _debugLog('Market snapshot refreshed');
     } catch (error) {
       _debugLog('Market snapshot refresh failed: $error');
+    }
+  }
+
+  void _emitQuote(Map<String, dynamic> quote) {
+    onQuoteUpdate?.call(quote);
+    for (final listener in List<MarketQuoteListener>.from(_quoteListeners)) {
+      listener(quote);
     }
   }
 
@@ -151,6 +179,7 @@ class MarketSocketService with WidgetsBindingObserver {
     onQuoteUpdate = null;
     onConnected = null;
     onDisconnected = null;
+    _quoteListeners.clear();
     _socket?.dispose();
     _socket = null;
     _hasConnectedOnce = false;

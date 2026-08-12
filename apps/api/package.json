@@ -21,12 +21,14 @@
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
     "seed": "tsx prisma/seed.ts",
-    "truedata:preflight": "tsx scripts/truedata-preflight.ts"
+    "truedata:preflight": "tsx scripts/truedata-preflight.ts",
+    "india-stock-mcp:smoke": "tsx scripts/india-stock-mcp-smoke.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@modelcontextprotocol/sdk": "1.30.0",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
     "@nestjs/core": "^11.0.1",
@@ -44,6 +46,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
+    "india-stock-mcp": "1.0.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.22.0",
@@ -52,7 +55,8 @@
     "socket.io": "^4.8.3",
     "socket.io-client": "^4.8.3",
     "truedata-nodejs": "1.2.0",
-    "ws": "^8.21.2"
+    "ws": "^8.21.2",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

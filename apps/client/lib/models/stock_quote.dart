@@ -8,6 +8,7 @@ class StockQuote {
     DateTime updatedAt, {
     String? logoUrl,
     String? category,
+    bool quoteFresh = true,
   }) {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final previous = _metadata[normalizedSymbol];
@@ -32,6 +33,7 @@ class StockQuote {
       updatedAt,
       logoUrl: resolvedLogoUrl,
       category: resolvedCategory,
+      quoteFresh: quoteFresh,
     );
   }
 
@@ -44,6 +46,7 @@ class StockQuote {
     this.updatedAt, {
     this.logoUrl,
     this.category,
+    this.quoteFresh = true,
   });
 
   static final Map<String, _StockMetadata> _metadata =
@@ -57,6 +60,7 @@ class StockQuote {
   final DateTime updatedAt;
   final String? logoUrl;
   final String? category;
+  final bool quoteFresh;
 
   factory StockQuote.fromMarketDataJson(Map<String, dynamic> json) {
     final price = (json['price'] as num?)?.toDouble() ??
@@ -73,6 +77,8 @@ class StockQuote {
     final change = rawChange != 0 || previousClose <= 0
         ? rawChange
         : ((price - previousClose) / previousClose) * 100;
+    final updatedAt = DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+        DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 
     return StockQuote(
       json['symbol']?.toString() ?? '',
@@ -82,9 +88,10 @@ class StockQuote {
       (json['volume'] as num?)?.toInt() ??
           int.tryParse(json['volume']?.toString() ?? '') ??
           0,
-      DateTime.tryParse(json['updatedAt']?.toString() ?? '') ?? DateTime.now(),
+      updatedAt,
       logoUrl: json['logoUrl']?.toString(),
       category: json['category']?.toString(),
+      quoteFresh: json['quoteFresh'] == true,
     );
   }
 }

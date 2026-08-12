@@ -107,10 +107,19 @@ class MarketDataService {
         }),
       );
 
-    return selected.values
+    final stocks = selected.values
         .map(StockQuote.fromMarketDataJson)
         .where((stock) => stock.symbol.isNotEmpty && stock.price > 0)
         .toList();
+
+    stocks.sort((left, right) {
+      final freshnessDifference =
+          (right.quoteFresh ? 1 : 0) - (left.quoteFresh ? 1 : 0);
+      if (freshnessDifference != 0) return freshnessDifference;
+      return 0;
+    });
+
+    return stocks;
   }
 }
 

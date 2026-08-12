@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 
@@ -7,6 +8,7 @@ export class MarketDataService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ingestion: QuoteIngestionService,
+    private readonly config: ConfigService,
   ) {}
 
   async getMarketSnapshot() {
@@ -16,31 +18,51 @@ export class MarketDataService {
       orderBy: { displayOrder: 'asc' },
     });
 
-    return instruments.map((item) => {
-      const lastPrice = Number(item.quote?.lastPrice ?? 0);
-      const previousClose = Number(item.quote?.previousClose ?? 0);
-      const change =
-        previousClose > 0
-          ? ((lastPrice - previousClose) / previousClose) * 100
-          : 0;
+    const now = Date.now();
+    const staleAfterMs = this.positiveInteger(
+      this.config.get<string>('MARKET_DATA_STALE_AFTER_MS'),
+      60000,
+    );
 
-      return {
-        symbol: item.symbol,
-        exchange: item.exchange,
-        name: item.name,
-        logoUrl: item.logoUrl,
-        category: item.category,
-        displayOrder: item.displayOrder,
-        price: item.quote?.lastPrice ?? null,
-        change,
-        previousClose: item.quote?.previousClose ?? null,
-        bid: item.quote?.bidPrice ?? null,
-        ask: item.quote?.askPrice ?? null,
-        volume: item.quote?.volume?.toString() ?? '0',
-        source: item.quote?.source ?? null,
-        updatedAt: item.quote?.asOf ?? null,
-      };
-    });
+    return instruments
+      .filter((item) => Number(item.quote?.lastPrice ?? 0) > 0)
+      .map((item) => {
+        const lastPrice = Number(item.quote!.lastPrice);
+        const previousClose = Number(item.quote?.previousClose ?? 0);
+        const change =
+          previousClose > 0
+            ? ((lastPrice - previousClose) / previousClose) * 100
+            : 0;
+        const updatedAt = item.quote!.asOf;
+        const quoteFresh = now - updatedAt.getTime() <= staleAfterMs;
+
+        return {
+          symbol: item.symbol,
+          exchange: item.exchange,
+          name: item.name,
+          logoUrl: item.logoUrl,
+          category: item.category,
+          displayOrder: item.displayOrder,
+          price: item.quote!.lastPrice,
+          change,
+          previousClose: item.quote?.previousClose ?? null,
+          bid: item.quote?.bidPrice ?? null,
+          ask: item.quote?.askPrice ?? null,
+          volume: item.quote?.volume?.toString() ?? '0',
+          source: item.quote?.source ?? null,
+          updatedAt,
+          quoteFresh,
+        };
+      })
+      .sort((left, right) => {
+        const freshnessDifference =
+          Number(right.quoteFresh) - Number(left.quoteFresh);
+        if (freshnessDifference !== 0) return freshnessDifference;
+        if (left.displayOrder !== right.displayOrder) {
+          return left.displayOrder - right.displayOrder;
+        }
+        return left.symbol.localeCompare(right.symbol);
+      });
   }
 
   getIndexSnapshot() {
@@ -91,5 +113,10 @@ export class MarketDataService {
       volume: volume ?? instrument.quote?.volume?.toString() ?? '0',
       updatedAt,
     };
+  }
+
+  private positiveInteger(value: string | undefined, fallback: number) {
+    const parsed = Number(value);
+    return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
   }
 }

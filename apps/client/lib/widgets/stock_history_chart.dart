@@ -16,6 +16,7 @@ class StockHistoryChart extends StatefulWidget {
 class _StockHistoryChartState extends State<StockHistoryChart> {
   final MarketDataService _marketData = MarketDataService();
   String _range = '1D';
+  bool _candles = false;
   bool _loading = true;
   String? _error;
   List<MarketHistoryPoint> _points = <MarketHistoryPoint>[];
@@ -112,30 +113,49 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
               _SelectedPointSummary(point: selected, range: _range),
             ],
             const SizedBox(height: 14),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(value: '1D', label: Text('1D')),
-                ButtonSegment(value: '1W', label: Text('1W')),
-                ButtonSegment(value: '1M', label: Text('1M')),
+            Row(
+              children: [
+                Expanded(
+                  child: SegmentedButton<String>(
+                    segments: const [
+                      ButtonSegment(value: '1D', label: Text('1D')),
+                      ButtonSegment(value: '1W', label: Text('1W')),
+                      ButtonSegment(value: '1M', label: Text('1M')),
+                    ],
+                    selected: {_range},
+                    onSelectionChanged: (selection) {
+                      final next = selection.first;
+                      if (next == _range) return;
+                      setState(() => _range = next);
+                      _load();
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filledTonal(
+                  tooltip: _candles ? 'Line chart' : 'Candlestick chart',
+                  onPressed: () => setState(() {
+                    _candles = !_candles;
+                    _selectedIndex = null;
+                  }),
+                  icon: Icon(
+                    _candles
+                        ? Icons.show_chart_rounded
+                        : Icons.candlestick_chart_rounded,
+                  ),
+                ),
               ],
-              selected: {_range},
-              onSelectionChanged: (selection) {
-                final next = selection.first;
-                if (next == _range) return;
-                setState(() => _range = next);
-                _load();
-              },
             ),
             const SizedBox(height: 14),
             SizedBox(
-              height: 190,
+              height: 230,
               width: double.infinity,
               child: _chartBody(),
             ),
             const SizedBox(height: 8),
             Text(
               selected == null
-                  ? 'Drag across the chart to inspect OHLC and volume'
+                  ? 'Tap or drag across the chart to inspect OHLC and volume'
                   : 'Tap or drag to inspect another point',
               style: const TextStyle(color: Colors.black54, fontSize: 12),
             ),
@@ -173,6 +193,7 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
           painter: _HistoryPainter(
             _points,
             selectedIndex: _selectedIndex,
+            candles: _candles,
           ),
           child: const SizedBox.expand(),
         ),
@@ -203,10 +224,7 @@ class _SelectedPointSummary extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            stamp,
-            style: const TextStyle(fontSize: 12, color: Colors.black54),
-          ),
+          Text(stamp, style: const TextStyle(fontSize: 12, color: Colors.black54)),
           const SizedBox(height: 5),
           Wrap(
             spacing: 12,
@@ -225,68 +243,127 @@ class _SelectedPointSummary extends StatelessWidget {
   }
 
   String _formatVolume(int volume) {
-    if (volume >= 10000000) {
-      return '${(volume / 10000000).toStringAsFixed(2)} Cr';
-    }
-    if (volume >= 100000) {
-      return '${(volume / 100000).toStringAsFixed(2)} L';
-    }
+    if (volume >= 10000000) return '${(volume / 10000000).toStringAsFixed(2)} Cr';
+    if (volume >= 100000) return '${(volume / 100000).toStringAsFixed(2)} L';
     if (volume >= 1000) return '${(volume / 1000).toStringAsFixed(1)} K';
     return '$volume';
   }
 }
 
 class _HistoryPainter extends CustomPainter {
-  const _HistoryPainter(this.points, {this.selectedIndex});
+  const _HistoryPainter(
+    this.points, {
+    this.selectedIndex,
+    required this.candles,
+  });
+
   final List<MarketHistoryPoint> points;
   final int? selectedIndex;
+  final bool candles;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final closes = points.map((point) => point.close).toList();
-    final minValue = closes.reduce((a, b) => a < b ? a : b);
-    final maxValue = closes.reduce((a, b) => a > b ? a : b);
-    final span = (maxValue - minValue).abs() < 0.0001
-        ? 1.0
-        : maxValue - minValue;
+    const volumeHeight = 42.0;
+    const gap = 10.0;
+    final priceHeight = size.height - volumeHeight - gap;
+    final lows = points.map((point) => point.low).toList();
+    final highs = points.map((point) => point.high).toList();
+    final minValue = lows.reduce((a, b) => a < b ? a : b);
+    final maxValue = highs.reduce((a, b) => a > b ? a : b);
+    final span = (maxValue - minValue).abs() < 0.0001 ? 1.0 : maxValue - minValue;
+    final maxVolume = points
+        .map((point) => point.volume)
+        .fold<int>(0, (current, value) => value > current ? value : current);
+
+    double yFor(double value) {
+      final normalized = (value - minValue) / span;
+      return priceHeight - normalized * (priceHeight - 12) - 6;
+    }
 
     final gridPaint = Paint()
       ..color = Colors.black12
       ..strokeWidth = 1;
     for (var i = 1; i < 4; i++) {
-      final y = size.height * i / 4;
+      final y = priceHeight * i / 4;
       canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
     }
+    canvas.drawLine(
+      Offset(0, priceHeight + gap / 2),
+      Offset(size.width, priceHeight + gap / 2),
+      gridPaint,
+    );
 
-    final offsets = <Offset>[];
-    final path = Path();
-    for (var i = 0; i < closes.length; i++) {
-      final x = size.width * i / (closes.length - 1);
-      final normalized = (closes[i] - minValue) / span;
-      final y = size.height - normalized * (size.height - 12) - 6;
-      final offset = Offset(x, y);
-      offsets.add(offset);
+    final step = size.width / points.length;
+    final candleWidth = (step * 0.62).clamp(2.0, 12.0);
+    final closeOffsets = <Offset>[];
+    final closePath = Path();
+
+    for (var i = 0; i < points.length; i++) {
+      final point = points[i];
+      final x = step * i + step / 2;
+      final closeOffset = Offset(x, yFor(point.close));
+      closeOffsets.add(closeOffset);
       if (i == 0) {
-        path.moveTo(x, y);
+        closePath.moveTo(closeOffset.dx, closeOffset.dy);
       } else {
-        path.lineTo(x, y);
+        closePath.lineTo(closeOffset.dx, closeOffset.dy);
+      }
+
+      final rising = point.close >= point.open;
+      final marketColor = rising ? AppConfig.gainColor : AppConfig.lossColor;
+      final volumePaint = Paint()..color = marketColor.withAlpha(90);
+      if (maxVolume > 0 && point.volume > 0) {
+        final barHeight = volumeHeight * point.volume / maxVolume;
+        canvas.drawRect(
+          Rect.fromLTWH(
+            x - candleWidth / 2,
+            size.height - barHeight,
+            candleWidth,
+            barHeight,
+          ),
+          volumePaint,
+        );
+      }
+
+      if (candles) {
+        final wickPaint = Paint()
+          ..color = marketColor
+          ..strokeWidth = 1.2;
+        canvas.drawLine(
+          Offset(x, yFor(point.high)),
+          Offset(x, yFor(point.low)),
+          wickPaint,
+        );
+        final top = yFor(point.open > point.close ? point.open : point.close);
+        final bottom = yFor(point.open < point.close ? point.open : point.close);
+        final bodyHeight = (bottom - top).abs().clamp(1.5, priceHeight);
+        final bodyPaint = Paint()..color = marketColor;
+        canvas.drawRect(
+          Rect.fromLTWH(x - candleWidth / 2, top, candleWidth, bodyHeight),
+          bodyPaint,
+        );
       }
     }
 
-    final positive = closes.last >= closes.first;
-    final linePaint = Paint()
-      ..color = positive ? AppConfig.gainColor : AppConfig.lossColor
-      ..strokeWidth = 2.2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    canvas.drawPath(path, linePaint);
+    if (!candles) {
+      final positive = points.last.close >= points.first.close;
+      final linePaint = Paint()
+        ..color = positive ? AppConfig.gainColor : AppConfig.lossColor
+        ..strokeWidth = 2.2
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round
+        ..strokeJoin = StrokeJoin.round;
+      canvas.drawPath(closePath, linePaint);
+    }
 
     if (selectedIndex != null &&
         selectedIndex! >= 0 &&
-        selectedIndex! < offsets.length) {
-      final selected = offsets[selectedIndex!];
-      final markerPaint = Paint()..color = linePaint.color;
+        selectedIndex! < closeOffsets.length) {
+      final selected = closeOffsets[selectedIndex!];
+      final point = points[selectedIndex!];
+      final markerColor = point.close >= point.open
+          ? AppConfig.gainColor
+          : AppConfig.lossColor;
       final crosshairPaint = Paint()
         ..color = Colors.black26
         ..strokeWidth = 1;
@@ -295,13 +372,18 @@ class _HistoryPainter extends CustomPainter {
         Offset(selected.dx, size.height),
         crosshairPaint,
       );
-      canvas.drawCircle(selected, 4.5, markerPaint);
-      final haloPaint = Paint()..color = markerPaint.color.withAlpha(46);
-      canvas.drawCircle(selected, 7, haloPaint);
+      canvas.drawCircle(selected, 4.5, Paint()..color = markerColor);
+      canvas.drawCircle(
+        selected,
+        7,
+        Paint()..color = markerColor.withAlpha(46),
+      );
     }
   }
 
   @override
   bool shouldRepaint(covariant _HistoryPainter oldDelegate) =>
-      oldDelegate.points != points || oldDelegate.selectedIndex != selectedIndex;
+      oldDelegate.points != points ||
+      oldDelegate.selectedIndex != selectedIndex ||
+      oldDelegate.candles != candles;
 }

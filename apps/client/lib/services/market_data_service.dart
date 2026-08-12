@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
 import '../models/stock_quote.dart';
+import 'auth_service.dart';
 import 'local_data_cache.dart';
 
 class MarketSearchPage {
@@ -23,6 +24,8 @@ class MarketSearchPage {
 }
 
 class MarketDataService {
+  final AuthService _authService = AuthService();
+
   static final Map<String, String> _preferredExchangeBySymbol =
       <String, String>{};
 
@@ -47,6 +50,11 @@ class MarketDataService {
     int limit = 40,
   }) async {
     try {
+      final session = await _authService.restoreSession();
+      if (session == null || session.accessToken.isEmpty) {
+        return _cachedSnapshot();
+      }
+
       final normalizedSymbols = symbols
           .map((symbol) => symbol.trim().toUpperCase())
           .where((symbol) => symbol.isNotEmpty)
@@ -58,7 +66,12 @@ class MarketDataService {
           'limit': '$limit',
         },
       );
-      final response = await http.get(uri).timeout(const Duration(seconds: 6));
+      final response = await http
+          .get(
+            uri,
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw const MarketDataException('Unable to load home market data');
       }

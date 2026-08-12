@@ -1,6 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { Exchange, InstrumentType } from '../generated/prisma/enums';
+import {
+  Exchange,
+  InstrumentType,
+  OrderStatus,
+} from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 
@@ -22,7 +26,7 @@ export class MarketDataService {
     return this.mapSnapshot(instruments);
   }
 
-  async getHomeBootstrap(symbols = '', limit = 40) {
+  async getHomeBootstrap(userId: string, symbols = '', limit = 40) {
     const requestedSymbols = [...new Set(
       symbols
         .split(',')
@@ -37,26 +41,62 @@ export class MarketDataService {
       quote: { is: { lastPrice: { gt: 0 } } },
     };
 
-    const [featured, requested] = await this.prisma.$transaction([
-      this.prisma.instrument.findMany({
-        where: ordinaryStockWhere,
-        include: { quote: true },
-        orderBy: [{ displayOrder: 'asc' }, { symbol: 'asc' }],
-        take: safeLimit,
-      }),
-      requestedSymbols.length === 0
-        ? this.prisma.instrument.findMany({ where: { id: { in: [] } } })
-        : this.prisma.instrument.findMany({
-            where: {
-              ...ordinaryStockWhere,
-              symbol: { in: requestedSymbols },
+    const [featured, requested, holdings, activeOrders] =
+      await this.prisma.$transaction([
+        this.prisma.instrument.findMany({
+          where: ordinaryStockWhere,
+          include: { quote: true },
+          orderBy: [{ displayOrder: 'asc' }, { symbol: 'asc' }],
+          take: safeLimit,
+        }),
+        requestedSymbols.length === 0
+          ? this.prisma.instrument.findMany({ where: { id: { in: [] } } })
+          : this.prisma.instrument.findMany({
+              where: {
+                ...ordinaryStockWhere,
+                symbol: { in: requestedSymbols },
+              },
+              include: { quote: true },
+            }),
+        this.prisma.instrument.findMany({
+          where: {
+            ...ordinaryStockWhere,
+            positions: {
+              some: {
+                quantity: { not: 0 },
+                account: { userId },
+              },
             },
-            include: { quote: true },
-          }),
-    ]);
+          },
+          include: { quote: true },
+        }),
+        this.prisma.instrument.findMany({
+          where: {
+            ...ordinaryStockWhere,
+            orders: {
+              some: {
+                status: {
+                  in: [
+                    OrderStatus.PENDING,
+                    OrderStatus.OPEN,
+                    OrderStatus.PARTIALLY_FILLED,
+                  ],
+                },
+                account: { userId },
+              },
+            },
+          },
+          include: { quote: true },
+        }),
+      ]);
 
     const byInstrument = new Map<string, any>();
-    for (const instrument of [...featured, ...requested]) {
+    for (const instrument of [
+      ...featured,
+      ...requested,
+      ...holdings,
+      ...activeOrders,
+    ]) {
       byInstrument.set(instrument.id, instrument);
     }
 

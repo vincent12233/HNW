@@ -12,6 +12,17 @@ describe('MarketDataService', () => {
     asOf,
   });
 
+  const instrument = (id: string, symbol: string, displayOrder: number) => ({
+    id,
+    symbol,
+    exchange: 'NSE',
+    name: `${symbol} Ltd`,
+    logoUrl: null,
+    category: 'EQUITY',
+    displayOrder,
+    quote: quote(100 + displayOrder, new Date()),
+  });
+
   function createService(rows: any[]) {
     const prisma = {
       instrument: {
@@ -100,5 +111,61 @@ describe('MarketDataService', () => {
     expect(snapshot.map((item) => item.symbol)).toEqual(['FRESH', 'OLD']);
     expect(snapshot[0].quoteFresh).toBe(true);
     expect(snapshot[1].quoteFresh).toBe(false);
+  });
+
+  it('merges user holdings and active-order symbols into the compact home list', async () => {
+    const featured = instrument('featured', 'RELIANCE', 0);
+    const holding = instrument('holding', 'SMALLCAP', 80);
+    const activeOrder = instrument('order', 'ORDERSTOCK', 90);
+
+    const prisma = {
+      instrument: {
+        findMany: jest.fn((args: any) => {
+          if (args.where?.positions) return Promise.resolve([holding]);
+          if (args.where?.orders) return Promise.resolve([activeOrder]);
+          if (args.where?.symbol) return Promise.resolve([]);
+          return Promise.resolve([featured]);
+        }),
+        findFirst: jest.fn(),
+      },
+      $transaction: jest.fn((operations: Promise<unknown>[]) =>
+        Promise.all(operations),
+      ),
+    };
+    const ingestion = {
+      getIndexSnapshot: jest.fn().mockReturnValue([]),
+      ingest: jest.fn(),
+    };
+    const config = {
+      get: jest.fn((key: string) =>
+        key === 'MARKET_DATA_STALE_AFTER_MS' ? '60000' : undefined,
+      ),
+    } as unknown as ConfigService;
+    const service = new MarketDataService(
+      prisma as never,
+      ingestion as never,
+      config,
+    );
+
+    const snapshot = await service.getHomeBootstrap('user-1', '', 40);
+
+    expect(snapshot.map((item) => item.symbol)).toEqual([
+      'RELIANCE',
+      'SMALLCAP',
+      'ORDERSTOCK',
+    ]);
+
+    expect(prisma.instrument.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          positions: {
+            some: {
+              quantity: { not: 0 },
+              account: { userId: 'user-1' },
+            },
+          },
+        }),
+      }),
+    );
   });
 });

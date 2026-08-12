@@ -1,6 +1,24 @@
-import { Body, Controller, Get, Patch, Query } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Patch,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    phone?: string | null;
+    role: string;
+  };
+}
 
 @Controller('market-data')
 export class MarketDataController {
@@ -15,11 +33,17 @@ export class MarketDataController {
   }
 
   @Get('home')
+  @UseGuards(JwtAuthGuard)
   getHomeBootstrap(
+    @Req() request: AuthenticatedRequest,
     @Query('symbols') symbols = '',
     @Query('limit') limit = '40',
   ) {
-    return this.marketDataService.getHomeBootstrap(symbols, Number(limit));
+    return this.marketDataService.getHomeBootstrap(
+      request.user.userId,
+      symbols,
+      Number(limit),
+    );
   }
 
   @Get('search')

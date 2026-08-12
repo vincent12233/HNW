@@ -1,13 +1,51 @@
 import { OrderSubmissionService } from './order-submission.service';
 
 describe('OrderSubmissionService', () => {
-  it('replays idempotent result from preparation', async () => {
+  function createService(overrides?: {
+    prisma?: any;
+    matchingService?: any;
+    tradingService?: any;
+    orderPreparation?: any;
+    limitOrderService?: any;
+  }) {
+    const prisma =
+      overrides?.prisma ??
+      ({ $transaction: jest.fn(async (fn: any) => fn({})) } as any);
+    const matchingService =
+      overrides?.matchingService ?? ({ matchOrder: jest.fn() } as any);
+    const tradingService =
+      overrides?.tradingService ?? ({ executeImmediately: jest.fn() } as any);
+    const orderPreparation =
+      overrides?.orderPreparation ??
+      ({
+        validateOrderRequest: jest.fn(),
+        prepare: jest.fn(),
+        getIdempotentOrder: jest.fn(),
+      } as any);
+    const limitOrderService =
+      overrides?.limitOrderService ??
+      ({ createOpenLimitOrder: jest.fn() } as any);
+
+    return {
+      service: new OrderSubmissionService(
+        prisma,
+        matchingService,
+        tradingService,
+        orderPreparation,
+        limitOrderService,
+      ),
+      prisma,
+      matchingService,
+      tradingService,
+      orderPreparation,
+      limitOrderService,
+    };
+  }
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('replays idempotent result from preparation without executing again', async () => {
     const order = { id: 'order-1', status: 'OPEN', timeInForce: 'DAY' };
-    const prisma = {
-      $transaction: jest.fn(async (fn: any) => fn({})),
-    } as any;
-    const matchingService = { matchOrder: jest.fn() } as any;
-    const tradingService = { executeImmediately: jest.fn() } as any;
     const orderPreparation = {
       validateOrderRequest: jest.fn(),
       prepare: jest.fn().mockResolvedValue({
@@ -16,60 +54,111 @@ describe('OrderSubmissionService', () => {
       }),
       getIdempotentOrder: jest.fn(),
     } as any;
-    const limitOrderService = { createOpenLimitOrder: jest.fn() } as any;
-
-    const service = new OrderSubmissionService(
-      prisma,
-      matchingService,
-      tradingService,
-      orderPreparation,
-      limitOrderService,
-    );
+    const { service, tradingService, limitOrderService, matchingService } =
+      createService({ orderPreparation });
 
     const result = await service.submit('user-1', {} as any);
 
     expect(result).toEqual({ idempotentReplay: true, order });
     expect(tradingService.executeImmediately).not.toHaveBeenCalled();
     expect(limitOrderService.createOpenLimitOrder).not.toHaveBeenCalled();
+    expect(matchingService.matchOrder).not.toHaveBeenCalled();
   });
 
-  it('retries once after a serializable transaction conflict', async () => {
-    const order = { id: 'order-1', status: 'FILLED', timeInForce: 'DAY' };
+  it('restarts preparation inside a fresh transaction after P2034', async () => {
+    const transactions = [{ attempt: 1 }, { attempt: 2 }];
     let calls = 0;
     const prisma = {
       $transaction: jest.fn(async (fn: any) => {
-        calls += 1;
+        const tx = transactions[calls++];
         if (calls === 1) {
-          const error: any = new Error('conflict');
+          await fn(tx);
+          const error: any = new Error('serialization conflict');
           error.code = 'P2034';
           throw error;
         }
-        return fn({});
+        return fn(tx);
       }),
     } as any;
-    const matchingService = { matchOrder: jest.fn() } as any;
-    const tradingService = { executeImmediately: jest.fn() } as any;
+    const order = { id: 'order-2', status: 'FILLED', timeInForce: 'DAY' };
     const orderPreparation = {
       validateOrderRequest: jest.fn(),
-      prepare: jest.fn().mockResolvedValue({
-        idempotentReplay: true,
-        existingOrder: order,
-      }),
+      prepare: jest
+        .fn()
+        .mockResolvedValueOnce({
+          idempotentReplay: true,
+          existingOrder: { id: 'rolled-back' },
+        })
+        .mockResolvedValueOnce({
+          idempotentReplay: true,
+          existingOrder: order,
+        }),
       getIdempotentOrder: jest.fn(),
     } as any;
-    const limitOrderService = { createOpenLimitOrder: jest.fn() } as any;
-
-    const service = new OrderSubmissionService(
-      prisma,
-      matchingService,
-      tradingService,
-      orderPreparation,
-      limitOrderService,
-    );
+    const { service } = createService({ prisma, orderPreparation });
 
     const result = await service.submit('user-1', {} as any);
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
+    expect(orderPreparation.prepare).toHaveBeenCalledTimes(2);
+    expect(orderPreparation.prepare.mock.calls[0][0]).toBe(transactions[0]);
+    expect(orderPreparation.prepare.mock.calls[1][0]).toBe(transactions[1]);
     expect(result).toEqual({ idempotentReplay: true, order });
+  });
+
+  it('recovers a simultaneous duplicate P2002 as an idempotent replay without a second execution', async () => {
+    const duplicate: any = new Error('unique constraint');
+    duplicate.code = 'P2002';
+    const prisma = {
+      $transaction: jest.fn().mockRejectedValue(duplicate),
+    } as any;
+    const existingOrder = {
+      id: 'existing-order',
+      status: 'FILLED',
+      timeInForce: 'DAY',
+    };
+    const orderPreparation = {
+      validateOrderRequest: jest.fn(),
+      prepare: jest.fn(),
+      getIdempotentOrder: jest.fn().mockResolvedValue({
+        idempotentReplay: true,
+        order: existingOrder,
+      }),
+    } as any;
+    const { service, tradingService, limitOrderService, matchingService } =
+      createService({ prisma, orderPreparation });
+    const dto = { clientOrderId: 'same-key' } as any;
+
+    const result = await service.submit('user-1', dto);
+
+    expect(orderPreparation.getIdempotentOrder).toHaveBeenCalledWith(
+      prisma,
+      'user-1',
+      dto,
+    );
+    expect(result).toEqual({ idempotentReplay: true, order: existingOrder });
+    expect(tradingService.executeImmediately).not.toHaveBeenCalled();
+    expect(limitOrderService.createOpenLimitOrder).not.toHaveBeenCalled();
+    expect(matchingService.matchOrder).not.toHaveBeenCalled();
+  });
+
+  it('stops after three serialization conflicts instead of executing with stale state', async () => {
+    const prisma = {
+      $transaction: jest.fn().mockImplementation(async () => {
+        const error: any = new Error('serialization conflict');
+        error.code = 'P2034';
+        throw error;
+      }),
+    } as any;
+    const { service, tradingService, limitOrderService } = createService({
+      prisma,
+    });
+
+    await expect(service.submit('user-1', {} as any)).rejects.toThrow(
+      'serialization conflict',
+    );
+    expect(prisma.$transaction).toHaveBeenCalledTimes(3);
+    expect(tradingService.executeImmediately).not.toHaveBeenCalled();
+    expect(limitOrderService.createOpenLimitOrder).not.toHaveBeenCalled();
   });
 });

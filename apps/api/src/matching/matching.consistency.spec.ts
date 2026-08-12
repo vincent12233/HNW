@@ -35,7 +35,12 @@ describe('MatchingService consistency guards', () => {
       instrument: {
         exchange: 'NSE',
         symbol: 'RELIANCE',
-        quote: { askPrice: price, bidPrice: price, lastPrice: price },
+        quote: {
+          askPrice: price,
+          bidPrice: price,
+          lastPrice: price,
+          asOf: new Date(),
+        },
       },
     };
 
@@ -73,7 +78,12 @@ describe('MatchingService consistency guards', () => {
       instrument: {
         exchange: 'NSE',
         symbol: 'RELIANCE',
-        quote: { askPrice: price, bidPrice: price, lastPrice: price },
+        quote: {
+          askPrice: price,
+          bidPrice: price,
+          lastPrice: price,
+          asOf: new Date(),
+        },
       },
     };
 

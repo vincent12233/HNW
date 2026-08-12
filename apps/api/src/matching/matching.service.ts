@@ -13,6 +13,7 @@ export class MatchingService {
   private readonly logger = new Logger(MatchingService.name);
   private readonly batchSize: number;
   private readonly maxFillQuantity: number;
+  private readonly quoteMaxAgeMs: number;
 
   constructor(
     private readonly prisma: PrismaService,
@@ -22,6 +23,10 @@ export class MatchingService {
     this.maxFillQuantity = this.positiveInteger(
       config.get('MATCHING_MAX_FILL_QUANTITY'),
       1000,
+    );
+    this.quoteMaxAgeMs = this.positiveInteger(
+      config.get('ORDER_QUOTE_MAX_AGE_MS'),
+      120000,
     );
   }
 
@@ -61,19 +66,26 @@ export class MatchingService {
             if (remaining <= 0) return order;
 
             const quote = order.instrument.quote;
-            const price = quote
-              ? order.side === 'BUY'
-                ? (quote.askPrice ?? quote.lastPrice)
-                : (quote.bidPrice ?? quote.lastPrice)
-              : null;
-            const marketable =
-              price !== null &&
-              (order.type === 'MARKET' ||
-                (order.side === 'BUY' && order.limitPrice?.gte(price)) ||
-                (order.side === 'SELL' && order.limitPrice?.lte(price)));
+            if (!quote || !this.isQuoteFresh(quote.asOf)) {
+              if (order.timeInForce !== 'DAY') {
+                await this.cancelRemainder(tx, order);
+              }
+              return tx.order.findUnique({ where: { id: order.id } });
+            }
 
-            if (!marketable || price === null) {
-              if (order.timeInForce !== 'DAY') await this.cancelRemainder(tx, order);
+            const price =
+              order.side === 'BUY'
+                ? (quote.askPrice ?? quote.lastPrice)
+                : (quote.bidPrice ?? quote.lastPrice);
+            const marketable =
+              order.type === 'MARKET' ||
+              (order.side === 'BUY' && order.limitPrice?.gte(price)) ||
+              (order.side === 'SELL' && order.limitPrice?.lte(price));
+
+            if (!marketable) {
+              if (order.timeInForce !== 'DAY') {
+                await this.cancelRemainder(tx, order);
+              }
               return tx.order.findUnique({ where: { id: order.id } });
             }
             if (order.timeInForce === 'FOK' && remaining > this.maxFillQuantity) {
@@ -365,6 +377,12 @@ export class MatchingService {
         completedAt: new Date(),
       },
     });
+  }
+
+  private isQuoteFresh(asOf: Date | null | undefined): boolean {
+    if (!asOf) return false;
+    const ageMs = Date.now() - asOf.getTime();
+    return ageMs >= 0 && ageMs <= this.quoteMaxAgeMs;
   }
 
   private positiveInteger(value: string | undefined, fallback: number): number {

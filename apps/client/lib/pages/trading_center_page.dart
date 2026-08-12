@@ -52,8 +52,7 @@ class TradingCenterPage extends StatefulWidget {
 class _TradingCenterPageState extends State<TradingCenterPage> {
   final TradingService _tradingService = TradingService();
   final List<TradingOrder> _orders = <TradingOrder>[];
-  final Map<String, PortfolioPosition> _positions =
-      <String, PortfolioPosition>{};
+  final Map<String, PortfolioPosition> _positions = <String, PortfolioPosition>{};
 
   Timer? _refreshTimer;
   bool _refreshing = false;
@@ -61,22 +60,10 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
 
   final List<_TradingModule> tabs = const [
     _TradingModule('Trades', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
-    _TradingModule(
-      'Inst.',
-      Icons.account_balance_outlined,
-      Color(0xFF1D4ED8),
-    ),
-    _TradingModule(
-      'Holdings',
-      Icons.account_balance_wallet_outlined,
-      Color(0xFF059669),
-    ),
+    _TradingModule('Inst.', Icons.account_balance_outlined, Color(0xFF1D4ED8)),
+    _TradingModule('Holdings', Icons.account_balance_wallet_outlined, Color(0xFF059669)),
     _TradingModule('Pending', Icons.schedule_rounded, Color(0xFFF97316)),
-    _TradingModule(
-      'Orders',
-      Icons.receipt_long_outlined,
-      Color(0xFF7C3AED),
-    ),
+    _TradingModule('Orders', Icons.receipt_long_outlined, Color(0xFF7C3AED)),
     _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
     _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
     _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
@@ -96,8 +83,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   @override
   void didUpdateWidget(covariant TradingCenterPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.orders != widget.orders ||
-        oldWidget.positions != widget.positions) {
+    if (oldWidget.orders != widget.orders || oldWidget.positions != widget.positions) {
       _syncFromWidget();
     }
   }
@@ -138,9 +124,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
           _positions
             ..clear()
             ..addEntries(
-              snapshot.positions.map(
-                (position) => MapEntry(position.symbol, position),
-              ),
+              snapshot.positions.map((position) => MapEntry(position.symbol, position)),
             );
         }
       });
@@ -149,11 +133,25 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
     }
   }
 
+  Future<String?> _cancelStandardOrder(TradingOrder order) async {
+    final orderId = order.orderId;
+    if (orderId == null || orderId.isEmpty) {
+      return 'Order reference is unavailable';
+    }
+
+    try {
+      await _tradingService.cancelOrder(orderId);
+      await _refreshTradingData();
+      return null;
+    } on TradingException catch (error) {
+      return error.message;
+    } catch (error) {
+      return error.toString();
+    }
+  }
+
   List<TradingOrder> get _activeOrders => _orders
-      .where(
-        (order) =>
-            order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED',
-      )
+      .where((order) => order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED')
       .toList();
 
   @override
@@ -170,10 +168,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                   const Expanded(
                     child: Text(
                       'Trading Center',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
                     ),
                   ),
                   IconButton(
@@ -200,9 +195,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                     module: module,
                     selected: selected,
                     onTap: () {
-                      setState(() {
-                        selectedTab = index;
-                      });
+                      setState(() => selectedTab = index);
                       if (index == 2 || index == 3 || index == 4 || index == 7) {
                         unawaited(_refreshTradingData());
                       }
@@ -222,9 +215,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                   height: 4,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
-                    color: selectedTab == index
-                        ? tabs[index].color
-                        : const Color(0xFFD7DCE5),
+                    color: selectedTab == index ? tabs[index].color : const Color(0xFFD7DCE5),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -254,9 +245,10 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
         return PendingCenterTab(
           activeOrders: _activeOrders,
           ipoApplications: widget.ipoApplications,
+          onOrderCancelled: () => unawaited(_refreshTradingData()),
         );
       case 4:
-        return OrdersTab(orders: _orders);
+        return OrdersTab(orders: _orders, onCancel: _cancelStandardOrder);
       case 5:
         return IpoTab(
           ipos: widget.ipos,
@@ -331,7 +323,6 @@ class _TradingModuleButton extends StatelessWidget {
                 color: selected ? module.color : const Color(0xFF334155),
                 fontSize: 11,
                 fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                letterSpacing: 0,
               ),
             ),
           ],

@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
 
@@ -25,6 +26,7 @@ export class MarketDataController {
   constructor(
     private readonly marketDataService: MarketDataService,
     private readonly marketDataHealth: MarketDataHealthService,
+    private readonly historicalMarketData: HistoricalMarketDataService,
   ) {}
 
   @Get()
@@ -57,6 +59,14 @@ export class MarketDataController {
       Number(page),
       Number(pageSize),
     );
+  }
+
+  @Get('history')
+  getHistory(
+    @Query('symbol') symbol = '',
+    @Query('range') range = '1D',
+  ) {
+    return this.historicalMarketData.getHistory(symbol, range);
   }
 
   @Get('indices')

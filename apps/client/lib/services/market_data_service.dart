@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
+import '../models/market_history.dart';
 import '../models/stock_quote.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
@@ -119,6 +120,28 @@ class MarketDataService {
       pageSize: (json['pageSize'] as num?)?.toInt() ?? pageSize,
       hasMore: json['hasMore'] == true,
     );
+  }
+
+  Future<MarketHistorySeries> fetchHistory({
+    required String symbol,
+    String range = '1D',
+  }) async {
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/market-data/history').replace(
+      queryParameters: {
+        'symbol': symbol.trim().toUpperCase(),
+        'range': range,
+      },
+    );
+    final response = await http.get(uri).timeout(const Duration(seconds: 10));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw const MarketDataException('Unable to load price history');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map) {
+      throw const MarketDataException('Unable to load price history');
+    }
+    return MarketHistorySeries.fromJson(Map<String, dynamic>.from(decoded));
   }
 
   Future<List<Map<String, dynamic>>> fetchIndexSnapshot() async {

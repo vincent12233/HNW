@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
+import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataController } from './market-data.controller';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
@@ -22,6 +23,7 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
   controllers: [MarketDataController],
   providers: [
     MarketDataService,
+    HistoricalMarketDataService,
     MarketDataHealthService,
     MarketDataProviderService,
     IndiaStockMcpProvider,
@@ -39,6 +41,7 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
   ],
   exports: [
     MarketDataService,
+    HistoricalMarketDataService,
     MarketDataHealthService,
     MarketDataProviderService,
     QuoteIngestionService,

@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
-import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
+import '../models/trading_order.dart';
 import '../services/market_socket_service.dart';
 import '../services/trading_service.dart';
 import '../services/watchlist_service.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/stock_history_chart.dart';
 
 class StockDetailPage extends StatefulWidget {
   const StockDetailPage({
@@ -178,7 +179,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 ? null
                 : () async {
                     setState(() => isSubmitting = true);
-
                     final order = TradingOrder(
                       symbol: liveStock.symbol,
                       isBuy: isBuy,
@@ -252,7 +252,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     Expanded(
                       child: Text(
                         '${order.symbol} Order',
-                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                     Text(order.status.replaceAll('_', ' ')),
@@ -280,9 +283,17 @@ class _StockDetailPageState extends State<StockDetailPage> {
       padding: const EdgeInsets.symmetric(vertical: 7),
       child: Row(
         children: [
-          Expanded(child: Text(label, style: const TextStyle(color: Colors.black54))),
+          Expanded(
+            child: Text(label, style: const TextStyle(color: Colors.black54)),
+          ),
           const SizedBox(width: 12),
-          Flexible(child: Text(value, textAlign: TextAlign.right, style: const TextStyle(fontWeight: FontWeight.w700))),
+          Flexible(
+            child: Text(
+              value,
+              textAlign: TextAlign.right,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+          ),
         ],
       ),
     );
@@ -295,8 +306,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final changeColor = liveStock.change > 0
         ? AppConfig.gainColor
         : liveStock.change < 0
-        ? AppConfig.lossColor
-        : AppConfig.neutralColor;
+            ? AppConfig.lossColor
+            : AppConfig.neutralColor;
 
     return Scaffold(
       appBar: AppBar(
@@ -334,7 +345,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   const SizedBox(height: 12),
                   Text(
                     formatPrice(liveStock.price),
-                    style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     '${liveStock.change > 0 ? '+' : ''}${liveStock.change.toStringAsFixed(2)}%',
@@ -348,6 +362,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
               ),
             ),
           ),
+          const SizedBox(height: 12),
+          StockHistoryChart(symbol: liveStock.symbol),
           const SizedBox(height: 12),
           Card(
             child: Padding(
@@ -364,7 +380,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   Row(
                     children: [
                       Expanded(child: _marketStat('Open', _statPrice(liveStock.open))),
-                      Expanded(child: _marketStat('Prev. Close', _statPrice(liveStock.previousClose))),
+                      Expanded(
+                        child: _marketStat(
+                          'Prev. Close',
+                          _statPrice(liveStock.previousClose),
+                        ),
+                      ),
                     ],
                   ),
                   const Divider(height: 24),
@@ -377,7 +398,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   const Divider(height: 24),
                   Row(
                     children: [
-                      Expanded(child: _marketStat('Volume', _formatVolume(liveStock.volume))),
+                      Expanded(
+                        child: _marketStat('Volume', _formatVolume(liveStock.volume)),
+                      ),
                       Expanded(child: _marketStat('Symbol', liveStock.symbol)),
                     ],
                   ),
@@ -386,7 +409,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
             ),
           ),
           const SizedBox(height: 18),
-          const Text('Place Order', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const Text(
+            'Place Order',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: const [
@@ -406,7 +432,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
             onSelectionChanged: (selection) {
               setState(() {
                 orderType = selection.first;
-                if (orderType == 'LIMIT' && limitPriceController.text.trim().isEmpty) {
+                if (orderType == 'LIMIT' &&
+                    limitPriceController.text.trim().isEmpty) {
                   limitPriceController.text = liveStock.price.toStringAsFixed(2);
                 }
               });
@@ -442,18 +469,22 @@ class _StockDetailPageState extends State<StockDetailPage> {
           Wrap(
             spacing: 8,
             children: ['DAY', 'IOC', 'FOK']
-                .map((value) => ChoiceChip(
-                      label: Text(value),
-                      selected: timeInForce == value,
-                      onSelected: (_) => setState(() => timeInForce = value),
-                    ))
+                .map(
+                  (value) => ChoiceChip(
+                    label: Text(value),
+                    selected: timeInForce == value,
+                    onSelected: (_) => setState(() => timeInForce = value),
+                  ),
+                )
                 .toList(),
           ),
           const SizedBox(height: 16),
           Card(
             child: ListTile(
               title: const Text('Estimated amount'),
-              subtitle: Text(isLimit ? 'Based on limit price' : 'Based on current market price'),
+              subtitle: Text(
+                isLimit ? 'Based on limit price' : 'Based on current market price',
+              ),
               trailing: Text(
                 selectedOrderPrice > 0 ? formatPrice(estimatedAmount) : '--',
                 style: const TextStyle(fontWeight: FontWeight.bold),
@@ -480,7 +511,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Colors.black54, fontSize: 12)),
+        Text(
+          label,
+          style: const TextStyle(color: Colors.black54, fontSize: 12),
+        ),
         const SizedBox(height: 5),
         Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
@@ -488,9 +522,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   String _formatVolume(int volume) {
-    if (volume >= 10000000) return '${(volume / 10000000).toStringAsFixed(2)} Cr';
-    if (volume >= 100000) return '${(volume / 100000).toStringAsFixed(2)} L';
-    if (volume >= 1000) return '${(volume / 1000).toStringAsFixed(1)} K';
+    if (volume >= 10000000) {
+      return '${(volume / 10000000).toStringAsFixed(2)} Cr';
+    }
+    if (volume >= 100000) {
+      return '${(volume / 100000).toStringAsFixed(2)} L';
+    }
+    if (volume >= 1000) {
+      return '${(volume / 1000).toStringAsFixed(1)} K';
+    }
     return '$volume';
   }
 }
@@ -515,7 +555,9 @@ String orderResultMessage(TradingOrder order) {
       return 'Order cancelled • No shares filled';
     case 'REJECTED':
       final reason = order.rejectionReason?.trim();
-      return reason == null || reason.isEmpty ? 'Order rejected' : 'Order rejected • $reason';
+      return reason == null || reason.isEmpty
+          ? 'Order rejected'
+          : 'Order rejected • $reason';
     case 'PENDING':
       return 'Order submitted';
     default:

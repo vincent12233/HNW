@@ -13,6 +13,21 @@ export interface MarketQuoteResult {
   updatedAt: Date;
 }
 
+export interface MarketHistoryPoint {
+  date: string;
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+export interface MarketHistoryResult {
+  symbol: string;
+  interval: '5m' | '1h' | '1d';
+  data: MarketHistoryPoint[];
+}
+
 export interface MarketDataProvider {
   readonly name: string;
   getQuote(symbol: string, exchange?: string): Promise<MarketQuoteResult>;

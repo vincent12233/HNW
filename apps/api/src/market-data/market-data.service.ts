@@ -22,6 +22,47 @@ export class MarketDataService {
     return this.mapSnapshot(instruments);
   }
 
+  async getHomeBootstrap(symbols = '', limit = 40) {
+    const requestedSymbols = [...new Set(
+      symbols
+        .split(',')
+        .map((symbol) => symbol.trim().toUpperCase())
+        .filter(Boolean),
+    )].slice(0, 100);
+    const safeLimit = Math.min(60, Math.max(10, Math.trunc(limit) || 40));
+    const ordinaryStockWhere = {
+      isActive: true,
+      exchange: { in: [Exchange.NSE, Exchange.BSE] },
+      type: InstrumentType.EQUITY,
+      quote: { is: { lastPrice: { gt: 0 } } },
+    };
+
+    const [featured, requested] = await this.prisma.$transaction([
+      this.prisma.instrument.findMany({
+        where: ordinaryStockWhere,
+        include: { quote: true },
+        orderBy: [{ displayOrder: 'asc' }, { symbol: 'asc' }],
+        take: safeLimit,
+      }),
+      requestedSymbols.length === 0
+        ? this.prisma.instrument.findMany({ where: { id: { in: [] } } })
+        : this.prisma.instrument.findMany({
+            where: {
+              ...ordinaryStockWhere,
+              symbol: { in: requestedSymbols },
+            },
+            include: { quote: true },
+          }),
+    ]);
+
+    const byInstrument = new Map<string, any>();
+    for (const instrument of [...featured, ...requested]) {
+      byInstrument.set(instrument.id, instrument);
+    }
+
+    return this.mapSnapshot([...byInstrument.values()]);
+  }
+
   async searchMarketSnapshot(query = '', page = 1, pageSize = 50) {
     const normalizedQuery = query.trim();
     const safePage = Math.max(1, Math.trunc(page) || 1);

@@ -39,23 +39,36 @@ class MarketDataService {
   }
 
   Future<List<StockQuote>> fetchSnapshot() async {
-    try {
-      final response = await http
-          .get(Uri.parse('${AppConfig.apiBaseUrl}/market-data'))
-          .timeout(const Duration(seconds: 6));
+    return fetchHomeBootstrap();
+  }
 
+  Future<List<StockQuote>> fetchHomeBootstrap({
+    Iterable<String> symbols = const <String>[],
+    int limit = 40,
+  }) async {
+    try {
+      final normalizedSymbols = symbols
+          .map((symbol) => symbol.trim().toUpperCase())
+          .where((symbol) => symbol.isNotEmpty)
+          .toSet()
+          .join(',');
+      final uri = Uri.parse('${AppConfig.apiBaseUrl}/market-data/home').replace(
+        queryParameters: {
+          'symbols': normalizedSymbols,
+          'limit': '$limit',
+        },
+      );
+      final response = await http.get(uri).timeout(const Duration(seconds: 6));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw const MarketDataException('Unable to load market data');
+        throw const MarketDataException('Unable to load home market data');
       }
 
       final decoded = jsonDecode(response.body);
-
       if (decoded is! List) {
         return _cachedSnapshot();
       }
 
       await LocalDataCache.saveJson(LocalDataCache.marketSnapshot, decoded);
-
       return _fromRows(decoded);
     } catch (_) {
       return _cachedSnapshot();

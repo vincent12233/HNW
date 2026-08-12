@@ -14,6 +14,14 @@ export class MarketDataController {
     return this.marketDataService.getMarketSnapshot();
   }
 
+  @Get('home')
+  getHomeBootstrap(
+    @Query('symbols') symbols = '',
+    @Query('limit') limit = '40',
+  ) {
+    return this.marketDataService.getHomeBootstrap(symbols, Number(limit));
+  }
+
   @Get('search')
   searchSnapshot(
     @Query('q') query = '',

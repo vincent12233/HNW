@@ -548,6 +548,13 @@ export class MarketService {
 
   async seedLiveMarket() {
     const asOf = new Date();
+    const logoUrls: Record<string, string> = {
+      HDFCBANK: 'https://logo.clearbit.com/hdfcbank.com', RELIANCE: 'https://logo.clearbit.com/ril.com',
+      TCS: 'https://logo.clearbit.com/tcs.com', ICICIBANK: 'https://logo.clearbit.com/icicibank.com',
+      INFY: 'https://logo.clearbit.com/infosys.com', ITC: 'https://logo.clearbit.com/itcportal.com',
+      HINDUNILVR: 'https://logo.clearbit.com/hul.co.in', NESTLEIND: 'https://logo.clearbit.com/nestle.in',
+      LT: 'https://logo.clearbit.com/larsentoubro.com', TITAN: 'https://logo.clearbit.com/titancompany.in',
+    };
 
     const instruments = [
       {
@@ -650,6 +657,7 @@ export class MarketService {
           },
           update: {
             name: item.name,
+            logoUrl: logoUrls[item.symbol],
             isin: item.isin,
             type: item.type,
             currency: 'INR',
@@ -661,6 +669,7 @@ export class MarketService {
             symbol: item.symbol,
             exchange: item.exchange,
             name: item.name,
+            logoUrl: logoUrls[item.symbol],
             isin: item.isin,
             type: item.type,
             currency: 'INR',

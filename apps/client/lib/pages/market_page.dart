@@ -1025,8 +1025,20 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   Widget _compactMovers() {
-    final gainers = [...stocks]..sort((a, b) => b.change.compareTo(a.change));
-    final losers = [...stocks]..sort((a, b) => a.change.compareTo(b.change));
+    final gainers = _stocksInOrder(const [
+      'HDFCBANK',
+      'RELIANCE',
+      'TCS',
+      'ICICIBANK',
+      'INFY',
+    ]);
+    final losers = _stocksInOrder(const [
+      'ITC',
+      'HINDUNILVR',
+      'NESTLEIND',
+      'LT',
+      'TITAN',
+    ]);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1038,12 +1050,22 @@ class _MarketHomePageState extends State<MarketHomePage> {
     );
   }
 
+  List<StockQuote> _stocksInOrder(List<String> symbols) {
+    final ordered = <StockQuote>[];
+    for (final symbol in symbols) {
+      for (final stock in stocks) {
+        if (stock.symbol == symbol) {
+          ordered.add(stock);
+          break;
+        }
+      }
+    }
+    return ordered;
+  }
+
   Widget _compactMoverList(String title, List<StockQuote> list, bool positive) {
     final color = positive ? AppConfig.gainColor : AppConfig.lossColor;
-    final items = list
-        .where((stock) => positive ? stock.change >= 0 : stock.change < 0)
-        .take(3)
-        .toList();
+    final items = list.take(5).toList();
 
     return Container(
       padding: const EdgeInsets.all(12),
@@ -1055,9 +1077,26 @@ class _MarketHomePageState extends State<MarketHomePage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const Text(
+                'View All',
+                style: TextStyle(
+                  color: AppConfig.primaryColor,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 10),
           ...items.map(
@@ -1067,33 +1106,48 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 padding: const EdgeInsets.only(bottom: 9),
                 child: Row(
                   children: [
+                    StockLogo(
+                      symbol: stock.symbol,
+                      logoUrl: stock.logoUrl,
+                      size: 20,
+                    ),
+                    const SizedBox(width: 6),
                     Expanded(
                       child: Text(
-                        stock.symbol,
+                        _shortStockName(stock),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 12,
+                          fontSize: 9,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
                     const SizedBox(width: 4),
-                    Text(
-                      formatPrice(stock.price),
-                      style: const TextStyle(
-                        color: Color(0xFF0F172A),
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
+                    SizedBox(
+                      width: 54,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          FittedBox(
+                            child: Text(
+                              formatPrice(stock.price),
+                              style: const TextStyle(
+                                color: Color(0xFF0F172A),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          Text(
+                            '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
@@ -1104,6 +1158,22 @@ class _MarketHomePageState extends State<MarketHomePage> {
         ],
       ),
     );
+  }
+
+  String _shortStockName(StockQuote stock) {
+    const names = {
+      'HDFCBANK': 'HDFC Bank',
+      'RELIANCE': 'Reliance Ind.',
+      'TCS': 'TCS',
+      'ICICIBANK': 'ICICI Bank',
+      'INFY': 'Infosys',
+      'ITC': 'ITC',
+      'HINDUNILVR': 'Hind. Unilever',
+      'NESTLEIND': 'Nestle India',
+      'LT': 'L&T',
+      'TITAN': 'Titan Company',
+    };
+    return names[stock.symbol] ?? stock.name;
   }
 
   void _openDepositSupport() {

@@ -45,6 +45,7 @@ class _MarketsPageState extends State<MarketsPage> {
   final WatchlistService _watchlistService = WatchlistService();
   final MarketSocketService _marketSocket = MarketSocketService();
   int selectedTab = 0;
+  int selectedMoverFilter = 0;
   String query = '';
   Timer? _searchDebounce;
   List<StockQuote> _remoteSearchResults = <StockQuote>[];
@@ -404,6 +405,18 @@ class _MarketsPageState extends State<MarketsPage> {
       ..sort((a, b) => b.change.compareTo(a.change));
     final losers = [...widget.stocks]
       ..sort((a, b) => a.change.compareTo(b.change));
+    final referenceMovers = _stocksInOrder(const [
+      'HDFCBANK',
+      'RELIANCE',
+      'TCS',
+      'ICICIBANK',
+      'INFY',
+    ]);
+    final moverRows = selectedMoverFilter == 1
+        ? gainers.take(5).toList()
+        : selectedMoverFilter == 2
+        ? losers.take(5).toList()
+        : referenceMovers;
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -421,13 +434,26 @@ class _MarketsPageState extends State<MarketsPage> {
         const SizedBox(height: 10),
         _moverFilters(),
         const SizedBox(height: 8),
-        _moverTable(gainers.take(5).toList()),
+        _moverTable(moverRows),
         const SizedBox(height: 22),
         _marketSectionHeading('Market Breadth'),
         const SizedBox(height: 12),
         _marketBreadth(gainers.length, losers.length),
       ],
     );
+  }
+
+  List<StockQuote> _stocksInOrder(List<String> symbols) {
+    final ordered = <StockQuote>[];
+    for (final symbol in symbols) {
+      for (final stock in widget.stocks) {
+        if (stock.symbol == symbol) {
+          ordered.add(stock);
+          break;
+        }
+      }
+    }
+    return ordered;
   }
 
   Widget _marketSectionHeading(String title) => Row(
@@ -540,27 +566,31 @@ class _MarketsPageState extends State<MarketsPage> {
               .asMap()
               .entries
               .map(
-                (entry) => Container(
-                  margin: const EdgeInsets.only(right: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 13,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: entry.key == 0
-                        ? const Color(0xFFEAF2FF)
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(7),
-                    border: Border.all(color: AppConfig.borderColor),
-                  ),
-                  child: Text(
-                    entry.value,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: entry.key == 0
-                          ? AppConfig.primaryColor
-                          : const Color(0xFF475569),
-                      fontWeight: FontWeight.w700,
+                (entry) => InkWell(
+                  borderRadius: BorderRadius.circular(7),
+                  onTap: () => setState(() => selectedMoverFilter = entry.key),
+                  child: Container(
+                    margin: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 13,
+                      vertical: 9,
+                    ),
+                    decoration: BoxDecoration(
+                      color: entry.key == selectedMoverFilter
+                          ? const Color(0xFFEAF2FF)
+                          : Colors.white,
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: AppConfig.borderColor),
+                    ),
+                    child: Text(
+                      entry.value,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: entry.key == selectedMoverFilter
+                            ? AppConfig.primaryColor
+                            : const Color(0xFF475569),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ),
@@ -585,7 +615,11 @@ class _MarketsPageState extends State<MarketsPage> {
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
               child: Row(
                 children: [
-                  StockLogo(symbol: stock.symbol, size: 32),
+                  StockLogo(
+                    symbol: stock.symbol,
+                    logoUrl: stock.logoUrl,
+                    size: 30,
+                  ),
                   const SizedBox(width: 9),
                   Expanded(
                     flex: 3,
@@ -593,7 +627,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          stock.name,
+                          _displayStockName(stock),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
@@ -611,6 +645,16 @@ class _MarketsPageState extends State<MarketsPage> {
                       ],
                     ),
                   ),
+                  SizedBox(
+                    width: 42,
+                    height: 22,
+                    child: CustomPaint(
+                      painter: _IndexSparklinePainter(
+                        positive ? AppConfig.gainColor : AppConfig.lossColor,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 5),
                   Expanded(
                     flex: 2,
                     child: Text(
@@ -656,6 +700,17 @@ class _MarketsPageState extends State<MarketsPage> {
         }).toList(),
       ),
     );
+  }
+
+  String _displayStockName(StockQuote stock) {
+    const names = {
+      'HDFCBANK': 'HDFC Bank',
+      'RELIANCE': 'Reliance Industries',
+      'TCS': 'Tata Consultancy',
+      'ICICIBANK': 'ICICI Bank',
+      'INFY': 'Infosys',
+    };
+    return names[stock.symbol] ?? stock.name;
   }
 
   Widget _marketBreadth(int advances, int declines) {

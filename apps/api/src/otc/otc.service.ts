@@ -185,13 +185,19 @@ export class OtcService {
   }
 
   async reject(reviewerId: string, orderId: string, note?: string) {
-    const existing = await this.prisma.otcOrder.findUnique({ where: { id: orderId }, include: { account: true, instrument: true } });
-    const result = await this.prisma.otcOrder.updateMany({ where: { id: orderId, status: 'PENDING' }, data: { status: 'REJECTED', reviewedById: reviewerId, reviewedAt: new Date(), reviewNote: note?.trim() || null } });
-    if (!result.count) throw new BadRequestException('OTC order not found or already reviewed');
-    if (existing) {
-      await this.prisma.notification.create({ data: { userId: existing.account.userId, type: 'OTC', title: 'OTC order rejected', body: `${existing.instrument.symbol} was not approved.${note ? ` ${note}` : ''}`, referenceId: orderId } });
-    }
-    return this.prisma.otcOrder.findUnique({ where: { id: orderId }, include: { instrument: true } });
+    return this.prisma.$transaction(async (tx) => {
+      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: true } }, instrument: true } });
+      if (!order) throw new NotFoundException('OTC order not found');
+      if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
+      const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
+      if (reviewer?.role === 'BUSINESS' && order.account.user.assignedBusinessId !== reviewerId) {
+        throw new UnauthorizedException('OTC order is not assigned to this business account');
+      }
+      const claimed = await tx.otcOrder.updateMany({ where: { id: orderId, status: 'PENDING' }, data: { status: 'REJECTED', reviewedById: reviewerId, reviewedAt: new Date(), reviewNote: note?.trim() || null } });
+      if (claimed.count !== 1) throw new BadRequestException('OTC order already reviewed');
+      await tx.notification.create({ data: { userId: order.account.userId, type: 'OTC', title: 'OTC order rejected', body: `${order.instrument.symbol} was not approved.${note ? ` ${note}` : ''}`, referenceId: orderId } });
+      return tx.otcOrder.findUnique({ where: { id: orderId }, include: { instrument: true } });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   private encryptionKey() {

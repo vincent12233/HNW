@@ -1,0 +1,791 @@
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                         String                @id @default(uuid())
+  email                      String                @unique
+  passwordHash               String
+  transactionKeyHash        String?
+  googleSubject             String?               @unique
+  authVersion               Int                   @default(0)
+  fullName                   String
+  phone                      String?               @unique
+  customerNo                 String?               @unique
+  role                       UserRole              @default(CLIENT)
+  status                     UserStatus            @default(ACTIVE)
+  createdAt                  DateTime              @default(now())
+  updatedAt                  DateTime              @updatedAt
+  assignedBusinessId         String?
+  createdAccountTransactions AccountTransaction[]  @relation("TransactionCreator")
+  account                    Account?
+  auditLogs                  AuditLog[]
+  businessProfile            BusinessProfile?
+  usedInviteCode             InviteCode?           @relation("InviteCodeCustomer")
+  loginAudits                LoginAudit[]
+  supportConversations       SupportConversation[]
+  supportMessages            SupportMessage[]
+  assignedBusiness           User?                 @relation("BusinessCustomers", fields: [assignedBusinessId], references: [id])
+  assignedCustomers          User[]                @relation("BusinessCustomers")
+  reviewedOtcOrders          OtcOrder[]             @relation("OtcReviewer")
+  bankAccounts               BankAccount[]
+  preferences                UserPreference?
+  notifications              Notification[]
+  devices                    UserDevice[]
+  passwordResetCodes         PasswordResetCode[]
+
+  @@index([assignedBusinessId])
+  @@map("users")
+}
+
+model BusinessProfile {
+  id          String       @id @default(uuid())
+  userId      String       @unique
+  employeeNo  String       @unique
+  department  String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  inviteCodes InviteCode[]
+
+  @@map("business_profiles")
+}
+
+model InviteCode {
+  id                String           @id @default(uuid())
+  code              String           @unique
+  businessProfileId String
+  customerId        String?          @unique
+  status            InviteCodeStatus @default(UNUSED)
+  expiresAt         DateTime?
+  usedAt            DateTime?
+  disabledAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  businessProfile   BusinessProfile  @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+  customer          User?            @relation("InviteCodeCustomer", fields: [customerId], references: [id])
+
+  @@index([businessProfileId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("invite_codes")
+}
+
+model Account {
+  id                 String               @id @default(uuid())
+  accountNumber      String               @unique
+  cashBalance        Decimal              @default(0) @db.Decimal(18, 2)
+  buyingPower        Decimal              @default(0) @db.Decimal(18, 2)
+  currency           String               @default("INR")
+  isLive          Boolean              @default(true)
+  userId             String               @unique
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  frozenBalance      Decimal              @default(0) @db.Decimal(18, 2)
+  depositRequests    DepositRequest[]
+  ipoApplications    IpoApplication[]
+  transactions       AccountTransaction[]
+  loanApplications    LoanApplication[]
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipoDebts           IpoDebt[]
+  orders             Order[]
+  positions          Position[]
+  trades             Trade[]
+  withdrawalRequests WithdrawalRequest[]
+  otcOrders          OtcOrder[]
+  portfolioSnapshots PortfolioSnapshot[]
+
+  @@map("accounts")
+}
+
+model AccountTransaction {
+  id            String                   @id @default(uuid())
+  accountId     String
+  type          AccountTransactionType
+  status        AccountTransactionStatus @default(PENDING)
+  amount        Decimal                  @db.Decimal(18, 2)
+  balanceBefore Decimal                  @db.Decimal(18, 2)
+  balanceAfter  Decimal                  @db.Decimal(18, 2)
+  referenceId   String?
+  note          String?
+  createdById   String?
+  createdAt     DateTime                 @default(now())
+  updatedAt     DateTime                 @updatedAt
+  account       Account                  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy     User?                    @relation("TransactionCreator", fields: [createdById], references: [id])
+
+  @@index([accountId, createdAt])
+  @@index([status])
+  @@index([referenceId])
+  @@map("account_transactions")
+}
+
+model Instrument {
+  id        String         @id @default(uuid())
+  symbol    String
+  exchange  Exchange
+  name      String
+  isin      String?
+  logoUrl   String?
+  category  String?
+  displayOrder Int       @default(0)
+  type      InstrumentType @default(EQUITY)
+  currency  String         @default("INR")
+  lotSize   Int            @default(1)
+  tickSize  Decimal        @default(0.05) @db.Decimal(10, 2)
+  isActive  Boolean        @default(true)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  quote     MarketQuote?
+  orders    Order[]
+  positions Position[]
+  trades    Trade[]
+  otcOffer  OtcOffer?
+  otcOrders OtcOrder[]
+
+  @@unique([exchange, symbol])
+  @@index([symbol])
+  @@index([isin])
+  @@index([isActive])
+  @@index([displayOrder])
+  @@map("instruments")
+}
+
+model MarketQuote {
+  id            String     @id @default(uuid())
+  instrumentId  String     @unique
+  lastPrice     Decimal    @db.Decimal(18, 4)
+  openPrice     Decimal?   @db.Decimal(18, 4)
+  highPrice     Decimal?   @db.Decimal(18, 4)
+  lowPrice      Decimal?   @db.Decimal(18, 4)
+  previousClose Decimal?   @db.Decimal(18, 4)
+  bidPrice      Decimal?   @db.Decimal(18, 4)
+  askPrice      Decimal?   @db.Decimal(18, 4)
+  volume        BigInt     @default(0)
+  source        String     @default("LIVE_FEED")
+  asOf          DateTime
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  instrument    Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@index([asOf])
+  @@map("market_quotes")
+}
+
+model Order {
+  id               String      @id @default(uuid())
+  clientOrderId    String
+  accountId        String
+  instrumentId     String
+  side             OrderSide
+  type             OrderType
+  status           OrderStatus @default(PENDING)
+  quantity         Int
+  filledQuantity   Int         @default(0)
+  limitPrice       Decimal?    @db.Decimal(18, 4)
+  averageFillPrice Decimal?    @db.Decimal(18, 4)
+  frozenAmount     Decimal     @default(0) @db.Decimal(18, 2)
+  rejectionReason  String?
+  placedAt         DateTime    @default(now())
+  completedAt      DateTime?
+  cancelledAt      DateTime?
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  timeInForce      TimeInForce @default(DAY)
+  account          Account     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  instrument       Instrument  @relation(fields: [instrumentId], references: [id])
+  trades           Trade[]
+
+  @@unique([accountId, clientOrderId])
+  @@index([accountId, status, placedAt])
+  @@index([instrumentId, status])
+  @@map("orders")
+}
+
+model Trade {
+  id           String     @id @default(uuid())
+  executionId  String     @unique
+  orderId      String
+  accountId    String
+  instrumentId String
+  quantity     Int
+  price        Decimal    @db.Decimal(18, 4)
+  grossAmount  Decimal    @db.Decimal(18, 2)
+  fees         Decimal    @default(0) @db.Decimal(18, 2)
+  netAmount    Decimal    @db.Decimal(18, 2)
+  executedAt   DateTime   @default(now())
+  createdAt    DateTime   @default(now())
+  account      Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  order        Order      @relation(fields: [orderId], references: [id])
+
+  @@index([accountId, executedAt])
+  @@index([instrumentId, executedAt])
+  @@index([orderId])
+  @@map("trades")
+}
+
+model Position {
+  id             String     @id @default(uuid())
+  accountId      String
+  instrumentId   String
+  quantity       Int        @default(0)
+  averagePrice   Decimal    @default(0) @db.Decimal(18, 4)
+  realizedPnl    Decimal    @default(0) @db.Decimal(18, 2)
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  frozenQuantity Int        @default(0)
+  account        Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  instrument     Instrument @relation(fields: [instrumentId], references: [id])
+
+  @@unique([accountId, instrumentId])
+  @@index([accountId])
+  @@map("positions")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  actorId     String?
+  action      String
+  resource    String
+  resourceId  String?
+  description String?
+  ipAddress   String?
+  userAgent   String?
+  metadata    Json?
+  createdAt   DateTime @default(now())
+  actor       User?    @relation(fields: [actorId], references: [id])
+
+  @@index([actorId])
+  @@index([action])
+  @@index([resource])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+model Ipo {
+  id              String           @id @default(uuid())
+  symbol          String
+  companyName     String
+  exchange        Exchange
+  issuePrice      Decimal
+  lotSize         Int
+  totalShares     Int
+  availableShares Int
+  openDate        DateTime
+  closeDate       DateTime
+  status          IpoStatus        @default(DRAFT)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  instrumentId    String?
+  applications    IpoApplication[]
+
+  @@map("ipos")
+}
+
+model IpoApplication {
+  id                String               @id @default(uuid())
+  ipoId             String
+  accountId         String
+  quantity          Int
+  amount            Decimal
+  status            IpoApplicationStatus @default(PENDING)
+  createdAt         DateTime             @default(now())
+  allocatedQuantity Int?
+  allocatedPrice    Decimal?             @db.Decimal(18, 2)
+  allocatedAmount   Decimal?             @db.Decimal(18, 2)
+  paymentStatus     IpoPaymentStatus     @default(PENDING)
+  updatedAt         DateTime             @default(now()) @updatedAt
+  account           Account              @relation(fields: [accountId], references: [id])
+  ipo               Ipo                  @relation(fields: [ipoId], references: [id])
+  ipoDebt           IpoDebt?
+
+  @@map("IpoApplication")
+}
+
+model IpoDebt {
+  id               String         @id @default(uuid())
+  accountId        String
+  ipoApplicationId String         @unique
+  amount           Decimal        @db.Decimal(18, 2)
+  paidAmount       Decimal        @default(0) @db.Decimal(18, 2)
+  status           IpoDebtStatus  @default(OPEN)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  account          Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  ipoApplication   IpoApplication @relation(fields: [ipoApplicationId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([status])
+  @@map("ipo_debts")
+}
+
+model LoginAudit {
+  id        String   @id @default(uuid())
+  userId    String
+  ipAddress String?
+  userAgent String?
+  success   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("login_audits")
+}
+
+model SupportConversation {
+  id          String           @id @default(uuid())
+  clientId    String
+  status      SupportStatus    @default(OPEN)
+  tags        String[]         @default([])
+  internalNote String?
+  priority    String           @default("普通")
+  assignedToId String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  client      User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  messages    SupportMessage[]
+
+  @@index([clientId])
+  @@index([status])
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id             String              @id @default(uuid())
+  conversationId String
+  senderId       String
+  senderType     SenderType
+  content        String
+  attachmentName String?
+  attachmentUrl  String?
+  attachmentType String?
+  readAt          DateTime?
+  createdAt      DateTime            @default(now())
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User                @relation(fields: [senderId], references: [id])
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@map("support_messages")
+}
+
+model BankAccount {
+  id            String            @id @default(uuid())
+  userId        String
+  bankName      String
+  accountHolder String
+  accountNumber String
+  ifscCode      String
+  status        BankAccountStatus @default(APPROVED)
+  isPrimary     Boolean           @default(false)
+  reviewNote    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("bank_accounts")
+}
+
+model UserPreference {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  orderNotifications Boolean  @default(true)
+  accountNotifications Boolean @default(true)
+  supportNotifications Boolean @default(true)
+  biometricEnabled   Boolean  @default(false)
+  language           String   @default("en")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  referenceId String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model UserDevice {
+  id          String   @id @default(uuid())
+  userId      String
+  deviceName  String
+  platform    String
+  pushToken   String?
+  lastIp      String?
+  lastSeenAt  DateTime @default(now())
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("user_devices")
+}
+
+model PortfolioSnapshot {
+  id          String   @id @default(uuid())
+  accountId   String
+  cashValue   Decimal  @db.Decimal(18, 2)
+  instValue   Decimal  @db.Decimal(18, 2)
+  otcValue    Decimal  @db.Decimal(18, 2)
+  ipoValue    Decimal  @db.Decimal(18, 2)
+  totalValue  Decimal  @db.Decimal(18, 2)
+  capturedAt  DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, capturedAt])
+  @@map("portfolio_snapshots")
+}
+
+model PasswordResetCode {
+  id        String   @id @default(uuid())
+  userId    String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_codes")
+}
+
+model DepositRequest {
+  id            String        @id @default(uuid())
+  accountId     String
+  amount        Decimal       @db.Decimal(18, 2)
+  paymentMethod String?
+  status        DepositStatus @default(PENDING)
+  note          String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  account       Account       @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+}
+
+model WithdrawalRequest {
+  id            String           @id @default(uuid())
+  orderNo       String?          @unique
+  accountId     String
+  amount        Decimal          @db.Decimal(18, 2)
+  bankName      String?
+  accountNumber String?
+  ifscCode      String?
+  upiId         String?
+  note          String?
+  status        WithdrawalStatus @default(PENDING)
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  account       Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([status])
+  @@index([orderNo])
+  @@map("withdrawal_requests")
+}
+
+model AdminWatchlistItem {
+  id        String   @id @default(uuid())
+  symbol    String
+  name      String
+  market    String   @default("NSE")
+  category  String
+  risk      String
+  status    String   @default("展示中")
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([symbol])
+  @@index([status])
+  @@map("admin_watchlist_items")
+}
+
+model OtcOffer {
+  id           String    @id @default(uuid())
+  instrumentId String    @unique
+  price        Decimal   @db.Decimal(18, 4)
+  isActive     Boolean   @default(true)
+  validFrom    DateTime
+  validUntil   DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  orders       OtcOrder[]
+
+  @@index([isActive, validFrom, validUntil])
+  @@map("otc_offers")
+}
+
+model OtcOrder {
+  id           String         @id @default(uuid())
+  orderNo      String         @unique
+  accountId    String
+  offerId      String
+  instrumentId String
+  quantity     Int
+  price        Decimal        @db.Decimal(18, 4)
+  amount       Decimal        @db.Decimal(18, 2)
+  status       OtcOrderStatus @default(PENDING)
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  account      Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  offer        OtcOffer       @relation(fields: [offerId], references: [id])
+  instrument   Instrument     @relation(fields: [instrumentId], references: [id])
+  reviewedBy   User?          @relation("OtcReviewer", fields: [reviewedById], references: [id])
+
+  @@index([accountId, createdAt])
+  @@index([status, createdAt])
+  @@map("otc_orders")
+}
+
+model AdminBlockTrade {
+  id          String   @id @default(uuid())
+  orderNo     String   @unique
+  symbol      String
+  side        String
+  quantity    Int
+  price       Decimal  @db.Decimal(18, 4)
+  minTicket   Decimal  @db.Decimal(18, 2)
+  status      String   @default("审核中")
+  note        String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([symbol])
+  @@index([status])
+  @@map("admin_block_trades")
+}
+
+model AdminFundProduct {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  name         String
+  type         String
+  nav          Decimal  @db.Decimal(18, 4)
+  minSubscribe Decimal  @db.Decimal(18, 2)
+  risk         String
+  status       String   @default("开放申购")
+  manager      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([status])
+  @@map("admin_fund_products")
+}
+
+model AdminQuantStrategy {
+  id                String   @id @default(uuid())
+  code              String   @unique
+  name              String
+  market            String
+  risk              String
+  annualReturn      Decimal  @db.Decimal(8, 2)
+  maxDrawdown       Decimal  @db.Decimal(8, 2)
+  authorizedClients Int      @default(0)
+  status            String   @default("观察中")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([status])
+  @@map("admin_quant_strategies")
+}
+
+enum UserRole {
+  ADMIN
+  BUSINESS
+  CLIENT
+  SUPPORT
+  FINANCE
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DISABLED
+}
+
+enum AccountTransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ADMIN_CREDIT
+  ADMIN_DEBIT
+  ORDER_FREEZE
+  ORDER_RELEASE
+  TRADE_SETTLEMENT
+  IPO_REPAYMENT
+  LOAN_DISBURSEMENT
+  LOAN_REPAYMENT
+  OTC_SETTLEMENT
+}
+
+enum OtcOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AccountTransactionStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum Exchange {
+  NSE
+  BSE
+}
+
+enum InstrumentType {
+  EQUITY
+  ETF
+}
+
+enum OrderSide {
+  BUY
+  SELL
+}
+
+enum OrderType {
+  MARKET
+  LIMIT
+}
+
+enum TimeInForce {
+  DAY
+  IOC
+  FOK
+}
+
+enum OrderStatus {
+  PENDING
+  OPEN
+  PARTIALLY_FILLED
+  FILLED
+  CANCELLED
+  REJECTED
+}
+
+enum IpoStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  ALLOTMENT_DONE
+}
+
+enum IpoApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  ALLOTTED
+}
+
+enum IpoPaymentStatus {
+  PENDING
+  PAID
+  FAILED
+}
+
+enum IpoDebtStatus {
+  OPEN
+  PARTIAL
+  PAID
+  DEFAULTED
+}
+
+enum InviteCodeStatus {
+  UNUSED
+  USED
+  EXPIRED
+  DISABLED
+}
+
+enum SupportStatus {
+  OPEN
+  CLOSED
+}
+
+enum SenderType {
+  CLIENT
+  SUPPORT
+  ADMIN
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum DepositStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BankAccountStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model LoanApplication {
+  id             String     @id @default(uuid())
+  orderNo        String     @unique
+  accountId      String
+  requestedAmount Decimal   @db.Decimal(18, 2)
+  approvedAmount  Decimal?  @db.Decimal(18, 2)
+  outstandingAmount Decimal @default(0) @db.Decimal(18, 2)
+  interestRate   Decimal    @default(0) @db.Decimal(8, 2)
+  dueDate        DateTime?
+  status         LoanStatus @default(PENDING)
+  note           String?
+  approvedById   String?
+  approvedAt     DateTime?
+  disbursedAt    DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  account        Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId])
+  @@index([orderNo])
+  @@index([status])
+  @@map("loan_applications")
+}
+
+enum LoanStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  DISBURSED
+  PARTIAL_REPAID
+  REPAID
+  OVERDUE
+}

@@ -1,0 +1,92 @@
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
+import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
+import { ListTradesQueryDto } from './dto/list-trades-query.dto';
+import { ListPositionsQueryDto } from './dto/list-positions-query.dto';
+import { TradingOrdersService } from './trading-orders.service';
+
+interface AuthenticatedRequest extends Request {
+  user: {
+    userId: string;
+    phone?: string | null;
+    role: string;
+  };
+}
+
+@Controller('orders')
+@UseGuards(JwtAuthGuard)
+export class OrdersController {
+  constructor(private readonly ordersService: TradingOrdersService) {}
+
+  @Post()
+  createOrder(
+    @Req() request: AuthenticatedRequest,
+    @Body() dto: CreateOrderDto,
+  ) {
+    return this.ordersService.createOrder(request.user.userId, dto);
+  }
+
+  @Get()
+  listOrders(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListOrdersQueryDto,
+  ) {
+    return this.ordersService.listOrders(request.user.userId, query);
+  }
+
+  @Get('positions')
+  listPositions(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListPositionsQueryDto,
+  ) {
+    return this.ordersService.listPositions(request.user.userId, query);
+  }
+
+  @Get('positions/:exchange/:symbol')
+  getPosition(
+    @Req() request: AuthenticatedRequest,
+    @Param('exchange') exchange: string,
+    @Param('symbol') symbol: string,
+  ) {
+    return this.ordersService.getPosition(
+      request.user.userId,
+      exchange,
+      symbol,
+    );
+  }
+
+  @Get('trades')
+  listTrades(
+    @Req() request: AuthenticatedRequest,
+    @Query() query: ListTradesQueryDto,
+  ) {
+    return this.ordersService.listTrades(request.user.userId, query);
+  }
+
+  @Get(':orderId')
+  getOrder(
+    @Req() request: AuthenticatedRequest,
+    @Param('orderId') orderId: string,
+  ) {
+    return this.ordersService.getOrder(request.user.userId, orderId);
+  }
+
+  @Post(':orderId/cancel')
+  cancelOrder(
+    @Req() request: AuthenticatedRequest,
+    @Param('orderId') orderId: string,
+  ) {
+    return this.ordersService.cancelOrder(request.user.userId, orderId);
+  }
+}

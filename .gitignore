@@ -1,0 +1,51 @@
+# Local editor state
+.idea/
+.agents/
+.claude/
+.windsurf/
+apps/**/.agents/
+apps/**/.claude/
+apps/**/.windsurf/
+
+# Local runtime logs
+*.log
+*-local.log
+*-local.err.log
+
+# Local environment and uploaded customer files
+.env
+.env.*
+!.env.example
+apps/**/.env
+apps/**/.env.*
+!apps/**/.env.example
+apps/api/uploads/
+
+# Local Flutter/Node helper caches used during checks
+.pub-cache/
+.flutter-appdata/
+.flutter-localappdata/
+.dart-appdata/
+.dart-localappdata/
+.dart-state/
+.tool-state/
+.codex-gitconfig
+
+# Flutter generated metadata and local release artifacts
+apps/client/.dart_tool/
+apps/client/.flutter-plugins
+apps/client/.flutter-plugins-dependencies
+*.apk
+*.aab
+
+# Android signing credentials
+*.jks
+*.keystore
+apps/client/android/key.properties
+
+# Dependency and build output fallbacks for workspace-level status
+node_modules/
+.next/
+dist/
+build/
+coverage/

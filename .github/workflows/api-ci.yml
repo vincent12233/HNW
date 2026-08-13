@@ -1,0 +1,54 @@
+name: API CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/api-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/api/**'
+      - '.github/workflows/api-ci.yml'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/api
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify TrueData SDK preflight
+        env:
+          MARKET_DATA_STREAMING_ENABLED: 'true'
+          MARKET_DATA_STREAMING_PROVIDER: TRUEDATA
+          TRUEDATA_USER: ci-placeholder
+          TRUEDATA_PASSWORD: ci-placeholder
+        run: npm run truedata:preflight
+
+      - name: Generate Prisma client
+        run: npm run db:generate
+
+      - name: Build API
+        run: npm run build
+
+      - name: Run unit tests
+        run: npm test -- --runInBand

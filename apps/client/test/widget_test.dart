@@ -12,7 +12,7 @@ void main() {
 
     expect(find.text('India Trading'), findsWidgets);
     expect(find.text('Sign In'), findsOneWidget);
-    expect(find.text('Mobile number'), findsOneWidget);
+    expect(find.text('Mobile Number'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Create Account'), findsOneWidget);
   });

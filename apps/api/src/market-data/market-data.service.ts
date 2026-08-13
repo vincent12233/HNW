@@ -29,7 +29,7 @@ export class MarketDataService {
     const configured = await this.prisma.adminWatchlistItem.findMany({
       where: {
         category: { in: ['INSTITUTIONAL', 'Institutional', 'INST'] },
-        status: '展示中',
+        status: { in: ['ACTIVE', '展示中'] },
       },
       orderBy: { updatedAt: 'desc' },
     });
@@ -59,6 +59,10 @@ export class MarketDataService {
         quoteAsOf: instrument.quote.asOf,
         quoteFresh: true,
         status: item.status,
+        direction: item.direction,
+        referencePrice: item.referencePrice?.toFixed(4) ?? null,
+        expectedReturn: item.expectedReturn?.toFixed(2) ?? null,
+        reason: item.reason,
       }];
     });
   }

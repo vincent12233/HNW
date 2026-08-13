@@ -73,23 +73,22 @@ class InstitutionalTab extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  StockLogo(symbol: stock.symbol, size: 42),
+                  StockLogo(
+                    symbol: stock.symbol,
+                    logoUrl: quote?.logoUrl,
+                    size: 46,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          stock.symbol,
+                          '${stock.companyName}\n(${stock.symbol}) ${stock.exchange}',
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.bold,
                           ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          stock.companyName,
-                          style: const TextStyle(color: Colors.black54),
                         ),
                       ],
                     ),
@@ -102,26 +101,85 @@ class InstitutionalTab extends StatelessWidget {
                   ),
                 ],
               ),
-              const Divider(height: 24),
-              Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Backend institutional offer',
-                      style: const TextStyle(color: Colors.black54),
+              const Divider(height: 22),
+              _offerLine(
+                Icons.trending_up_rounded,
+                'Buy Direction',
+                stock.direction == 'DOWN' ? 'Downward' : 'Upward',
+                stock.direction == 'DOWN' ? Colors.red : Colors.green,
+              ),
+              const SizedBox(height: 9),
+              _offerLine(
+                Icons.payments_outlined,
+                'Reference Buy Price',
+                stock.referencePrice == null
+                    ? 'Market Price'
+                    : formatPrice(stock.referencePrice!),
+                const Color(0xFF0F172A),
+              ),
+              const SizedBox(height: 9),
+              _offerLine(
+                Icons.auto_graph_rounded,
+                'Expected Short-Term Return',
+                stock.expectedReturn == null
+                    ? '--'
+                    : '${stock.expectedReturn!.toStringAsFixed(2)}%',
+                Colors.green,
+              ),
+              if (stock.reason?.trim().isNotEmpty == true) ...[
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    stock.reason!,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                      height: 1.4,
                     ),
                   ),
-                  if (onOpen != null && quote != null && quote.quoteFresh)
-                    FilledButton(
-                      onPressed: () => onOpen!(stock),
-                      child: const Text('View'),
-                    ),
-                ],
-              ),
+                ),
+              ],
+              if (onOpen != null && quote != null && quote.quoteFresh) ...[
+                const SizedBox(height: 14),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () => onOpen!(stock),
+                    child: const Text('View Inst. Opportunity'),
+                  ),
+                ),
+              ],
             ],
           ),
         );
       },
     );
   }
+
+  Widget _offerLine(
+    IconData icon,
+    String label,
+    String value,
+    Color valueColor,
+  ) => Row(
+    children: [
+      Icon(icon, size: 18, color: valueColor),
+      const SizedBox(width: 8),
+      Expanded(
+        child: Text(
+          label,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+        ),
+      ),
+      Text(
+        value,
+        style: TextStyle(
+          color: valueColor,
+          fontWeight: FontWeight.w800,
+          fontSize: 12,
+        ),
+      ),
+    ],
+  );
 }

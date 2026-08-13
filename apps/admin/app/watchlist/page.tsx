@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, StarOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
+import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -19,6 +19,9 @@ type WatchItem = {
   risk: string;
   status: string;
   reason: string;
+  direction: "UP" | "DOWN";
+  referencePrice?: string | null;
+  expectedReturn?: string | null;
 };
 
 export default function WatchlistPage() {
@@ -55,7 +58,7 @@ export default function WatchlistPage() {
   function openCreate() {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ market: "NSE", category: "INSTITUTIONAL", risk: "中" });
+    form.setFieldsValue({ market: "BSE", category: "INSTITUTIONAL", risk: "MEDIUM", direction: "UP", expectedReturn: 5 });
     setOpen(true);
   }
 
@@ -69,10 +72,10 @@ export default function WatchlistPage() {
     const values = form.getFieldsValue();
     if (editing) {
       await api.patch(`/admin-products/watchlist/${editing.id}`, values);
-      message.success("自选股已更新");
+      message.success("Inst. 股票已更新");
     } else {
       await api.post("/admin-products/watchlist", values);
-      message.success("自选股已加入后台池");
+      message.success("Inst. 股票已上架");
     }
     setOpen(false);
     setEditing(null);
@@ -91,8 +94,11 @@ export default function WatchlistPage() {
     { title: "名称", dataIndex: "name", width: 220 },
     { title: "市场", dataIndex: "market", width: 100 },
     { title: "分类", dataIndex: "category", width: 130 },
-    { title: "风险", dataIndex: "risk", width: 90, render: (value) => <Tag color={value === "高" ? "red" : value === "中" ? "gold" : "green"}>{value}</Tag> },
-    { title: "状态", dataIndex: "status", width: 110, render: (value) => <Tag color={value === "展示中" ? "green" : "default"}>{value}</Tag> },
+    { title: "方向", dataIndex: "direction", width: 90, render: (value) => <Tag color={value === "UP" ? "green" : "red"}>{value === "UP" ? "上涨" : "下跌"}</Tag> },
+    { title: "参考价", dataIndex: "referencePrice", width: 110, render: (value) => value ? `₹${Number(value).toFixed(2)}` : "实时价" },
+    { title: "预期收益", dataIndex: "expectedReturn", width: 100, render: (value) => value ? `${Number(value).toFixed(2)}%` : "-" },
+    { title: "风险", dataIndex: "risk", width: 90, render: (value) => <Tag color={value === "HIGH" ? "red" : value === "MEDIUM" ? "gold" : "green"}>{value}</Tag> },
+    { title: "状态", dataIndex: "status", width: 110, render: (value) => <Tag color={value === "ACTIVE" ? "green" : "default"}>{value === "ACTIVE" ? "展示中" : "已暂停"}</Tag> },
     { title: "推荐理由", dataIndex: "reason", width: 260 },
     {
       title: "操作",
@@ -104,12 +110,12 @@ export default function WatchlistPage() {
             size="small"
             onClick={async () => {
               await api.patch(`/admin-products/watchlist/${record.id}/status`, {
-                status: record.status === "展示中" ? "暂停" : "展示中",
+                status: record.status === "ACTIVE" ? "PAUSED" : "ACTIVE",
               });
               await loadItems();
             }}
           >
-            {record.status === "展示中" ? "暂停" : "展示"}
+            {record.status === "ACTIVE" ? "暂停" : "展示"}
           </Button>
           <Popconfirm title="确认删除这条自选股？" okText="删除" cancelText="取消" onConfirm={() => deleteItem(record)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
@@ -144,7 +150,9 @@ export default function WatchlistPage() {
           <Form.Item name="name" label="股票名称" rules={[{ required: true, message: "请输入股票名称" }]}><Input /></Form.Item>
           <Form.Item name="market" label="市场" initialValue="NSE"><Select options={[{ value: "NSE" }, { value: "BSE" }]} /></Form.Item>
           <Form.Item name="category" label="分类" initialValue="INSTITUTIONAL"><Input disabled /></Form.Item>
-          <Form.Item name="risk" label="风险等级" initialValue="中"><Select options={[{ value: "低" }, { value: "中" }, { value: "高" }]} /></Form.Item>
+          <Form.Item name="direction" label="买入方向" rules={[{ required: true }]}><Select options={[{ value: "UP", label: "上涨 Upward" }, { value: "DOWN", label: "下跌 Downward" }]} /></Form.Item>
+          <Space style={{ display: "flex" }} align="start"><Form.Item name="referencePrice" label="参考买入价（₹）"><InputNumber min={0.01} precision={2} style={{ width: 180 }} /></Form.Item><Form.Item name="expectedReturn" label="预期短期收益（%）"><InputNumber min={0.01} max={100} precision={2} style={{ width: 180 }} /></Form.Item></Space>
+          <Form.Item name="risk" label="风险等级"><Select options={[{ value: "LOW", label: "低" }, { value: "MEDIUM", label: "中" }, { value: "HIGH", label: "高" }]} /></Form.Item>
           <Form.Item name="reason" label="推荐理由"><Input.TextArea rows={3} /></Form.Item>
         </Form>
       </Modal>

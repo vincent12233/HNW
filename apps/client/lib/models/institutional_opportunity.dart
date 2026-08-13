@@ -6,6 +6,11 @@ class InstitutionalStock {
     required this.price,
     this.minimumQuantity,
     required this.status,
+    this.exchange = 'NSE',
+    this.direction = 'UP',
+    this.referencePrice,
+    this.expectedReturn,
+    this.reason,
   });
 
   final String id;
@@ -15,6 +20,11 @@ class InstitutionalStock {
   @Deprecated('Quantity limits are not used for Inst. or OTC orders')
   final int? minimumQuantity;
   final String status;
+  final String exchange;
+  final String direction;
+  final double? referencePrice;
+  final double? expectedReturn;
+  final String? reason;
 
   factory InstitutionalStock.fromOtcJson(Map<String, dynamic> json) {
     final instrument =
@@ -28,14 +38,20 @@ class InstitutionalStock {
     );
   }
 
-  factory InstitutionalStock.fromInstitutionalJson(Map<String, dynamic> json) =>
-      InstitutionalStock(
-        id: json['id']?.toString() ?? '',
-        symbol: json['symbol']?.toString() ?? '',
-        companyName: json['name']?.toString() ?? '',
-        price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
-        status: json['status']?.toString() ?? '',
-      );
+  factory InstitutionalStock.fromInstitutionalJson(
+    Map<String, dynamic> json,
+  ) => InstitutionalStock(
+    id: json['id']?.toString() ?? '',
+    symbol: json['symbol']?.toString() ?? '',
+    companyName: json['name']?.toString() ?? '',
+    price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+    status: json['status']?.toString() ?? '',
+    exchange: json['exchange']?.toString() ?? 'NSE',
+    direction: json['direction']?.toString() ?? 'UP',
+    referencePrice: double.tryParse(json['referencePrice']?.toString() ?? ''),
+    expectedReturn: double.tryParse(json['expectedReturn']?.toString() ?? ''),
+    reason: json['reason']?.toString(),
+  );
 }
 
 class OtcOrderRecord {

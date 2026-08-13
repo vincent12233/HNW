@@ -59,10 +59,6 @@ export class MarketDataService {
         quoteAsOf: instrument.quote.asOf,
         quoteFresh: true,
         status: item.status,
-        direction: item.direction,
-        referencePrice: item.referencePrice?.toFixed(4) ?? null,
-        expectedReturn: item.expectedReturn?.toFixed(2) ?? null,
-        reason: item.reason,
       }];
     });
   }

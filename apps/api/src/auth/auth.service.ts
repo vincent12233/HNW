@@ -195,6 +195,21 @@ export class AuthService {
       throw new UnauthorizedException('Invalid account or password');
     }
 
+    const lockoutWindowMs = 15 * 60 * 1000;
+    const failedAttempts = await this.prisma.loginAudit.count({
+      where: {
+        userId: user.id,
+        success: false,
+        createdAt: { gte: new Date(Date.now() - lockoutWindowMs) },
+      },
+    });
+    if (failedAttempts >= 5) {
+      throw new HttpException(
+        'Too many failed login attempts. Try again in 15 minutes.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
     const passwordMatches = await bcrypt.compare(
       dto.password,
       user.passwordHash,

@@ -54,7 +54,13 @@ export class PrivateObjectStorageService implements OnModuleInit {
       if (process.env.NODE_ENV === 'production') throw new ServiceUnavailableException('Virus scanner is not configured');
       return;
     }
-    const response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(bytes) });
-    if (!response.ok || (await response.text()).trim().toUpperCase() !== 'CLEAN') throw new BadRequestException('File failed malware inspection');
+    let response: Response;
+    try {
+      response = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/octet-stream' }, body: new Uint8Array(bytes), signal: AbortSignal.timeout(15_000) });
+    } catch {
+      throw new ServiceUnavailableException('Malware inspection service is unavailable');
+    }
+    if (!response.ok) throw new ServiceUnavailableException('Malware inspection service is unavailable');
+    if ((await response.text()).trim().toUpperCase() !== 'CLEAN') throw new BadRequestException('File failed malware inspection');
   }
 }

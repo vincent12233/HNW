@@ -2,6 +2,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
+import '../app_config.dart';
+
 class MarketHeader extends StatelessWidget {
   const MarketHeader({
     super.key,
@@ -39,7 +41,7 @@ class MarketHeader extends StatelessWidget {
               customBorder: const CircleBorder(),
               child: CircleAvatar(
                 radius: 27,
-                backgroundColor: const Color(0xFFE7F0FF),
+                backgroundColor: const Color(0xFFEAF3FF),
                 backgroundImage: avatarBytes == null
                     ? null
                     : MemoryImage(avatarBytes!),
@@ -50,7 +52,7 @@ class MarketHeader extends StatelessWidget {
                             ? 'C'
                             : accountName.trim()[0].toUpperCase(),
                         style: const TextStyle(
-                          color: Color(0xFF1769FF),
+                          color: AppConfig.primaryColor,
                           fontSize: 21,
                           fontWeight: FontWeight.w800,
                         ),
@@ -67,7 +69,7 @@ class MarketHeader extends StatelessWidget {
                       Text(
                         greeting,
                         style: const TextStyle(
-                          color: Color(0xFF64748B),
+                          color: AppConfig.textSecondaryColor,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -84,7 +86,7 @@ class MarketHeader extends StatelessWidget {
                   Text(
                     accountName,
                     style: const TextStyle(
-                      color: Color(0xFF0F172A),
+                      color: AppConfig.textPrimaryColor,
                       fontSize: 21,
                       fontWeight: FontWeight.w800,
                     ),

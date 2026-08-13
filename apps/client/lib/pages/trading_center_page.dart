@@ -253,7 +253,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FB),
+      backgroundColor: AppConfig.backgroundColor,
       body: SafeArea(
         child: Column(
           children: [

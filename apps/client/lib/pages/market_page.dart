@@ -800,12 +800,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF0B5CFF), Color(0xFF0648D8)],
+              colors: [
+                AppConfig.primaryDarkColor,
+                AppConfig.primaryGradientEnd,
+              ],
             ),
             borderRadius: BorderRadius.circular(12),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x220B5CFF),
+                color: Color(0x1A0878F9),
                 blurRadius: 20,
                 offset: Offset(0, 10),
               ),
@@ -885,7 +888,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     height: 54,
                     child: CustomPaint(
                       painter: _MiniLineChartPainter(
-                        color: const Color(0xFF4ADE80),
+                        color: AppConfig.chartGainColor,
                       ),
                     ),
                   ),
@@ -2472,7 +2475,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFF143D8D), Color(0xFF2563C7)],
+              colors: [
+                AppConfig.primaryDarkColor,
+                AppConfig.primaryGradientEnd,
+              ],
             ),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -2530,7 +2536,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     height: 62,
                     child: CustomPaint(
                       painter: const _MiniLineChartPainter(
-                        color: Color(0xFF4ADE80),
+                        color: AppConfig.chartGainColor,
                       ),
                     ),
                   ),

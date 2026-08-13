@@ -12,24 +12,24 @@ class AppTheme {
       splashFactory: InkSparkle.splashFactory,
       textTheme: const TextTheme(
         headlineLarge: TextStyle(
-          color: Color(0xFF111827),
+          color: AppConfig.textPrimaryColor,
           fontSize: 28,
           fontWeight: FontWeight.w800,
           height: 1.15,
         ),
         headlineMedium: TextStyle(
-          color: Color(0xFF111827),
+          color: AppConfig.textPrimaryColor,
           fontSize: 22,
           fontWeight: FontWeight.w800,
           height: 1.2,
         ),
         titleLarge: TextStyle(
-          color: Color(0xFF111827),
+          color: AppConfig.textPrimaryColor,
           fontSize: 18,
           fontWeight: FontWeight.w800,
         ),
         bodyMedium: TextStyle(
-          color: Color(0xFF334155),
+          color: AppConfig.textSecondaryColor,
           fontSize: 14,
           height: 1.35,
         ),
@@ -59,6 +59,22 @@ class AppTheme {
         labelTextStyle: WidgetStatePropertyAll(
           TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
         ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(0, 44),
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: Colors.white,
+        side: const BorderSide(color: AppConfig.borderColor),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+        labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+        visualDensity: VisualDensity.compact,
       ),
       dividerTheme: const DividerThemeData(color: AppConfig.borderColor),
       inputDecorationTheme: InputDecorationTheme(

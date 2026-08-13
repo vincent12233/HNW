@@ -579,7 +579,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     ),
                     decoration: BoxDecoration(
                       color: entry.key == selectedMoverFilter
-                          ? const Color(0xFFEAF2FF)
+                          ? const Color(0xFFEAF3FF)
                           : Colors.white,
                       borderRadius: BorderRadius.circular(7),
                       border: Border.all(color: AppConfig.borderColor),

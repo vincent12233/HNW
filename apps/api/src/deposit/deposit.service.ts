@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class DepositService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
 
   async createDepositRequest(
     userId: string,
@@ -90,7 +91,7 @@ export class DepositService {
     });
   }
 
-  async approveDeposit(depositId: string) {
+  async approveDeposit(depositId: string, actorId?: string) {
     const deposit = await this.prisma.depositRequest.findUnique({
       where: {
         id: depositId,
@@ -313,7 +314,7 @@ export class DepositService {
       }
     });
 
-    return {
+    const result = {
       message: 'Deposit approved',
 
       depositId,
@@ -324,9 +325,11 @@ export class DepositService {
 
       creditedAmount: availableAmount,
     };
+    if (actorId) await this.audit.createLog({ actorId, action: 'DEPOSIT_APPROVED', resource: 'deposit', resourceId: depositId, description: 'Deposit approved by finance operator', metadata: { depositAmount: String(deposit.amount), ipoRepayment: String(repayAmount), creditedAmount: String(availableAmount) } });
+    return result;
   }
 
-  async rejectDeposit(depositId: string, note?: string) {
+  async rejectDeposit(depositId: string, note?: string, actorId?: string) {
     const updated = await this.prisma.depositRequest.updateMany({
       where: {
         id: depositId,
@@ -342,6 +345,7 @@ export class DepositService {
       throw new NotFoundException('Pending deposit request not found');
     }
 
+    if (actorId) await this.audit.createLog({ actorId, action: 'DEPOSIT_REJECTED', resource: 'deposit', resourceId: depositId, description: note?.trim() || 'Deposit rejected by finance operator' });
     return {
       message: 'Deposit rejected',
       depositId,

@@ -58,13 +58,13 @@ export class WithdrawalController {
 
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  approve(@Param('id') id: string) {
-    return this.withdrawalService.approveWithdrawal(id);
+  approve(@Param('id') id: string, @Req() req: any) {
+    return this.withdrawalService.approveWithdrawal(id, req.user.userId);
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  reject(@Param('id') id: string, @Body() body: { note?: string }) {
-    return this.withdrawalService.rejectWithdrawal(id, body.note);
+  reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
+    return this.withdrawalService.rejectWithdrawal(id, body.note, req.user.userId);
   }
 }

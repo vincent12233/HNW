@@ -5,10 +5,11 @@ import {
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class WithdrawalService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
 
   async createRequest(
     userId: string,
@@ -95,8 +96,8 @@ export class WithdrawalService {
     });
   }
 
-  async approveWithdrawal(withdrawalId: string) {
-    return this.prisma.$transaction(async (tx) => {
+  async approveWithdrawal(withdrawalId: string, actorId?: string) {
+    const result = await this.prisma.$transaction(async (tx) => {
       const withdrawal = await tx.withdrawalRequest.findUnique({
         where: { id: withdrawalId },
       });
@@ -164,9 +165,11 @@ export class WithdrawalService {
         buyingPowerAfter,
       };
     });
+    if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_APPROVED', resource: 'withdrawal', resourceId: withdrawalId, description: 'Withdrawal approved by finance operator', metadata: { amount: String(result.amount) } });
+    return result;
   }
 
-  async rejectWithdrawal(withdrawalId: string, note?: string) {
+  async rejectWithdrawal(withdrawalId: string, note?: string, actorId?: string) {
     const withdrawal = await this.prisma.withdrawalRequest.findUnique({
       where: { id: withdrawalId },
     });
@@ -188,6 +191,7 @@ export class WithdrawalService {
     });
     const account = await this.prisma.account.findUnique({ where: { id: withdrawal.accountId } });
     if (account) await this.prisma.notification.create({ data: { userId: account.userId, type: 'WITHDRAWAL', title: 'Withdrawal rejected', body: `${withdrawal.orderNo ?? 'Your withdrawal'} was rejected.${note ? ` ${note}` : ''}`, referenceId: withdrawalId } });
+    if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_REJECTED', resource: 'withdrawal', resourceId: withdrawalId, description: note?.trim() || 'Withdrawal rejected by finance operator' });
     return rejected;
   }
 

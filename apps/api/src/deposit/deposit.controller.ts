@@ -43,13 +43,13 @@ export class DepositController {
 
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  approve(@Param('id') id: string) {
-    return this.depositService.approveDeposit(id);
+  approve(@Param('id') id: string, @Req() req: any) {
+    return this.depositService.approveDeposit(id, req.user.userId);
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  reject(@Param('id') id: string, @Body() body: { note?: string }) {
-    return this.depositService.rejectDeposit(id, body.note);
+  reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
+    return this.depositService.rejectDeposit(id, body.note, req.user.userId);
   }
 }

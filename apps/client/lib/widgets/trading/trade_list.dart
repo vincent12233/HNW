@@ -2,18 +2,103 @@ import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/stock_quote.dart';
+import '../../models/portfolio_position.dart';
+import '../../services/trading_service.dart';
+import '../../utils/number_formatters.dart';
 
 class TradeList extends StatelessWidget {
-  const TradeList({super.key, required this.stocks, required this.onTrade});
+  const TradeList({
+    super.key,
+    required this.stocks,
+    required this.positions,
+    required this.account,
+    required this.onTrade,
+  });
 
   final List<StockQuote> stocks;
+  final Map<String, PortfolioPosition> positions;
+  final TradingAccountSnapshot? account;
   final ValueChanged<StockQuote> onTrade;
 
   @override
   Widget build(BuildContext context) {
+    final invested = positions.values.fold<double>(
+      0,
+      (sum, position) => sum + position.averageCost * position.quantity,
+    );
+    final holdings = positions.values.fold<double>(0, (sum, position) {
+      final quote = stocks.where(
+        (item) =>
+            item.symbol == position.symbol &&
+            item.exchange == position.exchange,
+      );
+      return sum +
+          position.marketValue(
+            quote.isEmpty ? position.averageCost : quote.first.price,
+          );
+    });
+    final total = (account?.cashBalance ?? 0) + holdings;
+    final pnl = holdings - invested;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
       children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Text(
+                      'Trading Summary',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(Icons.visibility_outlined, size: 17),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _summary(
+                        'Total Portfolio Value',
+                        formatPrice(total),
+                        AppConfig.textPrimaryColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _summary(
+                        'Total Invested',
+                        formatPrice(invested),
+                        AppConfig.textPrimaryColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _summary(
+                        'Total P&L',
+                        '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                        pnl >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _summary(
+                        'Available Balance',
+                        formatPrice(account?.cashBalance ?? 0),
+                        AppConfig.textPrimaryColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
         _OverviewCard(
           icon: Icons.swap_horiz_rounded,
           title: 'Trades',
@@ -32,7 +117,7 @@ class TradeList extends StatelessWidget {
           icon: Icons.handshake_outlined,
           title: 'OTC',
           tag: 'OTC',
-          description: 'Over-the-counter opportunities will appear here',
+          description: 'Buy at the fixed price published by the backend',
           color: const Color(0xFF0D9488),
         ),
         _OverviewCard(
@@ -53,6 +138,29 @@ class TradeList extends StatelessWidget {
       ],
     );
   }
+
+  Widget _summary(String label, String value, Color color) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 7),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 2,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+        ),
+        const SizedBox(height: 7),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(color: color, fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _OverviewCard extends StatelessWidget {

@@ -1,9 +1,10 @@
-import { Body, Controller, Post, Req } from '@nestjs/common';
+import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -30,5 +31,37 @@ export class AuthController {
       ipAddress,
       userAgent,
     });
+  }
+
+  @Post('password-reset/request')
+  requestPasswordReset(@Body() body: { phone: string }) {
+    return this.authService.requestPasswordReset(body.phone);
+  }
+
+  @Post('password-reset/confirm')
+  confirmPasswordReset(@Body() body: { phone: string; code: string; newPassword: string }) {
+    return this.authService.confirmPasswordReset(body.phone, body.code, body.newPassword);
+  }
+
+  @Post('google')
+  google(@Body() body: { idToken: string }) {
+    return this.authService.googleLogin(body.idToken);
+  }
+
+  @Post('google/link')
+  @UseGuards(JwtAuthGuard)
+  linkGoogle(@Req() req: any, @Body() body: { idToken: string }) {
+    return this.authService.linkGoogle(req.user.userId, body.idToken);
+  }
+
+  @Post('biometric/token')
+  @UseGuards(JwtAuthGuard)
+  biometricToken(@Req() req: any) {
+    return this.authService.createBiometricToken(req.user.userId);
+  }
+
+  @Post('biometric/login')
+  biometricLogin(@Body() body: { biometricToken: string }) {
+    return this.authService.biometricLogin(body.biometricToken);
   }
 }

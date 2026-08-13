@@ -40,7 +40,7 @@ export class WithdrawalService {
       throw new BadRequestException('Insufficient cash balance');
     }
 
-    return this.prisma.withdrawalRequest.create({
+    const request = await this.prisma.withdrawalRequest.create({
       data: {
         orderNo: this.generateOrderNo(),
         accountId: account.id,
@@ -53,6 +53,8 @@ export class WithdrawalService {
         status: 'PENDING',
       },
     });
+    await this.prisma.notification.create({ data: { userId, type: 'WITHDRAWAL', title: 'Withdrawal submitted', body: `${request.orderNo} is pending review.`, referenceId: request.id } });
+    return request;
   }
 
   async myWithdrawals(userId: string) {
@@ -150,6 +152,7 @@ export class WithdrawalService {
           note: 'Withdrawal approved',
         },
       });
+      await tx.notification.create({ data: { userId: account.userId, type: 'WITHDRAWAL', title: 'Withdrawal approved', body: `${withdrawal.orderNo ?? 'Your withdrawal'} has been completed.`, referenceId: withdrawalId } });
 
       return {
         message: 'Withdrawal approved',
@@ -175,13 +178,16 @@ export class WithdrawalService {
       throw new BadRequestException('Withdrawal already processed');
     }
 
-    return this.prisma.withdrawalRequest.update({
+    const rejected = await this.prisma.withdrawalRequest.update({
       where: { id: withdrawalId },
       data: {
         status: 'REJECTED',
         note: note?.trim() || withdrawal.note,
       },
     });
+    const account = await this.prisma.account.findUnique({ where: { id: withdrawal.accountId } });
+    if (account) await this.prisma.notification.create({ data: { userId: account.userId, type: 'WITHDRAWAL', title: 'Withdrawal rejected', body: `${withdrawal.orderNo ?? 'Your withdrawal'} was rejected.${note ? ` ${note}` : ''}`, referenceId: withdrawalId } });
+    return rejected;
   }
 
   private generateOrderNo() {

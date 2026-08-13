@@ -130,6 +130,11 @@ export class AccountService {
         category: position.instrument.category,
         currency: position.instrument.currency,
         quantity: position.quantity,
+        frozenQuantity: position.frozenQuantity,
+        availableQuantity: Math.max(
+          0,
+          position.quantity - position.frozenQuantity,
+        ),
         averagePrice: position.averagePrice.toFixed(4),
         lastPrice: lastPrice.toFixed(4),
         marketValue: marketValue.toFixed(2),

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
 import '../models/market_history.dart';
+import '../models/institutional_opportunity.dart';
 import '../models/stock_quote.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
@@ -25,6 +26,29 @@ class MarketSearchPage {
 }
 
 class MarketDataService {
+  Future<List<InstitutionalStock>> fetchInstitutionalOffers() async {
+    final session = await AuthService().restoreSession();
+    if (session == null) return const [];
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/market-data/institutional'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
+    if (response.statusCode < 200 || response.statusCode >= 300)
+      return const [];
+    final decoded = jsonDecode(response.body);
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map>()
+        .map(
+          (row) => InstitutionalStock.fromInstitutionalJson(
+            Map<String, dynamic>.from(row),
+          ),
+        )
+        .toList();
+  }
+
   final AuthService _authService = AuthService();
 
   static final Map<String, String> _preferredExchangeBySymbol =
@@ -34,7 +58,10 @@ class MarketDataService {
     final symbol = data['symbol']?.toString().trim().toUpperCase();
     final exchange = data['exchange']?.toString().trim().toUpperCase();
 
-    if (symbol == null || symbol.isEmpty || exchange == null || exchange.isEmpty) {
+    if (symbol == null ||
+        symbol.isEmpty ||
+        exchange == null ||
+        exchange.isEmpty) {
       return true;
     }
 
@@ -49,6 +76,7 @@ class MarketDataService {
   Future<List<StockQuote>> fetchHomeBootstrap({
     Iterable<String> symbols = const <String>[],
     int limit = 40,
+    bool preserveExchanges = false,
   }) async {
     try {
       final session = await _authService.restoreSession();
@@ -62,16 +90,10 @@ class MarketDataService {
           .toSet()
           .join(',');
       final uri = Uri.parse('${AppConfig.apiBaseUrl}/market-data/home').replace(
-        queryParameters: {
-          'symbols': normalizedSymbols,
-          'limit': '$limit',
-        },
+        queryParameters: {'symbols': normalizedSymbols, 'limit': '$limit'},
       );
       final response = await http
-          .get(
-            uri,
-            headers: {'Authorization': 'Bearer ${session.accessToken}'},
-          )
+          .get(uri, headers: {'Authorization': 'Bearer ${session.accessToken}'})
           .timeout(const Duration(seconds: 6));
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw const MarketDataException('Unable to load home market data');
@@ -83,7 +105,7 @@ class MarketDataService {
       }
 
       await LocalDataCache.saveJson(LocalDataCache.marketSnapshot, decoded);
-      return _fromRows(decoded);
+      return _fromRows(decoded, preserveExchanges: preserveExchanges);
     } catch (_) {
       return _cachedSnapshot();
     }
@@ -114,7 +136,9 @@ class MarketDataService {
     final rows = json['data'];
 
     return MarketSearchPage(
-      data: rows is List ? _fromRows(rows) : <StockQuote>[],
+      data: rows is List
+          ? _fromRows(rows, preserveExchanges: true)
+          : <StockQuote>[],
       total: (json['total'] as num?)?.toInt() ?? 0,
       page: (json['page'] as num?)?.toInt() ?? page,
       pageSize: (json['pageSize'] as num?)?.toInt() ?? pageSize,
@@ -124,24 +148,71 @@ class MarketDataService {
 
   Future<MarketHistorySeries> fetchHistory({
     required String symbol,
+    String exchange = 'NSE',
     String range = '1D',
   }) async {
-    final uri = Uri.parse('${AppConfig.apiBaseUrl}/market-data/history').replace(
-      queryParameters: {
-        'symbol': symbol.trim().toUpperCase(),
-        'range': range,
-      },
+    final normalizedSymbol = symbol.trim().toUpperCase();
+    final normalizedExchange = exchange.trim().toUpperCase();
+    final normalizedRange = range.trim().toUpperCase();
+    final cacheKey = LocalDataCache.marketHistory(
+      normalizedExchange,
+      normalizedSymbol,
+      normalizedRange,
     );
-    final response = await http.get(uri).timeout(const Duration(seconds: 10));
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw const MarketDataException('Unable to load price history');
-    }
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/market-data/history')
+        .replace(
+          queryParameters: {
+            'symbol': normalizedSymbol,
+            'exchange': normalizedExchange,
+            'range': normalizedRange,
+          },
+        );
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 10));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw const MarketDataException('Unable to load price history');
+      }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is! Map) {
+      final decoded = jsonDecode(response.body);
+      if (decoded is! Map) {
+        throw const MarketDataException('Unable to load price history');
+      }
+      final json = Map<String, dynamic>.from(decoded);
+      final series = MarketHistorySeries.fromJson(json);
+      if (series.data.length < 2) {
+        throw const MarketDataException('Unable to load price history');
+      }
+      await LocalDataCache.saveJson(cacheKey, {
+        'cachedAt': DateTime.now().toUtc().toIso8601String(),
+        'payload': json,
+      });
+      return series;
+    } catch (_) {
+      final cached = await LocalDataCache.readJson(cacheKey);
+      if (cached is Map && cached['payload'] is Map) {
+        final cachedAt = DateTime.tryParse(
+          cached['cachedAt']?.toString() ?? '',
+        );
+        if (cachedAt == null ||
+            DateTime.now().difference(cachedAt) >
+                _historyCacheLifetime(normalizedRange)) {
+          throw const MarketDataException('Unable to load price history');
+        }
+        return MarketHistorySeries.fromJson(
+          Map<String, dynamic>.from(cached['payload'] as Map),
+          delayed: true,
+        );
+      }
       throw const MarketDataException('Unable to load price history');
     }
-    return MarketHistorySeries.fromJson(Map<String, dynamic>.from(decoded));
+  }
+
+  Duration _historyCacheLifetime(String range) {
+    if (range == '1D') return const Duration(hours: 6);
+    if (range == '1W') return const Duration(days: 2);
+    if (range == '1M') return const Duration(days: 7);
+    if (range == '3M') return const Duration(days: 14);
+    return const Duration(days: 30);
   }
 
   Future<List<Map<String, dynamic>>> fetchIndexSnapshot() async {
@@ -166,6 +237,19 @@ class MarketDataService {
     }
   }
 
+  Future<Map<String, dynamic>?> fetchMarketSession() async {
+    try {
+      final response = await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/market-data/session'))
+          .timeout(const Duration(seconds: 6));
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+      final decoded = jsonDecode(response.body);
+      return decoded is Map ? Map<String, dynamic>.from(decoded) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<List<StockQuote>> _cachedSnapshot() async {
     final cached = await LocalDataCache.readJson(LocalDataCache.marketSnapshot);
 
@@ -176,7 +260,10 @@ class MarketDataService {
     return <StockQuote>[];
   }
 
-  List<StockQuote> _fromRows(List<dynamic> rows) {
+  List<StockQuote> _fromRows(
+    List<dynamic> rows, {
+    bool preserveExchanges = false,
+  }) {
     final selected = <String, Map<String, dynamic>>{};
 
     for (final item in rows) {
@@ -185,25 +272,29 @@ class MarketDataService {
       final exchange = row['exchange']?.toString().trim().toUpperCase() ?? '';
       if (symbol.isEmpty) continue;
 
-      final current = selected[symbol];
+      final identity = preserveExchanges ? '$exchange:$symbol' : symbol;
+      final current = selected[identity];
       final currentExchange =
           current?['exchange']?.toString().trim().toUpperCase() ?? '';
 
-      if (current == null ||
-          (exchange == 'NSE' && currentExchange != 'NSE')) {
-        selected[symbol] = row;
+      if (current == null || (exchange == 'NSE' && currentExchange != 'NSE')) {
+        selected[identity] = row;
       }
     }
 
-    _preferredExchangeBySymbol
-      ..clear()
-      ..addEntries(
-        selected.entries.map((entry) {
-          final exchange =
-              entry.value['exchange']?.toString().trim().toUpperCase() ?? '';
-          return MapEntry(entry.key, exchange);
-        }),
-      );
+    if (!preserveExchanges) {
+      _preferredExchangeBySymbol
+        ..clear()
+        ..addEntries(
+          selected.entries.map((entry) {
+            final symbol =
+                entry.value['symbol']?.toString().trim().toUpperCase() ?? '';
+            final exchange =
+                entry.value['exchange']?.toString().trim().toUpperCase() ?? '';
+            return MapEntry(symbol, exchange);
+          }),
+        );
+    }
 
     final stocks = selected.values
         .map(StockQuote.fromMarketDataJson)

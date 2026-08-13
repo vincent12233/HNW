@@ -1,10 +1,23 @@
 import 'package:intl/intl.dart';
 
-final NumberFormat _priceFormatter = NumberFormat('#,##0.00');
-final NumberFormat _integerFormatter = NumberFormat('#,##0');
+final NumberFormat _priceFormatter = NumberFormat.currency(
+  locale: 'en_IN',
+  symbol: '',
+  decimalDigits: 2,
+);
+final NumberFormat _integerFormatter = NumberFormat.decimalPattern('en_IN');
 
 String formatPrice(num value) {
   return '₹${_priceFormatter.format(value)}';
+}
+
+String formatPriceValue(dynamic value) {
+  return formatPrice(num.tryParse(value?.toString() ?? '') ?? 0);
+}
+
+String formatSignedPrice(num value) {
+  final sign = value >= 0 ? '+' : '-';
+  return '$sign₹${_priceFormatter.format(value.abs())}';
 }
 
 String formatIndex(num value) {

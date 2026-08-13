@@ -5,11 +5,13 @@ class MarketHeader extends StatelessWidget {
     super.key,
     required this.accountName,
     required this.onNotificationTap,
+    required this.onSearchTap,
     this.notificationCount = 0,
   });
 
   final String accountName;
   final VoidCallback onNotificationTap;
+  final VoidCallback onSearchTap;
   final int notificationCount;
 
   @override
@@ -19,6 +21,21 @@ class MarketHeader extends StatelessWidget {
       children: [
         Row(
           children: [
+            CircleAvatar(
+              radius: 27,
+              backgroundColor: const Color(0xFFE7F0FF),
+              child: Text(
+                accountName.trim().isEmpty
+                    ? 'C'
+                    : accountName.trim()[0].toUpperCase(),
+                style: const TextStyle(
+                  color: Color(0xFF1769FF),
+                  fontSize: 21,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -52,6 +69,11 @@ class MarketHeader extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Search',
+              onPressed: onSearchTap,
+              icon: const Icon(Icons.search_rounded, size: 28),
             ),
             Stack(
               clipBehavior: Clip.none,

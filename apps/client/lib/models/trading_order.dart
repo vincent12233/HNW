@@ -8,12 +8,18 @@ class TradingOrder {
     this.limitPrice,
     this.averageFillPrice,
     this.rejectionReason,
+    this.category = '',
     this.filledQuantity = 0,
     required this.symbol,
+    this.exchange = 'NSE',
     required this.isBuy,
     required this.quantity,
     required this.price,
     required this.placedAt,
+    this.updatedAt,
+    this.completedAt,
+    this.cancelledAt,
+    this.fills = const <TradingFill>[],
   });
 
   final String? orderId;
@@ -24,12 +30,18 @@ class TradingOrder {
   final double? limitPrice;
   final double? averageFillPrice;
   final String? rejectionReason;
+  final String category;
   final int filledQuantity;
   final String symbol;
+  final String exchange;
   final bool isBuy;
   final int quantity;
   final double price;
   final DateTime placedAt;
+  final DateTime? updatedAt;
+  final DateTime? completedAt;
+  final DateTime? cancelledAt;
+  final List<TradingFill> fills;
 
   int get remainingQuantity =>
       (quantity - filledQuantity).clamp(0, quantity).toInt();
@@ -47,12 +59,18 @@ class TradingOrder {
       limitPrice: _nullableDoubleValue(json['limitPrice']),
       averageFillPrice: _nullableDoubleValue(json['averageFillPrice']),
       rejectionReason: json['rejectionReason']?.toString(),
+      category: json['category']?.toString() ?? '',
       filledQuantity: _intValue(json['filledQuantity']),
       symbol: json['symbol'] as String,
+      exchange: (json['exchange'] ?? 'NSE').toString().toUpperCase(),
       isBuy: json['isBuy'] as bool,
       quantity: json['quantity'] as int,
       price: (json['price'] as num).toDouble(),
       placedAt: DateTime.parse(json['placedAt'] as String),
+      updatedAt: _nullableDateTime(json['updatedAt']),
+      completedAt: _nullableDateTime(json['completedAt']),
+      cancelledAt: _nullableDateTime(json['cancelledAt']),
+      fills: _fillsFromJson(json['fills'] ?? json['trades']),
     );
   }
 
@@ -67,18 +85,28 @@ class TradingOrder {
     final limitPrice = _nullableDoubleValue(json['limitPrice']);
     final averageFillPrice = _nullableDoubleValue(json['averageFillPrice']);
     final firstTradePrice = _nullableDoubleValue(firstTrade?['price']);
+    final clientOrderId = json['clientOrderId']?.toString() ?? '';
+    final sourceCategory = clientOrderId.startsWith('OTC-')
+        ? 'OTC'
+        : clientOrderId.startsWith('IPO-')
+        ? 'IPO'
+        : (instrument?['category'] ?? json['category'] ?? '').toString();
 
     return TradingOrder(
       orderId: json['id']?.toString() ?? json['orderId']?.toString(),
-      clientOrderId: json['clientOrderId']?.toString(),
+      clientOrderId: clientOrderId.isEmpty ? null : clientOrderId,
       status: json['status']?.toString() ?? 'FILLED',
       type: json['type']?.toString() ?? 'MARKET',
       timeInForce: json['timeInForce']?.toString() ?? 'DAY',
       limitPrice: limitPrice,
       averageFillPrice: averageFillPrice,
       rejectionReason: json['rejectionReason']?.toString(),
+      category: sourceCategory,
       filledQuantity: filledQuantity,
       symbol: (instrument?['symbol'] ?? json['symbol'] ?? '').toString(),
+      exchange: (instrument?['exchange'] ?? json['exchange'] ?? 'NSE')
+          .toString()
+          .toUpperCase(),
       isBuy: json['side']?.toString() != 'SELL',
       quantity: quantity > 0 ? quantity : filledQuantity,
       price: firstTradePrice ?? averageFillPrice ?? limitPrice ?? 0,
@@ -87,6 +115,10 @@ class TradingOrder {
             (json['placedAt'] ?? json['createdAt'] ?? '').toString(),
           ) ??
           DateTime.now(),
+      updatedAt: _nullableDateTime(json['updatedAt']),
+      completedAt: _nullableDateTime(json['completedAt']),
+      cancelledAt: _nullableDateTime(json['cancelledAt']),
+      fills: _fillsFromJson(trades),
     );
   }
 
@@ -94,6 +126,7 @@ class TradingOrder {
     return <String, dynamic>{
       'orderId': orderId,
       'symbol': symbol,
+      'exchange': exchange,
       'clientOrderId': clientOrderId,
       'status': status,
       'type': type,
@@ -101,11 +134,16 @@ class TradingOrder {
       'limitPrice': limitPrice,
       'averageFillPrice': averageFillPrice,
       'rejectionReason': rejectionReason,
+      'category': category,
       'filledQuantity': filledQuantity,
       'isBuy': isBuy,
       'quantity': quantity,
       'price': price,
       'placedAt': placedAt.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+      'completedAt': completedAt?.toIso8601String(),
+      'cancelledAt': cancelledAt?.toIso8601String(),
+      'fills': fills.map((fill) => fill.toJson()).toList(),
     };
   }
 
@@ -123,6 +161,67 @@ class TradingOrder {
         '${twoDigits(placedAt.minute)}';
   }
 }
+
+class TradingFill {
+  const TradingFill({
+    required this.executionId,
+    required this.quantity,
+    required this.price,
+    required this.grossAmount,
+    required this.fees,
+    required this.netAmount,
+    required this.executedAt,
+  });
+
+  final String executionId;
+  final int quantity;
+  final double price;
+  final double grossAmount;
+  final double fees;
+  final double netAmount;
+  final DateTime executedAt;
+
+  factory TradingFill.fromJson(Map<String, dynamic> json) {
+    return TradingFill(
+      executionId: json['executionId']?.toString() ?? '',
+      quantity: _intValue(json['quantity']),
+      price: _doubleValue(json['price']),
+      grossAmount: _doubleValue(json['grossAmount']),
+      fees: _doubleValue(json['fees']),
+      netAmount: _doubleValue(json['netAmount']),
+      executedAt:
+          _nullableDateTime(json['executedAt']) ??
+          DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+    );
+  }
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'executionId': executionId,
+    'quantity': quantity,
+    'price': price,
+    'grossAmount': grossAmount,
+    'fees': fees,
+    'netAmount': netAmount,
+    'executedAt': executedAt.toIso8601String(),
+  };
+}
+
+List<TradingFill> _fillsFromJson(dynamic value) {
+  if (value is! List) return const <TradingFill>[];
+  return value
+      .whereType<Map>()
+      .map((row) => TradingFill.fromJson(Map<String, dynamic>.from(row)))
+      .where(
+        (fill) =>
+            fill.quantity > 0 &&
+            fill.price > 0 &&
+            fill.executedAt.millisecondsSinceEpoch > 0,
+      )
+      .toList();
+}
+
+DateTime? _nullableDateTime(dynamic value) =>
+    DateTime.tryParse(value?.toString() ?? '');
 
 int _intValue(dynamic value) {
   if (value is int) return value;

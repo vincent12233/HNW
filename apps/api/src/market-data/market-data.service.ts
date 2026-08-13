@@ -25,6 +25,41 @@ export class MarketDataService {
     return this.mapSnapshot(instruments);
   }
 
+  async getInstitutionalOffers() {
+    const configured = await this.prisma.adminWatchlistItem.findMany({
+      where: { category: { in: ['INSTITUTIONAL', 'Institutional', 'INST'] } },
+      orderBy: { updatedAt: 'desc' },
+    });
+    if (!configured.length) return [];
+    const instruments = await this.prisma.instrument.findMany({
+      where: {
+        isActive: true,
+        symbol: { in: configured.map((item) => item.symbol.trim().toUpperCase()) },
+        exchange: { in: [Exchange.NSE, Exchange.BSE] },
+        type: InstrumentType.EQUITY,
+      },
+      include: { quote: true },
+    });
+    const now = Date.now();
+    const staleAfterMs = this.config.get<number>('MARKET_DATA_STALE_AFTER_MS', 120000);
+    return configured.flatMap((item) => {
+      const instrument = instruments.find((candidate) =>
+        candidate.symbol === item.symbol.trim().toUpperCase() && candidate.exchange.toString() === item.market.trim().toUpperCase());
+      if (!instrument?.quote || now - instrument.quote.asOf.getTime() > staleAfterMs) return [];
+      return [{
+        id: item.id,
+        instrumentId: instrument.id,
+        symbol: instrument.symbol,
+        exchange: instrument.exchange,
+        name: instrument.name,
+        price: instrument.quote.lastPrice.toFixed(4),
+        quoteAsOf: instrument.quote.asOf,
+        quoteFresh: true,
+        status: item.status,
+      }];
+    });
+  }
+
   async getHomeBootstrap(userId: string, symbols = '', limit = 40) {
     const requestedSymbols = [...new Set(
       symbols.split(',').map((symbol) => symbol.trim().toUpperCase()).filter(Boolean),

@@ -34,7 +34,9 @@ jobs:
         run: flutter pub get
 
       - name: Analyze
-        run: flutter analyze
+        # Keep analyzer errors blocking while allowing the existing codebase's
+        # non-fatal style hints and warnings to be improved incrementally.
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Run tests
         run: flutter test

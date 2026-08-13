@@ -10,16 +10,21 @@ export class AdminProductsService {
     return this.prisma.adminWatchlistItem.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
-  createWatchlist(body: any) {
+  async createWatchlist(body: any) {
     this.require(body.symbol, '请输入股票代码');
     this.require(body.name, '请输入股票名称');
-    return this.prisma.adminWatchlistItem.create({ data: this.watchlistData(body) });
+    const data = this.watchlistData(body);
+    const item = await this.prisma.adminWatchlistItem.create({ data });
+    await this.markInstitutionalInstrument(data.symbol, data.market);
+    return item;
   }
 
-  updateWatchlist(id: string, body: any) {
-    return this.updateOrThrow(() =>
+  async updateWatchlist(id: string, body: any) {
+    const item = await this.updateOrThrow(() =>
       this.prisma.adminWatchlistItem.update({ where: { id }, data: this.watchlistData(body) }),
     );
+    await this.markInstitutionalInstrument(item.symbol, item.market);
+    return item;
   }
 
   updateWatchlistStatus(id: string, status: string) {
@@ -174,6 +179,16 @@ export class AdminProductsService {
     if (!String(value ?? '').trim()) {
       throw new BadRequestException(message);
     }
+  }
+
+  private async markInstitutionalInstrument(symbol: string, market: string) {
+    await this.prisma.instrument.updateMany({
+      where: {
+        symbol: symbol.trim().toUpperCase(),
+        exchange: market.trim().toUpperCase() as any,
+      },
+      data: { category: 'INSTITUTIONAL' },
+    });
   }
 
   private async updateOrThrow<T>(operation: () => Promise<T>) {

@@ -52,4 +52,18 @@ describe('MarketSessionService', () => {
 
     expect(service.isDayOrderExpired(placedAt, new Date('2026-08-13T03:00:00.000Z'))).toBe(true);
   });
+
+  it('returns client-safe session status without market-data source details', () => {
+    const service = createService();
+    const at = new Date('2026-08-12T05:00:00.000Z');
+
+    expect(service.getStatus(at)).toEqual({
+      isOpen: true,
+      isTradingDay: true,
+      timezone: 'Asia/Kolkata',
+      openTime: '09:15',
+      closeTime: '15:30',
+      asOf: at,
+    });
+  });
 });

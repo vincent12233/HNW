@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
 import '../models/portfolio_position.dart';
+import '../models/account_transaction.dart';
 import '../models/trading_order.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
@@ -48,7 +49,9 @@ class TradingService {
       final decoded = jsonDecode(response.body);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw TradingException(_apiMessage(decoded, 'Unable to load portfolio'));
+        throw TradingException(
+          _apiMessage(decoded, 'Unable to load portfolio'),
+        );
       }
 
       if (decoded is! Map<String, dynamic>) {
@@ -103,6 +106,37 @@ class TradingService {
     }
   }
 
+  Future<List<AccountTransaction>> fetchTransactions() async {
+    final session = await _authService.restoreSession();
+    if (session == null || session.accessToken.isEmpty) return const [];
+    final response = await http
+        .get(
+          Uri.parse(
+            '${AppConfig.apiBaseUrl}/account/transactions?pageSize=100',
+          ),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      return const [];
+    }
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw TradingException(
+        _apiMessage(decoded, 'Unable to load transactions'),
+      );
+    }
+    final rows = decoded is Map ? decoded['data'] : null;
+    if (rows is! List) return const [];
+    return rows
+        .whereType<Map>()
+        .map(
+          (row) => AccountTransaction.fromJson(Map<String, dynamic>.from(row)),
+        )
+        .toList();
+  }
+
   Future<TradingOrder> placeOrder(TradingOrder order) async {
     final session = await _authService.restoreSession();
 
@@ -112,8 +146,8 @@ class TradingService {
 
     final body = <String, dynamic>{
       'clientOrderId':
-          'APP-${DateTime.now().microsecondsSinceEpoch}-${order.symbol}',
-      'exchange': 'NSE',
+          'APP-${DateTime.now().microsecondsSinceEpoch}-${order.exchange}-${order.symbol}',
+      'exchange': order.exchange,
       'symbol': order.symbol,
       'side': order.isBuy ? 'BUY' : 'SELL',
       'type': order.type,
@@ -222,11 +256,15 @@ List<TradingOrder> _ordersFromRows(List<dynamic> rows) {
 class TradingAccountSnapshot {
   const TradingAccountSnapshot({
     required this.cashBalance,
+    required this.buyingPower,
+    required this.frozenBalance,
     required this.realizedProfitLoss,
     required this.positions,
   });
 
   final double cashBalance;
+  final double buyingPower;
+  final double frozenBalance;
   final double realizedProfitLoss;
   final List<PortfolioPosition> positions;
 
@@ -237,6 +275,10 @@ class TradingAccountSnapshot {
 
     return TradingAccountSnapshot(
       cashBalance: _doubleValue(balances['cashBalance']),
+      buyingPower: _doubleValue(
+        balances['buyingPower'] ?? balances['cashBalance'],
+      ),
+      frozenBalance: _doubleValue(balances['frozenBalance']),
       realizedProfitLoss: _doubleValue(pnl['realizedPnl']),
       positions: positionRows is List
           ? positionRows

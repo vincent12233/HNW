@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../models/stock_quote.dart';
+import '../utils/number_formatters.dart';
 import 'stock_logo.dart';
 
 class MostActive extends StatelessWidget {
@@ -128,7 +129,7 @@ class MostActive extends StatelessWidget {
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
                                 Text(
-                                  '₹${stock.price.toStringAsFixed(2)}',
+                                  formatPrice(stock.price),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),

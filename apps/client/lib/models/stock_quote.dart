@@ -15,15 +15,20 @@ class StockQuote {
     double? low,
     double? bid,
     double? ask,
+    String exchange = 'NSE',
   }) {
     final normalizedSymbol = symbol.trim().toUpperCase();
-    final previous = _metadata[normalizedSymbol];
+    final normalizedExchange = exchange.trim().toUpperCase() == 'BSE'
+        ? 'BSE'
+        : 'NSE';
+    final metadataKey = '$normalizedExchange:$normalizedSymbol';
+    final previous = _metadata[metadataKey];
     final resolvedName = name.isNotEmpty ? name : previous?.name ?? '';
     final resolvedLogoUrl = logoUrl ?? previous?.logoUrl;
     final resolvedCategory = category ?? previous?.category;
 
     if (normalizedSymbol.isNotEmpty) {
-      _metadata[normalizedSymbol] = _StockMetadata(
+      _metadata[metadataKey] = _StockMetadata(
         resolvedName,
         resolvedLogoUrl,
         resolvedCategory,
@@ -46,6 +51,7 @@ class StockQuote {
       low: low,
       bid: bid,
       ask: ask,
+      exchange: normalizedExchange,
     );
   }
 
@@ -65,6 +71,7 @@ class StockQuote {
     this.low,
     this.bid,
     this.ask,
+    this.exchange = 'NSE',
   });
 
   static final Map<String, _StockMetadata> _metadata =
@@ -85,6 +92,7 @@ class StockQuote {
   final double? low;
   final double? bid;
   final double? ask;
+  final String exchange;
 
   factory StockQuote.fromMarketDataJson(Map<String, dynamic> json) {
     final price = _doubleValue(json['price']) ?? 0;
@@ -97,6 +105,9 @@ class StockQuote {
         : ((price - previousClose) / previousClose) * 100;
     final updatedAt = DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
+    final age = DateTime.now().difference(updatedAt);
+    final quoteFresh = json['quoteFresh'] == true &&
+        age <= const Duration(minutes: 2);
 
     return StockQuote(
       json['symbol']?.toString() ?? '',
@@ -107,13 +118,64 @@ class StockQuote {
       updatedAt,
       logoUrl: json['logoUrl']?.toString(),
       category: json['category']?.toString(),
-      quoteFresh: json['quoteFresh'] == true,
+      quoteFresh: quoteFresh,
       previousClose: previousClose > 0 ? previousClose : null,
       open: _positiveDoubleValue(json['open']),
       high: _positiveDoubleValue(json['high']),
       low: _positiveDoubleValue(json['low']),
       bid: _positiveDoubleValue(json['bid']),
       ask: _positiveDoubleValue(json['ask']),
+      exchange: json['exchange']?.toString() ?? 'NSE',
+    );
+  }
+
+  static StockQuote? applyRealtime(
+    StockQuote current,
+    Map<String, dynamic> json,
+  ) {
+    final symbol = json['symbol']?.toString().trim().toUpperCase();
+    final exchange = json['exchange']?.toString().trim().toUpperCase();
+    if (symbol != current.symbol ||
+        (exchange != null &&
+            exchange.isNotEmpty &&
+            exchange != current.exchange)) {
+      return null;
+    }
+
+    final price = _positiveDoubleValue(json['price']);
+    if (price == null) return null;
+    final updatedAt = DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+        current.updatedAt;
+    final change = _doubleValue(json['change']) ??
+        (current.previousClose != null && current.previousClose! > 0
+            ? ((price - current.previousClose!) / current.previousClose!) * 100
+            : current.change);
+
+    return StockQuote(
+      current.symbol,
+      current.name,
+      price,
+      change,
+      _intValue(json['volume']) > 0
+          ? _intValue(json['volume'])
+          : current.volume,
+      updatedAt,
+      logoUrl: current.logoUrl,
+      category: current.category,
+      quoteFresh:
+          DateTime.now().difference(updatedAt) <= const Duration(minutes: 2),
+      previousClose: _realtimePrice(
+        json,
+        'previousClose',
+        'previousClose',
+        current.previousClose,
+      ),
+      open: _realtimePrice(json, 'openPrice', 'open', current.open),
+      high: _realtimePrice(json, 'highPrice', 'high', current.high),
+      low: _realtimePrice(json, 'lowPrice', 'low', current.low),
+      bid: _realtimePrice(json, 'bidPrice', 'bid', current.bid),
+      ask: _realtimePrice(json, 'askPrice', 'ask', current.ask),
+      exchange: current.exchange,
     );
   }
 }
@@ -141,3 +203,13 @@ double? _positiveDoubleValue(dynamic value) {
   final parsed = _doubleValue(value);
   return parsed != null && parsed > 0 ? parsed : null;
 }
+
+double? _realtimePrice(
+  Map<String, dynamic> json,
+  String primaryKey,
+  String fallbackKey,
+  double? current,
+) =>
+    _positiveDoubleValue(json[primaryKey]) ??
+    _positiveDoubleValue(json[fallbackKey]) ??
+    current;

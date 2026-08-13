@@ -164,6 +164,15 @@ export class BusinessController {
     return this.businessService.myTrades(req.user.userId, query);
   }
 
+  @Get('my-trade-pairs')
+  @Roles(UserRole.BUSINESS)
+  myTradePairs(
+    @Req() req: any,
+    @Query('customerId') customerId?: string,
+  ) {
+    return this.businessService.myTradePairs(req.user.userId, customerId);
+  }
+
   @Get('my-positions')
   @Roles(UserRole.BUSINESS)
   myPositions(

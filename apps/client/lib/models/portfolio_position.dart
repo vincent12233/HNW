@@ -5,15 +5,19 @@ class PortfolioPosition {
     required this.category,
     this.logoUrl,
     required this.quantity,
+    int? availableQuantity,
     required this.averageCost,
-  });
+    this.exchange = 'NSE',
+  }) : availableQuantity = availableQuantity ?? quantity;
 
   final String symbol;
   final String name;
   final String category;
   final String? logoUrl;
   final int quantity;
+  final int availableQuantity;
   final double averageCost;
+  final String exchange;
 
   factory PortfolioPosition.fromJson(Map<String, dynamic> json) {
     return PortfolioPosition(
@@ -22,7 +26,9 @@ class PortfolioPosition {
       category: (json['category'] ?? '').toString(),
       logoUrl: json['logoUrl']?.toString(),
       quantity: json['quantity'] as int,
+      availableQuantity: _nullableIntValue(json['availableQuantity']),
       averageCost: (json['averageCost'] as num).toDouble(),
+      exchange: (json['exchange'] ?? 'NSE').toString().toUpperCase(),
     );
   }
 
@@ -35,7 +41,11 @@ class PortfolioPosition {
       category: (instrument?['category'] ?? json['category'] ?? '').toString(),
       logoUrl: (instrument?['logoUrl'] ?? json['logoUrl'])?.toString(),
       quantity: _intValue(json['quantity']),
+      availableQuantity: _nullableIntValue(json['availableQuantity']),
       averageCost: _doubleValue(json['averagePrice'] ?? json['averageCost']),
+      exchange: (instrument?['exchange'] ?? json['exchange'] ?? 'NSE')
+          .toString()
+          .toUpperCase(),
     );
   }
 
@@ -46,7 +56,9 @@ class PortfolioPosition {
       'category': category,
       'logoUrl': logoUrl,
       'quantity': quantity,
+      'availableQuantity': availableQuantity,
       'averageCost': averageCost,
+      'exchange': exchange,
     };
   }
 
@@ -77,6 +89,11 @@ int _intValue(dynamic value) {
   }
 
   return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+int? _nullableIntValue(dynamic value) {
+  if (value == null) return null;
+  return _intValue(value);
 }
 
 double _doubleValue(dynamic value) {

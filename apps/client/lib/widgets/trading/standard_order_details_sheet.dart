@@ -13,7 +13,8 @@ Future<void> showStandardOrderDetails(
     context: context,
     isScrollControlled: true,
     backgroundColor: Colors.transparent,
-    builder: (_) => _StandardOrderDetailsSheet(order: order, onCancel: onCancel),
+    builder: (_) =>
+        _StandardOrderDetailsSheet(order: order, onCancel: onCancel),
   );
 }
 
@@ -103,12 +104,17 @@ class _StandardOrderDetailsSheetState
                   children: [
                     Row(
                       children: [
-                        Expanded(child: _value('Order Qty', '${order.quantity}')),
+                        Expanded(
+                          child: _value('Order Qty', '${order.quantity}'),
+                        ),
                         Expanded(
                           child: _value('Filled', '${order.filledQuantity}'),
                         ),
                         Expanded(
-                          child: _value('Remaining', '${order.remainingQuantity}'),
+                          child: _value(
+                            'Remaining',
+                            '${order.remainingQuantity}',
+                          ),
                         ),
                       ],
                     ),
@@ -141,13 +147,83 @@ class _StandardOrderDetailsSheetState
                 ),
               ),
               const SizedBox(height: 18),
-              _detailRow('Order Type', order.type == 'LIMIT' ? 'Limit' : 'Market'),
+              _detailRow(
+                'Order Type',
+                order.type == 'LIMIT' ? 'Limit' : 'Market',
+              ),
+              _detailRow('Exchange', order.exchange),
               _detailRow('Validity', order.timeInForce),
               _detailRow('Placed', order.formattedTime),
               if (order.clientOrderId?.isNotEmpty == true)
                 _detailRow('Reference', order.clientOrderId!),
               if (order.orderId?.isNotEmpty == true)
                 _detailRow('Order ID', order.orderId!),
+              const SizedBox(height: 18),
+              const Text(
+                'Order timeline',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 10),
+              _timelineItem(
+                label: 'Submitted',
+                time: order.placedAt,
+                color: const Color(0xFF2563EB),
+                last:
+                    order.updatedAt == null &&
+                    order.completedAt == null &&
+                    order.cancelledAt == null,
+              ),
+              if (order.updatedAt != null &&
+                  order.updatedAt != order.completedAt &&
+                  order.updatedAt != order.cancelledAt)
+                _timelineItem(
+                  label: _statusLabel(order.status),
+                  time: order.updatedAt!,
+                  color: statusColor,
+                  last: order.completedAt == null && order.cancelledAt == null,
+                ),
+              if (order.completedAt != null && order.cancelledAt == null)
+                _timelineItem(
+                  label: 'Filled',
+                  time: order.completedAt!,
+                  color: AppConfig.gainColor,
+                  last: true,
+                ),
+              if (order.cancelledAt != null)
+                _timelineItem(
+                  label: 'Cancelled',
+                  time: order.cancelledAt!,
+                  color: AppConfig.neutralColor,
+                  last: true,
+                ),
+              if (order.fills.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Executions',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 10),
+                ...order.fills.map(_executionCard),
+                const SizedBox(height: 4),
+                _detailRow(
+                  'Total fees',
+                  formatPrice(
+                    order.fills.fold<double>(
+                      0,
+                      (total, fill) => total + fill.fees,
+                    ),
+                  ),
+                ),
+                _detailRow(
+                  'Net amount',
+                  formatPrice(
+                    order.fills.fold<double>(
+                      0,
+                      (total, fill) => total + fill.netAmount,
+                    ),
+                  ),
+                ),
+              ],
               if (order.isActive && widget.onCancel != null) ...[
                 const SizedBox(height: 20),
                 SizedBox(
@@ -200,7 +276,9 @@ class _StandardOrderDetailsSheetState
     setState(() => cancelling = false);
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
@@ -219,7 +297,11 @@ class _StandardOrderDetailsSheetState
       ),
       child: Text(
         label,
-        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w800),
+        style: TextStyle(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w800,
+        ),
       ),
     );
   }
@@ -228,9 +310,15 @@ class _StandardOrderDetailsSheetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+        Text(
+          label,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+        ),
         const SizedBox(height: 5),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+        ),
       ],
     );
   }
@@ -243,7 +331,10 @@ class _StandardOrderDetailsSheetState
         children: [
           SizedBox(
             width: 110,
-            child: Text(label, style: const TextStyle(color: Color(0xFF64748B))),
+            child: Text(
+              label,
+              style: const TextStyle(color: Color(0xFF64748B)),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -256,6 +347,115 @@ class _StandardOrderDetailsSheetState
         ],
       ),
     );
+  }
+
+  Widget _timelineItem({
+    required String label,
+    required DateTime time,
+    required Color color,
+    required bool last,
+  }) {
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            width: 20,
+            child: Column(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                if (!last)
+                  Expanded(
+                    child: Container(width: 2, color: const Color(0xFFE2E8F0)),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                  Text(
+                    _formatTimelineTime(time),
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _executionCard(TradingFill fill) {
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${fill.quantity} @ ${formatPrice(fill.price)}',
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+              Text(
+                _formatTimelineTime(fill.executedAt),
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'Gross ${formatPrice(fill.grossAmount)}  |  '
+            'Fees ${formatPrice(fill.fees)}',
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+          ),
+          if (fill.executionId.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            SelectableText(
+              fill.executionId,
+              style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _formatTimelineTime(DateTime value) {
+    final ist = value.toUtc().add(const Duration(hours: 5, minutes: 30));
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${two(ist.day)}/${two(ist.month)} '
+        '${two(ist.hour)}:${two(ist.minute)}:${two(ist.second)} IST';
   }
 
   String _statusLabel(String status) {

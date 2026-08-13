@@ -10,6 +10,9 @@ class WatchlistService {
   final AuthService _auth = AuthService();
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
+  static String key(String exchange, String symbol) =>
+      '${exchange.trim().toUpperCase()}:${symbol.trim().toUpperCase()}';
+
   Future<Set<String>> fetchSymbols() async {
     final session = await _auth.restoreSession();
     if (session == null || session.accessToken.isEmpty) return <String>{};
@@ -33,8 +36,12 @@ class WatchlistService {
     if (decoded is! List) return <String>{};
     return decoded
         .whereType<Map>()
-        .map((item) => item['symbol']?.toString().trim().toUpperCase() ?? '')
-        .where((symbol) => symbol.isNotEmpty)
+        .map((item) {
+          final symbol = item['symbol']?.toString() ?? '';
+          final exchange = item['exchange']?.toString() ?? 'NSE';
+          return symbol.trim().isEmpty ? '' : key(exchange, symbol);
+        })
+        .where((value) => value.isNotEmpty)
         .toSet();
   }
 

@@ -9,6 +9,10 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: '',
   );
+  static const String googleClientId = String.fromEnvironment(
+    'GOOGLE_CLIENT_ID',
+    defaultValue: '',
+  );
 
   static String get apiBaseUrl {
     if (_configuredApiBaseUrl.isNotEmpty) {

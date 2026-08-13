@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/institutional_opportunity.dart';
+import '../models/account_transaction.dart';
 import '../models/ipo.dart';
 import '../models/pending_order.dart';
 import '../models/portfolio_position.dart';
@@ -10,6 +11,7 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../services/trading_service.dart';
 import '../widgets/trading/history_tab.dart';
+import '../widgets/trading/funds_tab.dart';
 import '../widgets/trading/holdings_tab.dart';
 import '../widgets/trading/institutional_tab.dart';
 import '../widgets/trading/ipo_tab.dart';
@@ -49,19 +51,28 @@ class TradingCenterPage extends StatefulWidget {
   State<TradingCenterPage> createState() => _TradingCenterPageState();
 }
 
-class _TradingCenterPageState extends State<TradingCenterPage> {
+class _TradingCenterPageState extends State<TradingCenterPage>
+    with WidgetsBindingObserver {
   final TradingService _tradingService = TradingService();
   final List<TradingOrder> _orders = <TradingOrder>[];
-  final Map<String, PortfolioPosition> _positions = <String, PortfolioPosition>{};
+  final Map<String, PortfolioPosition> _positions =
+      <String, PortfolioPosition>{};
+  final List<AccountTransaction> _transactions = <AccountTransaction>[];
+  TradingAccountSnapshot? _accountSnapshot;
 
   Timer? _refreshTimer;
   Future<void>? _refreshInFlight;
   int selectedTab = 0;
 
   final List<_TradingModule> tabs = const [
-    _TradingModule('Trades', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
+    _TradingModule('Overview', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
     _TradingModule('Inst.', Icons.account_balance_outlined, Color(0xFF1D4ED8)),
-    _TradingModule('Holdings', Icons.account_balance_wallet_outlined, Color(0xFF059669)),
+    _TradingModule(
+      'Holdings',
+      Icons.account_balance_wallet_outlined,
+      Color(0xFF059669),
+    ),
+    _TradingModule('Funds', Icons.account_balance_rounded, Color(0xFF0284C7)),
     _TradingModule('Pending', Icons.schedule_rounded, Color(0xFFF97316)),
     _TradingModule('Orders', Icons.receipt_long_outlined, Color(0xFF7C3AED)),
     _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
@@ -72,18 +83,16 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _syncFromWidget();
-    unawaited(_refreshTradingData());
-    _refreshTimer = Timer.periodic(
-      const Duration(seconds: 10),
-      (_) => unawaited(_refreshTradingData()),
-    );
+    unawaited(_refreshTradingData(ensureAfterCurrent: true));
   }
 
   @override
   void didUpdateWidget(covariant TradingCenterPage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.orders != widget.orders || oldWidget.positions != widget.positions) {
+    if (oldWidget.orders != widget.orders ||
+        oldWidget.positions != widget.positions) {
       _syncFromWidget();
     }
   }
@@ -91,7 +100,21 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   @override
   void dispose() {
     _refreshTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_refreshTradingData(ensureAfterCurrent: true));
+      return;
+    }
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _refreshTimer?.cancel();
+      _refreshTimer = null;
+    }
   }
 
   void _syncFromWidget() {
@@ -124,31 +147,85 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
       if (identical(_refreshInFlight, refresh)) {
         _refreshInFlight = null;
       }
+      _scheduleNextRefresh();
     }
   }
 
+  void _scheduleNextRefresh() {
+    if (!mounted) return;
+    _refreshTimer?.cancel();
+    final hasActiveOrders = _orders.any(
+      (order) => order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED',
+    );
+    _refreshTimer = Timer(
+      hasActiveOrders
+          ? const Duration(seconds: 5)
+          : const Duration(seconds: 30),
+      () => unawaited(_refreshTradingData()),
+    );
+  }
+
   Future<void> _performTradingRefresh() async {
+    final previousById = <String, TradingOrder>{
+      for (final order in _orders)
+        if (order.orderId?.isNotEmpty == true) order.orderId!: order,
+    };
     final results = await Future.wait<dynamic>([
       _tradingService.fetchOrders(),
       _tradingService.fetchAccountSnapshot(),
+      _tradingService.fetchTransactions(),
     ]);
     if (!mounted) return;
 
     final latestOrders = results[0] as List<TradingOrder>;
     final snapshot = results[1] as TradingAccountSnapshot?;
+    final transactions = results[2] as List<AccountTransaction>;
 
     setState(() {
       _orders
         ..clear()
         ..addAll(latestOrders);
       if (snapshot != null) {
+        _accountSnapshot = snapshot;
         _positions
           ..clear()
           ..addEntries(
-            snapshot.positions.map((position) => MapEntry(position.symbol, position)),
+            snapshot.positions.map(
+              (position) =>
+                  MapEntry('${position.exchange}:${position.symbol}', position),
+            ),
           );
       }
+      _transactions
+        ..clear()
+        ..addAll(transactions);
     });
+    _announceOrderChanges(previousById, latestOrders);
+  }
+
+  void _announceOrderChanges(
+    Map<String, TradingOrder> previousById,
+    List<TradingOrder> latestOrders,
+  ) {
+    for (final latest in latestOrders) {
+      final id = latest.orderId;
+      if (id == null) continue;
+      final previous = previousById[id];
+      if (previous == null ||
+          (previous.status == latest.status &&
+              previous.filledQuantity == latest.filledQuantity)) {
+        continue;
+      }
+      final message = latest.status == 'PARTIALLY_FILLED'
+          ? '${latest.exchange}:${latest.symbol} filled '
+                '${latest.filledQuantity}/${latest.quantity}'
+          : '${latest.exchange}:${latest.symbol} order '
+                '${latest.status.toLowerCase().replaceAll('_', ' ')}';
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(message)));
+      break;
+    }
   }
 
   Future<String?> _cancelStandardOrder(TradingOrder order) async {
@@ -169,7 +246,9 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   }
 
   List<TradingOrder> get _activeOrders => _orders
-      .where((order) => order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED')
+      .where(
+        (order) => order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED',
+      )
       .toList();
 
   @override
@@ -186,7 +265,10 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                   const Expanded(
                     child: Text(
                       'Trading Center',
-                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.w800),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   IconButton(
@@ -214,7 +296,7 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                     selected: selected,
                     onTap: () {
                       setState(() => selectedTab = index);
-                      if (index == 2 || index == 3 || index == 4 || index == 7) {
+                      if (index >= 2) {
                         unawaited(_refreshTradingData());
                       }
                     },
@@ -233,7 +315,9 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
                   height: 4,
                   margin: const EdgeInsets.symmetric(horizontal: 3),
                   decoration: BoxDecoration(
-                    color: selectedTab == index ? tabs[index].color : const Color(0xFFD7DCE5),
+                    color: selectedTab == index
+                        ? tabs[index].color
+                        : const Color(0xFFD7DCE5),
                     borderRadius: BorderRadius.circular(999),
                   ),
                 ),
@@ -250,9 +334,17 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
   Widget _buildContent() {
     switch (selectedTab) {
       case 0:
-        return TradeList(stocks: widget.stocks, onTrade: widget.onTrade);
+        return TradeList(
+          stocks: widget.stocks,
+          positions: _positions,
+          account: _accountSnapshot,
+          onTrade: widget.onTrade,
+        );
       case 1:
-        return InstitutionalTab(stocks: widget.institutionalStocks);
+        return InstitutionalTab(
+          stocks: widget.institutionalStocks,
+          marketStocks: widget.stocks,
+        );
       case 2:
         return HoldingsTab(
           positions: _positions,
@@ -260,24 +352,25 @@ class _TradingCenterPageState extends State<TradingCenterPage> {
           onStockTap: widget.onTrade,
         );
       case 3:
+        return FundsTab(transactions: _transactions);
+      case 4:
         return PendingCenterTab(
           activeOrders: _activeOrders,
           ipoApplications: widget.ipoApplications,
-          onOrderCancelled: () => unawaited(
-            _refreshTradingData(ensureAfterCurrent: true),
-          ),
+          onOrderCancelled: () =>
+              unawaited(_refreshTradingData(ensureAfterCurrent: true)),
         );
-      case 4:
-        return OrdersTab(orders: _orders, onCancel: _cancelStandardOrder);
       case 5:
+        return OrdersTab(orders: _orders, onCancel: _cancelStandardOrder);
+      case 6:
         return IpoTab(
           ipos: widget.ipos,
           applications: widget.ipoApplications,
           onApply: widget.onApplyIpo,
         );
-      case 6:
-        return OtcTab(opportunities: widget.institutionalStocks);
       case 7:
+        return const OtcTab();
+      case 8:
         return HistoryTab(orders: _orders);
       default:
         return const SizedBox.shrink();

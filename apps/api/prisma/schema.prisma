@@ -12,6 +12,9 @@ model User {
   id                         String                @id @default(uuid())
   email                      String                @unique
   passwordHash               String
+  transactionKeyHash        String?
+  googleSubject             String?               @unique
+  authVersion               Int                   @default(0)
   fullName                   String
   phone                      String?               @unique
   customerNo                 String?               @unique
@@ -30,6 +33,12 @@ model User {
   supportMessages            SupportMessage[]
   assignedBusiness           User?                 @relation("BusinessCustomers", fields: [assignedBusinessId], references: [id])
   assignedCustomers          User[]                @relation("BusinessCustomers")
+  reviewedOtcOrders          OtcOrder[]             @relation("OtcReviewer")
+  bankAccounts               BankAccount[]
+  preferences                UserPreference?
+  notifications              Notification[]
+  devices                    UserDevice[]
+  passwordResetCodes         PasswordResetCode[]
 
   @@index([assignedBusinessId])
   @@map("users")
@@ -90,6 +99,8 @@ model Account {
   positions          Position[]
   trades             Trade[]
   withdrawalRequests WithdrawalRequest[]
+  otcOrders          OtcOrder[]
+  portfolioSnapshots PortfolioSnapshot[]
 
   @@map("accounts")
 }
@@ -136,6 +147,8 @@ model Instrument {
   orders    Order[]
   positions Position[]
   trades    Trade[]
+  otcOffer  OtcOffer?
+  otcOrders OtcOrder[]
 
   @@unique([exchange, symbol])
   @@index([symbol])
@@ -352,6 +365,10 @@ model SupportMessage {
   senderId       String
   senderType     SenderType
   content        String
+  attachmentName String?
+  attachmentUrl  String?
+  attachmentType String?
+  readAt          DateTime?
   createdAt      DateTime            @default(now())
   conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User                @relation(fields: [senderId], references: [id])
@@ -359,6 +376,99 @@ model SupportMessage {
   @@index([conversationId])
   @@index([senderId])
   @@map("support_messages")
+}
+
+model BankAccount {
+  id            String            @id @default(uuid())
+  userId        String
+  bankName      String
+  accountHolder String
+  accountNumber String
+  ifscCode      String
+  status        BankAccountStatus @default(APPROVED)
+  isPrimary     Boolean           @default(false)
+  reviewNote    String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@map("bank_accounts")
+}
+
+model UserPreference {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  orderNotifications Boolean  @default(true)
+  accountNotifications Boolean @default(true)
+  supportNotifications Boolean @default(true)
+  biometricEnabled   Boolean  @default(false)
+  language           String   @default("en")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_preferences")
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  referenceId String?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
+  @@map("notifications")
+}
+
+model UserDevice {
+  id          String   @id @default(uuid())
+  userId      String
+  deviceName  String
+  platform    String
+  pushToken   String?
+  lastIp      String?
+  lastSeenAt  DateTime @default(now())
+  revokedAt   DateTime?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revokedAt])
+  @@map("user_devices")
+}
+
+model PortfolioSnapshot {
+  id          String   @id @default(uuid())
+  accountId   String
+  cashValue   Decimal  @db.Decimal(18, 2)
+  instValue   Decimal  @db.Decimal(18, 2)
+  otcValue    Decimal  @db.Decimal(18, 2)
+  ipoValue    Decimal  @db.Decimal(18, 2)
+  totalValue  Decimal  @db.Decimal(18, 2)
+  capturedAt  DateTime @default(now())
+  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([accountId, capturedAt])
+  @@map("portfolio_snapshots")
+}
+
+model PasswordResetCode {
+  id        String   @id @default(uuid())
+  userId    String
+  codeHash  String
+  expiresAt DateTime
+  usedAt    DateTime?
+  attempts  Int      @default(0)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
+  @@map("password_reset_codes")
 }
 
 model DepositRequest {
@@ -411,6 +521,47 @@ model AdminWatchlistItem {
   @@index([symbol])
   @@index([status])
   @@map("admin_watchlist_items")
+}
+
+model OtcOffer {
+  id           String    @id @default(uuid())
+  instrumentId String    @unique
+  price        Decimal   @db.Decimal(18, 4)
+  isActive     Boolean   @default(true)
+  validFrom    DateTime
+  validUntil   DateTime
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  instrument   Instrument @relation(fields: [instrumentId], references: [id])
+  orders       OtcOrder[]
+
+  @@index([isActive, validFrom, validUntil])
+  @@map("otc_offers")
+}
+
+model OtcOrder {
+  id           String         @id @default(uuid())
+  orderNo      String         @unique
+  accountId    String
+  offerId      String
+  instrumentId String
+  quantity     Int
+  price        Decimal        @db.Decimal(18, 4)
+  amount       Decimal        @db.Decimal(18, 2)
+  status       OtcOrderStatus @default(PENDING)
+  reviewNote   String?
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+  account      Account        @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  offer        OtcOffer       @relation(fields: [offerId], references: [id])
+  instrument   Instrument     @relation(fields: [instrumentId], references: [id])
+  reviewedBy   User?          @relation("OtcReviewer", fields: [reviewedById], references: [id])
+
+  @@index([accountId, createdAt])
+  @@index([status, createdAt])
+  @@map("otc_orders")
 }
 
 model AdminBlockTrade {
@@ -490,6 +641,13 @@ enum AccountTransactionType {
   IPO_REPAYMENT
   LOAN_DISBURSEMENT
   LOAN_REPAYMENT
+  OTC_SETTLEMENT
+}
+
+enum OtcOrderStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 enum AccountTransactionStatus {
@@ -586,6 +744,12 @@ enum WithdrawalStatus {
 }
 
 enum DepositStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BankAccountStatus {
   PENDING
   APPROVED
   REJECTED

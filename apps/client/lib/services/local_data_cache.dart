@@ -12,6 +12,10 @@ class LocalDataCache {
   static const openIpos = 'cache_open_ipos';
   static const ipoApplications = 'cache_ipo_applications';
 
+  static String marketHistory(String exchange, String symbol, String range) =>
+      'cache_market_history_${exchange.toUpperCase()}_'
+      '${symbol.toUpperCase()}_${range.toUpperCase()}';
+
   static Future<void> saveJson(String key, Object value) async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.setString(key, jsonEncode(value));

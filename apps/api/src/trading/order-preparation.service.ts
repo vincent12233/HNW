@@ -91,6 +91,11 @@ export class OrderPreparationService {
     }
 
     this.assertQuoteFresh(instrument.quote.asOf);
+    this.assertQuotePrices(
+      instrument.quote.lastPrice,
+      instrument.quote.bidPrice,
+      instrument.quote.askPrice,
+    );
 
     if (instrument.currency !== account.currency) {
       throw new BadRequestException(
@@ -169,7 +174,23 @@ export class OrderPreparationService {
     );
     const ageMs = Date.now() - asOf.getTime();
 
-    if (ageMs < 0 || ageMs > maxAgeMs) {
+    if (ageMs < -5000 || ageMs > maxAgeMs) {
+      throw new BadRequestException('Market quote is temporarily unavailable');
+    }
+  }
+
+  private assertQuotePrices(
+    lastPrice: Prisma.Decimal,
+    bidPrice: Prisma.Decimal | null,
+    askPrice: Prisma.Decimal | null,
+  ) {
+    if (lastPrice.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('Market quote is temporarily unavailable');
+    }
+    if (bidPrice?.lessThanOrEqualTo(0) || askPrice?.lessThanOrEqualTo(0)) {
+      throw new BadRequestException('Market quote is temporarily unavailable');
+    }
+    if (bidPrice && askPrice && bidPrice.greaterThan(askPrice)) {
       throw new BadRequestException('Market quote is temporarily unavailable');
     }
   }

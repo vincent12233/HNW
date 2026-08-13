@@ -41,12 +41,38 @@ class StockListTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    stock.symbol,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w800,
-                      fontSize: 15,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          stock.symbol,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 15,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 7),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 5,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          stock.exchange,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   Text(
                     stock.name,
@@ -65,6 +91,23 @@ class StockListTile extends StatelessWidget {
                       fontSize: 12,
                     ),
                   ),
+                  if (!stock.quoteFresh) ...[
+                    const SizedBox(height: 3),
+                    const Row(
+                      children: [
+                        Icon(Icons.schedule, size: 11, color: Color(0xFFF59E0B)),
+                        SizedBox(width: 4),
+                        Text(
+                          'Price delayed',
+                          style: TextStyle(
+                            color: Color(0xFFB45309),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
               ),
             ),

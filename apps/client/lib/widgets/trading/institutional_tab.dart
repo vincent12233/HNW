@@ -1,13 +1,20 @@
 import 'package:flutter/material.dart';
 
 import '../../models/institutional_opportunity.dart';
+import '../../models/stock_quote.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
 
 class InstitutionalTab extends StatelessWidget {
-  const InstitutionalTab({super.key, required this.stocks, this.onOpen});
+  const InstitutionalTab({
+    super.key,
+    required this.stocks,
+    required this.marketStocks,
+    this.onOpen,
+  });
 
   final List<InstitutionalStock> stocks;
+  final List<StockQuote> marketStocks;
   final ValueChanged<InstitutionalStock>? onOpen;
 
   @override
@@ -47,6 +54,13 @@ class InstitutionalTab extends StatelessWidget {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
         final stock = stocks[index];
+        StockQuote? quote;
+        for (final item in marketStocks) {
+          if (item.symbol.toUpperCase() == stock.symbol.toUpperCase()) {
+            quote = item;
+            break;
+          }
+        }
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -81,7 +95,9 @@ class InstitutionalTab extends StatelessWidget {
                     ),
                   ),
                   Text(
-                    formatPrice(stock.price),
+                    quote != null && quote.quoteFresh
+                        ? formatPrice(quote.price)
+                        : '--',
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ],
@@ -91,11 +107,11 @@ class InstitutionalTab extends StatelessWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      'Min. ${stock.minimumQuantity} shares',
+                      'Backend institutional offer',
                       style: const TextStyle(color: Colors.black54),
                     ),
                   ),
-                  if (onOpen != null)
+                  if (onOpen != null && quote != null && quote.quoteFresh)
                     FilledButton(
                       onPressed: () => onOpen!(stock),
                       child: const Text('View'),

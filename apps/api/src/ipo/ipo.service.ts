@@ -639,6 +639,18 @@ export class IpoService {
         },
       });
 
+      await tx.notification.create({
+        data: {
+          userId: account.userId,
+          type: 'IPO',
+          title: debtAmount > 0 ? 'IPO allotment payment required' : 'IPO allotment completed',
+          body: debtAmount > 0
+            ? `${application.ipo.symbol} was allotted. Pay the outstanding amount to complete settlement.`
+            : `${application.ipo.symbol} was settled and added to your holdings.`,
+          referenceId: application.id,
+        },
+      });
+
       return {
         application: updated,
 
@@ -777,13 +789,15 @@ export class IpoService {
   }
 
   async setInstrument(ipoId: string, instrumentId: string) {
-    return this.prisma.ipo.update({
-      where: {
-        id: ipoId,
-      },
-      data: {
-        instrumentId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.instrument.update({
+        where: { id: instrumentId },
+        data: { category: 'IPO' },
+      });
+      return tx.ipo.update({
+        where: { id: ipoId },
+        data: { instrumentId },
+      });
     });
   }
 

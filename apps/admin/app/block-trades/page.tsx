@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 type Instrument = { id: string; symbol: string; exchange: string; name: string };
-type Offer = { id: string; price: string; isActive: boolean; validFrom: string; validUntil: string; instrument: Instrument };
+type Offer = { id: string; price: string; transactionKey?: string | null; isActive: boolean; validFrom: string; validUntil: string; instrument: Instrument };
 type PublishedOffer = Offer & { transactionKey: string };
 
 export default function OtcOffersPage() {
@@ -35,7 +35,7 @@ export default function OtcOffersPage() {
       validFrom: values.period[0].toISOString(), validUntil: values.period[1].toISOString(),
     });
     setOpen(false); form.resetFields(); await load();
-    Modal.success({ title: "OTC published · New transaction key", content: <Space orientation="vertical"><Text>This 4-digit key was randomly generated for this listing. Save it now; it will not be shown again.</Text><Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>{response.data.transactionKey}</Title></Space> });
+    Modal.success({ title: "OTC published · New transaction key", content: <Space orientation="vertical"><Text>This 4-digit key remains visible in the OTC list until the offer is delisted.</Text><Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>{response.data.transactionKey}</Title></Space> });
   }
   async function toggle(record: Offer, isActive: boolean) {
     await api.patch(`/otc/admin/offers/${record.id}`, { isActive }); await load();
@@ -46,6 +46,7 @@ export default function OtcOffersPage() {
       <Table rowKey="id" loading={loading} dataSource={offers} columns={[
         { title: "Stock", render: (_: unknown, r: Offer) => <Space orientation="vertical" size={0}><Text strong>{r.instrument.symbol}</Text><Text type="secondary">{r.instrument.exchange} · {r.instrument.name}</Text></Space> },
         { title: "Price source", render: () => <Tag color="blue">LIVE MARKET</Tag> },
+        { title: "Transaction key", render: (_: unknown, r: Offer) => r.isActive && r.transactionKey ? <Text code copyable>{r.transactionKey}</Text> : <Text type="secondary">Hidden after delisting</Text> },
         { title: "Valid from", dataIndex: "validFrom", render: (v: string) => new Date(v).toLocaleString() },
         { title: "Valid until", dataIndex: "validUntil", render: (v: string) => new Date(v).toLocaleString() },
         { title: "Status", render: (_: unknown, r: Offer) => <Tag color={r.isActive ? "green" : "default"}>{r.isActive ? "ACTIVE" : "CLOSED"}</Tag> },

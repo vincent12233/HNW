@@ -563,6 +563,7 @@ model OtcOffer {
     keyHashTier1 String?
     keyHashTier2 String?
     keyHashTier3 String?
+    transactionKeyEncrypted String?
   isActive     Boolean   @default(true)
   validFrom    DateTime
   validUntil   DateTime

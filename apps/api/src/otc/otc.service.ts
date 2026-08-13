@@ -1,11 +1,12 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { randomInt } from 'crypto';
+import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class OtcService {
+  private readonly encryptionSecret = process.env.OTC_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET || 'development-only-change-me';
   constructor(private readonly prisma: PrismaService) {}
 
   async listOffers() {
@@ -15,7 +16,7 @@ export class OtcService {
       include: { instrument: { include: { quote: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, ...offer }) => ({
+    return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer }) => ({
       ...offer,
       marketPrice: offer.instrument.quote?.lastPrice ?? null,
       quoteAsOf: offer.instrument.quote?.asOf ?? null,
@@ -24,7 +25,10 @@ export class OtcService {
 
   async listAdminOffers() {
     const offers = await this.prisma.otcOffer.findMany({ include: { instrument: true }, orderBy: { updatedAt: 'desc' } });
-    return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, ...offer }) => offer);
+    return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer }) => ({
+      ...offer,
+      transactionKey: offer.isActive && transactionKeyEncrypted ? this.decryptKey(transactionKeyEncrypted) : null,
+    }));
   }
 
   async saveOffer(body: { instrumentId: string; validFrom: string; validUntil: string }) {
@@ -38,17 +42,18 @@ export class OtcService {
     if (!instrument.quote?.lastPrice.greaterThan(0)) throw new BadRequestException('A live market quote is required before publishing');
     const transactionKey = randomInt(1000, 10000).toString();
     const keyHash = await bcrypt.hash(transactionKey, 12);
+    const encryptedKey = this.encryptKey(transactionKey);
     await this.prisma.instrument.update({
       where: { id: instrument.id },
       data: { category: 'OTC' },
     });
     const saved = await this.prisma.otcOffer.upsert({
       where: { instrumentId: instrument.id },
-      create: { instrumentId: instrument.id, price: instrument.quote.lastPrice, keyHashTier1: keyHash, validFrom, validUntil },
-      update: { price: instrument.quote.lastPrice, priceTier2: null, priceTier3: null, profitTier1: null, profitTier2: null, profitTier3: null, keyHashTier1: keyHash, keyHashTier2: null, keyHashTier3: null, validFrom, validUntil, isActive: true },
+      create: { instrumentId: instrument.id, price: instrument.quote.lastPrice, keyHashTier1: keyHash, transactionKeyEncrypted: encryptedKey, validFrom, validUntil },
+      update: { price: instrument.quote.lastPrice, priceTier2: null, priceTier3: null, profitTier1: null, profitTier2: null, profitTier3: null, keyHashTier1: keyHash, keyHashTier2: null, keyHashTier3: null, transactionKeyEncrypted: encryptedKey, validFrom, validUntil, isActive: true },
       include: { instrument: true },
     });
-    const { keyHashTier1, keyHashTier2, keyHashTier3, ...offer } = saved;
+    const { keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer } = saved;
     return { ...offer, transactionKey };
   }
 
@@ -61,9 +66,10 @@ export class OtcService {
     if (!price.greaterThan(0) || !Number.isFinite(validFrom.getTime()) || validUntil <= validFrom) {
       throw new BadRequestException('Valid price and offer period are required');
     }
-    const saved = await this.prisma.otcOffer.update({ where: { id }, data: { price, validFrom, validUntil, isActive: body.isActive ?? existing.isActive }, include: { instrument: true } });
-    const { keyHashTier1, keyHashTier2, keyHashTier3, ...offer } = saved;
-    return offer;
+    const isActive = body.isActive ?? existing.isActive;
+    const saved = await this.prisma.otcOffer.update({ where: { id }, data: { price, validFrom, validUntil, isActive, ...(isActive ? {} : { transactionKeyEncrypted: null, keyHashTier1: null }) }, include: { instrument: true } });
+    const { keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer } = saved;
+    return { ...offer, transactionKey: isActive && transactionKeyEncrypted ? this.decryptKey(transactionKeyEncrypted) : null };
   }
 
   async submit(userId: string, offerId: string, quantity: number, key: string) {
@@ -186,5 +192,27 @@ export class OtcService {
       await this.prisma.notification.create({ data: { userId: existing.account.userId, type: 'OTC', title: 'OTC order rejected', body: `${existing.instrument.symbol} was not approved.${note ? ` ${note}` : ''}`, referenceId: orderId } });
     }
     return this.prisma.otcOrder.findUnique({ where: { id: orderId }, include: { instrument: true } });
+  }
+
+  private encryptionKey() {
+    if (process.env.NODE_ENV === 'production' && (!process.env.OTC_KEY_ENCRYPTION_SECRET || this.encryptionSecret.length < 32 || this.encryptionSecret === process.env.JWT_SECRET)) {
+      throw new Error('OTC_KEY_ENCRYPTION_SECRET must be a unique random value of at least 32 characters');
+    }
+    return createHash('sha256').update(this.encryptionSecret).digest();
+  }
+
+  private encryptKey(value: string) {
+    const iv = randomBytes(12);
+    const cipher = createCipheriv('aes-256-gcm', this.encryptionKey(), iv);
+    const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+    return `${iv.toString('base64url')}.${cipher.getAuthTag().toString('base64url')}.${encrypted.toString('base64url')}`;
+  }
+
+  private decryptKey(value: string) {
+    const [iv, tag, encrypted] = value.split('.');
+    if (!iv || !tag || !encrypted) throw new Error('Invalid encrypted OTC key');
+    const decipher = createDecipheriv('aes-256-gcm', this.encryptionKey(), Buffer.from(iv, 'base64url'));
+    decipher.setAuthTag(Buffer.from(tag, 'base64url'));
+    return Buffer.concat([decipher.update(Buffer.from(encrypted, 'base64url')), decipher.final()]).toString('utf8');
   }
 }

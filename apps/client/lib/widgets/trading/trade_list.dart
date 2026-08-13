@@ -99,45 +99,270 @@ class TradeList extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 14),
-        _OverviewCard(
-          icon: Icons.swap_horiz_rounded,
-          title: 'Trades',
-          tag: 'TRD',
-          description: 'Trading overview and live execution entries',
-          color: AppConfig.primaryColor,
+        Row(
+          children: ['All', 'Inst.', 'OTC', 'IPO']
+              .asMap()
+              .entries
+              .map(
+                (entry) => Container(
+                  margin: const EdgeInsets.only(right: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 17,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: entry.key == 0
+                        ? AppConfig.primaryColor
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: entry.key == 0
+                          ? AppConfig.primaryColor
+                          : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(
+                      color: entry.key == 0
+                          ? Colors.white
+                          : const Color(0xFF334155),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
         ),
-        _OverviewCard(
-          icon: Icons.campaign_outlined,
-          title: 'IPO',
-          tag: 'IPO',
-          description: 'Apply first, then wait for business allocation',
-          color: const Color(0xFFEF4444),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Text(
+              'Open Positions (${positions.length})',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const Spacer(),
+            const Text(
+              'View All',
+              style: TextStyle(
+                color: AppConfig.primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
-        _OverviewCard(
-          icon: Icons.handshake_outlined,
-          title: 'OTC',
-          tag: 'OTC',
-          description: 'Buy at the fixed price published by the backend',
-          color: const Color(0xFF0D9488),
+        const SizedBox(height: 9),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE8EDF5)),
+          ),
+          child: positions.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'No open positions',
+                      style: TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: positions.values
+                      .take(5)
+                      .map((position) => _positionRow(position))
+                      .toList(),
+                ),
         ),
-        _OverviewCard(
-          icon: Icons.account_balance_outlined,
-          title: 'Institutional Stocks',
-          tag: 'INST',
-          description: 'New institutional stock offers from the backend',
-          color: const Color(0xFF2563EB),
+        const SizedBox(height: 18),
+        const Row(
+          children: [
+            Text(
+              'Market Overview',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            Spacer(),
+            Text(
+              'View More',
+              style: TextStyle(
+                color: AppConfig.primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
-        _OverviewCard(
-          icon: Icons.history_rounded,
-          title: 'History',
-          tag: 'HIS',
-          description: 'Sold holdings, orders and completed records',
-          color: const Color(0xFFF59E0B),
+        const SizedBox(height: 9),
+        Row(
+          children: [
+            _indexMini('NIFTY 50', '24,467.45', .91),
+            const SizedBox(width: 7),
+            _indexMini('SENSEX', '80,159.83', .90),
+            const SizedBox(width: 7),
+            _indexMini('BANK NIFTY', '51,356.80', 1.01),
+            const SizedBox(width: 7),
+            _indexMini('INDIA VIX', '12.85', -1.16),
+          ],
         ),
         const SizedBox(height: 12),
       ],
     );
   }
+
+  Widget _positionRow(PortfolioPosition position) {
+    final quote = stocks.where(
+      (item) =>
+          item.symbol == position.symbol && item.exchange == position.exchange,
+    );
+    final price = quote.isEmpty ? position.averageCost : quote.first.price;
+    final pnl = position.unrealizedProfitLoss(price);
+    return InkWell(
+      onTap: quote.isEmpty ? null : () => onTrade(quote.first),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+        ),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: const Color(0xFFEAF2FF),
+              child: Text(
+                position.symbol.substring(
+                  0,
+                  position.symbol.length > 3 ? 3 : position.symbol.length,
+                ),
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                  color: AppConfig.primaryColor,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    position.symbol,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    '${position.quantity} Shares · ${position.exchange}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatPrice(price),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'Avg. ${formatPrice(position.averageCost)}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 65,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: pnl >= 0
+                          ? AppConfig.gainColor
+                          : AppConfig.lossColor,
+                    ),
+                  ),
+                  Text(
+                    '${pnl >= 0 ? '+' : ''}${position.averageCost > 0 ? (pnl / (position.averageCost * position.quantity) * 100).toStringAsFixed(2) : '0.00'}%',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: pnl >= 0
+                          ? AppConfig.gainColor
+                          : AppConfig.lossColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _indexMini(String name, String value, double change) => Expanded(
+    child: Container(
+      height: 94,
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFE8EDF5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 5),
+          FittedBox(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Text(
+            '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
+            style: TextStyle(
+              fontSize: 9,
+              color: change >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+            ),
+          ),
+          const Spacer(),
+          Container(
+            height: 2,
+            color: (change >= 0 ? AppConfig.gainColor : AppConfig.lossColor)
+                .withValues(alpha: .7),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _summary(String label, String value, Color color) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 7),

@@ -1,12 +1,18 @@
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import { join, normalize } from 'path';
 
 @Injectable()
-export class PrivateObjectStorageService {
+export class PrivateObjectStorageService implements OnModuleInit {
   private readonly root = join(process.cwd(), process.env.PRIVATE_OBJECT_ROOT || 'private-objects');
   private readonly secret = process.env.OBJECT_SIGNING_SECRET || process.env.JWT_SECRET || 'development-only-change-me';
+
+  onModuleInit() {
+    if (process.env.NODE_ENV === 'production' && (!process.env.OBJECT_SIGNING_SECRET || this.secret.length < 32 || this.secret === process.env.JWT_SECRET)) {
+      throw new Error('OBJECT_SIGNING_SECRET must be a unique random value of at least 32 characters');
+    }
+  }
 
   async putKyc(userId: string, bytes: Buffer, declaredMime?: string) {
     const mime = this.detectMime(bytes);

@@ -451,10 +451,12 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Widget _indexGrid(List<(String, double, double)> values) => LayoutBuilder(
     builder: (context, constraints) {
-      final width = (constraints.maxWidth - 10) / 2;
+      final columns = constraints.maxWidth >= 340 ? 4 : 2;
+      final gap = 8.0;
+      final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
       return Wrap(
-        spacing: 10,
-        runSpacing: 10,
+        spacing: gap,
+        runSpacing: gap,
         children: values
             .map((item) => SizedBox(width: width, child: _indexCard(item)))
             .toList(),
@@ -466,8 +468,8 @@ class _MarketsPageState extends State<MarketsPage> {
     final positive = item.$3 >= 0;
     final color = positive ? AppConfig.gainColor : AppConfig.lossColor;
     return Container(
-      height: 132,
-      padding: const EdgeInsets.all(13),
+      height: 112,
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -482,7 +484,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 child: Text(
                   item.$1,
                   style: const TextStyle(
-                    fontSize: 11,
+                    fontSize: 9,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
@@ -491,37 +493,33 @@ class _MarketsPageState extends State<MarketsPage> {
                 positive
                     ? Icons.keyboard_arrow_up_rounded
                     : Icons.keyboard_arrow_down_rounded,
-                size: 18,
+                size: 15,
                 color: color,
               ),
             ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            item.$2 > 0 ? item.$2.toStringAsFixed(2) : '--',
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              item.$2 > 0 ? item.$2.toStringAsFixed(2) : '--',
+              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+            ),
           ),
           Text(
             '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
             style: TextStyle(
               color: color,
-              fontSize: 12,
+              fontSize: 10,
               fontWeight: FontWeight.w700,
             ),
           ),
           const Spacer(),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: List.generate(
-              12,
-              (i) => Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 1),
-                  height: 5 + ((i * 7 + item.$1.length) % 18),
-                  color: color.withValues(alpha: .65),
-                ),
-              ),
-            ),
+          SizedBox(
+            height: 25,
+            width: double.infinity,
+            child: CustomPaint(painter: _IndexSparklinePainter(color)),
           ),
         ],
       ),
@@ -915,6 +913,46 @@ class _MarketsPageState extends State<MarketsPage> {
       ],
     );
   }
+}
+
+class _IndexSparklinePainter extends CustomPainter {
+  const _IndexSparklinePainter(this.color);
+  final Color color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final points = <double>[
+      .72,
+      .58,
+      .64,
+      .43,
+      .52,
+      .34,
+      .41,
+      .23,
+      .31,
+      .12,
+      .2,
+      .08,
+    ];
+    final path = Path();
+    for (var i = 0; i < points.length; i++) {
+      final x = size.width * i / (points.length - 1);
+      final y = size.height * points[i];
+      i == 0 ? path.moveTo(x, y) : path.lineTo(x, y);
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = color
+        ..strokeWidth = 1.4
+        ..style = PaintingStyle.stroke
+        ..strokeCap = StrokeCap.round,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _IndexSparklinePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _MarketSearchDelegate extends SearchDelegate<StockQuote?> {

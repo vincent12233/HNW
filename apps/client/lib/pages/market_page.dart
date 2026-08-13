@@ -894,6 +894,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
         Expanded(
           child: _HomeActionButton(
             label: 'Add Money',
+            subtitle: 'Instant Deposit',
             icon: Icons.support_agent_outlined,
             color: AppConfig.primaryColor,
             onTap: _openDepositSupport,
@@ -903,6 +904,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
         Expanded(
           child: _HomeActionButton(
             label: 'Withdraw',
+            subtitle: 'Withdraw to Bank',
             icon: Icons.account_balance_wallet_outlined,
             color: const Color(0xFF0F766E),
             onTap: _openWithdrawalRequest,
@@ -947,6 +949,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
         bankNiftyChange,
         'NSE',
       ),
+      ('INDIA VIX', '12.85', -1.16, 'NSE'),
     ];
 
     return Row(
@@ -955,9 +958,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(right: item.$1 == 'BANK NIFTY' ? 0 : 8),
+            padding: EdgeInsets.only(right: item.$1 == 'INDIA VIX' ? 0 : 6),
             child: Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(9),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
@@ -982,7 +985,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Color(0xFF64748B),
-                            fontSize: 11,
+                            fontSize: 9,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -990,11 +993,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     ],
                   ),
                   const SizedBox(height: 7),
-                  Text(
-                    item.$2,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      item.$2,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 5),
@@ -1004,7 +1011,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                       color: positive
                           ? AppConfig.gainColor
                           : AppConfig.lossColor,
-                      fontSize: 11,
+                      fontSize: 9,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -1730,8 +1737,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
             notificationCount: unreadNotificationCount,
           ),
           const SizedBox(height: 14),
-          _homeMarketStatus(),
-          const SizedBox(height: 10),
           _homeFundsCard(),
           const SizedBox(height: 18),
           _sectionTitle(
@@ -2307,9 +2312,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final itemWidth = constraints.maxWidth < 390
-                        ? constraints.maxWidth / 2
-                        : constraints.maxWidth / 4;
+                    final itemWidth = constraints.maxWidth / 4;
                     return Wrap(
                       runSpacing: 16,
                       children: [
@@ -2734,23 +2737,28 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   Widget _accountFundValue(String label, double value, {String? displayValue}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.black54, fontSize: 11),
-        ),
-        const SizedBox(height: 5),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          alignment: Alignment.centerLeft,
-          child: Text(
-            displayValue ?? formatPrice(value),
-            style: const TextStyle(fontWeight: FontWeight.w800),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.black54, fontSize: 11),
           ),
-        ),
-      ],
+          const SizedBox(height: 5),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              displayValue ?? formatPrice(value),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3010,9 +3018,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final itemWidth = constraints.maxWidth < 390
-                        ? constraints.maxWidth / 2
-                        : constraints.maxWidth / 4;
+                    final itemWidth = constraints.maxWidth / 4;
                     return Wrap(
                       runSpacing: 14,
                       children: [
@@ -3460,12 +3466,14 @@ class _HomeMoneyCard extends StatelessWidget {
 class _HomeActionButton extends StatelessWidget {
   const _HomeActionButton({
     required this.label,
+    required this.subtitle,
     required this.icon,
     required this.color,
     required this.onTap,
   });
 
   final String label;
+  final String subtitle;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
@@ -3476,7 +3484,7 @@ class _HomeActionButton extends StatelessWidget {
       borderRadius: BorderRadius.circular(8),
       onTap: onTap,
       child: Container(
-        height: 48,
+        height: 62,
         padding: const EdgeInsets.symmetric(horizontal: 12),
         decoration: BoxDecoration(
           color: Colors.white,
@@ -3495,13 +3503,37 @@ class _HomeActionButton extends StatelessWidget {
           children: [
             Icon(icon, color: color, size: 19),
             const SizedBox(width: 8),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF0F172A),
-                fontSize: 13,
-                fontWeight: FontWeight.w800,
+            Expanded(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      color: Color(0xFF0F172A),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
               ),
+            ),
+            const Icon(
+              Icons.chevron_right_rounded,
+              size: 18,
+              color: Color(0xFF64748B),
             ),
           ],
         ),

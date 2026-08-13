@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 interface JwtPayload {
   sub: string;
   role: string;
+  version?: number;
 }
 
 @Injectable()
@@ -37,6 +38,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         id: true,
         role: true,
         status: true,
+        authVersion: true,
 
         businessProfile: {
           select: {
@@ -52,6 +54,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
     if (user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('User account is not active');
+    }
+
+    if (payload.version !== user.authVersion) {
+      throw new UnauthorizedException('Access token has been revoked');
     }
 
     if (

@@ -268,6 +268,7 @@ export class AuthService {
       sub: user.id,
       phone: user.phone,
       role: user.role,
+      version: user.authVersion,
     });
 
     return {
@@ -339,7 +340,7 @@ export class AuthService {
     const user = await this.prisma.user.findFirst({ where: { OR: [{ googleSubject: subject }, { email }] }, include: { account: true } });
     if (!user || user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Google account is not linked to an active trading account');
     if (!user.googleSubject) await this.prisma.user.update({ where: { id: user.id }, data: { googleSubject: subject } });
-    const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role });
+    const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role, version: user.authVersion });
     return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
   }
 
@@ -381,7 +382,7 @@ export class AuthService {
     if (payload?.purpose !== 'BIOMETRIC_LOGIN' || !payload?.sub) throw new UnauthorizedException('Invalid biometric quick login');
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, include: { account: true } });
     if (!user || user.status !== UserStatus.ACTIVE || payload.version !== user.authVersion) throw new UnauthorizedException('Biometric quick login must be enabled again');
-    const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role });
+    const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role, version: user.authVersion });
     return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
   }
 

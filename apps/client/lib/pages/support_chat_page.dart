@@ -56,13 +56,16 @@ class _SupportChatPageState extends State<SupportChatPage> {
     }
   }
 
-  void _connectRealtime() {
+  Future<void> _connectRealtime() async {
+    final session = await AuthService().restoreSession();
+    if (session == null || session.accessToken.isEmpty) return;
     final socket = io.io(
       '${AppConfig.apiBaseUrl}/support',
       io.OptionBuilder()
           .setTransports(['websocket'])
           .enableReconnection()
           .setReconnectionDelay(1000)
+          .setAuth({'token': session.accessToken})
           .disableAutoConnect()
           .build(),
     );

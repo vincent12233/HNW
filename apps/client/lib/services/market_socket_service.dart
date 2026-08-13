@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 import 'package:socket_io_client/socket_io_client.dart' as io;
 
 import '../app_config.dart';
+import 'auth_service.dart';
 import 'market_data_service.dart';
 
 typedef MarketQuoteListener = void Function(Map<String, dynamic> quote);
@@ -52,6 +53,10 @@ class MarketSocketService with WidgetsBindingObserver {
   }
 
   void connect() {
+    unawaited(_connectAuthenticated());
+  }
+
+  Future<void> _connectAuthenticated() async {
     _ensureLifecycleObserver();
 
     if (_socket != null) {
@@ -61,6 +66,11 @@ class MarketSocketService with WidgetsBindingObserver {
       return;
     }
 
+    final session = await AuthService().restoreSession();
+    if (session == null || session.accessToken.isEmpty) {
+      _emitConnection(false);
+      return;
+    }
     final socket = io.io(
       AppConfig.apiBaseUrl,
       io.OptionBuilder()
@@ -70,6 +80,7 @@ class MarketSocketService with WidgetsBindingObserver {
           .setReconnectionDelay(1000)
           .setReconnectionDelayMax(30000)
           .setTimeout(10000)
+          .setAuth({'token': session.accessToken})
           .disableAutoConnect()
           .build(),
     );

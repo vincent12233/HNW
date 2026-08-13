@@ -1,8 +1,10 @@
-import { WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { OnGatewayInit, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
+import { JwtService } from '@nestjs/jwt';
 
-import { Server } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 
 import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 @WebSocketGateway({
   cors: {
@@ -13,12 +15,29 @@ import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
     ],
   },
 })
-export class MarketDataGateway implements OnModuleInit, OnModuleDestroy {
+export class MarketDataGateway implements OnGatewayInit, OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(MarketDataGateway.name);
   private heartbeatTimer?: NodeJS.Timeout;
 
   @WebSocketServer()
   server: Server;
+
+  constructor(private readonly jwt: JwtService, private readonly prisma: PrismaService) {}
+
+  afterInit(server: Server) {
+    server.use((socket, next) => void this.authenticate(socket, next));
+  }
+
+  private async authenticate(socket: Socket, next: (error?: Error) => void) {
+    try {
+      const token = String(socket.handshake.auth?.token || '').replace(/^Bearer\s+/i, '');
+      const payload = await this.jwt.verifyAsync<{ sub: string; version?: number }>(token);
+      const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, select: { status: true, authVersion: true } });
+      if (!user || user.status !== 'ACTIVE' || payload.version !== user.authVersion) throw new Error('Unauthorized');
+      socket.data.userId = payload.sub;
+      next();
+    } catch { next(new Error('Unauthorized websocket connection')); }
+  }
 
   onModuleInit() {
     this.heartbeatTimer = setInterval(() => {

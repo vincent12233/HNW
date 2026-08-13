@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
 import { MarketSessionModule } from '../market-session/market-session.module';
 import { HistoricalMarketDataService } from './historical-market-data.service';
@@ -20,7 +21,7 @@ import { StreamingMarketDataService } from './streaming-market-data.service';
 import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
 
 @Module({
-  imports: [PrismaModule, MarketSessionModule],
+  imports: [PrismaModule, MarketSessionModule, AuthModule],
   controllers: [MarketDataController],
   providers: [
     MarketDataService,

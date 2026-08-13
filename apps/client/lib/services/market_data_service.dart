@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
 import '../models/market_history.dart';
+import '../models/market_news_item.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/stock_quote.dart';
 import 'auth_service.dart';
@@ -26,6 +27,30 @@ class MarketSearchPage {
 }
 
 class MarketDataService {
+  Future<List<MarketNewsItem>> fetchMarketNews({int limit = 8}) async {
+    try {
+      final session = await _authService.restoreSession();
+      if (session == null) return const [];
+      final response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/market-data/news?limit=$limit'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode < 200 || response.statusCode >= 300)
+        return const [];
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List) return const [];
+      return decoded
+          .whereType<Map>()
+          .map((row) => MarketNewsItem.fromJson(Map<String, dynamic>.from(row)))
+          .where((item) => item.title.isNotEmpty)
+          .toList();
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<List<InstitutionalStock>> fetchInstitutionalOffers() async {
     final session = await AuthService().restoreSession();
     if (session == null) return const [];

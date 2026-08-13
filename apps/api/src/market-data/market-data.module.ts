@@ -6,6 +6,7 @@ import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataController } from './market-data.controller';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
+import { MarketNewsService } from './market-news.service';
 import { NseSyncService } from './nse-sync.service';
 import { IndiaStockMcpProvider } from './providers/india-stock-mcp.provider';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
@@ -25,6 +26,7 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
   controllers: [MarketDataController],
   providers: [
     MarketDataService,
+    MarketNewsService,
     HistoricalMarketDataService,
     MarketDataHealthService,
     MarketDataProviderService,

@@ -6,10 +6,12 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/ipo.dart';
+import '../models/market_news_item.dart';
 import '../models/pending_order.dart';
 import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
@@ -53,6 +55,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
   int unreadNotificationCount = 0;
   String marketHours = '09:15 - 15:30 IST';
   Timer? _marketSessionTimer;
+  Timer? _marketNewsTimer;
 
   double cashBalance = 0;
   double buyingPower = 0;
@@ -90,6 +93,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
       <String, PortfolioPosition>{};
 
   final List<StockQuote> stocks = <StockQuote>[];
+  final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
 
   Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
@@ -315,6 +319,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
       const Duration(minutes: 1),
       (_) => _refreshMarketSession(),
     );
+    _marketNewsTimer = Timer.periodic(const Duration(minutes: 5), (_) async {
+      final latest = await marketDataService.fetchMarketNews();
+      if (!mounted || latest.isEmpty) return;
+      setState(() {
+        marketNews
+          ..clear()
+          ..addAll(latest);
+      });
+    });
 
     marketSocket.onQuoteUpdate = (data) {
       final symbol = data['symbol']?.toString();
@@ -393,12 +406,14 @@ class _MarketHomePageState extends State<MarketHomePage> {
       marketDataService.fetchIndexSnapshot(),
       marketDataService.fetchMarketSession(),
       marketDataService.fetchInstitutionalOffers(),
+      marketDataService.fetchMarketNews(),
     ]);
     if (!mounted) return;
     final refreshedStocks = results[0] as List<StockQuote>;
     final indices = results[1] as List<Map<String, dynamic>>;
     final session = results[2] as Map<String, dynamic>?;
     final refreshedInstitutional = results[3] as List<InstitutionalStock>;
+    final refreshedNews = results[4] as List<MarketNewsItem>;
     setState(() {
       if (refreshedStocks.isNotEmpty) {
         stocks
@@ -432,12 +447,18 @@ class _MarketHomePageState extends State<MarketHomePage> {
       institutionalStocks
         ..clear()
         ..addAll(refreshedInstitutional);
+      if (refreshedNews.isNotEmpty) {
+        marketNews
+          ..clear()
+          ..addAll(refreshedNews);
+      }
     });
   }
 
   @override
   void dispose() {
     _marketSessionTimer?.cancel();
+    _marketNewsTimer?.cancel();
     marketSocket.removeConnectionListener(_handleMarketConnection);
     marketSocket.dispose();
     super.dispose();
@@ -560,6 +581,13 @@ class _MarketHomePageState extends State<MarketHomePage> {
           .length;
     } catch (_) {
       unreadNotificationCount = 0;
+    }
+
+    final latestNews = await marketDataService.fetchMarketNews();
+    if (latestNews.isNotEmpty) {
+      marketNews
+        ..clear()
+        ..addAll(latestNews);
     }
 
     if (mounted) {
@@ -1907,6 +1935,134 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   Widget _marketNewsSection() {
+    if (marketNews.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(18),
+          child: Row(
+            children: [
+              Icon(Icons.newspaper_outlined, color: Color(0xFF64748B)),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Live market news is temporarily unavailable.',
+                  style: TextStyle(color: Color(0xFF64748B)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final oneColumn = constraints.maxWidth < 340;
+        final width = oneColumn
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 10) / 2;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: marketNews
+              .take(6)
+              .map(
+                (item) => SizedBox(
+                  width: width,
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () => _openNews(item),
+                    child: Container(
+                    clipBehavior: Clip.antiAlias,
+                    constraints: const BoxConstraints(minHeight: 160),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFE8EDF5)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 78,
+                          child: item.imageUrl?.isNotEmpty == true
+                              ? Image.network(
+                                  item.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => const ColoredBox(
+                                    color: Color(0xFFEEF5FF),
+                                    child: Icon(
+                                      Icons.candlestick_chart_rounded,
+                                      color: AppConfig.primaryColor,
+                                      size: 32,
+                                    ),
+                                  ),
+                                )
+                              : const ColoredBox(
+                                  color: Color(0xFFEEF5FF),
+                                  child: Icon(
+                                    Icons.candlestick_chart_rounded,
+                                    color: AppConfig.primaryColor,
+                                    size: 32,
+                                  ),
+                                ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(11),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                item.title,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.28,
+                                ),
+                              ),
+                              const SizedBox(height: 7),
+                              Text(
+                                '${item.source}  ·  ${_newsAge(item.publishedAt)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  color: Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        );
+      },
+    );
+  }
+
+  String _newsAge(DateTime publishedAt) {
+    final difference = DateTime.now().difference(publishedAt);
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
+    if (difference.inDays < 1) return '${difference.inHours}h ago';
+    return '${difference.inDays}d ago';
+  }
+
+  Future<void> _openNews(MarketNewsItem item) async {
+    final uri = Uri.tryParse(item.url);
+    if (uri == null || !{'http', 'https'}.contains(uri.scheme)) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
+  // Kept temporarily as a layout fallback while live news is unavailable.
+  Widget _legacyMarketNewsSection() {
     const news = [
       (
         'Markets',

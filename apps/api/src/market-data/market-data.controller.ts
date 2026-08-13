@@ -13,6 +13,7 @@ import { MarketSessionService } from '../market-session/market-session.service';
 import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
+import { MarketNewsService } from './market-news.service';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -29,6 +30,7 @@ export class MarketDataController {
     private readonly marketDataHealth: MarketDataHealthService,
     private readonly historicalMarketData: HistoricalMarketDataService,
     private readonly marketSession: MarketSessionService,
+    private readonly marketNews: MarketNewsService,
   ) {}
 
   @Get()
@@ -75,6 +77,12 @@ export class MarketDataController {
   @Get('indices')
   getIndexSnapshot() {
     return this.marketDataService.getIndexSnapshot();
+  }
+
+  @Get('news')
+  @UseGuards(JwtAuthGuard)
+  getNews(@Query('limit') limit = '8') {
+    return this.marketNews.latest(Number(limit));
   }
 
   @Get('institutional')

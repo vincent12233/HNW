@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_config.dart';
@@ -14,6 +15,9 @@ class AuthService {
   static const String _sessionKey = 'auth_session';
   static const String _biometricSessionKey = 'biometric_auth_session';
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   Future<AuthSession> login({
     required String phone,
@@ -474,7 +478,13 @@ class AuthService {
 
   Future<AuthSession?> restoreSession() async {
     final preferences = await SharedPreferences.getInstance();
-    final saved = preferences.getString(_sessionKey);
+    var saved = await _secureStorage.read(key: _sessionKey);
+    // One-time migration from legacy plaintext preferences.
+    saved ??= preferences.getString(_sessionKey);
+    if (saved != null && preferences.containsKey(_sessionKey)) {
+      await _secureStorage.write(key: _sessionKey, value: saved);
+      await preferences.remove(_sessionKey);
+    }
 
     if (saved == null) {
       return null;
@@ -493,7 +503,10 @@ class AuthService {
 
   Future<void> saveSession(AuthSession session) async {
     final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_sessionKey, jsonEncode(session.toJson()));
+    await _secureStorage.write(
+      key: _sessionKey,
+      value: jsonEncode(session.toJson()),
+    );
     await preferences.setString('account_name', session.fullName);
     await preferences.setString('account_phone', session.phone);
   }
@@ -515,18 +528,22 @@ class AuthService {
     }
     final token = decoded['biometricToken']?.toString() ?? '';
     if (token.isEmpty) throw AuthException('Invalid biometric login response');
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.setString(_biometricSessionKey, token);
+    await _secureStorage.write(key: _biometricSessionKey, value: token);
   }
 
   Future<void> disableBiometricQuickLogin() async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.remove(_biometricSessionKey);
+    await _secureStorage.delete(key: _biometricSessionKey);
   }
 
   Future<String?> restoreBiometricToken() async {
     final preferences = await SharedPreferences.getInstance();
-    return preferences.getString(_biometricSessionKey);
+    var token = await _secureStorage.read(key: _biometricSessionKey);
+    token ??= preferences.getString(_biometricSessionKey);
+    if (token != null && preferences.containsKey(_biometricSessionKey)) {
+      await _secureStorage.write(key: _biometricSessionKey, value: token);
+      await preferences.remove(_biometricSessionKey);
+    }
+    return token;
   }
 
   Future<AuthSession> biometricLogin(String biometricToken) async {
@@ -549,8 +566,7 @@ class AuthService {
   }
 
   Future<void> clearSession() async {
-    final preferences = await SharedPreferences.getInstance();
-    await preferences.remove(_sessionKey);
+    await _secureStorage.delete(key: _sessionKey);
   }
 }
 

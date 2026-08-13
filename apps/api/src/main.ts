@@ -3,6 +3,7 @@ import { NestFactory } from '@nestjs/core';
 import { randomUUID } from 'crypto';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { AppModule } from './app.module';
+import { AllExceptionsFilter } from './observability/all-exceptions.filter';
 
 type RateEntry = { count: number; resetAt: number };
 const rateEntries = new Map<string, RateEntry>();
@@ -14,8 +15,10 @@ function requestLimit(path: string) {
 }
 
 function securityMiddleware(req: Request, res: Response, next: NextFunction) {
+  const startedAt = Date.now();
   const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
   res.setHeader('x-request-id', requestId);
+  res.on('finish', () => console.log(JSON.stringify({ level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info', event: 'http_request', requestId, method: req.method, path: req.path, statusCode: res.statusCode, durationMs: Date.now() - startedAt, ip: req.ip, userAgent: req.header('user-agent')?.slice(0, 200), timestamp: new Date().toISOString() })));
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('x-frame-options', 'DENY');
   res.setHeader('referrer-policy', 'no-referrer');
@@ -93,6 +96,7 @@ async function bootstrap() {
       transform: true,
     }),
   );
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   await app.listen(process.env.PORT ?? 3000);
 }

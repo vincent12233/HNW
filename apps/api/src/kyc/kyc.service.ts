@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { mkdir, readFile, writeFile } from 'fs/promises';
-import { extname, join } from 'path';
+import { extname } from 'path';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { PrivateObjectStorageService } from '../storage/private-object-storage.service';
 
 type KycSubmissionRow = {
   id: string;
@@ -35,7 +34,7 @@ type KycFileRow = {
 
 @Injectable()
 export class KycService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly objects: PrivateObjectStorageService) {}
 
   async submit(input: {
     phone: string;
@@ -91,19 +90,12 @@ export class KycService {
       throw new BadRequestException('Each KYC file must be 8 MB or smaller');
     }
 
-    const safeExtension = this.safeExtension(input.fileName);
-    const storedFileName = `${user.id}-${Date.now()}-${randomUUID()}${safeExtension}`;
-    const uploadDir = join(process.cwd(), 'uploads', 'kyc');
-    const filePath = join(uploadDir, storedFileName);
-
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(filePath, fileBuffer);
+    const frontObject = await this.objects.putKyc(user.id, fileBuffer, input.mimeType);
+    const filePath = frontObject.key;
 
     let backFilePath: string | null = null;
     if (backBuffer && input.backFileName) {
-      const backStoredName = `${user.id}-${Date.now()}-${randomUUID()}-back${this.safeExtension(input.backFileName)}`;
-      backFilePath = join(uploadDir, backStoredName);
-      await writeFile(backFilePath, backBuffer);
+      backFilePath = (await this.objects.putKyc(user.id, backBuffer, input.backMimeType)).key;
     }
 
     const recognizedType = this.recognizeDocumentType(
@@ -150,7 +142,11 @@ export class KycService {
       ORDER BY k."createdAt" DESC
     `;
 
-    return rows;
+    return rows.map(({ filePath: _frontKey, backFilePath: _backKey, ...row }) => ({
+      ...row,
+      frontFileEndpoint: `/kyc/business/${row.id}/file?side=front`,
+      backFileEndpoint: row.backFileName ? `/kyc/business/${row.id}/file?side=back` : null,
+    }));
   }
 
   async fileForBusiness(businessUserId: string, submissionId: string, side: 'front' | 'back') {
@@ -174,7 +170,7 @@ export class KycService {
     if (!selectedPath || !selectedName) {
       throw new NotFoundException('KYC file side not found');
     }
-    const content = await readFile(selectedPath);
+    const content = await this.objects.get(selectedPath);
 
     return {
       fileName: selectedName,

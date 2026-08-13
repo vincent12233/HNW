@@ -41,7 +41,6 @@ model User {
   passwordResetCodes         PasswordResetCode[]
   requestedApprovals         ApprovalRequest[]     @relation("ApprovalRequester")
   decidedApprovals           ApprovalRequest[]     @relation("ApprovalDecider")
-  ledgerJournals             LedgerJournal[]       @relation("LedgerJournalCreator")
 
   @@index([assignedBusinessId])
   @@map("users")
@@ -104,7 +103,6 @@ model Account {
   withdrawalRequests WithdrawalRequest[]
   otcOrders          OtcOrder[]
   portfolioSnapshots PortfolioSnapshot[]
-  ledgerAccounts     LedgerAccount[]
 
   @@map("accounts")
 }
@@ -129,58 +127,6 @@ model AccountTransaction {
   @@index([status])
   @@index([referenceId])
   @@map("account_transactions")
-}
-
-model LedgerAccount {
-  id          String            @id @default(uuid())
-  code        String            @unique
-  name        String
-  type        LedgerAccountType
-  currency    String            @default("INR")
-  customerAccountId String?
-  active      Boolean           @default(true)
-  createdAt   DateTime          @default(now())
-  customerAccount Account?      @relation(fields: [customerAccountId], references: [id], onDelete: Restrict)
-  entries     LedgerEntry[]
-
-  @@index([customerAccountId])
-  @@index([type, active])
-  @@map("ledger_accounts")
-}
-
-model LedgerJournal {
-  id            String        @id @default(uuid())
-  journalNo     String        @unique
-  eventType     String
-  referenceType String
-  referenceId   String
-  currency      String        @default("INR")
-  description   String?
-  idempotencyKey String       @unique
-  createdById   String?
-  createdAt     DateTime      @default(now())
-  createdBy     User?         @relation("LedgerJournalCreator", fields: [createdById], references: [id], onDelete: Restrict)
-  entries       LedgerEntry[]
-
-  @@unique([referenceType, referenceId, eventType])
-  @@index([referenceType, referenceId])
-  @@index([createdAt])
-  @@map("ledger_journals")
-}
-
-model LedgerEntry {
-  id              String          @id @default(uuid())
-  journalId       String
-  ledgerAccountId String
-  side            LedgerEntrySide
-  amount          Decimal         @db.Decimal(18, 2)
-  createdAt       DateTime        @default(now())
-  journal         LedgerJournal   @relation(fields: [journalId], references: [id], onDelete: Restrict)
-  ledgerAccount   LedgerAccount   @relation(fields: [ledgerAccountId], references: [id], onDelete: Restrict)
-
-  @@index([journalId])
-  @@index([ledgerAccountId, createdAt])
-  @@map("ledger_entries")
 }
 
 model ApprovalRequest {
@@ -734,19 +680,6 @@ enum AccountTransactionStatus {
   COMPLETED
   REJECTED
   CANCELLED
-}
-
-enum LedgerAccountType {
-  ASSET
-  LIABILITY
-  EQUITY
-  REVENUE
-  EXPENSE
-}
-
-enum LedgerEntrySide {
-  DEBIT
-  CREDIT
 }
 
 enum ApprovalStatus {

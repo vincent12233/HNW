@@ -7,7 +7,7 @@ import { join } from 'path';
 import { AccountModule } from './account/account.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { LedgerModule } from './ledger/ledger.module';
+import { ApprovalModule } from './approval/approval.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health/health.controller';
 import { MarketModule } from './market/market.module';
@@ -30,10 +30,11 @@ import { WatchlistModule } from './watchlist/watchlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { OtcModule } from './otc/otc.module';
 import { ClientExperienceModule } from './client-experience/client-experience.module';
+import { StorageModule } from './storage/storage.module';
 
 @Module({
   imports: [
-    LedgerModule,
+    ApprovalModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: join(process.cwd(), '.env'),
@@ -65,6 +66,7 @@ import { ClientExperienceModule } from './client-experience/client-experience.mo
     WatchlistModule,
     OtcModule,
     ClientExperienceModule,
+    StorageModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

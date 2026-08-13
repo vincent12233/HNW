@@ -56,7 +56,7 @@ export class MarketNewsService {
       || /<img[^>]+src=["']([^"']+)["']/i.exec(this.text(xml, 'description'))?.[1]
       || null;
     const publishedAt = new Date(published).toString() === 'Invalid Date' ? new Date().toISOString() : new Date(published).toISOString();
-    return { id: `${Date.parse(publishedAt)}-${index}`, title, source, url: link, imageUrl: imageCandidate && this.safeHttpUrl(imageCandidate) ? imageCandidate : null, publishedAt };
+    return { id: `${Date.parse(publishedAt)}-${index}`, title, source, url: link, imageUrl: imageCandidate && this.safeHttpsUrl(imageCandidate) ? imageCandidate : null, publishedAt };
   }
 
   private text(xml: string, tag: string) {
@@ -66,5 +66,9 @@ export class MarketNewsService {
 
   private safeHttpUrl(value: string) {
     try { return ['http:', 'https:'].includes(new URL(value).protocol); } catch { return false; }
+  }
+
+  private safeHttpsUrl(value: string) {
+    try { return new URL(value).protocol === 'https:'; } catch { return false; }
   }
 }

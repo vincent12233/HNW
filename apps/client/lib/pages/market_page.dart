@@ -629,71 +629,88 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 ),
               ],
             ),
-      bottomNavigationBar: Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(top: BorderSide(color: AppConfig.borderColor)),
-        ),
-        child: NavigationBar(
-          height: 76,
-          elevation: 0,
-          backgroundColor: Colors.white,
-          indicatorColor: Colors.transparent,
-          surfaceTintColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-          selectedIndex: selectedIndex,
-          onDestinationSelected: (index) {
-            setState(() {
-              selectedIndex = index;
-            });
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(top: BorderSide(color: AppConfig.borderColor)),
+          ),
+          child: NavigationBarTheme(
+            data: NavigationBarThemeData(
+              labelTextStyle: WidgetStatePropertyAll(
+                TextStyle(
+                  fontSize: MediaQuery.sizeOf(context).width < 360 ? 10 : 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              iconTheme: const WidgetStatePropertyAll(IconThemeData(size: 24)),
+            ),
+            child: NavigationBar(
+              height: MediaQuery.sizeOf(context).height < 650 ? 66 : 72,
+              elevation: 0,
+              backgroundColor: Colors.white,
+              indicatorColor: Colors.transparent,
+              surfaceTintColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+              selectedIndex: selectedIndex,
+              onDestinationSelected: (index) {
+                setState(() {
+                  selectedIndex = index;
+                });
 
-            if (index == 0) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (!mounted) {
-                  return;
+                if (index == 0) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (!mounted) {
+                      return;
+                    }
+
+                    _showPendingIpoAllocationIfNeeded();
+                  });
                 }
-
-                _showPendingIpoAllocationIfNeeded();
-              });
-            }
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home, color: AppConfig.primaryColor),
-              label: 'Home',
+              },
+              destinations: const [
+                NavigationDestination(
+                  icon: Icon(Icons.home_outlined),
+                  selectedIcon: Icon(Icons.home, color: AppConfig.primaryColor),
+                  label: 'Home',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.bar_chart_outlined),
+                  selectedIcon: Icon(
+                    Icons.bar_chart,
+                    color: AppConfig.primaryColor,
+                  ),
+                  label: 'Markets',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.swap_horiz_rounded),
+                  selectedIcon: Icon(
+                    Icons.swap_horiz_rounded,
+                    color: AppConfig.primaryColor,
+                  ),
+                  label: 'Trading',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.business_center_outlined),
+                  selectedIcon: Icon(
+                    Icons.business_center,
+                    color: AppConfig.primaryColor,
+                  ),
+                  label: 'Portfolio',
+                ),
+                NavigationDestination(
+                  icon: Icon(Icons.person_outline),
+                  selectedIcon: Icon(
+                    Icons.person,
+                    color: AppConfig.primaryColor,
+                  ),
+                  label: 'Account',
+                ),
+              ],
             ),
-            NavigationDestination(
-              icon: Icon(Icons.bar_chart_outlined),
-              selectedIcon: Icon(
-                Icons.bar_chart,
-                color: AppConfig.primaryColor,
-              ),
-              label: 'Markets',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.swap_horiz_rounded),
-              selectedIcon: Icon(
-                Icons.swap_horiz_rounded,
-                color: AppConfig.primaryColor,
-              ),
-              label: 'Trading',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.business_center_outlined),
-              selectedIcon: Icon(
-                Icons.business_center,
-                color: AppConfig.primaryColor,
-              ),
-              label: 'Portfolio',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person, color: AppConfig.primaryColor),
-              label: 'Account',
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -1972,24 +1989,33 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     borderRadius: BorderRadius.circular(12),
                     onTap: () => _openNews(item),
                     child: Container(
-                    clipBehavior: Clip.antiAlias,
-                    constraints: const BoxConstraints(minHeight: 160),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE8EDF5)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          height: 78,
-                          child: item.imageUrl?.isNotEmpty == true
-                              ? Image.network(
-                                  item.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, _, _) => const ColoredBox(
+                      clipBehavior: Clip.antiAlias,
+                      constraints: const BoxConstraints(minHeight: 160),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFE8EDF5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: double.infinity,
+                            height: 78,
+                            child: item.imageUrl?.isNotEmpty == true
+                                ? Image.network(
+                                    item.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    errorBuilder: (_, _, _) => const ColoredBox(
+                                      color: Color(0xFFEEF5FF),
+                                      child: Icon(
+                                        Icons.candlestick_chart_rounded,
+                                        color: AppConfig.primaryColor,
+                                        size: 32,
+                                      ),
+                                    ),
+                                  )
+                                : const ColoredBox(
                                     color: Color(0xFFEEF5FF),
                                     child: Icon(
                                       Icons.candlestick_chart_rounded,
@@ -1997,46 +2023,37 @@ class _MarketHomePageState extends State<MarketHomePage> {
                                       size: 32,
                                     ),
                                   ),
-                                )
-                              : const ColoredBox(
-                                  color: Color(0xFFEEF5FF),
-                                  child: Icon(
-                                    Icons.candlestick_chart_rounded,
-                                    color: AppConfig.primaryColor,
-                                    size: 32,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(11),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  item.title,
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w800,
+                                    height: 1.28,
                                   ),
                                 ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(11),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.title,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.28,
+                                const SizedBox(height: 7),
+                                Text(
+                                  '${item.source}  ·  ${_newsAge(item.publishedAt)}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    color: Color(0xFF64748B),
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 7),
-                              Text(
-                                '${item.source}  ·  ${_newsAge(item.publishedAt)}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  fontSize: 9,
-                                  color: Color(0xFF64748B),
-                                ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -2058,98 +2075,11 @@ class _MarketHomePageState extends State<MarketHomePage> {
   Future<void> _openNews(MarketNewsItem item) async {
     final uri = Uri.tryParse(item.url);
     if (uri == null || !{'http', 'https'}.contains(uri.scheme)) return;
-    await launchUrl(uri, mode: LaunchMode.externalApplication);
-  }
-
-  // Kept temporarily as a layout fallback while live news is unavailable.
-  Widget _legacyMarketNewsSection() {
-    const news = [
-      (
-        'Markets',
-        'Indian equities track banking and technology momentum',
-        Icons.show_chart_rounded,
-        Color(0xFF1769FF),
-      ),
-      (
-        'Economy',
-        'RBI policy and liquidity remain in investor focus',
-        Icons.account_balance_rounded,
-        Color(0xFF7C3AED),
-      ),
-      (
-        'Companies',
-        'Earnings updates shape today’s active counters',
-        Icons.apartment_rounded,
-        Color(0xFF0891B2),
-      ),
-      (
-        'Global',
-        'Asian markets react to currency and commodity moves',
-        Icons.public_rounded,
-        Color(0xFFF59E0B),
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final oneColumn = constraints.maxWidth < 340;
-        final width = oneColumn
-            ? constraints.maxWidth
-            : (constraints.maxWidth - 10) / 2;
-        return Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: news.map((item) {
-            return SizedBox(
-              width: width,
-              child: Container(
-                constraints: const BoxConstraints(minHeight: 116),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFFE8EDF5)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 34,
-                      height: 34,
-                      decoration: BoxDecoration(
-                        color: item.$4.withValues(alpha: .1),
-                        borderRadius: BorderRadius.circular(9),
-                      ),
-                      child: Icon(item.$3, color: item.$4, size: 19),
-                    ),
-                    const SizedBox(height: 9),
-                    Text(
-                      item.$1.toUpperCase(),
-                      style: TextStyle(
-                        color: item.$4,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .5,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      item.$2,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
-        );
-      },
-    );
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // The news card remains usable even when no browser is available.
+    }
   }
 
   Widget _homeTradingBanner() {

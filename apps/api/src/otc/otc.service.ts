@@ -90,7 +90,7 @@ export class OtcService {
     const amount = selectedPrice.mul(quantity).toDecimalPlaces(2);
     const order = await this.prisma.otcOrder.create({
       data: {
-        orderNo: `OTC-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+        orderNo: `OTC-${Date.now()}-${randomBytes(5).toString('hex').slice(0, 8).toUpperCase()}`,
         accountId: user.account.id,
         offerId: offer.id,
         instrumentId: offer.instrumentId,

@@ -46,12 +46,12 @@ PORT=3000
 
 | 角色 | 员工编号 | 密码 |
 | --- | --- | --- |
-| 管理员 | ADMIN001 | Admin@123456 |
-| 财务 | FINANCE001 | Finance@123456 |
-| 客服 | SUPPORT001 | Support@123456 |
-| 业务员 | BUSINESS001 | Business@123456 |
+| 管理员 | ADMIN001 | `ADMIN_INITIAL_PASSWORD` 环境变量 |
+| 财务 | FINANCE001 | `FINANCE_INITIAL_PASSWORD` 环境变量 |
+| 客服 | SUPPORT001 | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
+| 业务员 | BUSINESS001 | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 
-生产环境上线后请立即修改默认密码。
+项目不再提供固定默认密码。初始化前必须配置至少 12 位的独立密码，且脚本不会在日志中输出密码。
 
 ## 联调测试
 

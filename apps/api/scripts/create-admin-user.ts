@@ -17,7 +17,8 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const employeeNo = 'ADMIN001';
-  const password = 'Admin@123456';
+  const password = process.env.ADMIN_INITIAL_PASSWORD;
+  if (!password || password.length < 12) throw new Error('ADMIN_INITIAL_PASSWORD must contain at least 12 characters');
   const passwordHash = await bcrypt.hash(password, 12);
   const internalEmail = `${employeeNo.toLowerCase()}@internal.hnw.local`;
 
@@ -69,7 +70,7 @@ async function main() {
   console.log('==============================');
   console.log('Admin account is ready');
   console.log(`Employee No: ${admin.businessProfile?.employeeNo}`);
-  console.log(`Password: ${password}`);
+  console.log('Password was read securely from ADMIN_INITIAL_PASSWORD');
   console.log(`Role: ${admin.role}`);
   console.log('==============================');
 }

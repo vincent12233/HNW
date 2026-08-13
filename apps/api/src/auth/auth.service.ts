@@ -9,7 +9,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { randomBytes, randomInt } from 'crypto';
 import axios from 'axios';
 
 import {
@@ -299,7 +299,7 @@ export class AuthService {
       throw new HttpException('Too many reset requests. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
     }
     await this.prisma.passwordResetCode.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } });
-    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const code = String(randomInt(100000, 1000000));
     const reset = await this.prisma.passwordResetCode.create({ data: { userId: user.id, codeHash: await bcrypt.hash(code, 12), expiresAt: new Date(Date.now() + 10 * 60 * 1000) } });
     const webhook = this.config.get<string>('SMS_OTP_WEBHOOK_URL')?.trim();
     if (!webhook) throw new BadRequestException('Password reset service is temporarily unavailable');

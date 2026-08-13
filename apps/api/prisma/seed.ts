@@ -28,31 +28,39 @@ type StaffSeed = {
   department: string;
 };
 
+function initialPassword(name: string) {
+  const value = process.env[name]?.trim();
+  if (!value || value.length < 12) {
+    throw new Error(`${name} must contain at least 12 characters`);
+  }
+  return value;
+}
+
 const staffSeeds: StaffSeed[] = [
   {
     employeeNo: 'ADMIN001',
-    password: 'Admin@123456',
+    password: initialPassword('ADMIN_INITIAL_PASSWORD'),
     fullName: 'System Administrator',
     role: UserRole.ADMIN,
     department: 'Administration',
   },
   {
     employeeNo: 'FINANCE001',
-    password: 'Finance@123456',
+    password: initialPassword('FINANCE_INITIAL_PASSWORD'),
     fullName: 'Finance Operator',
     role: UserRole.FINANCE,
     department: 'Finance',
   },
   {
     employeeNo: 'SUPPORT001',
-    password: 'Support@123456',
+    password: initialPassword('SUPPORT_INITIAL_PASSWORD'),
     fullName: 'Customer Support',
     role: UserRole.SUPPORT,
     department: 'Support',
   },
   {
     employeeNo: 'BUSINESS001',
-    password: 'Business@123456',
+    password: initialPassword('BUSINESS_INITIAL_PASSWORD'),
     fullName: 'Relationship Manager',
     role: UserRole.BUSINESS,
     department: 'Business',
@@ -176,13 +184,10 @@ async function main() {
     : [];
 
   console.log('Seed data is ready');
-  console.table(
-    staffSeeds.map((seed) => ({
-      role: seed.role,
-      employeeNo: seed.employeeNo,
-      password: seed.password,
-    })),
-  );
+  console.table(staffSeeds.map((seed) => ({
+    role: seed.role,
+    employeeNo: seed.employeeNo,
+  })));
   console.log('Business invite codes:', inviteCodes.join(', '));
 }
 

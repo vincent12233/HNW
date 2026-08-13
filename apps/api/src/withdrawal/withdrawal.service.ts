@@ -3,6 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -197,7 +198,7 @@ export class WithdrawalService {
       String(now.getMonth() + 1).padStart(2, '0'),
       String(now.getDate()).padStart(2, '0'),
     ].join('');
-    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const suffix = randomBytes(5).toString('hex').slice(0, 8).toUpperCase();
 
     return `WD${date}${suffix}`;
   }

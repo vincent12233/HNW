@@ -1,4 +1,5 @@
 import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,7 +13,7 @@ export class LoansService {
   ) {}
 
   private generateOrderNo() {
-    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const suffix = randomBytes(5).toString('hex').slice(0, 8).toUpperCase();
     const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     return `LN${stamp}${suffix}`;
   }

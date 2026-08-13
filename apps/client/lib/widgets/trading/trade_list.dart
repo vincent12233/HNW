@@ -63,42 +63,94 @@ class TradeList extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                IntrinsicHeight(
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _summary(
-                          'Total Portfolio Value',
-                          formatPrice(total),
-                          AppConfig.textPrimaryColor,
-                        ),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 380;
+                    if (compact) {
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _summary(
+                                  'Total Portfolio Value',
+                                  formatPrice(total),
+                                  AppConfig.textPrimaryColor,
+                                ),
+                              ),
+                              Expanded(
+                                child: _summary(
+                                  'Total Invested',
+                                  formatPrice(invested),
+                                  AppConfig.textPrimaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _summary(
+                                  'Total P&L',
+                                  '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                                  pnl >= 0
+                                      ? AppConfig.gainColor
+                                      : AppConfig.lossColor,
+                                ),
+                              ),
+                              Expanded(
+                                child: _summary(
+                                  'Available Balance',
+                                  formatPrice(account?.cashBalance ?? 0),
+                                  AppConfig.textPrimaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    return IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _summary(
+                              'Total Portfolio Value',
+                              formatPrice(total),
+                              AppConfig.textPrimaryColor,
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _summary(
+                              'Total Invested',
+                              formatPrice(invested),
+                              AppConfig.textPrimaryColor,
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _summary(
+                              'Total P&L',
+                              '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                              pnl >= 0
+                                  ? AppConfig.gainColor
+                                  : AppConfig.lossColor,
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _summary(
+                              'Available Balance',
+                              formatPrice(account?.cashBalance ?? 0),
+                              AppConfig.textPrimaryColor,
+                            ),
+                          ),
+                        ],
                       ),
-                      const VerticalDivider(width: 1),
-                      Expanded(
-                        child: _summary(
-                          'Total Invested',
-                          formatPrice(invested),
-                          AppConfig.textPrimaryColor,
-                        ),
-                      ),
-                      const VerticalDivider(width: 1),
-                      Expanded(
-                        child: _summary(
-                          'Total P&L',
-                          '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                          pnl >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
-                        ),
-                      ),
-                      const VerticalDivider(width: 1),
-                      Expanded(
-                        child: _summary(
-                          'Available Balance',
-                          formatPrice(account?.cashBalance ?? 0),
-                          AppConfig.textPrimaryColor,
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               ],
             ),
@@ -202,16 +254,35 @@ class TradeList extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 9),
-        Row(
-          children: [
-            _indexMini('NIFTY 50', '24,467.45', .91),
-            const SizedBox(width: 7),
-            _indexMini('SENSEX', '80,159.83', .90),
-            const SizedBox(width: 7),
-            _indexMini('BANK NIFTY', '51,356.80', 1.01),
-            const SizedBox(width: 7),
-            _indexMini('INDIA VIX', '12.85', -1.16),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth < 380 ? 2 : 4;
+            const gap = 7.0;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                SizedBox(
+                  width: width,
+                  child: _indexMini('NIFTY 50', '24,467.45', .91),
+                ),
+                SizedBox(
+                  width: width,
+                  child: _indexMini('SENSEX', '80,159.83', .90),
+                ),
+                SizedBox(
+                  width: width,
+                  child: _indexMini('BANK NIFTY', '51,356.80', 1.01),
+                ),
+                SizedBox(
+                  width: width,
+                  child: _indexMini('INDIA VIX', '12.85', -1.16),
+                ),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
       ],
@@ -313,46 +384,44 @@ class TradeList extends StatelessWidget {
     );
   }
 
-  Widget _indexMini(String name, String value, double change) => Expanded(
-    child: Container(
-      height: 94,
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+  Widget _indexMini(String name, String value, double change) => Container(
+    height: 94,
+    padding: const EdgeInsets.all(9),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(9),
+      border: Border.all(color: const Color(0xFFE8EDF5)),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          name,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 5),
+        FittedBox(
+          child: Text(
+            value,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
           ),
-          const SizedBox(height: 5),
-          FittedBox(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-            ),
+        ),
+        Text(
+          '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
+          style: TextStyle(
+            fontSize: 9,
+            color: change >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
           ),
-          Text(
-            '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%',
-            style: TextStyle(
-              fontSize: 9,
-              color: change >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
-            ),
-          ),
-          const Spacer(),
-          Container(
-            height: 2,
-            color: (change >= 0 ? AppConfig.gainColor : AppConfig.lossColor)
-                .withValues(alpha: .7),
-          ),
-        ],
-      ),
+        ),
+        const Spacer(),
+        Container(
+          height: 2,
+          color: (change >= 0 ? AppConfig.gainColor : AppConfig.lossColor)
+              .withValues(alpha: .7),
+        ),
+      ],
     ),
   );
 

@@ -8,7 +8,6 @@ class AppTheme {
       useMaterial3: true,
       scaffoldBackgroundColor: AppConfig.backgroundColor,
       colorScheme: ColorScheme.fromSeed(seedColor: AppConfig.primaryColor),
-      fontFamily: 'Roboto',
       visualDensity: VisualDensity.standard,
       splashFactory: InkSparkle.splashFactory,
       textTheme: const TextTheme(
@@ -47,7 +46,7 @@ class AppTheme {
         margin: EdgeInsets.zero,
         color: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
           side: const BorderSide(color: AppConfig.borderColor),
         ),
       ),

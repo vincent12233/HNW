@@ -49,7 +49,6 @@ class OtcService {
 
   Future<OtcOrderRecord> submit(
     String offerId,
-    int priceTier,
     int quantity,
     String key,
   ) async {
@@ -58,7 +57,6 @@ class OtcService {
       headers: await _headers(),
       body: jsonEncode({
         'offerId': offerId,
-        'priceTier': priceTier,
         'quantity': quantity,
         'transactionKey': key,
       }),

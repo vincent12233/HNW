@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -11,16 +12,13 @@ export class OtcService {
     const now = new Date();
     const offers = await this.prisma.otcOffer.findMany({
       where: { isActive: true, validFrom: { lte: now }, validUntil: { gte: now } },
-      include: { instrument: true },
+      include: { instrument: { include: { quote: true } } },
       orderBy: { updatedAt: 'desc' },
     });
     return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, ...offer }) => ({
       ...offer,
-      tiers: [
-        { tier: 1, price: offer.price, profit: offer.profitTier1 },
-        ...(offer.priceTier2 ? [{ tier: 2, price: offer.priceTier2, profit: offer.profitTier2 }] : []),
-        ...(offer.priceTier3 ? [{ tier: 3, price: offer.priceTier3, profit: offer.profitTier3 }] : []),
-      ],
+      marketPrice: offer.instrument.quote?.lastPrice ?? null,
+      quoteAsOf: offer.instrument.quote?.asOf ?? null,
     }));
   }
 
@@ -29,35 +27,29 @@ export class OtcService {
     return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, ...offer }) => offer);
   }
 
-  async saveOffer(body: { instrumentId: string; tiers: Array<{ price: string; profit: string; transactionKey: string }>; validFrom: string; validUntil: string }) {
-    if (!Array.isArray(body.tiers) || body.tiers.length !== 3) throw new BadRequestException('Exactly three OTC price tiers are required');
-    const tiers = body.tiers.map((tier) => ({
-      price: new Prisma.Decimal(tier.price), profit: new Prisma.Decimal(tier.profit), key: tier.transactionKey?.trim(),
-    }));
-    if (tiers.some((tier) => !tier.price.greaterThan(0) || !tier.profit.greaterThan(0) || !/^\d{6}$/.test(tier.key))) {
-      throw new BadRequestException('Each tier requires a valid price, profit and unique 6-digit transaction key');
-    }
-    if (new Set(tiers.map((tier) => tier.key)).size !== 3) throw new BadRequestException('Each OTC tier must use a different transaction key');
-    const price = tiers[0].price;
+  async saveOffer(body: { instrumentId: string; validFrom: string; validUntil: string }) {
     const validFrom = new Date(body.validFrom);
     const validUntil = new Date(body.validUntil);
-    if (!price.greaterThan(0) || !Number.isFinite(validFrom.getTime()) || validUntil <= validFrom) {
-      throw new BadRequestException('Valid price and offer period are required');
+    if (!Number.isFinite(validFrom.getTime()) || validUntil <= validFrom) {
+      throw new BadRequestException('Valid offer period is required');
     }
-    const instrument = await this.prisma.instrument.findUnique({ where: { id: body.instrumentId } });
+    const instrument = await this.prisma.instrument.findUnique({ where: { id: body.instrumentId }, include: { quote: true } });
     if (!instrument?.isActive) throw new NotFoundException('Active instrument not found');
+    if (!instrument.quote?.lastPrice.greaterThan(0)) throw new BadRequestException('A live market quote is required before publishing');
+    const transactionKey = randomInt(1000, 10000).toString();
+    const keyHash = await bcrypt.hash(transactionKey, 12);
     await this.prisma.instrument.update({
       where: { id: instrument.id },
       data: { category: 'OTC' },
     });
     const saved = await this.prisma.otcOffer.upsert({
       where: { instrumentId: instrument.id },
-      create: { instrumentId: instrument.id, price, priceTier2: tiers[1].price, priceTier3: tiers[2].price, profitTier1: tiers[0].profit, profitTier2: tiers[1].profit, profitTier3: tiers[2].profit, keyHashTier1: await bcrypt.hash(tiers[0].key, 12), keyHashTier2: await bcrypt.hash(tiers[1].key, 12), keyHashTier3: await bcrypt.hash(tiers[2].key, 12), validFrom, validUntil },
-      update: { price, priceTier2: tiers[1].price, priceTier3: tiers[2].price, profitTier1: tiers[0].profit, profitTier2: tiers[1].profit, profitTier3: tiers[2].profit, keyHashTier1: await bcrypt.hash(tiers[0].key, 12), keyHashTier2: await bcrypt.hash(tiers[1].key, 12), keyHashTier3: await bcrypt.hash(tiers[2].key, 12), validFrom, validUntil, isActive: true },
+      create: { instrumentId: instrument.id, price: instrument.quote.lastPrice, keyHashTier1: keyHash, validFrom, validUntil },
+      update: { price: instrument.quote.lastPrice, priceTier2: null, priceTier3: null, profitTier1: null, profitTier2: null, profitTier3: null, keyHashTier1: keyHash, keyHashTier2: null, keyHashTier3: null, validFrom, validUntil, isActive: true },
       include: { instrument: true },
     });
     const { keyHashTier1, keyHashTier2, keyHashTier3, ...offer } = saved;
-    return offer;
+    return { ...offer, transactionKey };
   }
 
   async updateOffer(id: string, body: { price?: string; validFrom?: string; validUntil?: string; isActive?: boolean }) {
@@ -74,23 +66,21 @@ export class OtcService {
     return offer;
   }
 
-  async submit(userId: string, offerId: string, priceTier: number, quantity: number, key: string) {
+  async submit(userId: string, offerId: string, quantity: number, key: string) {
     if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 1000000) {
       throw new BadRequestException('Quantity must be a positive whole number');
     }
     const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { account: true } });
     if (!user?.account) throw new NotFoundException('Trading account not found');
-    const offer = await this.prisma.otcOffer.findUnique({ where: { id: offerId }, include: { instrument: true } });
+    const offer = await this.prisma.otcOffer.findUnique({ where: { id: offerId }, include: { instrument: { include: { quote: true } } } });
     const now = new Date();
     if (!offer || !offer.isActive || offer.validFrom > now || offer.validUntil < now) {
       throw new BadRequestException('OTC offer is not active');
     }
-    if (![1, 2, 3].includes(priceTier)) throw new BadRequestException('Invalid OTC price tier');
-    const tierPrices = [offer.price, offer.priceTier2, offer.priceTier3];
-    const tierHashes = [offer.keyHashTier1, offer.keyHashTier2, offer.keyHashTier3];
-    const selectedPrice = tierPrices[priceTier - 1];
-    const selectedHash = tierHashes[priceTier - 1];
-    if (!selectedPrice || !selectedHash || !(await bcrypt.compare(key ?? '', selectedHash))) throw new UnauthorizedException('Invalid transaction key for this OTC price');
+    if (!/^\d{4}$/.test(key ?? '') || !offer.keyHashTier1 || !(await bcrypt.compare(key, offer.keyHashTier1))) throw new UnauthorizedException('Invalid 4-digit OTC transaction key');
+    const quote = offer.instrument.quote;
+    if (!quote?.lastPrice.greaterThan(0) || Date.now() - quote.asOf.getTime() > 5 * 60_000) throw new BadRequestException('Live market price is temporarily unavailable');
+    const selectedPrice = quote.lastPrice;
     const amount = selectedPrice.mul(quantity).toDecimalPlaces(2);
     const order = await this.prisma.otcOrder.create({
       data: {
@@ -100,7 +90,7 @@ export class OtcService {
         instrumentId: offer.instrumentId,
         quantity,
         price: selectedPrice,
-        priceTier,
+        priceTier: 1,
         amount,
       },
       include: { instrument: true },

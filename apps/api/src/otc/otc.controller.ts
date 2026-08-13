@@ -14,8 +14,8 @@ export class OtcController {
   offers() { return this.otc.listOffers(); }
 
   @Post('orders')
-  submit(@Req() req: any, @Body() body: { offerId: string; priceTier: number; quantity: number; transactionKey: string }) {
-    return this.otc.submit(req.user.userId, body.offerId, Number(body.priceTier), Number(body.quantity), body.transactionKey);
+  submit(@Req() req: any, @Body() body: { offerId: string; quantity: number; transactionKey: string }) {
+    return this.otc.submit(req.user.userId, body.offerId, Number(body.quantity), body.transactionKey);
   }
 
   @Get('orders/me')
@@ -31,7 +31,7 @@ export class OtcController {
 
   @Post('admin/offers')
   @Roles(UserRole.ADMIN)
-  createOffer(@Body() body: { instrumentId: string; tiers: Array<{ price: string; profit: string; transactionKey: string }>; validFrom: string; validUntil: string }) {
+  createOffer(@Body() body: { instrumentId: string; validFrom: string; validUntil: string }) {
     return this.otc.saveOffer(body);
   }
 

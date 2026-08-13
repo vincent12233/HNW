@@ -132,67 +132,19 @@ class _OtcTabState extends State<OtcTab> {
                     ],
                   ),
                   const Divider(height: 24),
-                  Text(
-                    '${item.exchange} · Three purchase options',
-                    style: const TextStyle(color: Colors.black54),
+                  _value(
+                    'Live Market Price',
+                    item.price > 0 ? formatPrice(item.price) : '--',
                   ),
-                  const SizedBox(height: 12),
-                  ...item.otcTiers.map(
-                    (tier) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(12),
-                        onTap: () => _submitDialog(item, tier),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 13,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF7F9FC),
-                            border: Border.all(color: const Color(0xFFE5EAF2)),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      formatPrice(tier.price),
-                                      style: const TextStyle(
-                                        fontSize: 17,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      '${tier.profit.toStringAsFixed(tier.profit % 1 == 0 ? 0 : 2)}% profit',
-                                      style: const TextStyle(
-                                        color: AppConfig.gainColor,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const Text(
-                                'Buy',
-                                style: TextStyle(
-                                  color: AppConfig.primaryColor,
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.chevron_right_rounded,
-                                color: AppConfig.primaryColor,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: item.price > 0
+                          ? () => _submitDialog(item)
+                          : null,
+                      icon: const Icon(Icons.shopping_cart_checkout_rounded),
+                      label: const Text('Buy'),
                     ),
                   ),
                 ],
@@ -204,7 +156,7 @@ class _OtcTabState extends State<OtcTab> {
     );
   }
 
-  Future<void> _submitDialog(InstitutionalStock item, OtcPriceTier tier) async {
+  Future<void> _submitDialog(InstitutionalStock item) async {
     final quantity = TextEditingController(text: '1');
     final key = TextEditingController();
     final submitted = await showDialog<bool>(
@@ -214,9 +166,7 @@ class _OtcTabState extends State<OtcTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              '${formatPrice(tier.price)} · ${tier.profit.toStringAsFixed(tier.profit % 1 == 0 ? 0 : 2)}% profit',
-            ),
+            Text('Live market price ${formatPrice(item.price)}'),
             const SizedBox(height: 14),
             TextField(
               controller: quantity,
@@ -228,8 +178,10 @@ class _OtcTabState extends State<OtcTab> {
               controller: key,
               obscureText: true,
               keyboardType: TextInputType.number,
-              maxLength: 6,
-              decoration: const InputDecoration(labelText: 'Transaction key'),
+              maxLength: 4,
+              decoration: const InputDecoration(
+                labelText: '4-digit transaction key',
+              ),
             ),
           ],
         ),
@@ -247,12 +199,7 @@ class _OtcTabState extends State<OtcTab> {
     );
     if (submitted != true) return;
     try {
-      await service.submit(
-        item.id,
-        tier.tier,
-        int.tryParse(quantity.text) ?? 0,
-        key.text,
-      );
+      await service.submit(item.id, int.tryParse(quantity.text) ?? 0, key.text);
       await _refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

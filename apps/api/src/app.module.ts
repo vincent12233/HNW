@@ -7,6 +7,7 @@ import { join } from 'path';
 import { AccountModule } from './account/account.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { LedgerModule } from './ledger/ledger.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health/health.controller';
 import { MarketModule } from './market/market.module';
@@ -32,6 +33,7 @@ import { ClientExperienceModule } from './client-experience/client-experience.mo
 
 @Module({
   imports: [
+    LedgerModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: join(process.cwd(), '.env'),

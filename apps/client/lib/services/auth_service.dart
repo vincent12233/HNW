@@ -236,6 +236,26 @@ class AuthService {
     return documentType;
   }
 
+  Future<String> fetchKycStatus(String phone) async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse(
+              '${AppConfig.apiBaseUrl}/kyc/status?phone=${Uri.encodeQueryComponent(_normalizeIndianPhone(phone))}',
+            ),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (response.statusCode < 200 || response.statusCode >= 300)
+        return 'NOT_SUBMITTED';
+      final decoded = jsonDecode(response.body);
+      return decoded is Map
+          ? decoded['status']?.toString().toUpperCase() ?? 'NOT_SUBMITTED'
+          : 'NOT_SUBMITTED';
+    } catch (_) {
+      return 'NOT_SUBMITTED';
+    }
+  }
+
   Future<List<WithdrawalRequest>> fetchWithdrawals() async {
     final session = await restoreSession();
 

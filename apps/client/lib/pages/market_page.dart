@@ -72,6 +72,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
   String accountName = 'Client';
   String accountPhone = '';
   String accountNumber = '';
+  String kycStatus = 'NOT_SUBMITTED';
   Uint8List? profileAvatarBytes;
 
   final List<TradingOrder> orders = <TradingOrder>[];
@@ -453,6 +454,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
         : 'Client';
     accountPhone = session?.phone ?? '';
     accountNumber = session?.accountNumber ?? '';
+    if (accountPhone.isNotEmpty) {
+      kycStatus = await AuthService().fetchKycStatus(accountPhone);
+    }
     if (savedAvatar?.isNotEmpty == true) {
       profileAvatarBytes = base64Decode(savedAvatar!);
     }
@@ -983,14 +987,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
                           ),
                         ),
                       ),
-                      Text(
-                        item.$4,
-                        style: const TextStyle(
-                          color: Color(0xFF94A3B8),
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 7),
@@ -1124,8 +1120,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
         onTap: () => _openSupportChat(),
         borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
         child: Ink(
-          width: 34,
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          width: 30,
+          padding: const EdgeInsets.symmetric(vertical: 9),
           decoration: const BoxDecoration(
             color: AppConfig.primaryColor,
             borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
@@ -1140,15 +1136,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
           child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.support_agent_rounded, color: Colors.white, size: 18),
-              SizedBox(height: 6),
+              Icon(Icons.support_agent_rounded, color: Colors.white, size: 16),
+              SizedBox(height: 5),
               RotatedBox(
                 quarterTurns: 3,
                 child: Text(
                   'Support',
                   style: TextStyle(
                     color: Colors.white,
-                    fontSize: 9,
+                    fontSize: 8,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -2566,6 +2562,57 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ),
         )
         .toList();
+    final legend = Column(
+      children: segments.map((segment) {
+        final percent = total <= 0 ? 0 : segment.value / total * 100;
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 7),
+          child: Row(
+            children: [
+              Container(
+                width: 9,
+                height: 9,
+                decoration: BoxDecoration(
+                  color: segment.color,
+                  shape: BoxShape.circle,
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 38,
+                child: Text(
+                  segment.label,
+                  maxLines: 1,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  formatPrice(segment.value),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                width: 48,
+                child: Text(
+                  '${percent.toStringAsFixed(1)}%',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -2577,11 +2624,12 @@ class _MarketHomePageState extends State<MarketHomePage> {
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
             ),
             const SizedBox(height: 16),
-            Row(
-              children: [
-                SizedBox(
-                  width: 142,
-                  height: 142,
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final compact = constraints.maxWidth < 430;
+                final chart = SizedBox(
+                  width: compact ? 132 : 142,
+                  height: compact ? 132 : 142,
                   child: CustomPaint(
                     painter: _AllocationDonutPainter(segments),
                     child: Center(
@@ -2596,12 +2644,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          FittedBox(
-                            child: Text(
-                              formatPrice(total),
-                              style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w800,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 22),
+                            child: FittedBox(
+                              child: Text(
+                                formatPrice(total),
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w800,
+                                ),
                               ),
                             ),
                           ),
@@ -2609,60 +2660,24 @@ class _MarketHomePageState extends State<MarketHomePage> {
                       ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 22),
-                Expanded(
-                  child: Column(
-                    children: segments.map((segment) {
-                      final percent = total <= 0
-                          ? 0
-                          : segment.value / total * 100;
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 7),
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 9,
-                              height: 9,
-                              decoration: BoxDecoration(
-                                color: segment.color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                segment.label,
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            Text(
-                              '${percent.toStringAsFixed(1)}%',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            SizedBox(
-                              width: 86,
-                              child: Text(
-                                formatPrice(segment.value),
-                                textAlign: TextAlign.right,
-                                style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
+                );
+                if (compact) {
+                  return Column(
+                    children: [
+                      Center(child: chart),
+                      const SizedBox(height: 12),
+                      legend,
+                    ],
+                  );
+                }
+                return Row(
+                  children: [
+                    chart,
+                    const SizedBox(width: 22),
+                    Expanded(child: legend),
+                  ],
+                );
+              },
             ),
           ],
         ),
@@ -2718,7 +2733,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
     );
   }
 
-  Widget _accountFundValue(String label, double value) {
+  Widget _accountFundValue(String label, double value, {String? displayValue}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2731,7 +2746,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: Text(
-            formatPrice(value),
+            displayValue ?? formatPrice(value),
             style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
@@ -2951,17 +2966,31 @@ class _MarketHomePageState extends State<MarketHomePage> {
                             style: const TextStyle(color: Colors.black54),
                           ),
                           const SizedBox(height: 7),
-                          const Wrap(
+                          Wrap(
                             spacing: 8,
                             runSpacing: 6,
                             children: [
                               Chip(
                                 avatar: Icon(
-                                  Icons.verified,
-                                  color: Colors.green,
+                                  kycStatus == 'APPROVED'
+                                      ? Icons.verified
+                                      : kycStatus == 'PENDING'
+                                      ? Icons.schedule_rounded
+                                      : Icons.info_outline_rounded,
+                                  color: kycStatus == 'APPROVED'
+                                      ? Colors.green
+                                      : kycStatus == 'PENDING'
+                                      ? Colors.orange
+                                      : Colors.blueGrey,
                                   size: 18,
                                 ),
-                                label: Text('Verified'),
+                                label: Text(
+                                  kycStatus == 'APPROVED'
+                                      ? 'Verified'
+                                      : kycStatus == 'PENDING'
+                                      ? 'KYC Pending'
+                                      : 'KYC Required',
+                                ),
                               ),
                             ],
                           ),
@@ -2997,11 +3026,19 @@ class _MarketHomePageState extends State<MarketHomePage> {
                         ),
                         SizedBox(
                           width: itemWidth,
-                          child: _accountFundValue('Rewards', 1250),
+                          child: _accountFundValue(
+                            'Rewards',
+                            1250,
+                            displayValue: '1,250 pts',
+                          ),
                         ),
                         SizedBox(
                           width: itemWidth,
-                          child: _accountFundValue('Coupons', 3),
+                          child: _accountFundValue(
+                            'Coupons',
+                            3,
+                            displayValue: '3 Available',
+                          ),
                         ),
                       ],
                     );

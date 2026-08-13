@@ -1,10 +1,12 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
@@ -534,45 +536,43 @@ export class IpoService {
   }
 
   async allocate(applicationId: string, quantity: number, price: number) {
-    const application = await this.prisma.ipoApplication.findUnique({
-      where: {
-        id: applicationId,
-      },
-      include: {
-        ipo: true,
-        account: true,
-      },
-    });
-
-    if (!application) {
-      throw new NotFoundException('IPO application not found');
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1_000_000) {
+      throw new BadRequestException('IPO allocation quantity is invalid');
+    }
+    if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) {
+      throw new BadRequestException('IPO allocation price is invalid');
+    }
+    const totalAmount = Number((quantity * price).toFixed(2));
+    if (!Number.isSafeInteger(Math.round(totalAmount * 100))) {
+      throw new BadRequestException('IPO allocation amount is too large');
     }
 
-    if (application.status !== 'PENDING') {
-      throw new BadRequestException('IPO application already processed');
-    }
-
-    if (!application.ipo.instrumentId) {
-      throw new BadRequestException('IPO instrument not configured');
-    }
-
-    const instrumentId = application.ipo.instrumentId;
-    const totalAmount = quantity * price;
-
-    return await this.prisma.$transaction(async (tx) => {
-      const account = await tx.account.findUnique({
-        where: {
-          id: application.accountId,
-        },
+    return this.prisma.$transaction(async (tx) => {
+      const application = await tx.ipoApplication.findUnique({
+        where: { id: applicationId },
+        include: { ipo: true, account: true },
       });
+      if (!application) throw new NotFoundException('IPO application not found');
+      if (application.status !== 'PENDING') throw new ConflictException('IPO application already processed');
+      if (!application.ipo.instrumentId) throw new BadRequestException('IPO instrument not configured');
 
-      if (!account) {
-        throw new NotFoundException('Account not found');
-      }
+      const instrumentId = application.ipo.instrumentId;
+      const account = application.account;
 
       const cashBalance = Number(account.cashBalance);
-
       let debtAmount = 0;
+
+      const claimed = await tx.ipoApplication.updateMany({
+        where: { id: application.id, status: 'PENDING' },
+        data: {
+          allocatedQuantity: quantity,
+          allocatedPrice: price,
+          allocatedAmount: totalAmount,
+          status: 'ALLOTTED',
+          paymentStatus: cashBalance >= totalAmount ? 'PAID' : 'PENDING',
+        },
+      });
+      if (claimed.count !== 1) throw new ConflictException('IPO application was processed by another operator');
 
       if (cashBalance >= totalAmount) {
         await tx.account.update({
@@ -623,21 +623,7 @@ export class IpoService {
         });
       }
 
-      // 更新 IPO Application
-
-      const updated = await tx.ipoApplication.update({
-        where: {
-          id: application.id,
-        },
-
-        data: {
-          allocatedQuantity: quantity,
-          allocatedPrice: price,
-          allocatedAmount: totalAmount,
-          status: 'ALLOTTED',
-          paymentStatus: debtAmount > 0 ? 'PENDING' : 'PAID',
-        },
-      });
+      const updated = await tx.ipoApplication.findUniqueOrThrow({ where: { id: application.id } });
 
       await tx.notification.create({
         data: {
@@ -661,7 +647,7 @@ export class IpoService {
             ? 'IPO allocated with outstanding debt'
             : 'IPO allocated and settled successfully',
       };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   async settleIpoApplication(

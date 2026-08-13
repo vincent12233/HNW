@@ -1,11 +1,13 @@
-import { IsInt, IsNumber, Min } from 'class-validator';
+import { IsInt, IsNumber, Max, Min } from 'class-validator';
 
 export class AllocateIpoDto {
   @IsInt()
   @Min(1)
+  @Max(1_000_000)
   quantity: number;
 
-  @IsNumber()
-  @Min(0)
+  @IsNumber({ maxDecimalPlaces: 4 })
+  @Min(0.0001)
+  @Max(100_000_000)
   price: number;
 }

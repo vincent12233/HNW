@@ -904,28 +904,16 @@ export class BusinessService {
       throw new BadRequestException('账户状态不正确');
     }
 
-    const customer = await this.prisma.user.findFirst({
-      where: {
-        id: customerId,
-        role: UserRole.CLIENT,
-        assignedBusinessId: businessUserId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!customer) {
-      throw new NotFoundException('客户不存在或不属于当前业务员');
-    }
-
-    const updated = await this.prisma.user.update({
-      where: {
-        id: customerId,
-      },
+    const claimed = await this.prisma.user.updateMany({
+      where: { id: customerId, role: UserRole.CLIENT, assignedBusinessId: businessUserId },
       data: {
         status,
       },
+    });
+    if (claimed.count !== 1) throw new NotFoundException('客户不存在或不属于当前业务员');
+
+    const updated = await this.prisma.user.findUniqueOrThrow({
+      where: { id: customerId },
       select: {
         id: true,
         customerNo: true,
@@ -1026,25 +1014,7 @@ export class BusinessService {
     quantity: number,
     price: number,
   ) {
-    const application = await this.prisma.ipoApplication.findFirst({
-      where: {
-        id: applicationId,
-        account: {
-          user: {
-            assignedBusinessId: businessUserId,
-          },
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!application) {
-      throw new NotFoundException('IPO 申请不存在或不属于当前业务员');
-    }
-
-    const result = await this.ipoService.allocate(applicationId, quantity, price);
+    const result = await this.ipoService.allocate(applicationId, quantity, price, businessUserId);
 
     await this.auditService.createLog({
       actorId: businessUserId,

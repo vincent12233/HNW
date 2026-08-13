@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { IpoService } from './ipo.service';
 
@@ -37,5 +37,31 @@ describe('IpoService allocation safety', () => {
     expect(tx.account.update).not.toHaveBeenCalled();
     expect(tx.ipoDebt.create).not.toHaveBeenCalled();
     expect(tx.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('prevents a business operator from allocating another operator customer application', async () => {
+    const tx = {
+      ipoApplication: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'application-1',
+          status: 'PENDING',
+          ipo: { instrumentId: 'instrument-1' },
+          account: {
+            id: 'account-1',
+            cashBalance: new Prisma.Decimal(1000),
+            user: { assignedBusinessId: 'business-owner' },
+          },
+        }),
+        updateMany: jest.fn(),
+      },
+      account: { update: jest.fn() },
+    };
+    const prisma = { $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)) };
+    const service = new IpoService(prisma as any);
+
+    await expect(service.allocate('application-1', 10, 79.1, 'business-other'))
+      .rejects.toBeInstanceOf(ForbiddenException);
+    expect(tx.ipoApplication.updateMany).not.toHaveBeenCalled();
+    expect(tx.account.update).not.toHaveBeenCalled();
   });
 });

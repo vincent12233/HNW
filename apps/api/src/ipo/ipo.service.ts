@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -535,7 +536,7 @@ export class IpoService {
     };
   }
 
-  async allocate(applicationId: string, quantity: number, price: number) {
+  async allocate(applicationId: string, quantity: number, price: number, businessUserId?: string) {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1_000_000) {
       throw new BadRequestException('IPO allocation quantity is invalid');
     }
@@ -550,9 +551,12 @@ export class IpoService {
     return this.prisma.$transaction(async (tx) => {
       const application = await tx.ipoApplication.findUnique({
         where: { id: applicationId },
-        include: { ipo: true, account: true },
+        include: { ipo: true, account: { include: { user: { select: { assignedBusinessId: true } } } } },
       });
       if (!application) throw new NotFoundException('IPO application not found');
+      if (businessUserId && application.account.user.assignedBusinessId !== businessUserId) {
+        throw new ForbiddenException('IPO application is not assigned to this business account');
+      }
       if (application.status !== 'PENDING') throw new ConflictException('IPO application already processed');
       if (!application.ipo.instrumentId) throw new BadRequestException('IPO instrument not configured');
 

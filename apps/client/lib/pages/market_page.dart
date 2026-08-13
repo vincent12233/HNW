@@ -2014,7 +2014,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     onTap: () => _openNews(item),
                     child: Container(
                       clipBehavior: Clip.antiAlias,
-                      constraints: const BoxConstraints(minHeight: 160),
+                      height: oneColumn ? 154 : 168,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(12),
@@ -2030,6 +2030,21 @@ class _MarketHomePageState extends State<MarketHomePage> {
                                 ? Image.network(
                                     item.imageUrl!,
                                     fit: BoxFit.cover,
+                                    loadingBuilder: (context, child, progress) {
+                                      if (progress == null) return child;
+                                      return const ColoredBox(
+                                        color: Color(0xFFF2F6FC),
+                                        child: Center(
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
                                     errorBuilder: (_, _, _) => const ColoredBox(
                                       color: Color(0xFFEEF5FF),
                                       child: Icon(
@@ -2409,7 +2424,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
   }
 
-  // ignore: unused_element
   Widget _portfolioBody() {
     final positionList = positions.values.where((position) {
       final stock = _stockForOrNull(

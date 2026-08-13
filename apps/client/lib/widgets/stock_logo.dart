@@ -81,6 +81,11 @@ class StockLogo extends StatelessWidget {
                 width: size - 6,
                 height: size - 6,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return _FallbackLogo(style: style, size: size);
+                },
                 errorBuilder: (_, _, _) =>
                     _FallbackLogo(style: style, size: size),
               ),

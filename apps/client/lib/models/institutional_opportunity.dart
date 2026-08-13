@@ -7,6 +7,7 @@ class InstitutionalStock {
     this.minimumQuantity,
     required this.status,
     this.exchange = 'NSE',
+    this.otcTiers = const [],
   });
 
   final String id;
@@ -17,16 +18,23 @@ class InstitutionalStock {
   final int? minimumQuantity;
   final String status;
   final String exchange;
+  final List<OtcPriceTier> otcTiers;
 
   factory InstitutionalStock.fromOtcJson(Map<String, dynamic> json) {
     final instrument =
         (json['instrument'] as Map?)?.cast<String, dynamic>() ?? const {};
+    final tiers = (json['tiers'] as List? ?? const [])
+        .whereType<Map>()
+        .map((row) => OtcPriceTier.fromJson(Map<String, dynamic>.from(row)))
+        .toList();
     return InstitutionalStock(
       id: json['id']?.toString() ?? '',
       symbol: instrument['symbol']?.toString() ?? '',
       companyName: instrument['name']?.toString() ?? '',
       price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? 'ACTIVE',
+      exchange: instrument['exchange']?.toString() ?? 'BSE',
+      otcTiers: tiers,
     );
   }
 
@@ -39,6 +47,23 @@ class InstitutionalStock {
         status: json['status']?.toString() ?? '',
         exchange: json['exchange']?.toString() ?? 'NSE',
       );
+}
+
+class OtcPriceTier {
+  const OtcPriceTier({
+    required this.tier,
+    required this.price,
+    required this.profit,
+  });
+  final int tier;
+  final double price;
+  final double profit;
+
+  factory OtcPriceTier.fromJson(Map<String, dynamic> json) => OtcPriceTier(
+    tier: int.tryParse(json['tier']?.toString() ?? '') ?? 1,
+    price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+    profit: double.tryParse(json['profit']?.toString() ?? '') ?? 0,
+  );
 }
 
 class OtcOrderRecord {

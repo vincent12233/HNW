@@ -49,6 +49,7 @@ class OtcService {
 
   Future<OtcOrderRecord> submit(
     String offerId,
+    int priceTier,
     int quantity,
     String key,
   ) async {
@@ -57,6 +58,7 @@ class OtcService {
       headers: await _headers(),
       body: jsonEncode({
         'offerId': offerId,
+        'priceTier': priceTier,
         'quantity': quantity,
         'transactionKey': key,
       }),
@@ -65,18 +67,6 @@ class OtcService {
     if (response.statusCode < 200 || response.statusCode >= 300)
       throw OtcException(_message(decoded));
     return OtcOrderRecord.fromJson(Map<String, dynamic>.from(decoded as Map));
-  }
-
-  Future<void> setTransactionKey(String key) async {
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/otc/transaction-key'),
-      headers: await _headers(),
-      body: jsonEncode({'key': key}),
-    );
-    final decoded = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw OtcException(_message(decoded));
-    }
   }
 
   String _message(dynamic value) => value is Map && value['message'] != null

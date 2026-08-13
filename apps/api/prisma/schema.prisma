@@ -554,7 +554,15 @@ model AdminWatchlistItem {
 model OtcOffer {
   id           String    @id @default(uuid())
   instrumentId String    @unique
-  price        Decimal   @db.Decimal(18, 4)
+    price        Decimal   @db.Decimal(18, 4)
+    priceTier2   Decimal?  @db.Decimal(18, 4)
+    priceTier3   Decimal?  @db.Decimal(18, 4)
+    profitTier1  Decimal?  @db.Decimal(8, 2)
+    profitTier2  Decimal?  @db.Decimal(8, 2)
+    profitTier3  Decimal?  @db.Decimal(8, 2)
+    keyHashTier1 String?
+    keyHashTier2 String?
+    keyHashTier3 String?
   isActive     Boolean   @default(true)
   validFrom    DateTime
   validUntil   DateTime
@@ -574,7 +582,8 @@ model OtcOrder {
   offerId      String
   instrumentId String
   quantity     Int
-  price        Decimal        @db.Decimal(18, 4)
+    price        Decimal        @db.Decimal(18, 4)
+    priceTier    Int            @default(1)
   amount       Decimal        @db.Decimal(18, 2)
   status       OtcOrderStatus @default(PENDING)
   reviewNote   String?

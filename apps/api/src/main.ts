@@ -10,6 +10,7 @@ const rateEntries = new Map<string, RateEntry>();
 
 function requestLimit(path: string) {
   if (path.startsWith('/auth/')) return 20;
+  if (path === '/otc/orders') return 10;
   if (path.includes('/orders') || path.includes('/withdrawal')) return 60;
   return 300;
 }

@@ -20,7 +20,6 @@ import '../services/client_account_service.dart';
 import '../services/ipo_service.dart';
 import '../services/market_data_service.dart';
 import '../services/market_socket_service.dart';
-import '../services/otc_service.dart';
 import '../services/trading_service.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/market_header.dart';
@@ -3241,13 +3240,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
-                icon: Icons.pin_outlined,
-                title: 'Transaction key',
-                subtitle: 'Set or change the 6-digit OTC purchase key',
-                onTap: _setTransactionKey,
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
                 icon: Icons.help_outline,
                 title: 'Help & support',
                 subtitle: 'Get help with your account',
@@ -3312,65 +3304,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
         builder: (_) => AccountSettingsPage(section: section),
       ),
     );
-  }
-
-  Future<void> _setTransactionKey() async {
-    final first = TextEditingController();
-    final second = TextEditingController();
-    final submit = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Transaction key'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: first,
-              obscureText: true,
-              maxLength: 6,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'New 6-digit key'),
-            ),
-            TextField(
-              controller: second,
-              obscureText: true,
-              maxLength: 6,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Confirm key'),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-    if (submit != true || !mounted) return;
-    if (first.text != second.text || !RegExp(r'^\d{6}$').hasMatch(first.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter the same 6-digit key twice')),
-      );
-      return;
-    }
-    try {
-      await OtcService().setTransactionKey(first.text);
-      if (mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Transaction key updated')),
-        );
-    } on OtcException catch (error) {
-      if (mounted)
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
-    }
   }
 
   void _showInformation(String title, String message) {

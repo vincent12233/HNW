@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SupportController } from './support.controller';
 import { SupportService } from './support.service';
+import { SupportGateway } from './support.gateway';
 
 @Module({
   controllers: [
@@ -8,6 +9,7 @@ import { SupportService } from './support.service';
   ],
   providers: [
     SupportService,
+    SupportGateway,
   ],
 })
 export class SupportModule {}

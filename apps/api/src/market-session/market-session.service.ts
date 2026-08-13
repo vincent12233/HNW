@@ -51,6 +51,17 @@ export class MarketSessionService {
     return this.isTradingDayParts(this.istParts(at));
   }
 
+  getStatus(at = new Date()) {
+    return {
+      isOpen: this.isNormalMarketOpen(at),
+      isTradingDay: this.isTradingDay(at),
+      timezone: this.timeZone,
+      openTime: this.minuteLabel(this.openMinute()),
+      closeTime: this.minuteLabel(this.closeMinute()),
+      asOf: at,
+    };
+  }
+
   isDayOrderExpired(placedAt: Date, now = new Date()): boolean {
     const placed = this.istParts(placedAt);
     const current = this.istParts(now);
@@ -102,6 +113,12 @@ export class MarketSessionService {
     const minute = Number(match[2]);
     if (hour > 23 || minute > 59) return fallback;
     return hour * 60 + minute;
+  }
+
+  private minuteLabel(value: number) {
+    return `${Math.floor(value / 60).toString().padStart(2, '0')}:${(value % 60)
+      .toString()
+      .padStart(2, '0')}`;
   }
 
   private dateKey(parts: IstClockParts): string {

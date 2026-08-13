@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/stock_quote.dart';
 import '../services/market_data_service.dart';
+import '../services/market_socket_service.dart';
 import '../services/watchlist_service.dart';
-import '../utils/number_formatters.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_list_tile.dart';
 
@@ -14,11 +14,25 @@ class MarketsPage extends StatefulWidget {
   const MarketsPage({
     super.key,
     required this.stocks,
+    required this.nifty50Price,
+    required this.nifty50Change,
+    required this.sensexPrice,
+    required this.sensexChange,
+    required this.bankNiftyPrice,
+    required this.bankNiftyChange,
     required this.onStockTap,
+    required this.onRefresh,
   });
 
   final List<StockQuote> stocks;
+  final double nifty50Price;
+  final double nifty50Change;
+  final double sensexPrice;
+  final double sensexChange;
+  final double bankNiftyPrice;
+  final double bankNiftyChange;
   final ValueChanged<StockQuote> onStockTap;
+  final Future<void> Function() onRefresh;
 
   @override
   State<MarketsPage> createState() => _MarketsPageState();
@@ -27,6 +41,7 @@ class MarketsPage extends StatefulWidget {
 class _MarketsPageState extends State<MarketsPage> {
   final MarketDataService _marketDataService = MarketDataService();
   final WatchlistService _watchlistService = WatchlistService();
+  final MarketSocketService _marketSocket = MarketSocketService();
   int selectedTab = 0;
   String query = '';
   Timer? _searchDebounce;
@@ -39,14 +54,7 @@ class _MarketsPageState extends State<MarketsPage> {
   int _searchPage = 1;
   int _searchGeneration = 0;
 
-  final tabs = const [
-    'Stocks',
-    'Watchlist',
-    'Gainers',
-    'Losers',
-    'Sectors',
-    'ETF',
-  ];
+  final tabs = const ['Indices', 'Stocks', 'Sectors', 'Watchlist'];
 
   List<StockQuote> get _filteredStocks {
     final normalizedQuery = query.trim();
@@ -55,20 +63,22 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   List<StockQuote> get _filteredWatchlistStocks {
-    final bySymbol = <String, StockQuote>{};
+    final byInstrument = <String, StockQuote>{};
     for (final stock in _watchlistStocks) {
-      if (_watchlistSymbols.contains(stock.symbol)) {
-        bySymbol[stock.symbol] = stock;
+      final key = WatchlistService.key(stock.exchange, stock.symbol);
+      if (_watchlistSymbols.contains(key)) {
+        byInstrument[key] = stock;
       }
     }
     for (final stock in widget.stocks) {
-      if (_watchlistSymbols.contains(stock.symbol)) {
-        bySymbol[stock.symbol] = stock;
+      final key = WatchlistService.key(stock.exchange, stock.symbol);
+      if (_watchlistSymbols.contains(key)) {
+        byInstrument[key] = stock;
       }
     }
 
     final normalized = query.trim().toLowerCase();
-    final stocks = bySymbol.values.where((stock) {
+    final stocks = byInstrument.values.where((stock) {
       if (normalized.isEmpty) return true;
       return stock.symbol.toLowerCase().contains(normalized) ||
           stock.name.toLowerCase().contains(normalized);
@@ -81,13 +91,33 @@ class _MarketsPageState extends State<MarketsPage> {
   @override
   void initState() {
     super.initState();
+    _marketSocket.addQuoteListener(_handleRealtimeQuote);
     _loadWatchlist();
   }
 
   @override
   void dispose() {
     _searchDebounce?.cancel();
+    _marketSocket.removeQuoteListener(_handleRealtimeQuote);
     super.dispose();
+  }
+
+  void _handleRealtimeQuote(Map<String, dynamic> data) {
+    if (!mounted) return;
+    var changed = false;
+    changed = _updateRealtimeList(_remoteSearchResults, data) || changed;
+    changed = _updateRealtimeList(_watchlistStocks, data) || changed;
+    if (changed) setState(() {});
+  }
+
+  bool _updateRealtimeList(List<StockQuote> stocks, Map<String, dynamic> data) {
+    for (var index = 0; index < stocks.length; index++) {
+      final updated = StockQuote.applyRealtime(stocks[index], data);
+      if (updated == null) continue;
+      stocks[index] = updated;
+      return true;
+    }
+    return false;
   }
 
   Future<void> _loadWatchlist() async {
@@ -96,27 +126,43 @@ class _MarketsPageState extends State<MarketsPage> {
     }
 
     try {
-      final symbols = await _watchlistService.fetchSymbols();
+      final instrumentKeys = await _watchlistService.fetchSymbols();
       var stocks = <StockQuote>[];
-      if (symbols.isNotEmpty) {
+      if (instrumentKeys.isNotEmpty) {
+        final symbols = instrumentKeys
+            .map((key) => key.split(':').last)
+            .toSet();
         final bootstrap = await _marketDataService.fetchHomeBootstrap(
           symbols: symbols,
           limit: 10,
+          preserveExchanges: true,
         );
         stocks = bootstrap
-            .where((stock) => symbols.contains(stock.symbol))
+            .where(
+              (stock) => instrumentKeys.contains(
+                WatchlistService.key(stock.exchange, stock.symbol),
+              ),
+            )
             .toList();
       }
 
       if (!mounted) return;
       setState(() {
-        _watchlistSymbols = symbols;
+        _watchlistSymbols = instrumentKeys;
         _watchlistStocks = stocks;
         _watchlistLoading = false;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() => _watchlistLoading = false);
+    }
+  }
+
+  Future<void> _refreshAll() async {
+    await widget.onRefresh();
+    await _loadWatchlist();
+    if (query.trim().isNotEmpty && selectedTab != 3) {
+      await _searchStocks(reset: true);
     }
   }
 
@@ -132,7 +178,7 @@ class _MarketsPageState extends State<MarketsPage> {
     });
 
     _searchDebounce?.cancel();
-    if (value.trim().isEmpty || selectedTab == 1) return;
+    if (value.trim().isEmpty || selectedTab == 3) return;
     _searchDebounce = Timer(const Duration(milliseconds: 300), () {
       _searchStocks(reset: true);
     });
@@ -160,7 +206,9 @@ class _MarketsPageState extends State<MarketsPage> {
         if (reset) {
           _remoteSearchResults = result.data;
         } else {
-          final existing = _remoteSearchResults.map((item) => item.symbol).toSet();
+          final existing = _remoteSearchResults
+              .map((item) => item.symbol)
+              .toSet();
           _remoteSearchResults.addAll(
             result.data.where((item) => !existing.contains(item.symbol)),
           );
@@ -196,7 +244,7 @@ class _MarketsPageState extends State<MarketsPage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 10),
+              padding: const EdgeInsets.fromLTRB(22, 18, 16, 8),
               child: Row(
                 children: [
                   const Expanded(
@@ -208,22 +256,24 @@ class _MarketsPageState extends State<MarketsPage> {
                       ),
                     ),
                   ),
-                  SizedBox(
-                    width: 210,
-                    child: SearchBar(
-                      hintText: 'Search',
-                      leading: const Icon(Icons.search, size: 20),
-                      padding: const WidgetStatePropertyAll(
-                        EdgeInsets.symmetric(horizontal: 12),
+                  IconButton(
+                    tooltip: 'Search',
+                    onPressed: () => showSearch<StockQuote?>(
+                      context: context,
+                      delegate: _MarketSearchDelegate(
+                        stocks: widget.stocks,
+                        onSelected: widget.onStockTap,
                       ),
-                      onChanged: _onSearchChanged,
                     ),
+                    icon: const Icon(Icons.search_rounded, size: 28),
                   ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.notifications_none_rounded, size: 28),
                 ],
               ),
             ),
             SizedBox(
-              height: 46,
+              height: 48,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
@@ -232,14 +282,12 @@ class _MarketsPageState extends State<MarketsPage> {
                 itemBuilder: (context, index) {
                   final selected = selectedTab == index;
 
-                  return ChoiceChip(
-                    label: Text(tabs[index]),
-                    selected: selected,
-                    onSelected: (_) {
+                  return InkWell(
+                    onTap: () {
                       setState(() {
                         selectedTab = index;
                       });
-                      if (index == 1) {
+                      if (index == 3) {
                         _loadWatchlist();
                       } else if (query.trim().isNotEmpty) {
                         _searchDebounce?.cancel();
@@ -249,6 +297,31 @@ class _MarketsPageState extends State<MarketsPage> {
                         );
                       }
                     },
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(
+                            color: selected
+                                ? AppConfig.primaryColor
+                                : Colors.transparent,
+                            width: 2,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        tabs[index],
+                        style: TextStyle(
+                          color: selected
+                              ? AppConfig.primaryColor
+                              : const Color(0xFF475569),
+                          fontWeight: selected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                        ),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -264,14 +337,37 @@ class _MarketsPageState extends State<MarketsPage> {
   Widget _selectedContent() {
     switch (selectedTab) {
       case 0:
-        return _stockList(_filteredStocks, emptyTitle: 'No stocks found');
+        return RefreshIndicator(
+          onRefresh: _refreshAll,
+          child: _indicesContent(),
+        );
 
       case 1:
+        return RefreshIndicator(
+          onRefresh: _refreshAll,
+          child: _stockList(_filteredStocks, emptyTitle: 'No stocks found'),
+        );
+
+      case 2:
+        return RefreshIndicator(
+          onRefresh: _refreshAll,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(16),
+            children: [
+              SectorPerformance(stocks: widget.stocks),
+              const SizedBox(height: 18),
+              _sectorBreakdown(),
+            ],
+          ),
+        );
+
+      case 3:
         if (_watchlistLoading) {
           return const Center(child: CircularProgressIndicator());
         }
         return RefreshIndicator(
-          onRefresh: _loadWatchlist,
+          onRefresh: _refreshAll,
           child: _stockList(
             _filteredWatchlistStocks,
             emptyTitle: 'Your watchlist is empty',
@@ -280,36 +376,164 @@ class _MarketsPageState extends State<MarketsPage> {
           ),
         );
 
-      case 2:
-        final gainers =
-            _filteredStocks.where((stock) => stock.change > 0).toList()
-              ..sort((a, b) => b.change.compareTo(a.change));
-
-        return _stockList(gainers, emptyTitle: 'No gainers right now');
-
-      case 3:
-        final losers =
-            _filteredStocks.where((stock) => stock.change < 0).toList()
-              ..sort((a, b) => a.change.compareTo(b.change));
-
-        return _stockList(losers, emptyTitle: 'No losers right now');
-
-      case 4:
-        return ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SectorPerformance(stocks: widget.stocks),
-            const SizedBox(height: 18),
-            _sectorBreakdown(),
-          ],
-        );
-
-      case 5:
-        return _etfList();
-
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _indicesContent() {
+    final indices = [
+      ('NIFTY 50', widget.nifty50Price, widget.nifty50Change),
+      ('SENSEX', widget.sensexPrice, widget.sensexChange),
+      ('BANK NIFTY', widget.bankNiftyPrice, widget.bankNiftyChange),
+    ];
+    final gainers = [...widget.stocks]
+      ..sort((a, b) => b.change.compareTo(a.change));
+    final losers = [...widget.stocks]
+      ..sort((a, b) => a.change.compareTo(b.change));
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(22, 8, 22, 24),
+      children: [
+        const Text(
+          'Indian Indices',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 132,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: indices.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final item = indices[index];
+              final positive = item.$3 >= 0;
+              final color = positive
+                  ? AppConfig.gainColor
+                  : AppConfig.lossColor;
+              return Container(
+                width: 172,
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: AppConfig.borderColor),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.$1,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      item.$2 > 0 ? item.$2.toStringAsFixed(2) : '--',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
+                      style: TextStyle(
+                        color: color,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 9),
+                    Container(
+                      height: 3,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: .18),
+                        borderRadius: BorderRadius.circular(99),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Market Movers',
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _moverColumn(
+                'Top Gainers',
+                gainers.take(5).toList(),
+                true,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _moverColumn('Top Losers', losers.take(5).toList(), false),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _moverColumn(String title, List<StockQuote> rows, bool positive) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: AppConfig.borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          ...rows.map(
+            (stock) => InkWell(
+              onTap: () => widget.onStockTap(stock),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 7),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        stock.symbol,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: positive
+                            ? AppConfig.gainColor
+                            : AppConfig.lossColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _stockList(
@@ -321,16 +545,15 @@ class _MarketsPageState extends State<MarketsPage> {
     if (_searchLoading &&
         query.trim().isNotEmpty &&
         stocks.isEmpty &&
-        selectedTab != 1) {
+        selectedTab != 3) {
       return const Center(child: CircularProgressIndicator());
     }
     if (stocks.isEmpty) {
       return _emptyState(Icons.star_border, emptyTitle, emptySubtitle);
     }
 
-    final showMore = allowPagination &&
-        query.trim().isNotEmpty &&
-        _searchHasMore;
+    final showMore =
+        allowPagination && query.trim().isNotEmpty && _searchHasMore;
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -342,7 +565,9 @@ class _MarketsPageState extends State<MarketsPage> {
             padding: const EdgeInsets.symmetric(vertical: 12),
             child: Center(
               child: OutlinedButton(
-                onPressed: _searchLoading ? null : () => _searchStocks(reset: false),
+                onPressed: _searchLoading
+                    ? null
+                    : () => _searchStocks(reset: false),
                 child: _searchLoading
                     ? const SizedBox(
                         width: 18,
@@ -367,11 +592,34 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Widget _sectorBreakdown() {
-    final rows = [
-      ('Banking', 'HDFCBANK, ICICIBANK', Icons.account_balance_outlined),
-      ('Information Technology', 'TCS, INFY', Icons.memory_outlined),
-      ('Energy', 'RELIANCE', Icons.bolt_outlined),
-    ];
+    final groups = <String, List<StockQuote>>{};
+    for (final stock in widget.stocks) {
+      final category = stock.category?.trim();
+      if (category == null || category.isEmpty) continue;
+      groups.putIfAbsent(category, () => <StockQuote>[]).add(stock);
+    }
+    final rows = groups.entries.toList()
+      ..sort((left, right) => right.value.length.compareTo(left.value.length));
+
+    if (rows.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(20),
+          child: Row(
+            children: [
+              Icon(Icons.category_outlined, color: Colors.blueGrey),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Sector classifications are currently unavailable.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -381,13 +629,20 @@ class _MarketsPageState extends State<MarketsPage> {
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        ...rows.map((row) {
+        ...rows.take(12).map((row) {
+          final symbols = row.value
+              .map((stock) => stock.symbol)
+              .take(4)
+              .join(', ');
           return Card(
             child: ListTile(
-              leading: Icon(row.$3, color: AppConfig.primaryColor),
-              title: Text(row.$1),
-              subtitle: Text(row.$2),
-              trailing: const Icon(Icons.chevron_right),
+              leading: const Icon(
+                Icons.category_outlined,
+                color: AppConfig.primaryColor,
+              ),
+              title: Text(row.key),
+              subtitle: Text(symbols),
+              trailing: Text('${row.value.length}'),
             ),
           );
         }),
@@ -396,45 +651,16 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Widget _etfList() {
-    final etfs = [
-      ('NIFTYBEES', 'Nippon India ETF Nifty 50', 282.45, 0.42),
-      ('BANKBEES', 'Nippon India ETF Bank BeES', 532.10, -0.18),
-      ('JUNIORBEES', 'Nippon India ETF Junior BeES', 745.35, 0.27),
-    ];
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: etfs.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final etf = etfs[index];
-        final positive = etf.$4 >= 0;
-
-        return Card(
-          child: ListTile(
-            leading: const CircleAvatar(child: Icon(Icons.pie_chart_outline)),
-            title: Text(etf.$1),
-            subtitle: Text(etf.$2),
-            trailing: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  formatPrice(etf.$3),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                Text(
-                  '${positive ? '+' : ''}${etf.$4.toStringAsFixed(2)}%',
-                  style: TextStyle(
-                    color: positive ? AppConfig.gainColor : AppConfig.lossColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
+    final etfs = widget.stocks.where((stock) {
+      final category = stock.category?.toUpperCase() ?? '';
+      return category.contains('ETF') || stock.symbol.endsWith('BEES');
+    }).toList();
+    return _stockList(
+      etfs,
+      emptyTitle: 'ETF data unavailable',
+      emptySubtitle:
+          'ETF quotes will appear when enabled by the market catalog.',
+      allowPagination: false,
     );
   }
 
@@ -460,4 +686,52 @@ class _MarketsPageState extends State<MarketsPage> {
       ],
     );
   }
+}
+
+class _MarketSearchDelegate extends SearchDelegate<StockQuote?> {
+  _MarketSearchDelegate({required this.stocks, required this.onSelected});
+
+  final List<StockQuote> stocks;
+  final ValueChanged<StockQuote> onSelected;
+
+  @override
+  Widget buildSuggestions(BuildContext context) => _results(context);
+
+  @override
+  Widget buildResults(BuildContext context) => _results(context);
+
+  Widget _results(BuildContext context) {
+    final needle = query.trim().toLowerCase();
+    final results = stocks.where(
+      (stock) =>
+          needle.isEmpty ||
+          stock.symbol.toLowerCase().contains(needle) ||
+          stock.name.toLowerCase().contains(needle),
+    );
+    return ListView(
+      children: results
+          .map(
+            (stock) => StockListTile(
+              stock: stock,
+              onTap: () {
+                close(context, stock);
+                onSelected(stock);
+              },
+            ),
+          )
+          .toList(),
+    );
+  }
+
+  @override
+  List<Widget>? buildActions(BuildContext context) => [
+    if (query.isNotEmpty)
+      IconButton(onPressed: () => query = '', icon: const Icon(Icons.close)),
+  ];
+
+  @override
+  Widget? buildLeading(BuildContext context) => IconButton(
+    onPressed: () => close(context, null),
+    icon: const Icon(Icons.arrow_back),
+  );
 }

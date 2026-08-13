@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -9,17 +11,21 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../models/withdrawal_request.dart';
 import '../services/auth_service.dart';
+import '../services/client_account_service.dart';
 import '../services/ipo_service.dart';
 import '../services/market_data_service.dart';
 import '../services/market_socket_service.dart';
+import '../services/otc_service.dart';
 import '../services/trading_service.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/market_header.dart';
-import '../widgets/market_news.dart';
 import '../widgets/stock_logo.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
+import 'notifications_page.dart';
+import 'account_settings_page.dart';
 import 'stock_detail_page.dart';
+import 'support_chat_page.dart';
 import 'trading_center_page.dart';
 
 final marketSocket = MarketSocketService();
@@ -38,8 +44,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
   int selectedIndex = 0;
   bool isLoading = true;
   bool _ipoAllocationDialogOpen = false;
+  bool marketConnected = false;
+  bool? marketOpen;
+  int unreadNotificationCount = 0;
+  String marketHours = '09:15 - 15:30 IST';
+  Timer? _marketSessionTimer;
 
   double cashBalance = 0;
+  double buyingPower = 0;
+  double frozenBalance = 0;
   double realizedProfitLoss = 0;
 
   double nifty50Price = 0;
@@ -53,6 +66,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
   String accountName = 'Client';
   String accountPhone = '';
+  String accountNumber = '';
 
   final List<TradingOrder> orders = <TradingOrder>[];
 
@@ -111,9 +125,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
       );
     } on IpoException catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.message)));
     }
   }
 
@@ -289,6 +303,13 @@ class _MarketHomePageState extends State<MarketHomePage> {
   void initState() {
     super.initState();
 
+    marketConnected = marketSocket.isConnected;
+    marketSocket.addConnectionListener(_handleMarketConnection);
+    _marketSessionTimer = Timer.periodic(
+      const Duration(minutes: 1),
+      (_) => _refreshMarketSession(),
+    );
+
     marketSocket.onQuoteUpdate = (data) {
       final symbol = data['symbol']?.toString();
 
@@ -323,17 +344,18 @@ class _MarketHomePageState extends State<MarketHomePage> {
           return;
         }
 
-        final index = stocks.indexWhere((stock) => stock.symbol == symbol);
+        final exchange = data['exchange']?.toString().trim().toUpperCase();
+        final index = stocks.indexWhere(
+          (stock) =>
+              stock.symbol == symbol &&
+              (exchange == null ||
+                  exchange.isEmpty ||
+                  stock.exchange == exchange),
+        );
 
         if (index >= 0) {
-          stocks[index] = StockQuote(
-            stocks[index].symbol,
-            stocks[index].name,
-            price,
-            change,
-            int.tryParse(data['volume'].toString()) ?? stocks[index].volume,
-            DateTime.tryParse(data['updatedAt'].toString()) ?? DateTime.now(),
-          );
+          final updated = StockQuote.applyRealtime(stocks[index], data);
+          if (updated != null) stocks[index] = updated;
         }
       });
     };
@@ -341,8 +363,76 @@ class _MarketHomePageState extends State<MarketHomePage> {
     _loadAppData();
   }
 
+  void _handleMarketConnection(bool connected) {
+    if (!mounted || marketConnected == connected) return;
+    setState(() => marketConnected = connected);
+  }
+
+  Future<void> _refreshMarketSession() async {
+    final status = await marketDataService.fetchMarketSession();
+    if (!mounted || status == null) return;
+    final openTime = status['openTime']?.toString();
+    final closeTime = status['closeTime']?.toString();
+    setState(() {
+      marketOpen = status['isOpen'] == true;
+      if (openTime?.isNotEmpty == true && closeTime?.isNotEmpty == true) {
+        marketHours = '$openTime - $closeTime IST';
+      }
+    });
+  }
+
+  Future<void> _refreshMarketData() async {
+    final results = await Future.wait<dynamic>([
+      marketDataService.fetchSnapshot(),
+      marketDataService.fetchIndexSnapshot(),
+      marketDataService.fetchMarketSession(),
+      marketDataService.fetchInstitutionalOffers(),
+    ]);
+    if (!mounted) return;
+    final refreshedStocks = results[0] as List<StockQuote>;
+    final indices = results[1] as List<Map<String, dynamic>>;
+    final session = results[2] as Map<String, dynamic>?;
+    final refreshedInstitutional = results[3] as List<InstitutionalStock>;
+    setState(() {
+      if (refreshedStocks.isNotEmpty) {
+        stocks
+          ..clear()
+          ..addAll(refreshedStocks);
+      }
+      for (final item in indices) {
+        final symbol = item['symbol']?.toString();
+        final price = double.tryParse(item['price']?.toString() ?? '');
+        final change = double.tryParse(item['change']?.toString() ?? '') ?? 0;
+        if (price == null) continue;
+        if (symbol == 'NIFTY50') {
+          nifty50Price = price;
+          nifty50Change = change;
+        } else if (symbol == 'SENSEX') {
+          sensexPrice = price;
+          sensexChange = change;
+        } else if (symbol == 'BANKNIFTY') {
+          bankNiftyPrice = price;
+          bankNiftyChange = change;
+        }
+      }
+      if (session != null) {
+        marketOpen = session['isOpen'] == true;
+        final openTime = session['openTime']?.toString();
+        final closeTime = session['closeTime']?.toString();
+        if (openTime?.isNotEmpty == true && closeTime?.isNotEmpty == true) {
+          marketHours = '$openTime - $closeTime IST';
+        }
+      }
+      institutionalStocks
+        ..clear()
+        ..addAll(refreshedInstitutional);
+    });
+  }
+
   @override
   void dispose() {
+    _marketSessionTimer?.cancel();
+    marketSocket.removeConnectionListener(_handleMarketConnection);
     marketSocket.dispose();
     super.dispose();
   }
@@ -354,13 +444,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
         ? session!.fullName
         : 'Client';
     accountPhone = session?.phone ?? '';
+    accountNumber = session?.accountNumber ?? '';
 
-    stocks
-      ..clear()
-      ..addAll(_fallbackStocks());
-    ipos
-      ..clear()
-      ..addAll(_fallbackIpos());
+    stocks.clear();
+    ipos.clear();
 
     try {
       final remoteStocks = await marketDataService.fetchSnapshot();
@@ -370,24 +457,41 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ..addAll(remoteStocks);
       }
     } catch (_) {
-      // Read-only fallback market list stays visible if the API is unavailable.
+      // The service returns the last successful real snapshot when available.
+    }
+
+    final sessionStatus = await marketDataService.fetchMarketSession();
+    if (sessionStatus != null) {
+      marketOpen = sessionStatus['isOpen'] == true;
+      final openTime = sessionStatus['openTime']?.toString();
+      final closeTime = sessionStatus['closeTime']?.toString();
+      if (openTime?.isNotEmpty == true && closeTime?.isNotEmpty == true) {
+        marketHours = '$openTime - $closeTime IST';
+      }
     }
 
     try {
       final snapshot = await tradingService.fetchAccountSnapshot();
       if (snapshot != null) {
         cashBalance = snapshot.cashBalance;
+        buyingPower = snapshot.buyingPower;
+        frozenBalance = snapshot.frozenBalance;
         realizedProfitLoss = snapshot.realizedProfitLoss;
         positions
           ..clear()
           ..addEntries(
             snapshot.positions.map(
-              (position) => MapEntry(position.symbol, position),
+              (position) => MapEntry(
+                _positionKey(position.exchange, position.symbol),
+                position,
+              ),
             ),
           );
       }
     } catch (_) {
       cashBalance = 0;
+      buyingPower = 0;
+      frozenBalance = 0;
       realizedProfitLoss = 0;
       positions.clear();
     }
@@ -399,6 +503,16 @@ class _MarketHomePageState extends State<MarketHomePage> {
         ..addAll(remoteOrders);
     } catch (_) {
       orders.clear();
+    }
+
+    try {
+      final remoteInstitutional = await marketDataService
+          .fetchInstitutionalOffers();
+      institutionalStocks
+        ..clear()
+        ..addAll(remoteInstitutional);
+    } catch (_) {
+      institutionalStocks.clear();
     }
 
     try {
@@ -425,6 +539,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
       ipoApplications.clear();
     }
 
+    try {
+      final notifications = await ClientAccountService().notifications();
+      unreadNotificationCount = notifications
+          .where((item) => item['readAt'] == null)
+          .length;
+    } catch (_) {
+      unreadNotificationCount = 0;
+    }
+
     if (mounted) {
       setState(() {
         isLoading = false;
@@ -440,46 +563,27 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
   }
 
-  List<StockQuote> _fallbackStocks() {
-    final now = DateTime.now();
-    return <StockQuote>[
-      StockQuote('RELIANCE', 'Reliance Industries', 1334.8, 1.82, 9880895, now),
-      StockQuote('TCS', 'Tata Consultancy Services', 2452.7, 1.65, 4547325, now),
-      StockQuote('HDFCBANK', 'HDFC Bank', 731, 2.45, 19372672, now),
-      StockQuote('INFY', 'Infosys', 1928.60, -0.85, 0, now),
-      StockQuote('ICICIBANK', 'ICICI Bank', 1284.30, 1.18, 0, now),
-    ];
-  }
-
-  List<Ipo> _fallbackIpos() {
-    return <Ipo>[
-      Ipo(
-        id: 'FALLBACK_TATACAP',
-        symbol: 'TATACAP',
-        companyName: 'Tata Capital Limited',
-        marketPrice: 1185.60,
-        subscriptionPrice: 1020.00,
-        lotSize: 100,
-        status: IpoStatus.upcoming,
-      ),
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppConfig.backgroundColor,
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SafeArea(
-              bottom: false,
-              child: _selectedBody(),
+          : Stack(
+              children: [
+                SafeArea(bottom: false, child: _selectedBody()),
+                Positioned(
+                  right: 0,
+                  bottom: 96,
+                  child: SafeArea(child: _sideCustomerServiceButton()),
+                ),
+              ],
             ),
       bottomNavigationBar: NavigationBar(
-        height: 78,
+        height: 72,
         elevation: 0,
-        backgroundColor: const Color(0xFFF3F5FA),
-        indicatorColor: const Color(0xFFDDE8FF),
+        backgroundColor: Colors.white,
+        indicatorColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
         shadowColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -506,19 +610,22 @@ class _MarketHomePageState extends State<MarketHomePage> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.show_chart_outlined),
-            selectedIcon: Icon(Icons.show_chart, color: AppConfig.primaryColor),
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart, color: AppConfig.primaryColor),
             label: 'Markets',
           ),
           NavigationDestination(
-            icon: Icon(Icons.swap_horiz_outlined),
-            selectedIcon: Icon(Icons.swap_horiz, color: AppConfig.primaryColor),
+            icon: Icon(Icons.swap_horiz_rounded),
+            selectedIcon: Icon(
+              Icons.swap_horiz_rounded,
+              color: AppConfig.primaryColor,
+            ),
             label: 'Trading',
           ),
           NavigationDestination(
-            icon: Icon(Icons.account_balance_wallet_outlined),
+            icon: Icon(Icons.business_center_outlined),
             selectedIcon: Icon(
-              Icons.account_balance_wallet,
+              Icons.business_center,
               color: AppConfig.primaryColor,
             ),
             label: 'Portfolio',
@@ -541,7 +648,14 @@ class _MarketHomePageState extends State<MarketHomePage> {
       case 1:
         return MarketsPage(
           stocks: stocks,
+          nifty50Price: nifty50Price,
+          nifty50Change: nifty50Change,
+          sensexPrice: sensexPrice,
+          sensexChange: sensexChange,
+          bankNiftyPrice: bankNiftyPrice,
+          bankNiftyChange: bankNiftyChange,
           onStockTap: _openStock,
+          onRefresh: _refreshMarketData,
         );
 
       case 2:
@@ -581,13 +695,21 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
 
     for (final position in positions.values) {
-      final stock = _stockForOrNull(position.symbol);
-      holdingsValue += position.marketValue(stock?.price ?? position.averageCost);
+      final stock = _stockForOrNull(
+        position.symbol,
+        exchange: position.exchange,
+      );
+      holdingsValue += position.marketValue(
+        stock?.price ?? position.averageCost,
+      );
     }
 
     final totalPortfolioValue = cashBalance + holdingsValue;
     final todayPnl = positions.values.fold<double>(0, (total, position) {
-      final stock = _stockForOrNull(position.symbol);
+      final stock = _stockForOrNull(
+        position.symbol,
+        exchange: position.exchange,
+      );
       return total +
           position.unrealizedProfitLoss(stock?.price ?? position.averageCost);
     });
@@ -646,13 +768,17 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  SizedBox(
-                    width: 92,
+                  Container(
+                    width: 46,
                     height: 46,
-                    child: CustomPaint(
-                      painter: _MiniLinePainter(
-                        color: const Color(0xFF22C55E),
-                      ),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_wallet_outlined,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -679,33 +805,73 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ),
         ),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _HomeMoneyCard(
-                title: 'Available Cash',
-                value: formatPrice(cashBalance),
-                icon: Icons.account_balance_wallet_outlined,
-                color: AppConfig.primaryColor,
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: AppConfig.borderColor),
+          ),
+          child: Row(
+            children: [
+              Expanded(
+                child: _homeBalanceValue(
+                  'Available Balance',
+                  cashBalance,
+                  AppConfig.textPrimaryColor,
+                ),
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: _HomeMoneyCard(
-                title: "Today's P&L",
-                value:
-                    '${pnlPositive ? '+' : '-'}${formatPrice(todayPnl.abs())}',
-                subtitle: positions.isEmpty ? '+0.00%' : 'Live holdings',
-                icon: pnlPositive
-                    ? Icons.trending_up_rounded
-                    : Icons.trending_down_rounded,
-                color: pnlPositive ? AppConfig.gainColor : AppConfig.lossColor,
+              const SizedBox(height: 58, child: VerticalDivider(width: 1)),
+              Expanded(
+                child: _homeBalanceValue(
+                  'Used Margin',
+                  frozenBalance,
+                  AppConfig.textPrimaryColor,
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 58, child: VerticalDivider(width: 1)),
+              Expanded(
+                child: _homeBalanceValue(
+                  "Today's P&L",
+                  todayPnl,
+                  pnlPositive ? AppConfig.gainColor : AppConfig.lossColor,
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
       ],
+    );
+  }
+
+  Widget _homeBalanceValue(String label, double value, Color color) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+          ),
+          const SizedBox(height: 8),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              '${value > 0 && label.contains('P&L') ? '+' : ''}${formatPrice(value)}',
+              style: TextStyle(
+                color: color,
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -714,7 +880,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
       children: [
         Expanded(
           child: _HomeActionButton(
-            label: 'Deposit',
+            label: 'Add Money',
             icon: Icons.support_agent_outlined,
             color: AppConfig.primaryColor,
             onTap: _openDepositSupport,
@@ -754,16 +920,19 @@ class _MarketHomePageState extends State<MarketHomePage> {
         'NIFTY 50',
         nifty50Price > 0 ? formatIndex(nifty50Price) : '--',
         nifty50Change,
+        'NSE',
       ),
       (
         'SENSEX',
         sensexPrice > 0 ? formatIndex(sensexPrice) : '--',
         sensexChange,
+        'BSE',
       ),
       (
         'BANK NIFTY',
         bankNiftyPrice > 0 ? formatIndex(bankNiftyPrice) : '--',
         bankNiftyChange,
+        'NSE',
       ),
     ];
 
@@ -773,9 +942,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
         return Expanded(
           child: Padding(
-            padding: EdgeInsets.only(
-              right: item.$1 == 'BANK NIFTY' ? 0 : 8,
-            ),
+            padding: EdgeInsets.only(right: item.$1 == 'BANK NIFTY' ? 0 : 8),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
@@ -793,15 +960,29 @@ class _MarketHomePageState extends State<MarketHomePage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    item.$1,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.$1,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF64748B),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        item.$4,
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 7),
                   Text(
@@ -815,8 +996,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
                   Text(
                     '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
                     style: TextStyle(
-                      color:
-                          positive ? AppConfig.gainColor : AppConfig.lossColor,
+                      color: positive
+                          ? AppConfig.gainColor
+                          : AppConfig.lossColor,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -831,8 +1013,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   Widget _compactMovers() {
-    final gainers = [...stocks]
-      ..sort((a, b) => b.change.compareTo(a.change));
+    final gainers = [...stocks]..sort((a, b) => b.change.compareTo(a.change));
     final losers = [...stocks]..sort((a, b) => a.change.compareTo(b.change));
 
     return Row(
@@ -914,14 +1095,77 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   void _openDepositSupport() {
-    _openCustomerService(
-      title: 'Deposit Support',
-      initialMessage: 'Hello, I would like to make a deposit.',
-      icon: Icons.add_circle_outline,
+    _openSupportChat(
+      initialMessage: 'Hello, I would like to add money to my account.',
+    );
+  }
+
+  void _openSupportChat({String? initialMessage}) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SupportChatPage(initialMessage: initialMessage),
+      ),
+    );
+  }
+
+  Widget _sideCustomerServiceButton() {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: () => _openSupportChat(),
+        borderRadius: const BorderRadius.horizontal(left: Radius.circular(18)),
+        child: Ink(
+          padding: const EdgeInsets.fromLTRB(10, 10, 7, 10),
+          decoration: const BoxDecoration(
+            color: AppConfig.primaryColor,
+            borderRadius: BorderRadius.horizontal(left: Radius.circular(18)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x33000000),
+                blurRadius: 10,
+                offset: Offset(0, 3),
+              ),
+            ],
+          ),
+          child: const Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.support_agent_rounded, color: Colors.white, size: 24),
+              SizedBox(height: 3),
+              Text(
+                'Support',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
   Future<void> _openWithdrawalRequest() async {
+    List<Map<String, dynamic>> bankAccounts;
+    try {
+      bankAccounts = await ClientAccountService().banks();
+    } on AuthException catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+      return;
+    }
+    if (bankAccounts.isEmpty) {
+      await _openAccountSettings('banks');
+      return;
+    }
+    var selectedBank = bankAccounts.firstWhere(
+      (bank) => bank['isPrimary'] == true,
+      orElse: () => bankAccounts.first,
+    );
     final amountController = TextEditingController();
 
     final submitted = await showDialog<bool>(
@@ -1012,11 +1256,37 @@ class _MarketHomePageState extends State<MarketHomePage> {
                             ],
                           ),
                           const SizedBox(height: 14),
+                          DropdownButtonFormField<String>(
+                            initialValue: selectedBank['id']?.toString(),
+                            decoration: const InputDecoration(
+                              labelText: 'Bank account',
+                            ),
+                            items: bankAccounts.map((bank) {
+                              final number =
+                                  bank['accountNumber']?.toString() ?? '';
+                              final suffix = number.length > 4
+                                  ? number.substring(number.length - 4)
+                                  : number;
+                              return DropdownMenuItem(
+                                value: bank['id']?.toString(),
+                                child: Text('${bank['bankName']} ••••$suffix'),
+                              );
+                            }).toList(),
+                            onChanged: (id) => setDialogState(() {
+                              selectedBank = bankAccounts.firstWhere(
+                                (bank) => bank['id']?.toString() == id,
+                              );
+                            }),
+                          ),
+                          const SizedBox(height: 12),
                           _withdrawBankRow('Account Holder', accountName),
                           const SizedBox(height: 10),
-                          _withdrawBankRow('Bank Account', '****4582'),
+                          _withdrawBankRow(
+                            'Bank Account',
+                            selectedBank['accountNumber']?.toString() ?? '',
+                          ),
                           const SizedBox(height: 10),
-                          _withdrawBankRow('Bank Status', 'Verified'),
+                          _withdrawBankRow('Bank Status', 'Added'),
                         ],
                       ),
                     ),
@@ -1145,9 +1415,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
     try {
       request = await AuthService().submitWithdrawal(
         amount: amount,
-        bankName: 'Linked Bank Account',
-        accountNumber: '00004582',
-        ifscCode: 'HDFC0000001',
+        bankName: selectedBank['bankName']?.toString() ?? '',
+        accountNumber: selectedBank['accountNumber']?.toString() ?? '',
+        ifscCode: selectedBank['ifscCode']?.toString() ?? '',
         note: 'App withdrawal request',
       );
     } on AuthException catch (error) {
@@ -1325,8 +1595,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 const SizedBox(height: 10),
 
                 const Text(
-                  'No balance changes are made from this page. '
-                  'Deposits are handled by customer service. Withdrawals can be submitted in the app.',
+                  'Send a message directly to online customer service. '
+                  'Customer service will assist you in this conversation.',
                   style: TextStyle(
                     color: Colors.black54,
                     fontSize: 12,
@@ -1361,7 +1631,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                   ScaffoldMessenger.of(context).hideCurrentSnackBar();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Customer service request submitted'),
+                      content: Text('Message sent to online customer service'),
                     ),
                   );
                 } on AuthException catch (error) {
@@ -1373,7 +1643,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 }
               },
               icon: const Icon(Icons.send_outlined),
-              label: const Text('Contact Support'),
+              label: const Text('Send Message'),
             ),
           ],
         );
@@ -1381,6 +1651,53 @@ class _MarketHomePageState extends State<MarketHomePage> {
     ).whenComplete(() {
       messageController.dispose();
     });
+  }
+
+  Widget _homeMarketStatus() {
+    final color = marketOpen == true
+        ? AppConfig.gainColor
+        : marketOpen == false
+        ? AppConfig.lossColor
+        : AppConfig.neutralColor;
+    final sessionLabel = marketOpen == true
+        ? 'Market Open'
+        : marketOpen == false
+        ? 'Market Closed'
+        : 'Market Status';
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.circle, size: 8, color: color),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              '$sessionLabel  •  $marketHours',
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Text(
+            marketConnected ? 'Connected' : 'Reconnecting…',
+            style: TextStyle(
+              color: marketConnected
+                  ? AppConfig.gainColor
+                  : AppConfig.neutralColor,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _marketBody() {
@@ -1391,18 +1708,19 @@ class _MarketHomePageState extends State<MarketHomePage> {
         children: [
           MarketHeader(
             accountName: accountName,
+            onSearchTap: () => showSearch<StockQuote?>(
+              context: context,
+              delegate: StockSearchDelegate(
+                stocks: stocks,
+                onSelected: _openStock,
+              ),
+            ),
             onNotificationTap: _openNotifications,
-            notificationCount: pendingOrders.length +
-                ipoApplications
-                    .where(
-                      (application) =>
-                          application.status ==
-                              IpoApplicationStatus.allocated &&
-                          application.remainingAmount > 0,
-                    )
-                    .length,
+            notificationCount: unreadNotificationCount,
           ),
           const SizedBox(height: 14),
+          _homeMarketStatus(),
+          const SizedBox(height: 10),
           _homeFundsCard(),
           const SizedBox(height: 10),
           _homeQuickActions(),
@@ -1415,96 +1733,40 @@ class _MarketHomePageState extends State<MarketHomePage> {
           _marketOverviewGrid(),
           const SizedBox(height: 18),
           _compactMovers(),
-          const SizedBox(height: 18),
-          const MarketNews(),
         ],
       ),
     );
   }
 
-  void _openNotifications() {
-    final outstandingIpos = ipoApplications
-        .where(
-          (application) =>
-              application.status == IpoApplicationStatus.allocated &&
-              application.remainingAmount > 0,
-        )
-        .toList();
-
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 18),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Notifications',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 14),
-                if (pendingOrders.isEmpty && outstandingIpos.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 18),
-                    child: Text(
-                      'No pending updates',
-                      style: TextStyle(color: Color(0xFF64748B)),
-                    ),
-                  ),
-                ...pendingOrders.take(3).map(
-                  (order) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.schedule_rounded),
-                    title: Text('${order.symbol} order pending'),
-                    subtitle: Text('${order.side.name} ${order.quantity} shares'),
-                  ),
-                ),
-                ...outstandingIpos.take(3).map(
-                  (application) => ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.campaign_outlined),
-                    title: Text('${application.symbol} IPO outstanding'),
-                    subtitle: Text(
-                      'Remaining ${formatPrice(application.remainingAmount)}',
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
+  Future<void> _openNotifications() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const NotificationsPage()));
+    if (mounted) setState(() => unreadNotificationCount = 0);
   }
 
   void _openStock(StockQuote stock) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (_) => StockDetailPage(
-          stock: stock,
-          onOrderPlaced: _placeOrder,
-        ),
+        builder: (_) =>
+            StockDetailPage(stock: stock, onOrderPlaced: _placeOrder),
       ),
     );
   }
 
   Future<String?> _placeOrder(TradingOrder order) async {
-    final existing = positions[order.symbol];
+    final existing = positions[_positionKey(order.exchange, order.symbol)];
 
-    if (order.isBuy && order.amount > cashBalance) {
-      return 'Insufficient Available Balance. Available: '
-          '${formatPrice(cashBalance)}';
+    if (order.isBuy && order.amount > buyingPower) {
+      return 'Insufficient buying power. Available: '
+          '${formatPrice(buyingPower)}';
     }
 
     if (!order.isBuy &&
-        (existing == null || existing.quantity < order.quantity)) {
+        (existing == null || existing.availableQuantity < order.quantity)) {
       return 'Insufficient holdings. Available: '
-          '${existing?.quantity ?? 0}';
+          '${existing?.availableQuantity ?? 0}';
     }
 
     try {
@@ -1515,12 +1777,17 @@ class _MarketHomePageState extends State<MarketHomePage> {
       if (snapshot != null) {
         setState(() {
           cashBalance = snapshot.cashBalance;
+          buyingPower = snapshot.buyingPower;
+          frozenBalance = snapshot.frozenBalance;
           realizedProfitLoss = snapshot.realizedProfitLoss;
           positions
             ..clear()
             ..addEntries(
               snapshot.positions.map(
-                (position) => MapEntry(position.symbol, position),
+                (position) => MapEntry(
+                  _positionKey(position.exchange, position.symbol),
+                  position,
+                ),
               ),
             );
           orders
@@ -1708,12 +1975,17 @@ class _MarketHomePageState extends State<MarketHomePage> {
       setState(() {
         if (snapshot != null) {
           cashBalance = snapshot.cashBalance;
+          buyingPower = snapshot.buyingPower;
+          frozenBalance = snapshot.frozenBalance;
           realizedProfitLoss = snapshot.realizedProfitLoss;
           positions
             ..clear()
             ..addEntries(
               snapshot.positions.map(
-                (position) => MapEntry(position.symbol, position),
+                (position) => MapEntry(
+                  _positionKey(position.exchange, position.symbol),
+                  position,
+                ),
               ),
             );
         }
@@ -1722,14 +1994,14 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ..addAll(remoteOrders);
       });
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Trading data refreshed')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Trading data refreshed')));
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(error.toString())));
     }
   }
 
@@ -1741,14 +2013,19 @@ class _MarketHomePageState extends State<MarketHomePage> {
     final holdingsValue = positionList.fold<double>(
       0,
       (total, position) =>
-          total + position.marketValue(_stockFor(position.symbol).price),
+          total +
+          position.marketValue(
+            _stockFor(position.symbol, exchange: position.exchange).price,
+          ),
     );
 
     final unrealizedProfitLoss = positionList.fold<double>(
       0,
       (total, position) =>
           total +
-          position.unrealizedProfitLoss(_stockFor(position.symbol).price),
+          position.unrealizedProfitLoss(
+            _stockFor(position.symbol, exchange: position.exchange).price,
+          ),
     );
 
     final totalAssets = cashBalance + holdingsValue;
@@ -1756,23 +2033,40 @@ class _MarketHomePageState extends State<MarketHomePage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        const Text(
-          'Portfolio',
-          style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Portfolio',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Search',
+              onPressed: () => showSearch<StockQuote?>(
+                context: context,
+                delegate: StockSearchDelegate(
+                  stocks: stocks,
+                  onSelected: _openStock,
+                ),
+              ),
+              icon: const Icon(Icons.search_rounded, size: 28),
+            ),
+            IconButton(
+              tooltip: 'Notifications',
+              onPressed: _openNotifications,
+              icon: const Icon(Icons.notifications_none_rounded, size: 28),
+            ),
+          ],
         ),
-        const SizedBox(height: 4),
-        const Text(
-          'Trading Account overview',
-          style: TextStyle(color: Colors.black54),
-        ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [Color(0xFF143D8D), Color(0xFF2563C7)],
             ),
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1796,7 +2090,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                   Expanded(
                     child: _summaryValue(
                       'Available funds',
-                      formatPrice(cashBalance),
+                      formatPrice(buyingPower),
                     ),
                   ),
                   Expanded(
@@ -1810,6 +2104,49 @@ class _MarketHomePageState extends State<MarketHomePage> {
             ],
           ),
         ),
+        const SizedBox(height: 16),
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Investment Summary',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _portfolioMetric(
+                        'Invested Value',
+                        holdingsValue - unrealizedProfitLoss,
+                      ),
+                    ),
+                    Expanded(
+                      child: _portfolioMetric('Current Value', holdingsValue),
+                    ),
+                    Expanded(
+                      child: _portfolioMetric(
+                        'Total Returns',
+                        unrealizedProfitLoss,
+                        color: unrealizedProfitLoss >= 0
+                            ? AppConfig.gainColor
+                            : AppConfig.lossColor,
+                      ),
+                    ),
+                    Expanded(
+                      child: _portfolioMetric('Available Balance', cashBalance),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        _portfolioAllocationCard(positionList),
         const SizedBox(height: 16),
         Row(
           children: [
@@ -1831,60 +2168,317 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ],
         ),
         const SizedBox(height: 24),
-        Row(
-          children: [
-            const Expanded(
-              child: Text(
-                'My Holdings',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-              ),
+        _sectionTitle('Top Performers'),
+        const SizedBox(height: 10),
+        _portfolioTopPerformers(positionList),
+        const SizedBox(height: 20),
+        _sectionTitle(
+          'Recent Activity',
+          onViewAll: () => setState(() => selectedIndex = 2),
+        ),
+        const SizedBox(height: 8),
+        Card(
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: orders
+                .where(
+                  (order) =>
+                      order.status == 'FILLED' &&
+                      _isSpecialCategory(order.category),
+                )
+                .take(5)
+                .map(
+                  (order) => ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor:
+                          (order.isBuy
+                                  ? AppConfig.gainColor
+                                  : AppConfig.lossColor)
+                              .withValues(alpha: .12),
+                      child: Text(
+                        order.isBuy ? 'B' : 'S',
+                        style: TextStyle(
+                          color: order.isBuy
+                              ? AppConfig.gainColor
+                              : AppConfig.lossColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      '${order.isBuy ? 'Bought' : 'Sold'} ${order.symbol}',
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    subtitle: Text(
+                      '${order.exchange} · ${order.quantity} shares',
+                    ),
+                    trailing: Text(
+                      formatPrice(order.averageFillPrice ?? order.price),
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _portfolioTopPerformers(List<PortfolioPosition> positions) {
+    final ranked =
+        positions
+            .where((position) => _isSpecialCategory(position.category))
+            .map((position) {
+              final stock = _stockForOrNull(
+                position.symbol,
+                exchange: position.exchange,
+              );
+              final price = stock?.price ?? position.averageCost;
+              return (
+                position: position,
+                price: price,
+                percent: position.returnPercent(price),
+              );
+            })
+            .toList()
+          ..sort((a, b) => b.percent.compareTo(a.percent));
+    if (ranked.isEmpty) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(18),
+          child: Text(
+            'Performance will appear after positions are settled.',
+            style: TextStyle(color: Color(0xFF64748B)),
+          ),
+        ),
+      );
+    }
+    return SizedBox(
+      height: 116,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: ranked.take(6).length,
+        separatorBuilder: (_, _) => const SizedBox(width: 10),
+        itemBuilder: (context, index) {
+          final item = ranked[index];
+          final positive = item.percent >= 0;
+          return Container(
+            width: 154,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppConfig.borderColor),
             ),
-            Text(
-              '${positionList.length} stock'
-              '${positionList.length == 1 ? '' : 's'}',
-              style: const TextStyle(color: Colors.black54),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.position.symbol,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                Text(
+                  item.position.exchange,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 10,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  formatPrice(item.price),
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${positive ? '+' : ''}${item.percent.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                    color: positive ? AppConfig.gainColor : AppConfig.lossColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  bool _isSpecialCategory(String value) {
+    final normalized = value.toUpperCase();
+    return normalized.contains('INST') ||
+        normalized.contains('LIMIT_UP') ||
+        normalized.contains('OTC') ||
+        normalized.contains('BLOCK') ||
+        normalized.contains('IPO');
+  }
+
+  Widget _portfolioAllocationCard(List<PortfolioPosition> positionList) {
+    const colors = <String, Color>{
+      'Inst.': Color(0xFF16B8C4),
+      'OTC': Color(0xFFF59E0B),
+      'IPO': Color(0xFF7C3AED),
+    };
+    final values = <String, double>{for (final key in colors.keys) key: 0};
+    for (final position in positionList) {
+      final stock = _stockForOrNull(
+        position.symbol,
+        exchange: position.exchange,
+      );
+      final value = position.marketValue(stock?.price ?? position.averageCost);
+      final text = '${position.category} ${stock?.category ?? ''}'
+          .toUpperCase();
+      final String? key = text.contains('IPO')
+          ? 'IPO'
+          : text.contains('OTC') || text.contains('BLOCK')
+          ? 'OTC'
+          : text.contains('INST') || text.contains('LIMIT_UP')
+          ? 'Inst.'
+          : null;
+      if (key == null) continue;
+      values[key] = (values[key] ?? 0) + value;
+    }
+    final total = values.values.fold<double>(0, (sum, value) => sum + value);
+    final segments = colors.entries
+        .map(
+          (entry) => _AllocationSegment(
+            label: entry.key,
+            value: values[entry.key] ?? 0,
+            color: entry.value,
+          ),
+        )
+        .toList();
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Portfolio Breakdown',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                SizedBox(
+                  width: 142,
+                  height: 142,
+                  child: CustomPaint(
+                    painter: _AllocationDonutPainter(segments),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Total',
+                            style: TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 11,
+                            ),
+                          ),
+                          const SizedBox(height: 3),
+                          FittedBox(
+                            child: Text(
+                              formatPrice(total),
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 22),
+                Expanded(
+                  child: Column(
+                    children: segments.map((segment) {
+                      final percent = total <= 0
+                          ? 0
+                          : segment.value / total * 100;
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 7),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 9,
+                              height: 9,
+                              decoration: BoxDecoration(
+                                color: segment.color,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                segment.label,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${percent.toStringAsFixed(1)}%',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            SizedBox(
+                              width: 86,
+                              child: Text(
+                                formatPrice(segment.value),
+                                textAlign: TextAlign.right,
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        if (positionList.isEmpty)
-          Card(
-            color: Colors.white,
-            child: Padding(
-              padding: const EdgeInsets.all(28),
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.pie_chart_outline,
-                    size: 58,
-                    color: Colors.grey.shade400,
-                  ),
-                  const SizedBox(height: 12),
-                  const Text(
-                    'No holdings yet',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Place a Buy order to build your portfolio.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton.icon(
-                    onPressed: () {
-                      setState(() => selectedIndex = 0);
-                    },
-                    icon: const Icon(Icons.show_chart),
-                    label: const Text('Browse stocks'),
-                  ),
-                ],
+      ),
+    );
+  }
+
+  Widget _portfolioMetric(String label, double value, {Color? color}) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 7),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 2,
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+          ),
+          const SizedBox(height: 7),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              formatPrice(value),
+              style: TextStyle(
+                color: color ?? AppConfig.textPrimaryColor,
+                fontWeight: FontWeight.w800,
               ),
             ),
-          )
-        else
-          ...positionList.map(_positionCard),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -1902,6 +2496,27 @@ class _MarketHomePageState extends State<MarketHomePage> {
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _accountFundValue(String label, double value) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: const TextStyle(color: Colors.black54, fontSize: 11),
+        ),
+        const SizedBox(height: 5),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            formatPrice(value),
+            style: const TextStyle(fontWeight: FontWeight.w800),
           ),
         ),
       ],
@@ -1938,7 +2553,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   Widget _positionCard(PortfolioPosition position) {
-    final stock = _stockFor(position.symbol);
+    final stock = _stockFor(position.symbol, exchange: position.exchange);
 
     final marketValue = position.marketValue(stock.price);
 
@@ -2021,13 +2636,21 @@ class _MarketHomePageState extends State<MarketHomePage> {
     );
   }
 
-  StockQuote _stockFor(String symbol) {
-    return stocks.firstWhere((stock) => stock.symbol == symbol);
+  String _positionKey(String exchange, String symbol) =>
+      '${exchange.trim().toUpperCase()}:${symbol.trim().toUpperCase()}';
+
+  StockQuote _stockFor(String symbol, {String? exchange}) {
+    return stocks.firstWhere(
+      (stock) =>
+          stock.symbol == symbol &&
+          (exchange == null || stock.exchange == exchange),
+    );
   }
 
-  StockQuote? _stockForOrNull(String symbol) {
+  StockQuote? _stockForOrNull(String symbol, {String? exchange}) {
     for (final stock in stocks) {
-      if (stock.symbol == symbol) {
+      if (stock.symbol == symbol &&
+          (exchange == null || stock.exchange == exchange)) {
         return stock;
       }
     }
@@ -2037,7 +2660,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
   Widget _accountBody() {
     final holdingsValue = positions.values.fold<double>(0, (total, position) {
-      final stock = _stockFor(position.symbol);
+      final stock = _stockFor(position.symbol, exchange: position.exchange);
 
       return total + position.marketValue(stock.price);
     });
@@ -2047,6 +2670,27 @@ class _MarketHomePageState extends State<MarketHomePage> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        Row(
+          children: [
+            const Expanded(
+              child: Text(
+                'Profile',
+                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+              ),
+            ),
+            IconButton(
+              tooltip: 'Settings',
+              onPressed: () => _openAccountSettings('preferences'),
+              icon: const Icon(Icons.settings_outlined, size: 27),
+            ),
+            IconButton(
+              tooltip: 'Notifications',
+              onPressed: _openNotifications,
+              icon: const Icon(Icons.notifications_none_rounded, size: 28),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
         Card(
           color: Colors.white,
           child: Padding(
@@ -2055,11 +2699,11 @@ class _MarketHomePageState extends State<MarketHomePage> {
               children: [
                 const CircleAvatar(
                   radius: 34,
-                  backgroundColor: AppConfig.primaryColor,
+                  backgroundColor: Color(0xFFE7F0FF),
                   child: Icon(
-                    Icons.candlestick_chart,
-                    size: 36,
-                    color: Colors.white,
+                    Icons.person_rounded,
+                    size: 38,
+                    color: AppConfig.primaryColor,
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -2090,9 +2734,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
                               color: Colors.green,
                               size: 18,
                             ),
-                            label: Text('KYC Verified'),
+                            label: Text('Verified'),
                           ),
-                          Chip(label: Text('Order')),
                         ],
                       ),
                     ],
@@ -2142,6 +2785,20 @@ class _MarketHomePageState extends State<MarketHomePage> {
             ],
           ),
         ),
+        const SizedBox(height: 12),
+        Card(
+          color: Colors.white,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Expanded(child: _accountFundValue('Cash', cashBalance)),
+                Expanded(child: _accountFundValue('Buying power', buyingPower)),
+                Expanded(child: _accountFundValue('Frozen', frozenBalance)),
+              ],
+            ),
+          ),
+        ),
         const SizedBox(height: 22),
         const Text(
           'Account details',
@@ -2156,28 +2813,21 @@ class _MarketHomePageState extends State<MarketHomePage> {
               _accountTile(
                 icon: Icons.badge_outlined,
                 title: 'Client ID',
-                subtitle: 'IT-SBX-100001',
+                subtitle: accountNumber,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.verified_user_outlined,
                 title: 'KYC & Verification',
-                subtitle: 'Identity Verified',
-                onTap: () => _showInformation(
-                  'KYC & verification',
-                  'Your identity verification status is complete. '
-                      'You can manage your KYC information and account verification here.',
-                ),
+                subtitle: 'View verification status and review result',
+                onTap: () => _openAccountSettings('kyc'),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.account_balance_outlined,
                 title: 'Linked bank account',
-                subtitle: 'Bank Account ****4582',
-                onTap: () => _showInformation(
-                  'Linked bank account',
-                  'This is your linked bank account.',
-                ),
+                subtitle: 'Manage verified withdrawal bank accounts',
+                onTap: () => _openAccountSettings('banks'),
               ),
             ],
           ),
@@ -2196,25 +2846,29 @@ class _MarketHomePageState extends State<MarketHomePage> {
               _accountTile(
                 icon: Icons.notifications_outlined,
                 title: 'Order notifications',
-                subtitle: 'Ask support to update notification preferences',
-                onTap: () => _openCustomerService(
-                  title: 'Notification support',
-                  initialMessage:
-                      'Hello, I need help with order notification preferences.',
-                  icon: Icons.notifications_outlined,
-                ),
+                subtitle: 'Manage transaction and account alerts',
+                onTap: () => _openAccountSettings('preferences'),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.lock_outline,
                 title: 'Security',
                 subtitle: 'Password and device access',
-                onTap: () => _openCustomerService(
-                  title: 'Security support',
-                  initialMessage:
-                      'Hello, I need help with password or device access for my account.',
-                  icon: Icons.lock_outline,
-                ),
+                onTap: () => _openAccountSettings('security'),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.fact_check_outlined,
+                title: 'Portfolio reconciliation',
+                subtitle: 'Inst., OTC and IPO settlement totals',
+                onTap: () => _openAccountSettings('reconciliation'),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.pin_outlined,
+                title: 'Transaction key',
+                subtitle: 'Set or change the 6-digit OTC purchase key',
+                onTap: _setTransactionKey,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -2273,12 +2927,74 @@ class _MarketHomePageState extends State<MarketHomePage> {
   }
 
   void _editProfile() {
-    _openCustomerService(
-      title: 'Profile support',
-      initialMessage:
-          'Hello, I need to update my profile information for +91 $accountPhone.',
-      icon: Icons.manage_accounts_outlined,
+    _openAccountSettings('profile');
+  }
+
+  Future<void> _openAccountSettings(String section) async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => AccountSettingsPage(section: section),
+      ),
     );
+  }
+
+  Future<void> _setTransactionKey() async {
+    final first = TextEditingController();
+    final second = TextEditingController();
+    final submit = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Transaction key'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: first,
+              obscureText: true,
+              maxLength: 6,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'New 6-digit key'),
+            ),
+            TextField(
+              controller: second,
+              obscureText: true,
+              maxLength: 6,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Confirm key'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+    if (submit != true || !mounted) return;
+    if (first.text != second.text || !RegExp(r'^\d{6}$').hasMatch(first.text)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Enter the same 6-digit key twice')),
+      );
+      return;
+    }
+    try {
+      await OtcService().setTransactionKey(first.text);
+      if (mounted)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transaction key updated')),
+        );
+    } on OtcException catch (error) {
+      if (mounted)
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
+    }
   }
 
   void _showInformation(String title, String message) {
@@ -2494,43 +3210,51 @@ class _HomeActionButton extends StatelessWidget {
   }
 }
 
-class _MiniLinePainter extends CustomPainter {
-  const _MiniLinePainter({required this.color});
-
+class _AllocationSegment {
+  const _AllocationSegment({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+  final String label;
+  final double value;
   final Color color;
+}
+
+class _AllocationDonutPainter extends CustomPainter {
+  const _AllocationDonutPainter(this.segments);
+  final List<_AllocationSegment> segments;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final points = [
-      Offset(0, size.height * 0.68),
-      Offset(size.width * 0.16, size.height * 0.52),
-      Offset(size.width * 0.31, size.height * 0.62),
-      Offset(size.width * 0.48, size.height * 0.30),
-      Offset(size.width * 0.64, size.height * 0.42),
-      Offset(size.width * 0.82, size.height * 0.22),
-      Offset(size.width, size.height * 0.10),
-    ];
-
+    final total = segments.fold<double>(
+      0,
+      (sum, segment) => sum + segment.value,
+    );
+    final rect = Offset.zero & size;
+    final stroke = size.shortestSide * .18;
     final paint = Paint()
-      ..color = color
-      ..strokeWidth = 3
       ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final path = Path()..moveTo(points.first.dx, points.first.dy);
-
-    for (final point in points.skip(1)) {
-      path.lineTo(point.dx, point.dy);
+      ..strokeWidth = stroke
+      ..strokeCap = StrokeCap.butt;
+    if (total <= 0) {
+      paint.color = const Color(0xFFE8EDF5);
+      canvas.drawArc(rect.deflate(stroke / 2), 0, math.pi * 2, false, paint);
+      return;
     }
-
-    canvas.drawPath(path, paint);
+    var start = -math.pi / 2;
+    for (final segment in segments) {
+      if (segment.value <= 0) continue;
+      final sweep = math.pi * 2 * segment.value / total;
+      paint.color = segment.color;
+      canvas.drawArc(rect.deflate(stroke / 2), start, sweep, false, paint);
+      start += sweep;
+    }
   }
 
   @override
-  bool shouldRepaint(covariant _MiniLinePainter oldDelegate) {
-    return oldDelegate.color != color;
-  }
+  bool shouldRepaint(covariant _AllocationDonutPainter oldDelegate) =>
+      oldDelegate.segments != segments;
 }
 
 class StockSearchDelegate extends SearchDelegate<StockQuote?> {

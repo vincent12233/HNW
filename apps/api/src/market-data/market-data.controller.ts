@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { MarketSessionService } from '../market-session/market-session.service';
 import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
@@ -27,6 +28,7 @@ export class MarketDataController {
     private readonly marketDataService: MarketDataService,
     private readonly marketDataHealth: MarketDataHealthService,
     private readonly historicalMarketData: HistoricalMarketDataService,
+    private readonly marketSession: MarketSessionService,
   ) {}
 
   @Get()
@@ -65,13 +67,25 @@ export class MarketDataController {
   getHistory(
     @Query('symbol') symbol = '',
     @Query('range') range = '1D',
+    @Query('exchange') exchange = '',
   ) {
-    return this.historicalMarketData.getHistory(symbol, range);
+    return this.historicalMarketData.getHistory(symbol, range, exchange);
   }
 
   @Get('indices')
   getIndexSnapshot() {
     return this.marketDataService.getIndexSnapshot();
+  }
+
+  @Get('institutional')
+  @UseGuards(JwtAuthGuard)
+  getInstitutionalOffers() {
+    return this.marketDataService.getInstitutionalOffers();
+  }
+
+  @Get('session')
+  getMarketSession() {
+    return this.marketSession.getStatus();
   }
 
   @Get('health')

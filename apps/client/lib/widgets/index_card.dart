@@ -117,7 +117,7 @@ class IndexCard extends StatelessWidget {
           const SizedBox(height: 10),
 
           const Text(
-            'Live Market Data',
+            'Market Overview',
 
             style: TextStyle(color: Colors.black45, fontSize: 12),
           ),

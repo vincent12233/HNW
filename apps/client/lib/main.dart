@@ -69,8 +69,36 @@ void _showExpiredSessionLogin() {
   );
 }
 
-class IndiaTradingApp extends StatelessWidget {
+class IndiaTradingApp extends StatefulWidget {
   const IndiaTradingApp({super.key});
+
+  @override
+  State<IndiaTradingApp> createState() => _IndiaTradingAppState();
+}
+
+class _IndiaTradingAppState extends State<IndiaTradingApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Backgrounding must not sign the user out, clear navigation, or dispose
+    // live services. Mobile operating systems may suspend networking while the
+    // app is backgrounded, so reconnect and refresh once it becomes active.
+    if (state == AppLifecycleState.resumed && marketSocket.hasStarted) {
+      marketSocket.resume();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +107,20 @@ class IndiaTradingApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: AppConfig.appName,
       theme: AppTheme.light(),
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            // Prevent system accessibility scaling from making dense trading
+            // controls unusable while retaining meaningful text enlargement.
+            textScaler: media.textScaler.clamp(
+              minScaleFactor: 0.9,
+              maxScaleFactor: 1.4,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const AuthGate(),
     );
   }
@@ -117,7 +159,7 @@ class _AuthGateState extends State<AuthGate> {
           );
         }
 
-        if (snapshot.hasError || snapshot.data != null) {
+        if (!snapshot.hasError && snapshot.data != null) {
           return _marketHome();
         }
 

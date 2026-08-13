@@ -12,6 +12,7 @@ import 'session_expiry_service.dart';
 
 class AuthService {
   static const String _sessionKey = 'auth_session';
+  static const String _biometricSessionKey = 'biometric_auth_session';
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
   Future<AuthSession> login({
@@ -23,14 +24,16 @@ class AuthService {
     final http.Response response;
 
     try {
-      response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone': _normalizeIndianPhone(phone),
-          'password': password,
-        }),
-      ).timeout(const Duration(seconds: 10));
+      response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': _normalizeIndianPhone(phone),
+              'password': password,
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',
@@ -59,6 +62,85 @@ class AuthService {
     return session;
   }
 
+  Future<void> requestPasswordReset(String phone) async {
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/auth/password-reset/request'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'phone': _normalizeIndianPhone(phone)}),
+        )
+        .timeout(const Duration(seconds: 12));
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _englishApiMessage(decoded, 'Unable to send reset code'),
+      );
+    }
+  }
+
+  Future<void> confirmPasswordReset({
+    required String phone,
+    required String code,
+    required String newPassword,
+  }) async {
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/auth/password-reset/confirm'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({
+            'phone': _normalizeIndianPhone(phone),
+            'code': code,
+            'newPassword': newPassword,
+          }),
+        )
+        .timeout(const Duration(seconds: 12));
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _englishApiMessage(decoded, 'Unable to reset password'),
+      );
+    }
+  }
+
+  Future<AuthSession> googleLogin(String idToken) async {
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/auth/google'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'idToken': idToken}),
+        )
+        .timeout(const Duration(seconds: 12));
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        decoded is! Map<String, dynamic>) {
+      throw AuthException(_englishApiMessage(decoded, 'Google sign in failed'));
+    }
+    final session = AuthSession.fromLoginJson(decoded);
+    await saveSession(session);
+    return session;
+  }
+
+  Future<void> linkGoogle(String idToken) async {
+    final session = await restoreSession();
+    if (session == null) throw AuthException('Please sign in again');
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/auth/google/link'),
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+            'Content-Type': 'application/json',
+          },
+          body: jsonEncode({'idToken': idToken}),
+        )
+        .timeout(const Duration(seconds: 12));
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300)
+      throw AuthException(
+        _englishApiMessage(decoded, 'Unable to link Google account'),
+      );
+  }
+
   Future<void> register({
     required String phone,
     required String password,
@@ -69,15 +151,17 @@ class AuthService {
     final http.Response response;
 
     try {
-      response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone': _normalizeIndianPhone(phone),
-          'password': password,
-          'inviteCode': inviteCode.trim().toUpperCase(),
-        }),
-      ).timeout(const Duration(seconds: 10));
+      response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': _normalizeIndianPhone(phone),
+              'password': password,
+              'inviteCode': inviteCode.trim().toUpperCase(),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',
@@ -108,17 +192,19 @@ class AuthService {
     final http.Response response;
 
     try {
-      response = await http.post(
-        uri,
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'phone': _normalizeIndianPhone(phone),
-          'documentType': documentType,
-          'fileName': file.name,
-          'mimeType': _mimeTypeForFile(file.name),
-          'contentBase64': base64Encode(bytes),
-        }),
-      ).timeout(const Duration(seconds: 10));
+      response = await http
+          .post(
+            uri,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'phone': _normalizeIndianPhone(phone),
+              'documentType': documentType,
+              'fileName': file.name,
+              'mimeType': _mimeTypeForFile(file.name),
+              'contentBase64': base64Encode(bytes),
+            }),
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',
@@ -230,6 +316,11 @@ class AuthService {
   }
 
   Future<void> contactSupport(String content) async {
+    final conversationId = await openSupportConversation();
+    await sendSupportMessage(conversationId, content);
+  }
+
+  Future<String> openSupportConversation() async {
     final session = await restoreSession();
 
     if (session == null || session.accessToken.isEmpty) {
@@ -272,6 +363,57 @@ class AuthService {
       throw AuthException('Support conversation was not created');
     }
 
+    return conversationId;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchSupportMessages(
+    String conversationId,
+  ) async {
+    final session = await restoreSession();
+    if (session == null || session.accessToken.isEmpty) {
+      throw AuthException('Please sign in again');
+    }
+    final response = await http
+        .get(
+          Uri.parse(
+            '${AppConfig.apiBaseUrl}/support/conversations/$conversationId/messages',
+          ),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 10));
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw AuthException('Please sign in again');
+    }
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw AuthException(
+        _englishApiMessage(decoded, 'Unable to load messages'),
+      );
+    }
+    if (decoded is! List) return const [];
+    return decoded
+        .whereType<Map>()
+        .map((item) => item.cast<String, dynamic>())
+        .toList();
+  }
+
+  Future<void> sendSupportMessage(
+    String conversationId,
+    String content, {
+    String? attachmentName,
+    String? attachmentType,
+    String? attachmentBase64,
+  }) async {
+    final session = await restoreSession();
+    if (session == null || session.accessToken.isEmpty) {
+      throw AuthException('Please sign in again');
+    }
+    final headers = {
+      'Authorization': 'Bearer ${session.accessToken}',
+      'Content-Type': 'application/json',
+    };
+
     final messageResponse = await http
         .post(
           Uri.parse('${AppConfig.apiBaseUrl}/support/messages'),
@@ -279,6 +421,9 @@ class AuthService {
           body: jsonEncode({
             'conversationId': conversationId,
             'content': content.trim(),
+            if (attachmentName != null) 'attachmentName': attachmentName,
+            if (attachmentType != null) 'attachmentType': attachmentType,
+            if (attachmentBase64 != null) 'attachmentBase64': attachmentBase64,
           }),
         )
         .timeout(const Duration(seconds: 10));
@@ -290,12 +435,34 @@ class AuthService {
 
     final messageDecoded = jsonDecode(messageResponse.body);
 
-    if (messageResponse.statusCode < 200 ||
-        messageResponse.statusCode >= 300) {
+    if (messageResponse.statusCode < 200 || messageResponse.statusCode >= 300) {
       throw AuthException(
         _englishApiMessage(messageDecoded, 'Unable to send message'),
       );
     }
+  }
+
+  Future<void> markSupportConversationRead(String conversationId) async {
+    final session = await restoreSession();
+    if (session == null) return;
+    await http.post(
+      Uri.parse(
+        '${AppConfig.apiBaseUrl}/support/conversations/$conversationId/read',
+      ),
+      headers: {'Authorization': 'Bearer ${session.accessToken}'},
+    );
+  }
+
+  Future<bool> supportOnline() async {
+    final session = await restoreSession();
+    if (session == null) return false;
+    final response = await http.get(
+      Uri.parse('${AppConfig.apiBaseUrl}/support/status'),
+      headers: {'Authorization': 'Bearer ${session.accessToken}'},
+    );
+    if (response.statusCode < 200 || response.statusCode >= 300) return false;
+    final decoded = jsonDecode(response.body);
+    return decoded is Map && decoded['online'] == true;
   }
 
   Future<AuthSession?> restoreSession() async {
@@ -324,6 +491,56 @@ class AuthService {
     await preferences.setString('account_phone', session.phone);
   }
 
+  Future<void> enableBiometricQuickLogin() async {
+    final session = await restoreSession();
+    if (session == null) throw AuthException('Please sign in again');
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/auth/biometric/token'),
+      headers: {'Authorization': 'Bearer ${session.accessToken}'},
+    );
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        decoded is! Map) {
+      throw AuthException(
+        _englishApiMessage(decoded, 'Unable to enable biometric login'),
+      );
+    }
+    final token = decoded['biometricToken']?.toString() ?? '';
+    if (token.isEmpty) throw AuthException('Invalid biometric login response');
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.setString(_biometricSessionKey, token);
+  }
+
+  Future<void> disableBiometricQuickLogin() async {
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_biometricSessionKey);
+  }
+
+  Future<String?> restoreBiometricToken() async {
+    final preferences = await SharedPreferences.getInstance();
+    return preferences.getString(_biometricSessionKey);
+  }
+
+  Future<AuthSession> biometricLogin(String biometricToken) async {
+    final response = await http.post(
+      Uri.parse('${AppConfig.apiBaseUrl}/auth/biometric/login'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'biometricToken': biometricToken}),
+    );
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 ||
+        response.statusCode >= 300 ||
+        decoded is! Map<String, dynamic>) {
+      throw AuthException(
+        _englishApiMessage(decoded, 'Biometric quick login failed'),
+      );
+    }
+    final session = AuthSession.fromLoginJson(decoded);
+    await saveSession(session);
+    return session;
+  }
+
   Future<void> clearSession() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
@@ -343,9 +560,8 @@ Future<List<WithdrawalRequest>> _cachedWithdrawals() async {
 List<WithdrawalRequest> _withdrawalsFromRows(List<dynamic> rows) {
   return rows
       .map(
-        (item) => WithdrawalRequest.fromJson(
-          Map<String, dynamic>.from(item as Map),
-        ),
+        (item) =>
+            WithdrawalRequest.fromJson(Map<String, dynamic>.from(item as Map)),
       )
       .toList();
 }

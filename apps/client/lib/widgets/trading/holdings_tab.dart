@@ -25,9 +25,9 @@ class HoldingsTab extends StatefulWidget {
 class _HoldingsTabState extends State<HoldingsTab> {
   String selectedCategory = 'ALL';
 
-  StockQuote? _findStock(String symbol) {
+  StockQuote? _findStock(String symbol, String exchange) {
     for (final stock in widget.stocks) {
-      if (stock.symbol == symbol) {
+      if (stock.symbol == symbol && stock.exchange == exchange) {
         return stock;
       }
     }
@@ -64,7 +64,10 @@ class _HoldingsTabState extends State<HoldingsTab> {
         return true;
       }
 
-      return _positionCategory(position, _findStock(position.symbol)) ==
+      return _positionCategory(
+            position,
+            _findStock(position.symbol, position.exchange),
+          ) ==
           selectedCategory;
     }).toList();
 
@@ -101,7 +104,10 @@ class _HoldingsTabState extends State<HoldingsTab> {
                   separatorBuilder: (_, _) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final position = positionList[index];
-                    final stock = _findStock(position.symbol);
+                    final stock = _findStock(
+                      position.symbol,
+                      position.exchange,
+                    );
 
                     final currentPrice = stock?.price ?? position.averageCost;
                     final marketValue = position.marketValue(currentPrice);
@@ -208,7 +214,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                     child: _valueItem(
                                       _categoryLabel(category),
                                       '${returnPercent > 0 ? '+' : ''}'
-                                          '${returnPercent.toStringAsFixed(2)}%',
+                                      '${returnPercent.toStringAsFixed(2)}%',
                                       valueColor: profitColor,
                                     ),
                                   ),

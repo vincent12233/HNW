@@ -1,44 +1,25 @@
 "use client";
 
 import {
-  BankOutlined,
-  BarChartOutlined,
-  DashboardOutlined,
-  DollarOutlined,
-  GiftOutlined,
-  LogoutOutlined,
-  MenuFoldOutlined,
-  MenuUnfoldOutlined,
-  SafetyCertificateOutlined,
-  StockOutlined,
-  TeamOutlined,
-  TransactionOutlined,
-  UsergroupAddOutlined,
-  WarningOutlined,
+  BankOutlined, BarChartOutlined, DashboardOutlined, DollarOutlined,
+  GiftOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined,
+  SafetyCertificateOutlined, StockOutlined, TeamOutlined,
+  TransactionOutlined, UsergroupAddOutlined, WarningOutlined,
 } from "@ant-design/icons";
-import { Avatar, Button, Layout, Menu, Space, Tag, Typography } from "antd";
+import { Avatar, Button, Drawer, Layout, Menu, Space, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
+type CurrentUser = { id?: string; fullName?: string; phone?: string; role?: string };
+type MenuItem = { key: string; icon?: ReactNode; label: string };
 
-type AdminShellProps = {
-  children: ReactNode;
-};
-
-type CurrentUser = {
-  id?: string;
-  fullName?: string;
-  phone?: string;
-  role?: string;
-};
-
-const adminMenuItems = [
-  { key: "/dashboard", icon: <DashboardOutlined />, label: "控制台" },
+const adminItems: MenuItem[] = [
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "运营总览" },
   { key: "/customers", icon: <TeamOutlined />, label: "客户管理" },
   { key: "/business-users", icon: <UsergroupAddOutlined />, label: "业务员管理" },
-  { key: "/audit-logs", icon: <SafetyCertificateOutlined />, label: "操作日志" },
+  { key: "/bank-accounts", icon: <BankOutlined />, label: "银行账户" },
   { key: "/orders", icon: <StockOutlined />, label: "订单查询" },
   { key: "/trades", icon: <TransactionOutlined />, label: "成交查询" },
   { key: "/market", icon: <StockOutlined />, label: "股票管理" },
@@ -46,253 +27,114 @@ const adminMenuItems = [
   { key: "/watchlist", icon: <StockOutlined />, label: "自选股" },
   { key: "/block-trades", icon: <BankOutlined />, label: "大宗交易" },
   { key: "/ipo-debts", icon: <WarningOutlined />, label: "IPO 欠款" },
-  { key: "/funds", icon: <GiftOutlined />, label: "基金" },
-  { key: "/quant", icon: <BarChartOutlined />, label: "量化" },
+  { key: "/funds", icon: <GiftOutlined />, label: "产品管理" },
+  { key: "/quant", icon: <BarChartOutlined />, label: "量化管理" },
+  { key: "/audit-logs", icon: <SafetyCertificateOutlined />, label: "操作日志" },
 ];
-
-const financeMenuItems = [
-  { key: "/dashboard", icon: <DashboardOutlined />, label: "财务首页" },
-  { key: "/deposits", icon: <DollarOutlined />, label: "财务上分" },
+const financeItems: MenuItem[] = [
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "财务总览" },
+  { key: "/deposits", icon: <DollarOutlined />, label: "入金处理" },
   { key: "/withdrawals", icon: <BankOutlined />, label: "提现审核" },
   { key: "/loans", icon: <DollarOutlined />, label: "贷款管理" },
   { key: "/finance-overview", icon: <TransactionOutlined />, label: "资金总览" },
   { key: "/transactions", icon: <TransactionOutlined />, label: "资金流水" },
+  { key: "/bank-accounts", icon: <BankOutlined />, label: "银行账户" },
   { key: "/orders", icon: <StockOutlined />, label: "订单查询" },
   { key: "/trades", icon: <TransactionOutlined />, label: "成交查询" },
   { key: "/customers", icon: <TeamOutlined />, label: "客户查询" },
 ];
-
-const supportMenuItems = [
-  { key: "/dashboard", icon: <DashboardOutlined />, label: "客服首页" },
+const supportItems: MenuItem[] = [
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "客服总览" },
   { key: "/support-console", icon: <SafetyCertificateOutlined />, label: "在线客服" },
   { key: "/customers", icon: <TeamOutlined />, label: "客户查询" },
 ];
-
-const businessMenuItems = [
-  { key: "/dashboard", icon: <DashboardOutlined />, label: "控制台" },
+const businessItems: MenuItem[] = [
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "业务总览" },
   { key: "/business-customers", icon: <TeamOutlined />, label: "客户管理" },
   { key: "/business-accounts", icon: <BankOutlined />, label: "账户管理" },
   { key: "/business-funds", icon: <DollarOutlined />, label: "资金管理" },
   { key: "/business-kyc", icon: <SafetyCertificateOutlined />, label: "KYC 审核" },
   { key: "/business-ipo", icon: <WarningOutlined />, label: "IPO 分配" },
-  { key: "/business-positions", label: "持仓" },
-  { key: "/invite-codes", icon: <GiftOutlined />, label: "我的邀请码" },
-  { key: "/business-orders", icon: <StockOutlined />, label: "客户订单记录" },
-  { key: "/business-trades", icon: <TransactionOutlined />, label: "客户成交记录" },
-  { key: "/business-institutional", icon: <StockOutlined />, label: "涨停股" },
-  { key: "/business-otc", icon: <BankOutlined />, label: "OTC" },
+  { key: "/business-positions", icon: <StockOutlined />, label: "客户持仓" },
+  { key: "/invite-codes", icon: <GiftOutlined />, label: "邀请码" },
+  { key: "/business-orders", icon: <StockOutlined />, label: "客户订单" },
+  { key: "/business-trades", icon: <TransactionOutlined />, label: "客户成交" },
+  { key: "/business-institutional", icon: <StockOutlined />, label: "Inst. 管理" },
+  { key: "/business-otc", icon: <BankOutlined />, label: "OTC 审核" },
 ];
-
-const roleLabels: Record<string, string> = {
-  ADMIN: "管理员",
-  FINANCE: "财务",
-  SUPPORT: "客服",
-  BUSINESS: "业务员",
+const businessItemsEn: MenuItem[] = [
+  { key: "/dashboard", icon: <DashboardOutlined />, label: "Business Overview" },
+  { key: "/business-customers", icon: <TeamOutlined />, label: "Customers" },
+  { key: "/business-accounts", icon: <BankOutlined />, label: "Accounts" },
+  { key: "/business-funds", icon: <DollarOutlined />, label: "Funds" },
+  { key: "/business-kyc", icon: <SafetyCertificateOutlined />, label: "KYC Review" },
+  { key: "/business-ipo", icon: <WarningOutlined />, label: "IPO Allocation" },
+  { key: "/business-positions", icon: <StockOutlined />, label: "Positions" },
+  { key: "/invite-codes", icon: <GiftOutlined />, label: "Invite Codes" },
+  { key: "/business-orders", icon: <StockOutlined />, label: "Customer Orders" },
+  { key: "/business-trades", icon: <TransactionOutlined />, label: "Customer Trades" },
+  { key: "/business-institutional", icon: <StockOutlined />, label: "Inst. Management" },
+  { key: "/business-otc", icon: <BankOutlined />, label: "OTC Review" },
+];
+const roleMeta: Record<string, { label: string; product: string; color: string }> = {
+  ADMIN: { label: "管理员", product: "管理后台", color: "purple" },
+  FINANCE: { label: "财务", product: "财务后台", color: "gold" },
+  SUPPORT: { label: "客服", product: "客服后台", color: "blue" },
+  BUSINESS: { label: "业务员", product: "业务后台", color: "green" },
 };
 
-const pageTitles: Record<string, string> = {
-  "/dashboard": "控制台",
-  "/customers": "客户管理",
-  "/business-users": "业务员管理",
-  "/support-console": "在线客服",
-  "/deposits": "财务上分",
-  "/withdrawals": "提现审核",
-  "/loans": "贷款管理",
-  "/finance-overview": "资金总览",
-  "/transactions": "资金流水",
-  "/audit-logs": "操作日志",
-  "/orders": "订单查询",
-  "/trades": "成交查询",
-  "/market": "股票管理",
-  "/instruments": "NSE 股票库",
-  "/watchlist": "自选股",
-  "/block-trades": "大宗交易",
-  "/ipo-debts": "IPO 欠款",
-  "/funds": "基金",
-  "/quant": "量化",
-  "/business-customers": "客户管理",
-  "/business-accounts": "账户管理",
-  "/business-funds": "资金管理",
-  "/business-kyc": "KYC 审核",
-  "/business-ipo": "IPO 分配",
-  "/business-positions": "持仓",
-  "/invite-codes": "我的邀请码",
-  "/business-deposits": "客户入金记录",
-  "/business-withdrawals": "客户提现记录",
-  "/business-orders": "客户订单记录",
-  "/business-trades": "客户成交记录",
-  "/business-institutional": "涨停股",
-  "/business-otc": "OTC",
-};
-
-export default function AdminShell({ children }: AdminShellProps) {
+export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobile, setMobile] = useState(false);
+  const [drawer, setDrawer] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
+  const [language, setLanguage] = useState<"zh" | "en">("zh");
 
   useEffect(() => {
+    const sync = () => setMobile(window.innerWidth < 900);
+    sync(); window.addEventListener("resize", sync);
+    return () => window.removeEventListener("resize", sync);
+  }, []);
+  useEffect(() => {
     const token = localStorage.getItem("adminAccessToken");
-    const storedUser = localStorage.getItem("adminUser");
-
-    if (!token) {
-      router.replace("/login");
-      return;
-    }
-
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem("adminUser");
-        router.replace("/login");
-      }
-    }
+    const stored = localStorage.getItem("adminUser");
+    if (!token) { router.replace("/login"); return; }
+    try { if (stored) setUser(JSON.parse(stored)); }
+    catch { localStorage.removeItem("adminUser"); router.replace("/login"); }
   }, [router]);
+  useEffect(() => {
+    const saved = localStorage.getItem("businessLanguage");
+    if (saved === "en") setLanguage("en");
+  }, []);
 
-  const menuItems = useMemo(() => {
-    if (user?.role === "BUSINESS") return businessMenuItems;
-    if (user?.role === "FINANCE") return financeMenuItems;
-    if (user?.role === "SUPPORT") return supportMenuItems;
-    return adminMenuItems;
-  }, [user?.role]);
+  const items = useMemo(() => user?.role === "BUSINESS" ? (language === "en" ? businessItemsEn : businessItems) : user?.role === "FINANCE" ? financeItems : user?.role === "SUPPORT" ? supportItems : adminItems, [user?.role, language]);
+  const meta = roleMeta[user?.role || "ADMIN"] || roleMeta.ADMIN;
+  const pageTitle = items.find((item) => item.key === pathname)?.label || "工作台";
+  const logout = () => { localStorage.removeItem("adminAccessToken"); localStorage.removeItem("adminUser"); router.replace("/login"); };
+  const switchLanguage = () => {
+    const next = language === "zh" ? "en" : "zh";
+    setLanguage(next); localStorage.setItem("businessLanguage", next);
+    window.dispatchEvent(new CustomEvent("business-language-change", { detail: next }));
+  };
+  const menu = <Menu theme="dark" mode="inline" selectedKeys={[pathname]} items={items} onClick={({ key }) => { router.push(key); setDrawer(false); }} className="ops-menu" />;
+  const brand = <div className="ops-brand"><span className="ops-logo"><StockOutlined /></span>{!collapsed && <div><strong>India Trading</strong><small>{meta.product}</small></div>}</div>;
 
-  const productName = useMemo(() => {
-    if (user?.role === "BUSINESS") return "HNW 业务后台";
-    if (user?.role === "FINANCE") return "HNW 财务后台";
-    if (user?.role === "SUPPORT") return "HNW 客服后台";
-    return "HNW 管理后台";
-  }, [user?.role]);
-
-  const pageTitle = pageTitles[pathname] || "工作台";
-
-  function logout() {
-    localStorage.removeItem("adminAccessToken");
-    localStorage.removeItem("adminUser");
-    router.replace("/login");
-  }
-
-  return (
-    <Layout style={{ minHeight: "100vh", background: "#eef3f8" }}>
-      <Sider
-        collapsible
-        collapsed={collapsed}
-        trigger={null}
-        width={232}
-        style={{
-          background: "linear-gradient(180deg, #07192d 0%, #0b2038 56%, #0d2a4a 100%)",
-          boxShadow: "6px 0 24px rgba(7,25,45,0.16)",
-        }}
-      >
-        <div
-          style={{
-            height: 76,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            paddingInline: collapsed ? 16 : 20,
-            color: "#fff",
-            fontWeight: 700,
-            fontSize: collapsed ? 16 : 18,
-          }}
-        >
-          <span
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: 10,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: "linear-gradient(135deg, #1f8fff, #60a5fa)",
-              fontSize: 13,
-            }}
-          >
-            H
-          </span>
-          {!collapsed && <span>{productName}</span>}
-        </div>
-
-        <Menu
-          theme="dark"
-          mode="inline"
-          selectedKeys={[pathname]}
-          items={menuItems}
-          onClick={({ key }) => router.push(key)}
-          style={{
-            background: "transparent",
-            borderInlineEnd: 0,
-            paddingInline: 8,
-          }}
-        />
-      </Sider>
-
-      <Layout>
-        <Header
-          style={{
-            paddingInline: 20,
-            background: "rgba(255,255,255,0.92)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderBottom: "1px solid #e8edf5",
-            boxShadow: "0 8px 24px rgba(15,23,42,0.06)",
-            position: "sticky",
-            top: 0,
-            zIndex: 10,
-          }}
-        >
-          <Space size="middle">
-            <Button
-              type="text"
-              icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => setCollapsed(!collapsed)}
-            />
-            <div style={{ lineHeight: 1.2 }}>
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                HNW Operations
-              </Text>
-              <br />
-              <Text strong style={{ fontSize: 18 }}>
-                {pageTitle}
-              </Text>
-            </div>
-          </Space>
-
-          <Space size="middle">
-            <Tag color={user?.role === "BUSINESS" ? "green" : user?.role === "FINANCE" ? "gold" : user?.role === "SUPPORT" ? "blue" : "purple"}>
-              {roleLabels[user?.role || "ADMIN"] || user?.role || "管理员"}
-            </Tag>
-
-            <Avatar style={{ background: "#1f8fff" }}>
-              {(user?.fullName || "管").charAt(0).toUpperCase()}
-            </Avatar>
-
-            <div style={{ lineHeight: 1.25 }}>
-              <Text strong>{user?.fullName || "系统管理员"}</Text>
-              <br />
-              <Text type="secondary" style={{ fontSize: 12 }}>
-                员工编号登录
-              </Text>
-            </div>
-
-            <Button icon={<LogoutOutlined />} onClick={logout}>
-              退出登录
-            </Button>
-          </Space>
-        </Header>
-
-        <Content
-          style={{
-            margin: 0,
-            padding: 24,
-            background: "#eef3f8",
-            minHeight: 280,
-          }}
-        >
-          {children}
-        </Content>
-      </Layout>
+  return <Layout className="ops-layout">
+    {!mobile && <Sider width={256} collapsedWidth={76} collapsed={collapsed} trigger={null} className="ops-sider">{brand}{menu}</Sider>}
+    <Drawer placement="left" width={280} open={mobile && drawer} onClose={() => setDrawer(false)} styles={{ body: { padding: 0, background: "#071426" }, header: { display: "none" } }}>{<div className="ops-mobile-nav"><div className="ops-brand"><span className="ops-logo"><StockOutlined /></span><div><strong>India Trading</strong><small>{meta.product}</small></div></div>{menu}</div>}</Drawer>
+    <Layout>
+      <Header className="ops-header">
+        <Space><Button type="text" aria-label="切换导航" icon={mobile ? <MenuUnfoldOutlined /> : collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => mobile ? setDrawer(true) : setCollapsed(!collapsed)} /><div className="ops-title"><Text type="secondary">OPERATIONS WORKSPACE</Text><strong>{pageTitle}</strong></div></Space>
+        <Space size={mobile ? 8 : 14}>
+          {user?.role === "BUSINESS" && <Button size="small" onClick={switchLanguage}>{language === "zh" ? "EN" : "中文"}</Button>}
+          <Tag color={meta.color}>{meta.label}</Tag>
+          {!mobile && <><Avatar className="ops-avatar">{(user?.fullName || "管").charAt(0)}</Avatar><div className="ops-user"><strong>{user?.fullName || "系统管理员"}</strong><small>安全登录</small></div></>}
+          <Button type="text" danger icon={<LogoutOutlined />} onClick={logout}>{mobile ? null : "退出"}</Button>
+        </Space>
+      </Header>
+      <Content className="ops-content">{children}</Content>
     </Layout>
-  );
+  </Layout>;
 }

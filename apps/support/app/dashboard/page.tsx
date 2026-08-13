@@ -27,6 +27,9 @@ type SupportMessage = {
   content: string;
   senderType: "CLIENT" | "SUPPORT" | "ADMIN";
   createdAt: string;
+  attachmentName?: string | null;
+  attachmentUrl?: string | null;
+  attachmentType?: string | null;
 };
 
 const presetTags = ["入金咨询", "提现问题", "KYC", "交易问题", "账户问题", "紧急", "已跟进"];
@@ -118,6 +121,7 @@ export default function Dashboard() {
     const response = await api(`/support/conversations/${conversationId}/messages`);
     const data = await response.json();
     setMessages(Array.isArray(data) ? data : data.data || []);
+    await api(`/support/conversations/${conversationId}/read`, { method: "POST" });
   }
 
   async function updateTags(nextTags: string[]) {
@@ -403,6 +407,15 @@ export default function Dashboard() {
                   >
                     <div className="mb-1 text-xs opacity-70">{isClient ? "客户" : "客服"} · {formatDate(item.createdAt)}</div>
                     <p className="whitespace-pre-wrap">{item.content}</p>
+                    {item.attachmentUrl && (
+                      <a
+                        href={item.attachmentUrl}
+                        download={item.attachmentName || "attachment"}
+                        className={`mt-2 block rounded px-3 py-2 text-sm underline ${isClient ? "bg-slate-100 text-blue-700" : "bg-white/15 text-white"}`}
+                      >
+                        📎 {item.attachmentName || "查看附件"}
+                      </a>
+                    )}
                     <div className="mt-2 flex items-center gap-2">
                       <button
                         className={`rounded px-2 py-1 text-xs ${

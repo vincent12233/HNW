@@ -299,6 +299,15 @@ export class MatchingService {
         completedAt: complete ? new Date() : null,
       },
     });
+    await tx.notification.create({
+      data: {
+        userId: order.account.userId,
+        type: 'ORDER',
+        title: complete ? 'Order filled' : 'Order partially filled',
+        body: `${order.side} ${quantity} ${order.instrument.symbol} at ₹${price.toFixed(2)}.`,
+        referenceId: order.id,
+      },
+    });
   }
 
   private async createSettlement(

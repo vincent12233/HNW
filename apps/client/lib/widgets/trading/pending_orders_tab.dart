@@ -87,12 +87,24 @@ class PendingOrdersTab extends StatelessWidget {
                   ),
                   const SizedBox(width: 10),
                   Expanded(
-                    child: Text(
-                      order.symbol,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          order.symbol,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          order.exchange,
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   Container(

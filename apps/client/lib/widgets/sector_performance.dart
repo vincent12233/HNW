@@ -8,39 +8,23 @@ class SectorPerformance extends StatelessWidget {
 
   final List<StockQuote> stocks;
 
-  double _averageChange(List<String> symbols) {
-    final matched = stocks
-        .where((stock) => symbols.contains(stock.symbol))
-        .toList();
-
-    if (matched.isEmpty) {
-      return 0;
-    }
-
-    final total = matched.fold<double>(0, (sum, stock) => sum + stock.change);
-
-    return total / matched.length;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final sectors = [
-      (
-        name: 'Banking',
-        icon: Icons.account_balance_outlined,
-        change: _averageChange(['HDFCBANK', 'ICICIBANK']),
-      ),
-      (
-        name: 'IT',
-        icon: Icons.memory_outlined,
-        change: _averageChange(['TCS', 'INFY']),
-      ),
-      (
-        name: 'Energy',
-        icon: Icons.bolt_outlined,
-        change: _averageChange(['RELIANCE']),
-      ),
-    ];
+    final grouped = <String, List<StockQuote>>{};
+    for (final stock in stocks) {
+      final category = stock.category?.trim();
+      if (category == null || category.isEmpty) continue;
+      grouped.putIfAbsent(category, () => <StockQuote>[]).add(stock);
+    }
+    final sectors = grouped.entries.map((entry) {
+      final change = entry.value.fold<double>(
+            0,
+            (total, stock) => total + stock.change,
+          ) /
+          entry.value.length;
+      return (name: entry.key, change: change, count: entry.value.length);
+    }).toList()
+      ..sort((left, right) => right.count.compareTo(left.count));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -79,7 +63,7 @@ class SectorPerformance extends StatelessWidget {
                       color: color.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(sector.icon, color: color),
+                    child: Icon(Icons.category_outlined, color: color),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -97,6 +81,13 @@ class SectorPerformance extends StatelessWidget {
                           style: TextStyle(
                             color: color,
                             fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          '${sector.count} stocks',
+                          style: const TextStyle(
+                            color: Colors.black45,
+                            fontSize: 11,
                           ),
                         ),
                       ],

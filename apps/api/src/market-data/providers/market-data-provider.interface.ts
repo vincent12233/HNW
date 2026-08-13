@@ -24,8 +24,19 @@ export interface MarketHistoryPoint {
 
 export interface MarketHistoryResult {
   symbol: string;
+  exchange: string;
+  range: '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
+  timezone: 'Asia/Kolkata';
   interval: '5m' | '1h' | '1d';
   data: MarketHistoryPoint[];
+  events?: MarketHistoryEvent[];
+}
+
+export interface MarketHistoryEvent {
+  date: string;
+  type: 'DIVIDEND' | 'SPLIT';
+  value: number;
+  label: string;
 }
 
 export interface MarketDataProvider {

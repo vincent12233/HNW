@@ -27,6 +27,8 @@ import { LoansModule } from './loans/loans.module';
 import { InstrumentMasterModule } from './instrument-master/instrument-master.module';
 import { WatchlistModule } from './watchlist/watchlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { OtcModule } from './otc/otc.module';
+import { ClientExperienceModule } from './client-experience/client-experience.module';
 
 @Module({
   imports: [
@@ -59,6 +61,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     LoansModule,
     InstrumentMasterModule,
     WatchlistModule,
+    OtcModule,
+    ClientExperienceModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

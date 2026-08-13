@@ -439,6 +439,8 @@ class _MarketsPageState extends State<MarketsPage> {
         _marketSectionHeading('Market Breadth'),
         const SizedBox(height: 12),
         _marketBreadth(gainers.length, losers.length),
+        const SizedBox(height: 18),
+        _marketBanner(),
       ],
     );
   }
@@ -607,97 +609,159 @@ class _MarketsPageState extends State<MarketsPage> {
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
-        children: rows.map((stock) {
-          final positive = stock.change >= 0;
-          return InkWell(
-            onTap: () => widget.onStockTap(stock),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-              child: Row(
-                children: [
-                  StockLogo(
-                    symbol: stock.symbol,
-                    logoUrl: stock.logoUrl,
-                    size: 30,
-                  ),
-                  const SizedBox(width: 9),
-                  Expanded(
-                    flex: 3,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          _displayStockName(stock),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        Text(
-                          stock.exchange,
-                          style: const TextStyle(
-                            fontSize: 10,
-                            color: Color(0xFF64748B),
-                          ),
-                        ),
-                      ],
+        children: [
+          const Padding(
+            padding: EdgeInsets.fromLTRB(12, 10, 12, 7),
+            child: Row(
+              children: [
+                SizedBox(width: 39),
+                Expanded(
+                  flex: 3,
+                  child: Text(
+                    'Name',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  SizedBox(
-                    width: 42,
-                    height: 22,
-                    child: CustomPaint(
-                      painter: _IndexSparklinePainter(
-                        positive ? AppConfig.gainColor : AppConfig.lossColor,
-                      ),
+                ),
+                SizedBox(width: 47),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    'Price',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 5),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      stock.price.toStringAsFixed(2),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
+                ),
+                Expanded(
+                  flex: 2,
+                  child: Text(
+                    '% Change',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Expanded(
-                    flex: 2,
-                    child: Text(
-                      '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                      textAlign: TextAlign.right,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: positive
-                            ? AppConfig.gainColor
-                            : AppConfig.lossColor,
-                        fontWeight: FontWeight.w800,
-                      ),
+                ),
+                SizedBox(
+                  width: 55,
+                  child: Text(
+                    'Volume',
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF64748B),
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
-                  const SizedBox(width: 7),
-                  SizedBox(
-                    width: 48,
-                    child: Text(
-                      formatVolume(stock.volume),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          );
-        }).toList(),
+          ),
+          const Divider(height: 1),
+          ...rows.map((stock) {
+            final positive = stock.change >= 0;
+            return InkWell(
+              onTap: () => widget.onStockTap(stock),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 11,
+                ),
+                child: Row(
+                  children: [
+                    StockLogo(
+                      symbol: stock.symbol,
+                      logoUrl: stock.logoUrl,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 9),
+                    Expanded(
+                      flex: 3,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            _displayStockName(stock),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            stock.exchange,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Color(0xFF64748B),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    SizedBox(
+                      width: 42,
+                      height: 22,
+                      child: CustomPaint(
+                        painter: _IndexSparklinePainter(
+                          positive ? AppConfig.gainColor : AppConfig.lossColor,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 5),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        stock.price.toStringAsFixed(2),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      flex: 2,
+                      child: Text(
+                        '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: positive
+                              ? AppConfig.gainColor
+                              : AppConfig.lossColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 7),
+                    SizedBox(
+                      width: 48,
+                      child: Text(
+                        formatVolume(stock.volume),
+                        textAlign: TextAlign.right,
+                        style: const TextStyle(
+                          color: Color(0xFF64748B),
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        ],
       ),
     );
   }
@@ -767,6 +831,40 @@ class _MarketsPageState extends State<MarketsPage> {
       ),
     );
   }
+
+  Widget _marketBanner() => Container(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    decoration: BoxDecoration(
+      color: const Color(0xFFEEF5FF),
+      borderRadius: BorderRadius.circular(12),
+    ),
+    child: const Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Track live markets & place orders on the go',
+                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Live prices, company logos and secure execution',
+                style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(width: 12),
+        Icon(
+          Icons.candlestick_chart_rounded,
+          color: AppConfig.gainColor,
+          size: 50,
+        ),
+      ],
+    ),
+  );
 
   Widget _moverColumn(String title, List<StockQuote> rows, bool positive) {
     return Container(

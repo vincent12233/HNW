@@ -63,37 +63,42 @@ class TradeList extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 18),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _summary(
-                        'Total Portfolio Value',
-                        formatPrice(total),
-                        AppConfig.textPrimaryColor,
+                IntrinsicHeight(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _summary(
+                          'Total Portfolio Value',
+                          formatPrice(total),
+                          AppConfig.textPrimaryColor,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: _summary(
-                        'Total Invested',
-                        formatPrice(invested),
-                        AppConfig.textPrimaryColor,
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        child: _summary(
+                          'Total Invested',
+                          formatPrice(invested),
+                          AppConfig.textPrimaryColor,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: _summary(
-                        'Total P&L',
-                        '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                        pnl >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        child: _summary(
+                          'Total P&L',
+                          '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                          pnl >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: _summary(
-                        'Available Balance',
-                        formatPrice(account?.cashBalance ?? 0),
-                        AppConfig.textPrimaryColor,
+                      const VerticalDivider(width: 1),
+                      Expanded(
+                        child: _summary(
+                          'Available Balance',
+                          formatPrice(account?.cashBalance ?? 0),
+                          AppConfig.textPrimaryColor,
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ],
             ),

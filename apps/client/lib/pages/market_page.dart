@@ -750,14 +750,14 @@ class _MarketHomePageState extends State<MarketHomePage> {
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [Color(0xFF0B5CFF), Color(0xFF0648D8)],
             ),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: const [
               BoxShadow(
                 color: Color(0x220B5CFF),
@@ -771,15 +771,51 @@ class _MarketHomePageState extends State<MarketHomePage> {
             children: [
               Row(
                 children: [
-                  const Text(
-                    'Total Portfolio Value',
-                    style: TextStyle(color: Colors.white70, fontSize: 13),
+                  const Expanded(
+                    child: Row(
+                      children: [
+                        Text(
+                          'Total Portfolio Value',
+                          style: TextStyle(color: Colors.white70, fontSize: 13),
+                        ),
+                        SizedBox(width: 6),
+                        Icon(
+                          Icons.visibility_outlined,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
+                      ],
+                    ),
                   ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.visibility_outlined,
-                    color: Colors.white.withValues(alpha: 0.72),
-                    size: 16,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 9,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      borderRadius: BorderRadius.circular(7),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '1D',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        SizedBox(width: 3),
+                        Icon(
+                          Icons.keyboard_arrow_down_rounded,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -1029,6 +1065,18 @@ class _MarketHomePageState extends State<MarketHomePage> {
                           : AppConfig.lossColor,
                       fontSize: 9,
                       fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  SizedBox(
+                    height: 24,
+                    width: double.infinity,
+                    child: CustomPaint(
+                      painter: _MiniLineChartPainter(
+                        color: positive
+                            ? AppConfig.gainColor
+                            : AppConfig.lossColor,
+                      ),
                     ),
                   ),
                 ],
@@ -1837,6 +1885,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
           _sectionTitle('Market News'),
           const SizedBox(height: 10),
           _marketNewsSection(),
+          const SizedBox(height: 14),
+          _homeTradingBanner(),
         ],
       ),
     );
@@ -1883,63 +1933,102 @@ class _MarketHomePageState extends State<MarketHomePage> {
         Color(0xFFF59E0B),
       ),
     ];
-    return Column(
-      children: news
-          .map(
-            (item) => Container(
-              margin: const EdgeInsets.only(bottom: 10),
-              padding: const EdgeInsets.all(13),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE8EDF5)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      color: item.$4.withValues(alpha: .1),
-                      borderRadius: BorderRadius.circular(12),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final oneColumn = constraints.maxWidth < 340;
+        final width = oneColumn
+            ? constraints.maxWidth
+            : (constraints.maxWidth - 10) / 2;
+        return Wrap(
+          spacing: 10,
+          runSpacing: 10,
+          children: news.map((item) {
+            return SizedBox(
+              width: width,
+              child: Container(
+                constraints: const BoxConstraints(minHeight: 116),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFE8EDF5)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: item.$4.withValues(alpha: .1),
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Icon(item.$3, color: item.$4, size: 19),
                     ),
-                    child: Icon(item.$3, color: item.$4),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          item.$1.toUpperCase(),
-                          style: TextStyle(
-                            color: item.$4,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .5,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          item.$2,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w700,
-                            height: 1.3,
-                          ),
-                        ),
-                      ],
+                    const SizedBox(height: 9),
+                    Text(
+                      item.$1.toUpperCase(),
+                      style: TextStyle(
+                        color: item.$4,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: .5,
+                      ),
                     ),
-                  ),
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    color: Color(0xFF94A3B8),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      item.$2,
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
               ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _homeTradingBanner() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF5FF),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Track live markets & place orders on the go',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Invest in equities, Inst., OTC and IPO',
+                  style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                ),
+              ],
             ),
-          )
-          .toList(),
+          ),
+          SizedBox(width: 12),
+          Icon(
+            Icons.candlestick_chart_rounded,
+            size: 52,
+            color: AppConfig.gainColor,
+          ),
+        ],
+      ),
     );
   }
 
@@ -3206,13 +3295,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 title: 'Personal Information',
                 subtitle: 'Update your profile, email, phone and address',
                 onTap: _editProfile,
+                color: const Color(0xFF2563EB),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.verified_user_outlined,
-                title: 'KYC Details',
-                subtitle: 'View and update your KYC information',
-                onTap: () => _openAccountSettings('kyc'),
+                title: 'Security',
+                subtitle: 'Password, biometric and device access',
+                onTap: () => _openAccountSettings('security'),
+                color: const Color(0xFF10B981),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3220,6 +3311,23 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 title: 'Bank Accounts',
                 subtitle: 'Manage linked bank accounts and UPI',
                 onTap: () => _openAccountSettings('banks'),
+                color: const Color(0xFFF59E0B),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.description_outlined,
+                title: 'KYC Details',
+                subtitle: 'View and update your KYC information',
+                onTap: () => _openAccountSettings('kyc'),
+                color: const Color(0xFF8B5CF6),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.tune_rounded,
+                title: 'Preferences',
+                subtitle: 'App settings, notifications and theme',
+                onTap: () => _openAccountSettings('preferences'),
+                color: const Color(0xFF06B6D4),
               ),
             ],
           ),
@@ -3236,54 +3344,55 @@ class _MarketHomePageState extends State<MarketHomePage> {
           child: Column(
             children: [
               _accountTile(
-                icon: Icons.notifications_outlined,
-                title: 'Order notifications',
-                subtitle: 'Manage transaction and account alerts',
-                onTap: () => _openAccountSettings('preferences'),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.lock_outline,
-                title: 'Security',
-                subtitle: 'Password and device access',
-                onTap: () => _openAccountSettings('security'),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.fact_check_outlined,
-                title: 'Portfolio reconciliation',
-                subtitle: 'Inst., OTC and IPO settlement totals',
-                onTap: () => _openAccountSettings('reconciliation'),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
                 icon: Icons.help_outline,
-                title: 'Help & support',
-                subtitle: 'Get help with your account',
+                title: 'Help & Support',
+                subtitle: 'FAQs, contact support and raise a ticket',
                 onTap: () => _openCustomerService(
                   title: 'Help & support',
                   initialMessage: 'Hello, I need help with my account.',
                   icon: Icons.help_outline,
                 ),
+                color: const Color(0xFF2563EB),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
-                icon: Icons.restart_alt,
-                title: 'Account support',
-                subtitle: 'Request account data assistance',
-                onTap: _confirmResetAccount,
+                icon: Icons.menu_book_outlined,
+                title: 'Learning Center',
+                subtitle: 'Tutorials and trading guides',
+                onTap: () => _showInformation(
+                  'Learning Center',
+                  'Learning resources will appear here.',
+                ),
+                color: const Color(0xFF10B981),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.campaign_outlined,
+                title: 'Refer & Earn',
+                subtitle: 'Invite friends and earn rewards',
+                onTap: () => _showInformation(
+                  'Refer & Earn',
+                  'Referral rewards will appear here.',
+                ),
+                color: const Color(0xFFF59E0B),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.info_outline_rounded,
+                title: 'About Us',
+                subtitle: 'About our app, terms and policies',
+                onTap: () => _showInformation('About Us', AppConfig.appName),
+                color: const Color(0xFF8B5CF6),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.logout_rounded,
+                title: 'Logout',
+                subtitle: 'Securely logout from your account',
+                onTap: _confirmSignOut,
+                color: AppConfig.lossColor,
               ),
             ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        OutlinedButton.icon(
-          onPressed: _confirmSignOut,
-          icon: const Icon(Icons.logout),
-          label: const Text('Sign Out'),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.red,
-            minimumSize: const Size.fromHeight(50),
           ),
         ),
         const SizedBox(height: 14),
@@ -3301,11 +3410,29 @@ class _MarketHomePageState extends State<MarketHomePage> {
     required String title,
     required String subtitle,
     VoidCallback? onTap,
+    Color color = const Color(0xFF143D8D),
   }) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF143D8D)),
-      title: Text(title),
-      subtitle: Text(subtitle),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+      leading: Container(
+        width: 34,
+        height: 34,
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: .10),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Icon(icon, color: color, size: 20),
+      ),
+      title: Text(
+        title,
+        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+      ),
+      subtitle: Text(
+        subtitle,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+      ),
       trailing: onTap == null ? null : const Icon(Icons.chevron_right),
       onTap: onTap,
     );

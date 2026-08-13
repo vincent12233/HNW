@@ -585,7 +585,15 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ? const Center(child: CircularProgressIndicator())
           : Stack(
               children: [
-                SafeArea(bottom: false, child: _selectedBody()),
+                SafeArea(
+                  bottom: false,
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 760),
+                      child: _selectedBody(),
+                    ),
+                  ),
+                ),
                 Positioned(
                   right: 0,
                   bottom: 96,
@@ -593,63 +601,72 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 ),
               ],
             ),
-      bottomNavigationBar: NavigationBar(
-        height: 72,
-        elevation: 0,
-        backgroundColor: Colors.white,
-        indicatorColor: Colors.transparent,
-        surfaceTintColor: Colors.transparent,
-        shadowColor: Colors.transparent,
-        labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        selectedIndex: selectedIndex,
-        onDestinationSelected: (index) {
-          setState(() {
-            selectedIndex = index;
-          });
-
-          if (index == 0) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (!mounted) {
-                return;
-              }
-
-              _showPendingIpoAllocationIfNeeded();
+      bottomNavigationBar: Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          border: Border(top: BorderSide(color: AppConfig.borderColor)),
+        ),
+        child: NavigationBar(
+          height: 76,
+          elevation: 0,
+          backgroundColor: Colors.white,
+          indicatorColor: Colors.transparent,
+          surfaceTintColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+          selectedIndex: selectedIndex,
+          onDestinationSelected: (index) {
+            setState(() {
+              selectedIndex = index;
             });
-          }
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home, color: AppConfig.primaryColor),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bar_chart_outlined),
-            selectedIcon: Icon(Icons.bar_chart, color: AppConfig.primaryColor),
-            label: 'Markets',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.swap_horiz_rounded),
-            selectedIcon: Icon(
-              Icons.swap_horiz_rounded,
-              color: AppConfig.primaryColor,
+
+            if (index == 0) {
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (!mounted) {
+                  return;
+                }
+
+                _showPendingIpoAllocationIfNeeded();
+              });
+            }
+          },
+          destinations: const [
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home, color: AppConfig.primaryColor),
+              label: 'Home',
             ),
-            label: 'Trading',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.business_center_outlined),
-            selectedIcon: Icon(
-              Icons.business_center,
-              color: AppConfig.primaryColor,
+            NavigationDestination(
+              icon: Icon(Icons.bar_chart_outlined),
+              selectedIcon: Icon(
+                Icons.bar_chart,
+                color: AppConfig.primaryColor,
+              ),
+              label: 'Markets',
             ),
-            label: 'Portfolio',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person, color: AppConfig.primaryColor),
-            label: 'Account',
-          ),
-        ],
+            NavigationDestination(
+              icon: Icon(Icons.swap_horiz_rounded),
+              selectedIcon: Icon(
+                Icons.swap_horiz_rounded,
+                color: AppConfig.primaryColor,
+              ),
+              label: 'Trading',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.business_center_outlined),
+              selectedIcon: Icon(
+                Icons.business_center,
+                color: AppConfig.primaryColor,
+              ),
+              label: 'Portfolio',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person, color: AppConfig.primaryColor),
+              label: 'Account',
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1789,7 +1806,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
     return Container(
       color: AppConfig.backgroundColor,
       child: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
         children: [
           MarketHeader(
             accountName: accountName,
@@ -2044,7 +2061,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
     }
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
       children: [
         Row(
           children: [
@@ -2233,7 +2250,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
             const Expanded(
               child: Text(
                 'Portfolio',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
               ),
             ),
             IconButton(
@@ -2976,14 +2993,14 @@ class _MarketHomePageState extends State<MarketHomePage> {
     final totalAssets = cashBalance + holdingsValue;
 
     return ListView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
       children: [
         Row(
           children: [
             const Expanded(
               child: Text(
                 'Profile',
-                style: TextStyle(fontSize: 26, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
               ),
             ),
             IconButton(

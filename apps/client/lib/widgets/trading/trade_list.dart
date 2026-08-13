@@ -5,6 +5,7 @@ import '../../models/stock_quote.dart';
 import '../../models/portfolio_position.dart';
 import '../../services/trading_service.dart';
 import '../../utils/number_formatters.dart';
+import '../stock_logo.dart';
 
 class TradeList extends StatelessWidget {
   const TradeList({
@@ -228,21 +229,7 @@ class TradeList extends StatelessWidget {
         ),
         child: Row(
           children: [
-            CircleAvatar(
-              radius: 18,
-              backgroundColor: const Color(0xFFEAF2FF),
-              child: Text(
-                position.symbol.substring(
-                  0,
-                  position.symbol.length > 3 ? 3 : position.symbol.length,
-                ),
-                style: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w800,
-                  color: AppConfig.primaryColor,
-                ),
-              ),
-            ),
+            StockLogo(symbol: position.symbol, size: 36),
             const SizedBox(width: 10),
             Expanded(
               flex: 4,

@@ -255,14 +255,14 @@ class _MarketsPageState extends State<MarketsPage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 18, 16, 8),
+              padding: const EdgeInsets.fromLTRB(22, 20, 16, 8),
               child: Row(
                 children: [
                   const Expanded(
                     child: Text(
                       'Markets',
                       style: TextStyle(
-                        fontSize: 26,
+                        fontSize: 28,
                         fontWeight: FontWeight.bold,
                       ),
                     ),

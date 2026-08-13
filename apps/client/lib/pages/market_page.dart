@@ -1049,87 +1049,95 @@ class _MarketHomePageState extends State<MarketHomePage> {
       ('INDIA VIX', '12.85', -1.16, 'NSE'),
     ];
 
-    return Row(
-      children: indices.map((item) {
-        final positive = item.$3 >= 0;
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth >= 600 ? 4 : 2;
+        const gap = 8.0;
+        final cardWidth =
+            (constraints.maxWidth - (columns - 1) * gap) / columns;
+        return Wrap(
+          spacing: gap,
+          runSpacing: gap,
+          children: indices.map((item) {
+            final positive = item.$3 >= 0;
 
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: item.$1 == 'INDIA VIX' ? 0 : 6),
-            child: Container(
-              padding: const EdgeInsets.all(9),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: const Color(0xFFE8EDF5)),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFF0F172A).withValues(alpha: 0.035),
-                    blurRadius: 10,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          item.$1,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w700,
+            return SizedBox(
+              width: cardWidth,
+              child: Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: const Color(0xFFE8EDF5)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.035),
+                      blurRadius: 10,
+                      offset: const Offset(0, 5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            item.$1,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFF64748B),
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 7),
-                  FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      item.$2,
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
+                      ],
+                    ),
+                    const SizedBox(height: 7),
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        item.$2,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 5),
-                  Text(
-                    '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
-                    style: TextStyle(
-                      color: positive
-                          ? AppConfig.gainColor
-                          : AppConfig.lossColor,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 7),
-                  SizedBox(
-                    height: 24,
-                    width: double.infinity,
-                    child: CustomPaint(
-                      painter: _MiniLineChartPainter(
+                    const SizedBox(height: 5),
+                    Text(
+                      '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
+                      style: TextStyle(
                         color: positive
                             ? AppConfig.gainColor
                             : AppConfig.lossColor,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 7),
+                    SizedBox(
+                      height: 24,
+                      width: double.infinity,
+                      child: CustomPaint(
+                        painter: _MiniLineChartPainter(
+                          color: positive
+                              ? AppConfig.gainColor
+                              : AppConfig.lossColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          }).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
@@ -1149,13 +1157,26 @@ class _MarketHomePageState extends State<MarketHomePage> {
       'TITAN',
     ]);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(child: _compactMoverList('Top Gainers', gainers, true)),
-        const SizedBox(width: 10),
-        Expanded(child: _compactMoverList('Top Losers', losers, false)),
-      ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 420) {
+          return Column(
+            children: [
+              _compactMoverList('Top Gainers', gainers, true),
+              const SizedBox(height: 10),
+              _compactMoverList('Top Losers', losers, false),
+            ],
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(child: _compactMoverList('Top Gainers', gainers, true)),
+            const SizedBox(width: 10),
+            Expanded(child: _compactMoverList('Top Losers', losers, false)),
+          ],
+        );
+      },
     );
   }
 
@@ -2573,7 +2594,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 const SizedBox(height: 16),
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final itemWidth = constraints.maxWidth / 4;
+                    final columns = constraints.maxWidth < 420 ? 2 : 4;
+                    final itemWidth = constraints.maxWidth / columns;
                     return Wrap(
                       runSpacing: 16,
                       children: [
@@ -3279,7 +3301,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 child: LayoutBuilder(
                   builder: (context, constraints) {
-                    final itemWidth = constraints.maxWidth / 4;
+                    final columns = constraints.maxWidth < 420 ? 2 : 4;
+                    final itemWidth = constraints.maxWidth / columns;
                     return Wrap(
                       runSpacing: 14,
                       children: [

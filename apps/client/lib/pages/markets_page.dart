@@ -479,7 +479,7 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Widget _indexGrid(List<(String, double, double)> values) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns = constraints.maxWidth >= 340 ? 4 : 2;
+      final columns = constraints.maxWidth >= 600 ? 4 : 2;
       final gap = 8.0;
       final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
       return Wrap(

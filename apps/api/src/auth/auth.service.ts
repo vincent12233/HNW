@@ -427,4 +427,25 @@ export class AuthService {
   private defaultCustomerName(phone: string): string {
     return `Client ${phone.slice(-4)}`;
   }
+
+  async currentUser(userId: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        fullName: true,
+        phone: true,
+        role: true,
+        status: true,
+        businessProfile: { select: { employeeNo: true, department: true, isActive: true } },
+      },
+    });
+    if (!user || user.status !== UserStatus.ACTIVE) {
+      throw new UnauthorizedException('User account is not active');
+    }
+    if (user.role === UserRole.BUSINESS && !user.businessProfile?.isActive) {
+      throw new UnauthorizedException('Business account is not active');
+    }
+    return user;
+  }
 }

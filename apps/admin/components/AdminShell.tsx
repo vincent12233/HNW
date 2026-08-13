@@ -1,9 +1,10 @@
 "use client";
 
 import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
-import { Avatar, Button, Drawer, Layout, Menu, Space, Tag, Typography } from "antd";
+import { Avatar, Button, Drawer, Layout, Menu, Space, Spin, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import { api } from "@/lib/api";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -61,9 +62,9 @@ const roleMeta: Record<Role, { label: string; product: string; color: string }> 
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter(); const pathname = usePathname();
-  const [collapsed, setCollapsed] = useState(false); const [mobile, setMobile] = useState(false); const [drawer, setDrawer] = useState(false); const [user, setUser] = useState<CurrentUser | null>(null);
+  const [collapsed, setCollapsed] = useState(false); const [mobile, setMobile] = useState(false); const [drawer, setDrawer] = useState(false); const [user, setUser] = useState<CurrentUser | null>(null); const [verified, setVerified] = useState(false);
   useEffect(() => { const sync = () => setMobile(window.innerWidth < 900); sync(); window.addEventListener("resize", sync); return () => window.removeEventListener("resize", sync); }, []);
-  useEffect(() => { const token = localStorage.getItem("adminAccessToken"); const stored = localStorage.getItem("adminUser"); if (!token || !stored) { router.replace("/login"); return; } try { const parsed = JSON.parse(stored) as CurrentUser; if (!parsed.role || !menus[parsed.role]) throw new Error(); setUser(parsed); } catch { localStorage.removeItem("adminAccessToken"); localStorage.removeItem("adminUser"); router.replace("/login"); } }, [router]);
+  useEffect(() => { const token = localStorage.getItem("adminAccessToken"); if (!token) { router.replace("/login"); return; } let active=true; api.get<CurrentUser>("/auth/me").then(({data})=>{if(!active)return;if(!data.role||!menus[data.role])throw new Error("No staff access");localStorage.setItem("adminUser",JSON.stringify(data));setUser(data);setVerified(true);}).catch(()=>{if(!active)return;localStorage.removeItem("adminAccessToken");localStorage.removeItem("adminUser");router.replace("/login");});return()=>{active=false;}; }, [router]);
   const role: Role = user?.role || "ADMIN"; const items = useMemo(() => menus[role], [role]); const meta = roleMeta[role];
   const pageTitle = items.find((item) => pathname.startsWith(item.key))?.label || "工作台";
   const allowed = pathname === "/" || pathname === "/login" || items.some((item) => pathname.startsWith(item.key));
@@ -71,9 +72,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const logout = () => { localStorage.removeItem("adminAccessToken"); localStorage.removeItem("adminUser"); router.replace("/login"); };
   const menu = <Menu theme="dark" mode="inline" selectedKeys={[pathname]} items={items} onClick={({ key }) => { router.push(key); setDrawer(false); }} className="ops-menu" />;
   const brand = <div className="ops-brand"><span className="ops-logo"><StockOutlined /></span>{!collapsed && <div><strong>India Trading</strong><small>{meta.product}</small></div>}</div>;
+  if (!verified || !user) return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#f4f7fb" }}><Spin size="large" tip="正在验证安全会话" /></div>;
   return <Layout className={`ops-layout role-${role.toLowerCase()}`}>
     {!mobile && <Sider width={256} collapsedWidth={76} collapsed={collapsed} trigger={null} className="ops-sider">{brand}{menu}</Sider>}
     <Drawer placement="left" width={280} open={mobile && drawer} onClose={() => setDrawer(false)} styles={{ body: { padding: 0, background: "#071426" }, header: { display: "none" } }}><div className="ops-mobile-nav">{brand}{menu}</div></Drawer>
-    <Layout><Header className="ops-header"><Space><Button type="text" aria-label="切换导航" icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => mobile ? setDrawer(true) : setCollapsed(!collapsed)} /><div className="ops-title"><Text type="secondary">OPERATIONS WORKSPACE</Text><strong>{pageTitle}</strong></div></Space><Space size={mobile ? 8 : 14}><Tag color={meta.color}>{meta.label}</Tag>{!mobile && <><Avatar className="ops-avatar">{(user?.fullName || "管").charAt(0)}</Avatar><div className="ops-user"><strong>{user?.fullName || meta.label}</strong><small>安全登录</small></div></>}<Button type="text" danger icon={<LogoutOutlined />} onClick={logout}>{mobile ? null : "退出"}</Button></Space></Header><Content className="ops-content">{allowed ? children : null}</Content></Layout>
+    <Layout><Header className="ops-header"><Space><Button type="text" aria-label="切换导航" icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => mobile ? setDrawer(true) : setCollapsed(!collapsed)} /><div className="ops-title"><Text type="secondary">OPERATIONS WORKSPACE</Text><strong>{pageTitle}</strong></div></Space><Space size={mobile ? 8 : 14}><Tag color={meta.color}>{meta.label}</Tag>{!mobile && <><Avatar className="ops-avatar">{(user?.fullName || "管").charAt(0)}</Avatar><div className="ops-user"><strong>{user?.fullName || meta.label}</strong><small>安全登录</small></div></>}<Button type="text" danger icon={<LogoutOutlined />} onClick={logout}>{mobile ? null : "退出"}</Button></Space></Header><Content className="ops-content">{verified && allowed ? children : null}</Content></Layout>
   </Layout>;
 }

@@ -1,4 +1,4 @@
-import { Body, Controller, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Req, UseGuards } from '@nestjs/common';
 import type { Request } from 'express';
 
 import { AuthService } from './auth.service';
@@ -63,5 +63,11 @@ export class AuthController {
   @Post('biometric/login')
   biometricLogin(@Body() body: { biometricToken: string }) {
     return this.authService.biometricLogin(body.biometricToken);
+  }
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  me(@Req() req: any) {
+    return this.authService.currentUser(req.user.userId);
   }
 }

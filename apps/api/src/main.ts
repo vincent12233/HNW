@@ -8,6 +8,31 @@ import { AllExceptionsFilter } from './observability/all-exceptions.filter';
 type RateEntry = { count: number; resetAt: number };
 const rateEntries = new Map<string, RateEntry>();
 
+function validateProductionEnvironment() {
+  if (process.env.NODE_ENV !== 'production') return;
+  const requiredSecrets = [
+    'JWT_SECRET',
+    'OTC_KEY_ENCRYPTION_SECRET',
+    'OBJECT_SIGNING_SECRET',
+  ];
+  for (const name of requiredSecrets) {
+    const value = process.env[name]?.trim() ?? '';
+    if (value.length < 32 || /replace|change-me|development/i.test(value)) {
+      throw new Error(`${name} must be a random value of at least 32 characters`);
+    }
+  }
+  if (new Set(requiredSecrets.map((name) => process.env[name])).size !== requiredSecrets.length) {
+    throw new Error('Production encryption and signing secrets must be different');
+  }
+  const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+  if (!origins.length || origins.some((origin) => !origin.startsWith('https://'))) {
+    throw new Error('CORS_ORIGINS must contain only explicit HTTPS origins in production');
+  }
+  if (!process.env.VIRUS_SCAN_URL?.startsWith('https://')) {
+    throw new Error('VIRUS_SCAN_URL must be configured with HTTPS in production');
+  }
+}
+
 function requestLimit(path: string) {
   if (path.startsWith('/auth/')) return 20;
   if (path === '/otc/orders') return 10;
@@ -56,6 +81,7 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
 }
 
 async function bootstrap() {
+  validateProductionEnvironment();
   const app = await NestFactory.create(AppModule);
 
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
@@ -78,7 +104,8 @@ async function bootstrap() {
         return;
       }
 
-      const isLocalDevOrigin = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      const isLocalDevOrigin = process.env.NODE_ENV !== 'production' &&
+        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
 
       if (isLocalDevOrigin || allowedOrigins.includes(origin)) {
         callback(null, true);

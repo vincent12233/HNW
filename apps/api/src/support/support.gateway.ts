@@ -7,8 +7,7 @@ import { PrismaService } from '../prisma/prisma.service';
   namespace: '/support',
   cors: {
     origin: [
-      'http://localhost:3001',
-      'http://localhost:3002',
+      ...(process.env.NODE_ENV === 'production' ? [] : ['http://localhost:3001', 'http://localhost:3002']),
       ...(process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean),
     ],
   },

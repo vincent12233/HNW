@@ -1,7 +1,7 @@
 "use client";
 
 import { BankOutlined, CreditCardOutlined, ReloadOutlined, SearchOutlined, WalletOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Input, Modal, Row, Space, Statistic, Table, Tabs, Tag, Typography, message } from "antd";
+import { Alert, Button, Card, Col, Input, InputNumber, Modal, Row, Space, Statistic, Table, Tabs, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -123,13 +123,17 @@ export default function BusinessFundsPage() {
       content: (
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Input placeholder="客户交易账号" onChange={(event) => { accountNumber = event.target.value; }} />
-          <Input placeholder="贷款金额" onChange={(event) => { amount = event.target.value; }} />
+          <InputNumber min={0.01} precision={2} style={{ width: "100%" }} placeholder="贷款金额" onChange={(value) => { amount = String(value ?? ""); }} />
           <Input placeholder="备注" onChange={(event) => { note = event.target.value; }} />
         </Space>
       ),
       okText: "提交",
       cancelText: "取消",
       async onOk() {
+        if (!accountNumber.trim() || !Number.isFinite(Number(amount)) || Number(amount) <= 0) {
+          message.error("请输入交易账号和有效贷款金额");
+          throw new Error("Invalid loan application values");
+        }
         await api.post("/loans", { accountNumber, amount: Number(amount), note });
         message.success("贷款申请已创建");
         await loadRecords();

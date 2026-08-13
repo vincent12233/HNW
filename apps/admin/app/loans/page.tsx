@@ -1,7 +1,7 @@
 "use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Modal, Space, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Card, DatePicker, Input, InputNumber, Modal, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -74,14 +74,18 @@ export default function LoansPage() {
       content: (
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Text type="secondary">通过后资金会直接进入客户账户，还款只做后台登记，不从账户扣除。</Text>
-          <Input defaultValue={amount} placeholder="批准金额" onChange={(event) => { amount = event.target.value; }} />
-          <Input placeholder="到期日，例如 2026-08-31" onChange={(event) => { dueDate = event.target.value; }} />
+          <InputNumber min={0.01} precision={2} style={{ width: "100%" }} defaultValue={Number(amount)} placeholder="批准金额" onChange={(value) => { amount = String(value ?? ""); }} />
+          <DatePicker style={{ width: "100%" }} placeholder="到期日" disabledDate={(date) => date.startOf("day").valueOf() < Date.now() - 86400000} onChange={(date) => { dueDate = date?.format("YYYY-MM-DD") ?? ""; }} />
           <Input placeholder="备注" onChange={(event) => { note = event.target.value; }} />
         </Space>
       ),
       okText: "通过并到账",
       cancelText: "取消",
       async onOk() {
+        if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || !dueDate) {
+          message.error("请输入有效的批准金额和到期日");
+          throw new Error("Invalid loan approval values");
+        }
         await api.patch(`/loans/${record.id}/approve`, { approvedAmount: Number(amount), dueDate: dueDate || undefined, note });
         message.success("贷款已审核通过并自动到账");
         await loadItems();
@@ -97,13 +101,17 @@ export default function LoansPage() {
       content: (
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Text type="secondary">这里只登记客户还款，不会从客户交易账户扣款。</Text>
-          <Input placeholder="还款金额" onChange={(event) => { amount = event.target.value; }} />
+          <InputNumber min={0.01} max={Number(record.outstandingAmount)} precision={2} style={{ width: "100%" }} placeholder="还款金额" onChange={(value) => { amount = String(value ?? ""); }} />
           <Input placeholder="备注" onChange={(event) => { note = event.target.value; }} />
         </Space>
       ),
       okText: "登记",
       cancelText: "取消",
       async onOk() {
+        if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > Number(record.outstandingAmount)) {
+          message.error("还款金额必须大于零且不能超过未还金额");
+          throw new Error("Invalid repayment amount");
+        }
         await api.patch(`/loans/${record.id}/repay`, { amount: Number(amount), note });
         message.success("还款已登记");
         await loadItems();

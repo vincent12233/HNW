@@ -1,7 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../utils/client_error_message.dart';
 

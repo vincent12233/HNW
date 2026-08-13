@@ -400,7 +400,7 @@ class _StockHistoryChartState extends State<StockHistoryChart> {
           movingAverages: _movingAverages,
           indicator: _indicator,
           events: _events,
-          referencePrice: reference,
+          referencePrice: reference!,
         ),
       ),
     );

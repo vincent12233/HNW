@@ -1297,8 +1297,8 @@ export class BusinessService {
       while (sellRemaining > 0 && queue.length) {
         const lot = queue[0];
         const quantity = Math.min(sellRemaining, lot.remaining);
-        const buyFee = Number(lot.trade.feeAmount) * quantity / lot.trade.quantity;
-        const sellFee = Number(trade.feeAmount) * quantity / trade.quantity;
+        const buyFee = Number(lot.trade.fees) * quantity / lot.trade.quantity;
+        const sellFee = Number(trade.fees) * quantity / trade.quantity;
         const buyPrice = Number(lot.trade.price);
         const sellPrice = Number(trade.price);
         rows.push({
@@ -1321,7 +1321,7 @@ export class BusinessService {
     for (const queue of queues.values()) {
       for (const lot of queue) {
         if (lot.remaining <= 0) continue;
-        const buyFee = Number(lot.trade.feeAmount) * lot.remaining / lot.trade.quantity;
+        const buyFee = Number(lot.trade.fees) * lot.remaining / lot.trade.quantity;
         rows.push({
           id: `${lot.trade.id}:OPEN`, status: 'OPEN', quantity: lot.remaining,
           customer: lot.trade.account.user, accountNumber: lot.trade.account.accountNumber,

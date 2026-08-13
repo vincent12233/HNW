@@ -6,6 +6,7 @@ class PendingOrder {
   const PendingOrder({
     required this.id,
     required this.symbol,
+    this.exchange = 'NSE',
     required this.side,
     required this.orderType,
     required this.quantity,
@@ -15,6 +16,7 @@ class PendingOrder {
 
   final String id;
   final String symbol;
+  final String exchange;
   final PendingOrderSide side;
   final PendingOrderType orderType;
   final int quantity;
@@ -29,6 +31,11 @@ class PendingOrder {
     return PendingOrder(
       id: json['id'] as String,
       symbol: json['symbol'] as String,
+      exchange:
+          (json['exchange']?.toString().trim().toUpperCase().isNotEmpty ??
+              false)
+          ? json['exchange'].toString().trim().toUpperCase()
+          : 'NSE',
       side: json['side'] == 'SELL'
           ? PendingOrderSide.sell
           : PendingOrderSide.buy,
@@ -45,6 +52,7 @@ class PendingOrder {
     return <String, dynamic>{
       'id': id,
       'symbol': symbol,
+      'exchange': exchange,
       'side': isBuy ? 'BUY' : 'SELL',
       'orderType': orderType == PendingOrderType.market ? 'MARKET' : 'LIMIT',
       'quantity': quantity,

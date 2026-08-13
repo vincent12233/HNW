@@ -59,8 +59,12 @@ function statusTag(status: string) {
 }
 
 function payoutMethod(record: WithdrawalRecord) {
-  if (record.upiId) return `UPI：${record.upiId}`;
-  const parts = [record.bankName, record.accountNumber, record.ifscCode].filter(Boolean);
+  const mask = (value?: string | null, visible = 4) => value ? `${"•".repeat(Math.max(4, value.length - visible))}${value.slice(-visible)}` : null;
+  if (record.upiId) {
+    const [name, provider] = record.upiId.split("@");
+    return `UPI：${mask(name, 2)}${provider ? `@${provider}` : ""}`;
+  }
+  const parts = [record.bankName, mask(record.accountNumber), record.ifscCode ? `${record.ifscCode.slice(0, 4)}•••` : null].filter(Boolean);
   return parts.length > 0 ? parts.join(" / ") : "-";
 }
 

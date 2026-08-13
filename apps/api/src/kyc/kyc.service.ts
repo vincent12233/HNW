@@ -70,7 +70,7 @@ export class KycService {
       throw new NotFoundException('Registered customer not found');
     }
 
-    const fileBuffer = Buffer.from(input.contentBase64, 'base64');
+    const fileBuffer = this.decodeBase64(input.contentBase64, 'KYC front file');
 
     if (fileBuffer.length === 0) {
       throw new BadRequestException('KYC file is empty');
@@ -81,7 +81,7 @@ export class KycService {
     }
 
     const backBuffer = input.backContentBase64
-      ? Buffer.from(input.backContentBase64, 'base64')
+      ? this.decodeBase64(input.backContentBase64, 'KYC back file')
       : null;
     if (input.documentType === 'AADHAAR' && (!backBuffer || !input.backFileName)) {
       throw new BadRequestException('Aadhaar front and back files are required');
@@ -115,6 +115,18 @@ export class KycService {
       status: 'PENDING',
       recognizedType,
     };
+  }
+
+  private decodeBase64(value: string, label: string) {
+    const normalized = value?.trim() ?? '';
+    if (!normalized || normalized.length > 11_200_000 || normalized.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+      throw new BadRequestException(`${label} is not valid base64 data`);
+    }
+    const bytes = Buffer.from(normalized, 'base64');
+    if (bytes.toString('base64') !== normalized) {
+      throw new BadRequestException(`${label} is not valid base64 data`);
+    }
+    return bytes;
   }
 
   async pendingForBusiness(businessUserId: string) {

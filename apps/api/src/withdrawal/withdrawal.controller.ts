@@ -20,6 +20,7 @@ export class WithdrawalController {
   constructor(private readonly withdrawalService: WithdrawalService) {}
 
   @Post('request')
+  @Roles(UserRole.CLIENT)
   createRequest(
     @Req() req: any,
     @Body()
@@ -44,6 +45,7 @@ export class WithdrawalController {
   }
 
   @Get('me')
+  @Roles(UserRole.CLIENT)
   myWithdrawals(@Req() req: any) {
     return this.withdrawalService.myWithdrawals(req.user.userId);
   }

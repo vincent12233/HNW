@@ -40,6 +40,19 @@ class WithdrawalRequest {
     }
   }
 
+  String get fundsStatusLabel {
+    switch (status) {
+      case WithdrawalStatus.pending:
+      case WithdrawalStatus.processing:
+        return 'Funds frozen';
+      case WithdrawalStatus.approved:
+      case WithdrawalStatus.completed:
+        return 'Deducted from balance';
+      case WithdrawalStatus.rejected:
+        return 'Freeze released';
+    }
+  }
+
   WithdrawalRequest copyWith({
     String? id,
     String? orderNo,

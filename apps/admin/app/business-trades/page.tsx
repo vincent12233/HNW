@@ -1,200 +1,25 @@
-﻿"use client";
-
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
+"use client";
+import { DownloadOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useState } from "react";
-
+import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
-
-const { Title, Paragraph, Text } = Typography;
-
-type TradeRecord = {
-  id: string;
-  executionId: string;
-  quantity: number;
-  price: string;
-  grossAmount: string;
-  feeAmount: string;
-  netAmount: string;
-  executedAt: string;
-  account: {
-    accountNumber: string;
-    user: {
-      customerNo?: string | null;
-      fullName?: string | null;
-      phone?: string | null;
-    };
-  };
-  instrument: {
-    exchange: string;
-    symbol: string;
-    name: string;
-  };
-  order: {
-    clientOrderId: string;
-    side: string;
-    type: string;
-    status: string;
-  };
-};
-
-type TradesResponse = {
-  data: TradeRecord[];
-  total: number;
-};
-
-const sideLabels: Record<string, string> = {
-  BUY: "买入",
-  SELL: "卖出",
-};
-
-function formatMoney(value?: string | number | null) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
-}
-
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString("zh-CN") : "-";
-}
-
-export default function BusinessTradesPage() {
-  const [records, setRecords] = useState<TradeRecord[]>([]);
-  const [search, setSearch] = useState("");
-  const [side, setSide] = useState<string | undefined>();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function loadRecords() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await api.get<TradesResponse>("/business/my-trades", {
-        params: {
-          page: 1,
-          pageSize: 100,
-          search: search.trim() || undefined,
-          side,
-        },
-      });
-      setRecords(Array.isArray(response.data.data) ? response.data.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "客户成交记录加载失败",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    loadRecords();
-  }, []);
-
-  const columns: ColumnsType<TradeRecord> = [
-    {
-      title: "客户",
-      fixed: "left",
-      width: 250,
-      render: (_, record) => (
-        <Space orientation="vertical" size={0}>
-          <Text strong>{record.account.user.fullName || "未命名客户"}</Text>
-          <Text type="secondary">
-            {record.account.user.customerNo || "-"} / +91 {record.account.user.phone || "-"}
-          </Text>
-        </Space>
-      ),
-    },
-    { title: "交易账号", width: 170, render: (_, record) => record.account.accountNumber },
-    {
-      title: "股票",
-      width: 190,
-      render: (_, record) => (
-        <Space orientation="vertical" size={0}>
-          <Text strong>{record.instrument.symbol}</Text>
-          <Text type="secondary">{record.instrument.exchange} / {record.instrument.name}</Text>
-        </Space>
-      ),
-    },
-    {
-      title: "方向",
-      width: 90,
-      render: (_, record) => (
-        <Tag color={record.order.side === "BUY" ? "green" : "red"}>
-          {sideLabels[record.order.side] || record.order.side}
-        </Tag>
-      ),
-    },
-    { title: "数量", dataIndex: "quantity", width: 100, align: "right" },
-    { title: "成交价", dataIndex: "price", width: 130, align: "right", render: formatMoney },
-    { title: "成交金额", dataIndex: "grossAmount", width: 140, align: "right", render: formatMoney },
-    { title: "手续费", dataIndex: "feeAmount", width: 120, align: "right", render: formatMoney },
-    { title: "净额", dataIndex: "netAmount", width: 140, align: "right", render: formatMoney },
-    { title: "成交编号", dataIndex: "executionId", width: 220 },
-    { title: "客户订单号", render: (_, record) => record.order.clientOrderId, width: 230 },
-    { title: "成交时间", dataIndex: "executedAt", width: 180, render: formatDate },
-  ];
-
-  return (
-    <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>客户成交记录</Title>
-          <Paragraph type="secondary">
-            这里只显示自己名下客户的成交流水，便于查看客户实际买卖情况。
-          </Paragraph>
-        </div>
-
-        {error && <Alert type="error" showIcon title={error} />}
-
-        <Card>
-          <Space wrap>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索成交号、订单号、客户、手机号、交易账号、股票"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              onPressEnter={loadRecords}
-              style={{ width: 390 }}
-            />
-            <Select
-              allowClear
-              placeholder="方向"
-              value={side}
-              onChange={setSide}
-              style={{ width: 130 }}
-              options={[
-                { value: "BUY", label: "买入" },
-                { value: "SELL", label: "卖出" },
-              ]}
-            />
-            <Button type="primary" icon={<SearchOutlined />} loading={loading} onClick={loadRecords}>
-              查询
-            </Button>
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={loadRecords}>
-              刷新
-            </Button>
-          </Space>
-
-          <Table<TradeRecord>
-            rowKey="id"
-            columns={columns}
-            dataSource={records}
-            loading={loading}
-            scroll={{ x: 1890 }}
-            style={{ marginTop: 16 }}
-          />
-        </Card>
-      </Space>
-    </AdminShell>
-  );
+const {Title,Paragraph,Text}=Typography;
+type Customer={id:string;customerNo?:string|null;fullName?:string|null;phone?:string|null};
+type Pair={id:string;status:"OPEN"|"CLOSED";quantity:number;customer:Customer;accountNumber:string;instrument:{symbol:string;name:string;exchange:string};buyExecutionId:string;buyTime:string;buyPrice:number;buyFee:number;sellExecutionId?:string|null;sellTime?:string|null;sellPrice?:number|null;sellFee?:number|null;holdingSeconds?:number|null;realizedPnl?:number|null};
+type Language="zh"|"en";
+const text={zh:{title:"客户交易配对记录",desc:"买入与卖出按 FIFO 配对显示在同一行；未卖出的买入显示为持仓中。",search:"搜索客户、账号、股票或成交编号",customer:"选择客户",query:"查询",refresh:"刷新",export:"导出当前结果",exportOne:"导出该客户",choose:"请先选择一位客户",empty:"没有可导出的记录",done:"英文交易记录已导出",load:"交易记录加载失败",client:"客户",account:"交易账号",stock:"股票",status:"状态",open:"持仓中",closed:"已卖出",qty:"配对数量",buyTime:"买入时间",buyPrice:"买入价",buyFee:"买入费用",sellTime:"卖出时间",sellPrice:"卖出价",sellFee:"卖出费用",holding:"持有时长",pnl:"已实现盈亏"},en:{title:"Matched Customer Trades",desc:"Buy and sell executions are matched on one row using FIFO. Unsold quantities remain Open.",search:"Search customer, account, symbol or execution ID",customer:"Select customer",query:"Search",refresh:"Refresh",export:"Export Results",exportOne:"Export Customer",choose:"Select one customer first",empty:"No records to export",done:"English trade records exported",load:"Failed to load trade records",client:"Customer",account:"Trading Account",stock:"Instrument",status:"Status",open:"Open",closed:"Closed",qty:"Matched Quantity",buyTime:"Buy Time",buyPrice:"Buy Price",buyFee:"Buy Fee",sellTime:"Sell Time",sellPrice:"Sell Price",sellFee:"Sell Fee",holding:"Holding Period",pnl:"Realized P&L"}};
+const money=(v?:number|null)=>v==null?"—":new Intl.NumberFormat("en-IN",{style:"currency",currency:"INR",minimumFractionDigits:2,maximumFractionDigits:2}).format(v);
+const cell=(v:unknown)=>{const raw=String(v??"");const safe=/^[=+\-@\t\r]/.test(raw)?`'${raw}`:raw;return `"${safe.split('"').join('""')}"`;};
+const duration=(seconds?:number|null)=>{if(seconds==null)return"—";const d=Math.floor(seconds/86400),h=Math.floor(seconds%86400/3600),m=Math.floor(seconds%3600/60);return `${d}d ${h}h ${m}m`;};
+export default function Page(){
+ const [lang,setLang]=useState<Language>("zh"),[rows,setRows]=useState<Pair[]>([]),[customers,setCustomers]=useState<Customer[]>([]),[customerId,setCustomerId]=useState<string>(),[search,setSearch]=useState(""),[loading,setLoading]=useState(false),[error,setError]=useState("");const t=text[lang];
+ useEffect(()=>{const sync=(e?:Event)=>setLang(((e as CustomEvent)?.detail||localStorage.getItem("businessLanguage"))==="en"?"en":"zh");sync();window.addEventListener("business-language-change",sync);api.get<Customer[]>("/business/my-customers").then(r=>setCustomers(Array.isArray(r.data)?r.data:[]));return()=>window.removeEventListener("business-language-change",sync);},[]);
+ async function load(id=customerId){setLoading(true);setError("");try{const r=await api.get<{data:Pair[]}>("/business/my-trade-pairs",{params:{customerId:id}});setRows(r.data.data||[]);}catch(e:any){setError(e.response?.data?.message||t.load);}finally{setLoading(false);}}
+ useEffect(()=>{load();},[]);
+ const visible=useMemo(()=>{const q=search.trim().toLowerCase();if(!q)return rows;return rows.filter(r=>[r.customer.fullName,r.customer.customerNo,r.customer.phone,r.accountNumber,r.instrument.symbol,r.instrument.name,r.buyExecutionId,r.sellExecutionId].filter(Boolean).join(" ").toLowerCase().includes(q));},[rows,search]);
+ function exportCsv(one:boolean){if(one&&!customerId){message.warning(t.choose);return;}const data=visible;if(!data.length){message.info(t.empty);return;}const head=["Customer No.","Customer Name","Phone","Trading Account","Symbol","Instrument Name","Exchange","Status","Matched Quantity","Buy Execution ID","Buy Time (IST)","Buy Price (INR)","Buy Fee (INR)","Sell Execution ID","Sell Time (IST)","Sell Price (INR)","Sell Fee (INR)","Holding Period","Realized P&L (INR)","Matching Method"];const date=(v?:string|null)=>v?new Date(v).toLocaleString("en-IN",{timeZone:"Asia/Kolkata"}):"";const lines=[head,...data.map(r=>[r.customer.customerNo||"",r.customer.fullName||"",r.customer.phone?`+91 ${r.customer.phone}`:"",r.accountNumber,r.instrument.symbol,r.instrument.name,r.instrument.exchange,r.status==="CLOSED"?"Closed":"Open",r.quantity,r.buyExecutionId,date(r.buyTime),r.buyPrice,r.buyFee,r.sellExecutionId||"",date(r.sellTime),r.sellPrice??"",r.sellFee??"",duration(r.holdingSeconds),r.realizedPnl??"","FIFO"])].map(r=>r.map(cell).join(","));const blob=new Blob(["\ufeff"+lines.join("\r\n")],{type:"text/csv;charset=utf-8"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${one?"customer":"matched"}-trade-records-${new Date().toISOString().slice(0,10)}.csv`;a.click();URL.revokeObjectURL(url);message.success(t.done);}
+ const cols=useMemo<ColumnsType<Pair>>(()=>[{title:t.client,fixed:"left",width:220,render:(_,r)=><Space direction="vertical" size={0}><Text strong>{r.customer.fullName||"—"}</Text><Text type="secondary">{r.customer.customerNo||"—"}</Text></Space>},{title:t.account,dataIndex:"accountNumber",width:160},{title:t.stock,width:170,render:(_,r)=><><Text strong>{r.instrument.symbol}</Text><br/><Text type="secondary">{r.instrument.exchange}</Text></>},{title:t.status,width:95,render:(_,r)=><Tag color={r.status==="CLOSED"?"blue":"gold"}>{r.status==="CLOSED"?t.closed:t.open}</Tag>},{title:t.qty,dataIndex:"quantity",align:"right",width:110},{title:t.buyTime,dataIndex:"buyTime",width:180,render:v=>new Date(v).toLocaleString(lang==="zh"?"zh-CN":"en-IN",{timeZone:"Asia/Kolkata"})},{title:t.buyPrice,dataIndex:"buyPrice",align:"right",width:135,render:money},{title:t.buyFee,dataIndex:"buyFee",align:"right",width:120,render:money},{title:t.sellTime,dataIndex:"sellTime",width:180,render:v=>v?new Date(v).toLocaleString(lang==="zh"?"zh-CN":"en-IN",{timeZone:"Asia/Kolkata"}):"—"},{title:t.sellPrice,dataIndex:"sellPrice",align:"right",width:135,render:money},{title:t.sellFee,dataIndex:"sellFee",align:"right",width:120,render:money},{title:t.holding,dataIndex:"holdingSeconds",width:130,render:duration},{title:t.pnl,dataIndex:"realizedPnl",align:"right",width:145,render:(v)=> <Text style={{color:v==null?undefined:v>=0?"#16a34a":"#dc2626"}}>{money(v)}</Text>}],[lang,t]);
+ return <AdminShell><Space direction="vertical" size="large" style={{width:"100%"}}><div><Title level={2}>{t.title}</Title><Paragraph type="secondary">{t.desc}</Paragraph></div>{error&&<Alert type="error" showIcon message={error}/>}<Card><Space wrap><Input allowClear prefix={<SearchOutlined/>} placeholder={t.search} value={search} onChange={e=>setSearch(e.target.value)} style={{width:340,maxWidth:"100%"}}/><Select allowClear showSearch optionFilterProp="label" placeholder={t.customer} value={customerId} onChange={v=>{setCustomerId(v);load(v);}} style={{width:250}} options={customers.map(c=>({value:c.id,label:`${c.fullName||"—"} · ${c.customerNo||c.phone||"—"}`}))}/><Button type="primary" icon={<SearchOutlined/>} onClick={()=>load()} loading={loading}>{t.query}</Button><Button icon={<ReloadOutlined/>} onClick={()=>load()} loading={loading}>{t.refresh}</Button><Button icon={<DownloadOutlined/>} onClick={()=>exportCsv(false)}>{t.export}</Button><Button icon={<DownloadOutlined/>} disabled={!customerId} onClick={()=>exportCsv(true)}>{t.exportOne}</Button></Space><Table<Pair> rowKey="id" columns={cols} dataSource={visible} loading={loading} scroll={{x:1900}} style={{marginTop:16}}/></Card></Space></AdminShell>;
 }

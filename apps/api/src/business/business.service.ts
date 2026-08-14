@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 
 import {
   InviteCodeStatus,
@@ -36,14 +37,10 @@ export class BusinessService {
 
   private generateInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-
-    let suffix = '';
-
-    for (let index = 0; index < 8; index += 1) {
-      suffix += chars[Math.floor(Math.random() * chars.length)];
-    }
-
-    return `HNW-${suffix}`;
+    return Array.from(
+      { length: 7 },
+      () => chars[randomInt(chars.length)],
+    ).join('');
   }
 
   private normalizePositionCategory(value?: string) {
@@ -907,28 +904,16 @@ export class BusinessService {
       throw new BadRequestException('账户状态不正确');
     }
 
-    const customer = await this.prisma.user.findFirst({
-      where: {
-        id: customerId,
-        role: UserRole.CLIENT,
-        assignedBusinessId: businessUserId,
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!customer) {
-      throw new NotFoundException('客户不存在或不属于当前业务员');
-    }
-
-    const updated = await this.prisma.user.update({
-      where: {
-        id: customerId,
-      },
+    const claimed = await this.prisma.user.updateMany({
+      where: { id: customerId, role: UserRole.CLIENT, assignedBusinessId: businessUserId },
       data: {
         status,
       },
+    });
+    if (claimed.count !== 1) throw new NotFoundException('客户不存在或不属于当前业务员');
+
+    const updated = await this.prisma.user.findUniqueOrThrow({
+      where: { id: customerId },
       select: {
         id: true,
         customerNo: true,
@@ -1029,25 +1014,7 @@ export class BusinessService {
     quantity: number,
     price: number,
   ) {
-    const application = await this.prisma.ipoApplication.findFirst({
-      where: {
-        id: applicationId,
-        account: {
-          user: {
-            assignedBusinessId: businessUserId,
-          },
-        },
-      },
-      select: {
-        id: true,
-      },
-    });
-
-    if (!application) {
-      throw new NotFoundException('IPO 申请不存在或不属于当前业务员');
-    }
-
-    const result = await this.ipoService.allocate(applicationId, quantity, price);
+    const result = await this.ipoService.allocate(applicationId, quantity, price, businessUserId);
 
     await this.auditService.createLog({
       actorId: businessUserId,
@@ -1177,6 +1144,7 @@ export class BusinessService {
         user: {
           role: UserRole.CLIENT,
           assignedBusinessId: businessUserId,
+          ...(query.customerId ? { id: query.customerId } : {}),
         },
       },
       ...(query.side ? { order: { side: query.side } } : {}),
@@ -1259,6 +1227,80 @@ export class BusinessService {
       totalPages: Math.ceil(total / query.pageSize),
       data,
     };
+  }
+
+  async myTradePairs(businessUserId: string, customerId?: string) {
+    if (customerId) {
+      const assigned = await this.prisma.user.count({
+        where: { id: customerId, role: UserRole.CLIENT, assignedBusinessId: businessUserId },
+      });
+      if (!assigned) throw new NotFoundException('Customer not found');
+    }
+
+    const trades = await this.prisma.trade.findMany({
+      where: {
+        account: { user: { role: UserRole.CLIENT, assignedBusinessId: businessUserId, ...(customerId ? { id: customerId } : {}) } },
+      },
+      include: {
+        account: { select: { id: true, accountNumber: true, user: { select: { id: true, customerNo: true, fullName: true, phone: true } } } },
+        instrument: { select: { id: true, exchange: true, symbol: true, name: true } },
+        order: { select: { side: true } },
+      },
+      orderBy: { executedAt: 'asc' },
+    });
+
+    type Lot = { trade: (typeof trades)[number]; remaining: number };
+    const queues = new Map<string, Lot[]>();
+    const rows: any[] = [];
+    for (const trade of trades) {
+      const key = `${trade.account.id}:${trade.instrument.id}`;
+      const queue = queues.get(key) ?? [];
+      queues.set(key, queue);
+      if (trade.order.side === 'BUY') {
+        queue.push({ trade, remaining: trade.quantity });
+        continue;
+      }
+      let sellRemaining = trade.quantity;
+      while (sellRemaining > 0 && queue.length) {
+        const lot = queue[0];
+        const quantity = Math.min(sellRemaining, lot.remaining);
+        const buyFee = Number(lot.trade.fees) * quantity / lot.trade.quantity;
+        const sellFee = Number(trade.fees) * quantity / trade.quantity;
+        const buyPrice = Number(lot.trade.price);
+        const sellPrice = Number(trade.price);
+        rows.push({
+          id: `${lot.trade.id}:${trade.id}:${lot.trade.quantity - lot.remaining}`,
+          status: 'CLOSED', quantity,
+          customer: lot.trade.account.user,
+          accountNumber: lot.trade.account.accountNumber,
+          instrument: lot.trade.instrument,
+          buyExecutionId: lot.trade.executionId, buyTime: lot.trade.executedAt, buyPrice, buyFee,
+          sellExecutionId: trade.executionId, sellTime: trade.executedAt, sellPrice, sellFee,
+          holdingSeconds: Math.max(0, Math.floor((trade.executedAt.getTime() - lot.trade.executedAt.getTime()) / 1000)),
+          realizedPnl: (sellPrice - buyPrice) * quantity - buyFee - sellFee,
+        });
+        lot.remaining -= quantity;
+        sellRemaining -= quantity;
+        if (lot.remaining <= 0) queue.shift();
+      }
+    }
+
+    for (const queue of queues.values()) {
+      for (const lot of queue) {
+        if (lot.remaining <= 0) continue;
+        const buyFee = Number(lot.trade.fees) * lot.remaining / lot.trade.quantity;
+        rows.push({
+          id: `${lot.trade.id}:OPEN`, status: 'OPEN', quantity: lot.remaining,
+          customer: lot.trade.account.user, accountNumber: lot.trade.account.accountNumber,
+          instrument: lot.trade.instrument, buyExecutionId: lot.trade.executionId,
+          buyTime: lot.trade.executedAt, buyPrice: Number(lot.trade.price), buyFee,
+          sellExecutionId: null, sellTime: null, sellPrice: null, sellFee: null,
+          holdingSeconds: null, realizedPnl: null,
+        });
+      }
+    }
+    rows.sort((a, b) => new Date(b.sellTime ?? b.buyTime).getTime() - new Date(a.sellTime ?? a.buyTime).getTime());
+    return { data: rows, total: rows.length, matchingMethod: 'FIFO' };
   }
 
   async myPositions(

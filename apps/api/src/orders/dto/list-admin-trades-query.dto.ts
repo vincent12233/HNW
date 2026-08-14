@@ -5,6 +5,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsUUID,
   Matches,
   Max,
   Min,
@@ -12,6 +13,10 @@ import {
 import { Exchange, OrderSide } from '../../generated/prisma/client';
 
 export class ListAdminTradesQueryDto {
+  @IsOptional()
+  @IsUUID()
+  customerId?: string;
+
   @IsOptional()
   @IsString()
   search?: string;

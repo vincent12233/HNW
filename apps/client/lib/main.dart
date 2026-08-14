@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 import 'app_config.dart';
 import 'models/auth_session.dart';
 import 'pages/login_page.dart';
 import 'pages/market_page.dart';
+import 'pages/splash_page.dart';
 import 'services/auth_service.dart';
+import 'services/local_data_cache.dart';
 import 'services/session_expiry_service.dart';
 import 'theme/app_theme.dart';
 
@@ -69,8 +72,36 @@ void _showExpiredSessionLogin() {
   );
 }
 
-class IndiaTradingApp extends StatelessWidget {
+class IndiaTradingApp extends StatefulWidget {
   const IndiaTradingApp({super.key});
+
+  @override
+  State<IndiaTradingApp> createState() => _IndiaTradingAppState();
+}
+
+class _IndiaTradingAppState extends State<IndiaTradingApp>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Backgrounding must not sign the user out, clear navigation, or dispose
+    // live services. Mobile operating systems may suspend networking while the
+    // app is backgrounded, so reconnect and refresh once it becomes active.
+    if (state == AppLifecycleState.resumed && marketSocket.hasStarted) {
+      marketSocket.resume();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -79,6 +110,20 @@ class IndiaTradingApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: AppConfig.appName,
       theme: AppTheme.light(),
+      builder: (context, child) {
+        final media = MediaQuery.of(context);
+        return MediaQuery(
+          data: media.copyWith(
+            // Prevent system accessibility scaling from making dense trading
+            // controls unusable while retaining meaningful text enlargement.
+            textScaler: media.textScaler.clamp(
+              minScaleFactor: 0.9,
+              maxScaleFactor: 1.4,
+            ),
+          ),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       home: const AuthGate(),
     );
   }
@@ -98,7 +143,28 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    sessionFuture = authService.restoreSession();
+    sessionFuture = _initializeApp();
+  }
+
+  Future<AuthSession?> _initializeApp() async {
+    final results = await Future.wait<dynamic>([
+      authService.restoreSession(),
+      LocalDataCache.readJson(LocalDataCache.marketSnapshot),
+      LocalDataCache.readJson(LocalDataCache.accountSnapshot),
+      _warmApiConnection(),
+      Future<void>.delayed(const Duration(milliseconds: 1400)),
+    ]);
+    return results.first as AuthSession?;
+  }
+
+  Future<void> _warmApiConnection() async {
+    try {
+      await http
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/health'))
+          .timeout(const Duration(seconds: 4));
+    } catch (_) {
+      // Login remains available and will show a precise network error itself.
+    }
   }
 
   Widget _marketHome() {
@@ -112,12 +178,10 @@ class _AuthGateState extends State<AuthGate> {
       future: sessionFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const SplashPage();
         }
 
-        if (snapshot.hasError || snapshot.data != null) {
+        if (!snapshot.hasError && snapshot.data != null) {
           return _marketHome();
         }
 

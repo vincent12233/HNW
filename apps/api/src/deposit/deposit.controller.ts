@@ -29,6 +29,15 @@ export class DepositController {
     );
   }
 
+  @Post('support-submit')
+  @Roles(UserRole.SUPPORT)
+  submitToFinance(
+    @Req() req: any,
+    @Body() body: { conversationId?: string; amount?: string; referenceId?: string; paymentMethod?: string; note?: string },
+  ) {
+    return this.depositService.submitToFinanceBySupport(req.user.userId, body);
+  }
+
   @Get('me')
   @Roles(UserRole.CLIENT)
   myDeposits(@Req() req: any) {
@@ -36,20 +45,20 @@ export class DepositController {
   }
 
   @Get('pending')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  @Roles(UserRole.FINANCE)
   listPending() {
     return this.depositService.listPendingDeposits();
   }
 
   @Patch(':id/approve')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  approve(@Param('id') id: string) {
-    return this.depositService.approveDeposit(id);
+  @Roles(UserRole.FINANCE)
+  approve(@Param('id') id: string, @Req() req: any) {
+    return this.depositService.approveDeposit(id, req.user.userId);
   }
 
   @Patch(':id/reject')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  reject(@Param('id') id: string, @Body() body: { note?: string }) {
-    return this.depositService.rejectDeposit(id, body.note);
+  @Roles(UserRole.FINANCE)
+  reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
+    return this.depositService.rejectDeposit(id, body.note, req.user.userId);
   }
 }

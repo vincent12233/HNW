@@ -21,7 +21,7 @@ NEXT_PUBLIC_API_URL=http://localhost:3000
 
 ```text
 员工编号：SUPPORT001
-密码：Support@123456
+密码：由 API 的 `SUPPORT_INITIAL_PASSWORD` 环境变量设置
 ```
 
 生产环境上线后请修改默认密码。

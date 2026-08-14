@@ -548,7 +548,6 @@ export class MarketService {
 
   async seedLiveMarket() {
     const asOf = new Date();
-
     const instruments = [
       {
         symbol: 'RELIANCE',
@@ -595,6 +594,48 @@ export class MarketService {
         askPrice: '985.25',
         volume: BigInt(18200000),
       },
+      {
+        symbol: 'ICICIBANK', exchange: Exchange.NSE,
+        name: 'ICICI Bank Limited', isin: 'INE090A01021', type: InstrumentType.EQUITY,
+        lastPrice: '1041.60', openPrice: '1029.50', highPrice: '1048.20', lowPrice: '1026.10',
+        previousClose: '1029.45', bidPrice: '1041.55', askPrice: '1041.65', volume: BigInt(11000000),
+      },
+      {
+        symbol: 'INFY', exchange: Exchange.NSE,
+        name: 'Infosys Limited', isin: 'INE009A01021', type: InstrumentType.EQUITY,
+        lastPrice: '1485.30', openPrice: '1465.20', highPrice: '1492.75', lowPrice: '1460.40',
+        previousClose: '1467.25', bidPrice: '1485.25', askPrice: '1485.35', volume: BigInt(10800000),
+      },
+      {
+        symbol: 'ITC', exchange: Exchange.NSE,
+        name: 'ITC Limited', isin: 'INE154A01025', type: InstrumentType.EQUITY,
+        lastPrice: '445.35', openPrice: '451.10', highPrice: '452.25', lowPrice: '443.80',
+        previousClose: '451.30', bidPrice: '445.30', askPrice: '445.40', volume: BigInt(24500000),
+      },
+      {
+        symbol: 'HINDUNILVR', exchange: Exchange.NSE,
+        name: 'Hindustan Unilever Limited', isin: 'INE030A01027', type: InstrumentType.EQUITY,
+        lastPrice: '2465.10', openPrice: '2489.00', highPrice: '2492.40', lowPrice: '2458.20',
+        previousClose: '2486.25', bidPrice: '2465.00', askPrice: '2465.20', volume: BigInt(1780000),
+      },
+      {
+        symbol: 'NESTLEIND', exchange: Exchange.NSE,
+        name: 'Nestle India Limited', isin: 'INE239A01024', type: InstrumentType.EQUITY,
+        lastPrice: '2235.60', openPrice: '2256.40', highPrice: '2262.00', lowPrice: '2228.70',
+        previousClose: '2251.82', bidPrice: '2235.50', askPrice: '2235.70', volume: BigInt(620000),
+      },
+      {
+        symbol: 'LT', exchange: Exchange.NSE,
+        name: 'Larsen & Toubro Limited', isin: 'INE018A01030', type: InstrumentType.EQUITY,
+        lastPrice: '3120.45', openPrice: '3142.00', highPrice: '3151.60', lowPrice: '3106.20',
+        previousClose: '3140.86', bidPrice: '3120.35', askPrice: '3120.55', volume: BigInt(1650000),
+      },
+      {
+        symbol: 'TITAN', exchange: Exchange.NSE,
+        name: 'Titan Company Limited', isin: 'INE280A01028', type: InstrumentType.EQUITY,
+        lastPrice: '3567.80', openPrice: '3588.20', highPrice: '3602.40', lowPrice: '3554.10',
+        previousClose: '3583.93', bidPrice: '3567.70', askPrice: '3567.90', volume: BigInt(980000),
+      },
     ];
 
     await this.prisma.$transaction(async (transaction) => {
@@ -608,6 +649,7 @@ export class MarketService {
           },
           update: {
             name: item.name,
+            logoUrl: null,
             isin: item.isin,
             type: item.type,
             currency: 'INR',
@@ -619,6 +661,7 @@ export class MarketService {
             symbol: item.symbol,
             exchange: item.exchange,
             name: item.name,
+            logoUrl: null,
             isin: item.isin,
             type: item.type,
             currency: 'INR',

@@ -1,5 +1,10 @@
-import { ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { MarketSessionService } from '../market-session/market-session.service';
 import { MatchingService } from '../matching/matching.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
@@ -15,6 +20,7 @@ export class OrderSubmissionService {
     private readonly tradingService: TradingService,
     private readonly orderPreparation: OrderPreparationService,
     private readonly limitOrderService: LimitOrderService,
+    private readonly marketSession: MarketSessionService,
   ) {}
 
   async submit(userId: string, dto: CreateOrderDto) {
@@ -35,6 +41,12 @@ export class OrderSubmissionService {
                 idempotentReplay: true,
                 order: prepared.existingOrder,
               };
+            }
+
+            if (!this.marketSession.isNormalMarketOpen()) {
+              throw new BadRequestException(
+                'Market is closed. Orders can be placed during normal market hours.',
+              );
             }
 
             const {

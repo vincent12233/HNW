@@ -32,7 +32,6 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem("accessToken", data.accessToken);
       localStorage.setItem("supportUser", JSON.stringify(data.user || {}));
       router.push("/dashboard");
     } catch {

@@ -1,16 +1,33 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+
+import '../app_config.dart';
 
 class MarketHeader extends StatelessWidget {
   const MarketHeader({
     super.key,
     required this.accountName,
     required this.onNotificationTap,
+    required this.onSearchTap,
     this.notificationCount = 0,
+    this.avatarBytes,
+    this.onAvatarTap,
   });
 
   final String accountName;
   final VoidCallback onNotificationTap;
+  final VoidCallback onSearchTap;
   final int notificationCount;
+  final Uint8List? avatarBytes;
+  final VoidCallback? onAvatarTap;
+
+  String get greeting {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good Morning';
+    if (hour < 18) return 'Good Afternoon';
+    return 'Good Evening';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,22 +36,46 @@ class MarketHeader extends StatelessWidget {
       children: [
         Row(
           children: [
+            InkWell(
+              onTap: onAvatarTap,
+              customBorder: const CircleBorder(),
+              child: CircleAvatar(
+                radius: 27,
+                backgroundColor: const Color(0xFFEAF3FF),
+                backgroundImage: avatarBytes == null
+                    ? null
+                    : MemoryImage(avatarBytes!),
+                child: avatarBytes != null
+                    ? null
+                    : Text(
+                        accountName.trim().isEmpty
+                            ? 'C'
+                            : accountName.trim()[0].toUpperCase(),
+                        style: const TextStyle(
+                          color: AppConfig.primaryColor,
+                          fontSize: 21,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+              ),
+            ),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(
+                  Row(
                     children: [
                       Text(
-                        'Good Morning',
-                        style: TextStyle(
-                          color: Color(0xFF64748B),
+                        greeting,
+                        style: const TextStyle(
+                          color: AppConfig.textSecondaryColor,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      SizedBox(width: 5),
-                      Icon(
+                      const SizedBox(width: 5),
+                      const Icon(
                         Icons.waving_hand_rounded,
                         size: 15,
                         color: Color(0xFFF59E0B),
@@ -45,13 +86,18 @@ class MarketHeader extends StatelessWidget {
                   Text(
                     accountName,
                     style: const TextStyle(
-                      color: Color(0xFF0F172A),
+                      color: AppConfig.textPrimaryColor,
                       fontSize: 21,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
                 ],
               ),
+            ),
+            IconButton(
+              tooltip: 'Search',
+              onPressed: onSearchTap,
+              icon: const Icon(Icons.search_rounded, size: 28),
             ),
             Stack(
               clipBehavior: Clip.none,

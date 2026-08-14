@@ -19,6 +19,12 @@ export class QuoteIngestionService {
     quote: MarketQuoteResult,
     type: 'STOCK' | 'INDEX' = 'STOCK',
   ) {
+    if (
+      Number.isNaN(quote.updatedAt.getTime()) ||
+      quote.updatedAt.getTime() > Date.now() + 2 * 60 * 1000
+    ) {
+      return;
+    }
     const payload = this.toPayload(exchange, quote, type);
 
     if (type === 'INDEX') {
@@ -35,12 +41,17 @@ export class QuoteIngestionService {
           symbol: quote.symbol,
         },
       },
+      include: { quote: { select: { asOf: true } } },
     });
 
     if (!instrument) {
       throw new NotFoundException(
         `Instrument not found: ${exchange}:${quote.symbol}`,
       );
+    }
+
+    if (instrument.quote && quote.updatedAt < instrument.quote.asOf) {
+      return;
     }
 
     await this.prisma.marketQuote.upsert({

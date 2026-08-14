@@ -20,6 +20,8 @@ apps/**/.env
 apps/**/.env.*
 !apps/**/.env.example
 apps/api/uploads/
+apps/api/private-objects/
+apps/api/private-objects/
 
 # Local Flutter/Node helper caches used during checks
 .pub-cache/
@@ -27,7 +29,21 @@ apps/api/uploads/
 .flutter-localappdata/
 .dart-appdata/
 .dart-localappdata/
+.dart-state/
+.tool-state/
 .codex-gitconfig
+
+# Flutter generated metadata and local release artifacts
+apps/client/.dart_tool/
+apps/client/.flutter-plugins
+apps/client/.flutter-plugins-dependencies
+*.apk
+*.aab
+
+# Android signing credentials
+*.jks
+*.keystore
+apps/client/android/key.properties
 
 # Dependency and build output fallbacks for workspace-level status
 node_modules/
@@ -35,3 +51,4 @@ node_modules/
 dist/
 build/
 coverage/
+backups/

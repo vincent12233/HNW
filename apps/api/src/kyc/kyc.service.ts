@@ -1,9 +1,8 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { randomUUID } from 'crypto';
-import { mkdir, readFile, writeFile } from 'fs/promises';
-import { extname, join } from 'path';
+import { extname } from 'path';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { PrivateObjectStorageService } from '../storage/private-object-storage.service';
 
 type KycSubmissionRow = {
   id: string;
@@ -12,6 +11,9 @@ type KycSubmissionRow = {
   fileName: string;
   filePath: string;
   mimeType: string | null;
+  backFileName: string | null;
+  backFilePath: string | null;
+  backMimeType: string | null;
   recognizedType: string | null;
   recognizedText: string | null;
   reviewNote: string | null;
@@ -25,33 +27,30 @@ type KycFileRow = {
   fileName: string;
   filePath: string;
   mimeType: string | null;
+  backFileName: string | null;
+  backFilePath: string | null;
+  backMimeType: string | null;
 };
 
 @Injectable()
 export class KycService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly objects: PrivateObjectStorageService) {}
 
-  async submit(input: {
-    phone: string;
+  async submit(userId: string, input: {
     documentType: 'AADHAAR' | 'PAN';
     fileName: string;
     mimeType?: string;
     contentBase64: string;
+    backFileName?: string;
+    backMimeType?: string;
+    backContentBase64?: string;
   }) {
-    const phone = this.normalizeIndianPhone(input.phone);
-
-    if (!phone) {
-      throw new BadRequestException('Invalid Indian mobile number');
-    }
-
     if (input.documentType !== 'AADHAAR' && input.documentType !== 'PAN') {
       throw new BadRequestException('Unsupported KYC document type');
     }
 
-    const user = await this.prisma.user.findFirst({
-      where: {
-        phone,
-      },
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
       select: {
         id: true,
         assignedBusinessId: true,
@@ -62,7 +61,7 @@ export class KycService {
       throw new NotFoundException('Registered customer not found');
     }
 
-    const fileBuffer = Buffer.from(input.contentBase64, 'base64');
+    const fileBuffer = this.decodeBase64(input.contentBase64, 'KYC front file');
 
     if (fileBuffer.length === 0) {
       throw new BadRequestException('KYC file is empty');
@@ -72,13 +71,23 @@ export class KycService {
       throw new BadRequestException('KYC file must be 8 MB or smaller');
     }
 
-    const safeExtension = this.safeExtension(input.fileName);
-    const storedFileName = `${user.id}-${Date.now()}-${randomUUID()}${safeExtension}`;
-    const uploadDir = join(process.cwd(), 'uploads', 'kyc');
-    const filePath = join(uploadDir, storedFileName);
+    const backBuffer = input.backContentBase64
+      ? this.decodeBase64(input.backContentBase64, 'KYC back file')
+      : null;
+    if (input.documentType === 'AADHAAR' && (!backBuffer || !input.backFileName)) {
+      throw new BadRequestException('Aadhaar front and back files are required');
+    }
+    if (backBuffer && (backBuffer.length === 0 || backBuffer.length > 8 * 1024 * 1024)) {
+      throw new BadRequestException('Each KYC file must be 8 MB or smaller');
+    }
 
-    await mkdir(uploadDir, { recursive: true });
-    await writeFile(filePath, fileBuffer);
+    const frontObject = await this.objects.putKyc(user.id, fileBuffer, input.mimeType);
+    const filePath = frontObject.key;
+
+    let backFilePath: string | null = null;
+    if (backBuffer && input.backFileName) {
+      backFilePath = (await this.objects.putKyc(user.id, backBuffer, input.backMimeType)).key;
+    }
 
     const recognizedType = this.recognizeDocumentType(
       input.fileName,
@@ -87,9 +96,9 @@ export class KycService {
 
     await this.prisma.$executeRaw`
       INSERT INTO "kyc_submissions"
-        ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "recognizedType", "recognizedText", "updatedAt")
+        ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "updatedAt")
       VALUES
-        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${input.mimeType ?? null}, ${recognizedType}, ${`Auto detected as ${recognizedType}`}, CURRENT_TIMESTAMP)
+        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${input.mimeType ?? null}, ${input.backFileName ?? null}, ${backFilePath}, ${input.backMimeType ?? null}, ${recognizedType}, ${`Auto detected as ${recognizedType}`}, CURRENT_TIMESTAMP)
     `;
 
     return {
@@ -97,6 +106,18 @@ export class KycService {
       status: 'PENDING',
       recognizedType,
     };
+  }
+
+  private decodeBase64(value: string, label: string) {
+    const normalized = value?.trim() ?? '';
+    if (!normalized || normalized.length > 11_200_000 || normalized.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+      throw new BadRequestException(`${label} is not valid base64 data`);
+    }
+    const bytes = Buffer.from(normalized, 'base64');
+    if (bytes.toString('base64') !== normalized) {
+      throw new BadRequestException(`${label} is not valid base64 data`);
+    }
+    return bytes;
   }
 
   async pendingForBusiness(businessUserId: string) {
@@ -108,6 +129,9 @@ export class KycService {
         k."fileName",
         k."filePath",
         k."mimeType",
+        k."backFileName",
+        k."backFilePath",
+        k."backMimeType",
         k."recognizedType",
         k."recognizedText",
         k."reviewNote",
@@ -121,12 +145,16 @@ export class KycService {
       ORDER BY k."createdAt" DESC
     `;
 
-    return rows;
+    return rows.map(({ filePath: _frontKey, backFilePath: _backKey, ...row }) => ({
+      ...row,
+      frontFileEndpoint: `/kyc/business/${row.id}/file?side=front`,
+      backFileEndpoint: row.backFileName ? `/kyc/business/${row.id}/file?side=back` : null,
+    }));
   }
 
-  async fileForBusiness(businessUserId: string, submissionId: string) {
+  async fileForBusiness(businessUserId: string, submissionId: string, side: 'front' | 'back') {
     const rows = await this.prisma.$queryRaw<KycFileRow[]>`
-      SELECT "fileName", "filePath", "mimeType"
+      SELECT "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType"
       FROM "kyc_submissions"
       WHERE "id" = ${submissionId}
         AND "businessUserId" = ${businessUserId}
@@ -138,29 +166,29 @@ export class KycService {
       throw new NotFoundException('KYC file not found');
     }
 
-    const content = await readFile(file.filePath);
+    const isBack = side === 'back';
+    const selectedPath = isBack ? file.backFilePath : file.filePath;
+    const selectedName = isBack ? file.backFileName : file.fileName;
+    const selectedMime = isBack ? file.backMimeType : file.mimeType;
+    if (!selectedPath || !selectedName) {
+      throw new NotFoundException('KYC file side not found');
+    }
+    const content = await this.objects.get(selectedPath);
 
     return {
-      fileName: file.fileName,
-      mimeType: file.mimeType ?? this.mimeTypeForFile(file.fileName),
+      fileName: selectedName,
+      mimeType: selectedMime ?? this.mimeTypeForFile(selectedName),
       contentBase64: content.toString('base64'),
     };
   }
 
-  async status(phoneValue: string) {
-    const phone = this.normalizeIndianPhone(phoneValue || '');
-
-    if (!phone) {
-      throw new BadRequestException('Invalid Indian mobile number');
-    }
-
+  async status(userId: string) {
     const rows = await this.prisma.$queryRaw<
       { status: string; documentType: string; recognizedType: string | null; createdAt: Date }[]
     >`
       SELECT k."status", k."documentType", k."recognizedType", k."createdAt"
       FROM "kyc_submissions" k
-      JOIN "users" u ON u."id" = k."userId"
-      WHERE u."phone" = ${phone}
+      WHERE k."userId" = ${userId}
       ORDER BY k."createdAt" DESC
       LIMIT 1
     `;

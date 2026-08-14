@@ -15,10 +15,12 @@ class RegisterPage extends StatefulWidget {
 class _RegisterPageState extends State<RegisterPage> {
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
   final inviteCodeController = TextEditingController();
   final authService = AuthService();
 
   bool obscurePassword = true;
+  bool obscureConfirmPassword = true;
   bool isSubmitting = false;
   String? errorText;
 
@@ -26,6 +28,7 @@ class _RegisterPageState extends State<RegisterPage> {
   void dispose() {
     phoneController.dispose();
     passwordController.dispose();
+    confirmPasswordController.dispose();
     inviteCodeController.dispose();
     super.dispose();
   }
@@ -70,6 +73,15 @@ class _RegisterPageState extends State<RegisterPage> {
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.black54),
                 ),
+                const SizedBox(height: 10),
+                const Text(
+                  'Step 1 of 2  •  Account details',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: AppConfig.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 24),
                 TextField(
                   controller: phoneController,
@@ -78,16 +90,6 @@ class _RegisterPageState extends State<RegisterPage> {
                     labelText: 'Mobile number',
                     prefixText: '+91 ',
                     prefixIcon: Icon(Icons.phone_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: inviteCodeController,
-                  textCapitalization: TextCapitalization.characters,
-                  decoration: const InputDecoration(
-                    labelText: 'Invite code',
-                    prefixIcon: Icon(Icons.confirmation_number_outlined),
                     border: OutlineInputBorder(),
                   ),
                 ),
@@ -113,6 +115,40 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: confirmPasswordController,
+                  obscureText: obscureConfirmPassword,
+                  textInputAction: TextInputAction.next,
+                  decoration: InputDecoration(
+                    labelText: 'Confirm password',
+                    prefixIcon: const Icon(Icons.lock_reset_outlined),
+                    border: const OutlineInputBorder(),
+                    suffixIcon: IconButton(
+                      onPressed: () {
+                        setState(() {
+                          obscureConfirmPassword = !obscureConfirmPassword;
+                        });
+                      },
+                      icon: Icon(
+                        obscureConfirmPassword
+                            ? Icons.visibility_outlined
+                            : Icons.visibility_off_outlined,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 14),
+                TextField(
+                  controller: inviteCodeController,
+                  textCapitalization: TextCapitalization.characters,
+                  autocorrect: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Invite code',
+                    prefixIcon: Icon(Icons.confirmation_number_outlined),
+                    border: OutlineInputBorder(),
+                  ),
+                ),
                 const SizedBox(height: 16),
                 SizedBox(
                   height: 52,
@@ -124,7 +160,7 @@ class _RegisterPageState extends State<RegisterPage> {
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Register'),
+                        : const Text('Register & Continue to KYC'),
                   ),
                 ),
                 if (errorText != null) ...[
@@ -153,6 +189,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Future<void> _submit() async {
     final phone = phoneController.text.trim();
     final password = passwordController.text;
+    final confirmPassword = confirmPasswordController.text;
     final inviteCode = inviteCodeController.text.trim();
 
     if (!_isIndianMobileNumber(phone)) {
@@ -160,13 +197,18 @@ class _RegisterPageState extends State<RegisterPage> {
       return;
     }
 
-    if (inviteCode.length != 12) {
-      setState(() => errorText = 'Invite code must be 12 characters');
+    if (inviteCode.length < 7 || inviteCode.length > 20) {
+      setState(() => errorText = 'Enter a valid invite code');
       return;
     }
 
     if (password.length < 8) {
       setState(() => errorText = 'Password must be at least 8 characters');
+      return;
+    }
+
+    if (password != confirmPassword) {
+      setState(() => errorText = 'Passwords do not match');
       return;
     }
 
@@ -176,7 +218,7 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      await authService.register(
+      final kycToken = await authService.register(
         phone: phone,
         password: password,
         inviteCode: inviteCode,
@@ -187,7 +229,9 @@ class _RegisterPageState extends State<RegisterPage> {
       }
 
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(builder: (_) => KycUploadPage(phone: phone)),
+        MaterialPageRoute<void>(
+          builder: (_) => KycUploadPage(accessToken: kycToken),
+        ),
       );
     } catch (error) {
       if (!mounted) {

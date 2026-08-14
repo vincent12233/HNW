@@ -3,11 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class WithdrawalService {
-  constructor(private readonly prisma: PrismaService) {}
+  private static readonly MINIMUM_WITHDRAWAL_AMOUNT = 100;
+  private static readonly MAXIMUM_WITHDRAWAL_AMOUNT = 9_999_999_999_999.99;
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   async createRequest(
     userId: string,
@@ -22,37 +29,78 @@ export class WithdrawalService {
       throw new BadRequestException('Amount must be greater than zero');
     }
 
+    if (amount < WithdrawalService.MINIMUM_WITHDRAWAL_AMOUNT) {
+      throw new BadRequestException('Minimum withdrawal amount is ₹100');
+    }
+
+    if (amount > WithdrawalService.MAXIMUM_WITHDRAWAL_AMOUNT) {
+      throw new BadRequestException('Withdrawal amount exceeds the limit');
+    }
+
+    const normalizedAmount = Math.round((amount + Number.EPSILON) * 100) / 100;
+    if (Math.abs(amount - normalizedAmount) > 1e-9) {
+      throw new BadRequestException(
+        'Withdrawal amount cannot have more than two decimal places',
+      );
+    }
+    amount = normalizedAmount;
+
     if (!upiId && (!bankName || !accountNumber || !ifscCode)) {
       throw new BadRequestException(
         'Provide either UPI ID or complete bank details',
       );
     }
 
-    const account = await this.prisma.account.findUnique({
-      where: { userId },
-    });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const account = await tx.account.findUnique({ where: { userId } });
+        if (!account) {
+          throw new NotFoundException('Account not found');
+        }
 
-    if (!account) {
-      throw new NotFoundException('Account not found');
-    }
+        if (
+          Number(account.cashBalance) < amount ||
+          Number(account.buyingPower) < amount
+        ) {
+          throw new BadRequestException(
+            'Insufficient available balance',
+          );
+        }
 
-    if (Number(account.cashBalance) < amount) {
-      throw new BadRequestException('Insufficient cash balance');
-    }
-
-    return this.prisma.withdrawalRequest.create({
-      data: {
-        orderNo: this.generateOrderNo(),
-        accountId: account.id,
-        amount,
-        bankName: bankName?.trim() || null,
-        accountNumber: accountNumber?.trim() || null,
-        ifscCode: ifscCode?.trim().toUpperCase() || null,
-        upiId: upiId?.trim() || null,
-        note: note?.trim() || null,
-        status: 'PENDING',
+        const request = await tx.withdrawalRequest.create({
+          data: {
+            orderNo: this.generateOrderNo(),
+            accountId: account.id,
+            amount,
+            frozenAmount: amount,
+            bankName: bankName?.trim() || null,
+            accountNumber: accountNumber?.trim() || null,
+            ifscCode: ifscCode?.trim().toUpperCase() || null,
+            upiId: upiId?.trim() || null,
+            note: note?.trim() || null,
+            status: 'PENDING',
+          },
+        });
+        await tx.account.update({
+          where: { id: account.id },
+          data: {
+            buyingPower: { decrement: amount },
+            frozenBalance: { increment: amount },
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId,
+            type: 'WITHDRAWAL',
+            title: 'Withdrawal submitted',
+            body: `${request.orderNo} is pending review. The requested funds are frozen.`,
+            referenceId: request.id,
+          },
+        });
+        return request;
       },
-    });
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   async myWithdrawals(userId: string) {
@@ -92,8 +140,8 @@ export class WithdrawalService {
     });
   }
 
-  async approveWithdrawal(withdrawalId: string) {
-    return this.prisma.$transaction(async (tx) => {
+  async approveWithdrawal(withdrawalId: string, actorId?: string) {
+    const result = await this.prisma.$transaction(async (tx) => {
       const withdrawal = await tx.withdrawalRequest.findUnique({
         where: { id: withdrawalId },
       });
@@ -115,27 +163,42 @@ export class WithdrawalService {
       }
 
       const amount = Number(withdrawal.amount);
+      const withdrawalFrozenAmount = Number(withdrawal.frozenAmount);
+      const hasDedicatedFreeze = withdrawalFrozenAmount >= amount;
       const cashBalance = Number(account.cashBalance);
+      const frozenBalance = Number(account.frozenBalance);
       const buyingPower = Number(account.buyingPower);
 
       if (cashBalance < amount) {
         throw new BadRequestException('Insufficient cash balance');
       }
+      if (hasDedicatedFreeze && frozenBalance < amount) {
+        throw new BadRequestException(
+          'Frozen balance is inconsistent with withdrawal request',
+        );
+      }
 
       const balanceAfter = cashBalance - amount;
-      const buyingPowerAfter = Math.max(0, buyingPower - amount);
+      const frozenBalanceAfter = hasDedicatedFreeze
+        ? frozenBalance - amount
+        : frozenBalance;
+
+      const claimed = await tx.withdrawalRequest.updateMany({
+        where: { id: withdrawalId, status: 'PENDING' },
+        data: { status: 'APPROVED', frozenAmount: 0 },
+      });
+      if (claimed.count !== 1) {
+        throw new BadRequestException('Withdrawal already processed');
+      }
 
       await tx.account.update({
         where: { id: account.id },
         data: {
           cashBalance: balanceAfter,
-          buyingPower: buyingPowerAfter,
+          ...(hasDedicatedFreeze
+            ? { frozenBalance: { decrement: amount } }
+            : { buyingPower: Math.max(0, buyingPower - amount) }),
         },
-      });
-
-      await tx.withdrawalRequest.update({
-        where: { id: withdrawalId },
-        data: { status: 'APPROVED' },
       });
 
       await tx.accountTransaction.create({
@@ -150,6 +213,15 @@ export class WithdrawalService {
           note: 'Withdrawal approved',
         },
       });
+      await tx.notification.create({
+        data: {
+          userId: account.userId,
+          type: 'WITHDRAWAL',
+          title: 'Withdrawal approved',
+          body: `${withdrawal.orderNo ?? 'Your withdrawal'} has been completed and deducted from your cash balance.`,
+          referenceId: withdrawalId,
+        },
+      });
 
       return {
         message: 'Withdrawal approved',
@@ -157,31 +229,74 @@ export class WithdrawalService {
         amount: withdrawal.amount,
         balanceBefore: cashBalance,
         balanceAfter,
-        buyingPowerAfter,
+        frozenBalanceAfter,
       };
     });
+    if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_APPROVED', resource: 'withdrawal', resourceId: withdrawalId, description: 'Withdrawal approved by finance operator', metadata: { amount: String(result.amount) } });
+    return result;
   }
 
-  async rejectWithdrawal(withdrawalId: string, note?: string) {
-    const withdrawal = await this.prisma.withdrawalRequest.findUnique({
-      where: { id: withdrawalId },
+  async rejectWithdrawal(withdrawalId: string, note?: string, actorId?: string) {
+    const rejected = await this.prisma.$transaction(async (tx) => {
+      const withdrawal = await tx.withdrawalRequest.findUnique({
+        where: { id: withdrawalId },
+      });
+      if (!withdrawal) {
+        throw new NotFoundException('Withdrawal request not found');
+      }
+      if (withdrawal.status !== 'PENDING') {
+        throw new BadRequestException('Withdrawal already processed');
+      }
+
+      const account = await tx.account.findUnique({
+        where: { id: withdrawal.accountId },
+      });
+      if (!account) {
+        throw new NotFoundException('Account not found');
+      }
+      const amount = Number(withdrawal.amount);
+      const hasDedicatedFreeze = Number(withdrawal.frozenAmount) >= amount;
+      if (hasDedicatedFreeze && Number(account.frozenBalance) < amount) {
+        throw new BadRequestException(
+          'Frozen balance is inconsistent with withdrawal request',
+        );
+      }
+
+      const claimed = await tx.withdrawalRequest.updateMany({
+        where: { id: withdrawalId, status: 'PENDING' },
+        data: {
+          status: 'REJECTED',
+          frozenAmount: 0,
+          note: note?.trim() || withdrawal.note,
+        },
+      });
+      if (claimed.count !== 1) {
+        throw new BadRequestException('Withdrawal already processed');
+      }
+      if (hasDedicatedFreeze) {
+        await tx.account.update({
+          where: { id: account.id },
+          data: {
+            buyingPower: { increment: amount },
+            frozenBalance: { decrement: amount },
+          },
+        });
+      }
+      await tx.notification.create({
+        data: {
+          userId: account.userId,
+          type: 'WITHDRAWAL',
+          title: 'Withdrawal rejected',
+          body: `${withdrawal.orderNo ?? 'Your withdrawal'} was rejected and the frozen funds were released.${note ? ` ${note}` : ''}`,
+          referenceId: withdrawalId,
+        },
+      });
+      return tx.withdrawalRequest.findUnique({
+        where: { id: withdrawalId },
+      });
     });
-
-    if (!withdrawal) {
-      throw new NotFoundException('Withdrawal request not found');
-    }
-
-    if (withdrawal.status !== 'PENDING') {
-      throw new BadRequestException('Withdrawal already processed');
-    }
-
-    return this.prisma.withdrawalRequest.update({
-      where: { id: withdrawalId },
-      data: {
-        status: 'REJECTED',
-        note: note?.trim() || withdrawal.note,
-      },
-    });
+    if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_REJECTED', resource: 'withdrawal', resourceId: withdrawalId, description: note?.trim() || 'Withdrawal rejected by finance operator' });
+    return rejected;
   }
 
   private generateOrderNo() {
@@ -191,7 +306,7 @@ export class WithdrawalService {
       String(now.getMonth() + 1).padStart(2, '0'),
       String(now.getDate()).padStart(2, '0'),
     ].join('');
-    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const suffix = randomBytes(5).toString('hex').slice(0, 8).toUpperCase();
 
     return `WD${date}${suffix}`;
   }

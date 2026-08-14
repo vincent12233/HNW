@@ -16,7 +16,8 @@ const prisma = new PrismaClient({ adapter });
 
 async function main() {
   const employeeNo = 'SUPPORT001';
-  const password = 'Support@123456';
+  const password = process.env.SUPPORT_INITIAL_PASSWORD;
+  if (!password || password.length < 12) throw new Error('SUPPORT_INITIAL_PASSWORD must contain at least 12 characters');
   const internalEmail = `${employeeNo.toLowerCase()}@internal.hnw.local`;
 
   const passwordHash = await bcrypt.hash(password, 12);
@@ -67,11 +68,7 @@ async function main() {
   });
 
   console.log('Support user is ready');
-  console.log({
-    employeeNo: user.businessProfile?.employeeNo,
-    password,
-    role: user.role,
-  });
+  console.log({ employeeNo: user.businessProfile?.employeeNo, role: user.role });
 }
 
 main()

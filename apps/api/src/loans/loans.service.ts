@@ -1,4 +1,5 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { randomBytes } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -12,7 +13,7 @@ export class LoansService {
   ) {}
 
   private generateOrderNo() {
-    const suffix = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const suffix = randomBytes(5).toString('hex').slice(0, 8).toUpperCase();
     const stamp = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     return `LN${stamp}${suffix}`;
   }
@@ -143,16 +144,32 @@ export class LoansService {
       throw new BadRequestException('批准金额不正确');
     }
 
-    const loan = await this.prisma.loanApplication.findUnique({
-      where: { id },
-      include: { account: true },
-    });
-    if (!loan) throw new NotFoundException('贷款申请不存在');
-    if (loan.status !== LoanStatus.PENDING) throw new BadRequestException('只有待审核贷款可以批准');
-
     const result = await this.prisma.$transaction(async (tx) => {
+      const loan = await tx.loanApplication.findUnique({
+        where: { id },
+        include: { account: true },
+      });
+      if (!loan) throw new NotFoundException('贷款申请不存在');
+      if (loan.status !== LoanStatus.PENDING) throw new ConflictException('贷款申请已被处理');
+
       const before = loan.account.cashBalance;
       const after = before.add(approvedAmount);
+
+      const claimed = await tx.loanApplication.updateMany({
+        where: { id, status: LoanStatus.PENDING },
+        data: {
+          approvedAmount,
+          outstandingAmount: approvedAmount,
+          interestRate: Number(body.interestRate ?? loan.interestRate),
+          dueDate: body.dueDate ? new Date(body.dueDate) : loan.dueDate,
+          note: body.note?.trim() || loan.note,
+          status: LoanStatus.DISBURSED,
+          approvedById: operatorId,
+          approvedAt: new Date(),
+          disbursedAt: new Date(),
+        },
+      });
+      if (claimed.count !== 1) throw new ConflictException('贷款申请已被其他操作员处理');
 
       await tx.account.update({
         where: { id: loan.accountId },
@@ -176,22 +193,11 @@ export class LoansService {
         },
       });
 
-      return tx.loanApplication.update({
+      return tx.loanApplication.findUniqueOrThrow({
         where: { id },
-        data: {
-          approvedAmount,
-          outstandingAmount: approvedAmount,
-          interestRate: Number(body.interestRate ?? loan.interestRate),
-          dueDate: body.dueDate ? new Date(body.dueDate) : loan.dueDate,
-          note: body.note?.trim() || loan.note,
-          status: LoanStatus.DISBURSED,
-          approvedById: operatorId,
-          approvedAt: new Date(),
-          disbursedAt: new Date(),
-        },
         include: this.includeCustomer(),
       });
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
     await this.auditService.createLog({
       actorId: operatorId,
@@ -208,18 +214,19 @@ export class LoansService {
   async reject(id: string, operatorId: string, note?: string) {
     const loan = await this.prisma.loanApplication.findUnique({ where: { id } });
     if (!loan) throw new NotFoundException('贷款申请不存在');
-    if (loan.status !== LoanStatus.PENDING) throw new BadRequestException('只有待审核贷款可以拒绝');
+    if (loan.status !== LoanStatus.PENDING) throw new ConflictException('贷款申请已被处理');
 
-    const result = await this.prisma.loanApplication.update({
-      where: { id },
+    const claimed = await this.prisma.loanApplication.updateMany({
+      where: { id, status: LoanStatus.PENDING },
       data: {
         status: LoanStatus.REJECTED,
         approvedById: operatorId,
         approvedAt: new Date(),
         note: note?.trim() || loan.note,
       },
-      include: this.includeCustomer(),
     });
+    if (claimed.count !== 1) throw new ConflictException('贷款申请已被其他操作员处理');
+    const result = await this.prisma.loanApplication.findUniqueOrThrow({ where: { id }, include: this.includeCustomer() });
 
     await this.auditService.createLog({
       actorId: operatorId,

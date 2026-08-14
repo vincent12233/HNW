@@ -1,4 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client';
 import { OrderPreparationService } from './order-preparation.service';
 
 describe('OrderPreparationService', () => {
@@ -46,6 +47,32 @@ describe('OrderPreparationService', () => {
     expect(() =>
       (service as any).assertQuoteFresh(new Date(Date.now() - 30000)),
     ).not.toThrow();
+  });
+
+  it('allows small upstream clock skew but rejects a future quote', () => {
+    expect(() =>
+      (service as any).assertQuoteFresh(new Date(Date.now() + 3000)),
+    ).not.toThrow();
+    expect(() =>
+      (service as any).assertQuoteFresh(new Date(Date.now() + 10000)),
+    ).toThrow('Market quote is temporarily unavailable');
+  });
+
+  it('rejects non-positive or crossed execution quotes', () => {
+    expect(() =>
+      (service as any).assertQuotePrices(
+        new Prisma.Decimal(0),
+        null,
+        null,
+      ),
+    ).toThrow('Market quote is temporarily unavailable');
+    expect(() =>
+      (service as any).assertQuotePrices(
+        new Prisma.Decimal(100),
+        new Prisma.Decimal(101),
+        new Prisma.Decimal(100),
+      ),
+    ).toThrow('Market quote is temporarily unavailable');
   });
 
   it('rejects reuse of clientOrderId for a different order', async () => {

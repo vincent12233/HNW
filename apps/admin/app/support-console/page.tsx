@@ -5,6 +5,7 @@ import {
   ReloadOutlined,
   SendOutlined,
   TranslationOutlined,
+  DollarOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -12,6 +13,9 @@ import {
   Card,
   Empty,
   Input,
+  InputNumber,
+  Form,
+  Modal,
   List,
   Select,
   Space,
@@ -29,7 +33,7 @@ const { Title, Paragraph, Text } = Typography;
 const supportTags = ["入金咨询", "提现问题", "KYC", "交易问题", "账户问题", "紧急", "已跟进"];
 
 const quickReplies = [
-  "您好，客户入金请先确认付款凭证和到账信息，财务确认后会为账户上分。",
+  "您好，请按客服提供的存款方式付款并发送付款凭证。客服会转交信息，财务核实实际到账后为账户上分。",
   "您的提现申请已收到，财务会根据订单号核对并处理。",
   "请上传清晰的 Aadhaar 或 PAN 文件，业务员会尽快审核 KYC。",
   "请提供手机号、客户姓名和问题截图，我们马上为您核查。",
@@ -76,6 +80,9 @@ export default function SupportConsolePage() {
   const [loading, setLoading] = useState(false);
   const [messageLoading, setMessageLoading] = useState(false);
   const [error, setError] = useState("");
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [depositSubmitting, setDepositSubmitting] = useState(false);
+  const [depositForm] = Form.useForm();
 
   const selectedTags = useMemo(() => selected?.tags || [], [selected?.tags]);
 
@@ -175,6 +182,30 @@ export default function SupportConsolePage() {
     } catch (requestError: any) {
       const responseMessage = requestError.response?.data?.message;
       message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "翻译失败");
+    }
+  }
+
+  async function submitDepositToFinance() {
+    if (!selected) return;
+    const values = await depositForm.validateFields();
+    setDepositSubmitting(true);
+    try {
+      await api.post('/deposit/support-submit', {
+        conversationId: selected.id,
+        amount: Number(values.amount).toFixed(2),
+        referenceId: String(values.referenceId).trim(),
+        paymentMethod: values.paymentMethod,
+        note: values.note,
+      });
+      message.success('存款信息已提交，由财务核对到账并上分');
+      setDepositOpen(false);
+      depositForm.resetFields();
+      await updateTags(Array.from(new Set([...selectedTags, '待财务核对'])));
+    } catch (requestError: any) {
+      const responseMessage = requestError.response?.data?.message;
+      message.error(Array.isArray(responseMessage) ? responseMessage.join('，') : responseMessage || '提交财务失败');
+    } finally {
+      setDepositSubmitting(false);
     }
   }
 
@@ -308,6 +339,16 @@ export default function SupportConsolePage() {
                 />
 
                 <Space wrap>
+                  <Button
+                    type="primary"
+                    icon={<DollarOutlined />}
+                    onClick={() => {
+                      depositForm.setFieldsValue({ referenceId: `DEP-${Date.now()}` });
+                      setDepositOpen(true);
+                    }}
+                  >
+                    提交存款信息给财务
+                  </Button>
                   {quickReplies.map((reply) => (
                     <Button key={reply} size="small" onClick={() => setContent(reply)}>
                       {reply.slice(0, 16)}...
@@ -387,6 +428,34 @@ export default function SupportConsolePage() {
           </Card>
         </div>
       </Space>
+      <Modal
+        title="提交客户存款信息"
+        open={depositOpen}
+        onCancel={() => setDepositOpen(false)}
+        onOk={submitDepositToFinance}
+        confirmLoading={depositSubmitting}
+        okText="提交财务核对"
+        cancelText="取消"
+      >
+        <Alert
+          type="warning"
+          showIcon
+          title="客服仅登记客户提供的信息，不代表资金已经到账；到账由财务核实。"
+          style={{ marginBottom: 16 }}
+        />
+        <Form form={depositForm} layout="vertical">
+          <Form.Item name="amount" label="客户申报存款金额" rules={[{ required: true, message: '请输入金额' }]}> 
+            <InputNumber min={0.01} precision={2} style={{ width: '100%' }} prefix="₹" />
+          </Form.Item>
+          <Form.Item name="referenceId" label="付款流水号" rules={[{ required: true, min: 8, message: '请输入至少8位付款流水号' }]}> 
+            <Input />
+          </Form.Item>
+          <Form.Item name="paymentMethod" label="存款方式" rules={[{ required: true, message: '请输入存款方式' }]}> 
+            <Input placeholder="例如 UPI / 银行转账" />
+          </Form.Item>
+          <Form.Item name="note" label="客服备注"><Input.TextArea maxLength={300} /></Form.Item>
+        </Form>
+      </Modal>
     </AdminShell>
   );
 }

@@ -4,6 +4,18 @@
 
 $ErrorActionPreference = "Stop"
 
+$requiredPasswords = @{
+  BUSINESS = $env:BUSINESS_INITIAL_PASSWORD
+  SUPPORT = $env:SUPPORT_INITIAL_PASSWORD
+  FINANCE = $env:FINANCE_INITIAL_PASSWORD
+  ADMIN = $env:ADMIN_INITIAL_PASSWORD
+}
+foreach ($entry in $requiredPasswords.GetEnumerator()) {
+  if ([string]::IsNullOrWhiteSpace($entry.Value)) {
+    throw "$($entry.Key)_INITIAL_PASSWORD must be set before running verification."
+  }
+}
+
 function Invoke-JsonPost($Url, $Body, $Token = $null) {
   $headers = @{}
   if ($Token) {
@@ -53,7 +65,7 @@ $clientPassword = "Client@123456"
 
 $business = Invoke-JsonPost "/auth/login" @{
   employeeNo = "BUSINESS001"
-  password = "Business@123456"
+  password = $requiredPasswords.BUSINESS
 }
 $businessToken = $business.accessToken
 
@@ -73,20 +85,23 @@ if (-not $invite) {
   throw "No unused invite code available, and automatic invite generation failed."
 }
 
-Invoke-JsonPost "/auth/register" @{
+$registration = Invoke-JsonPost "/auth/register" @{
   phone = $phone
   password = $clientPassword
   inviteCode = $invite
-} | Out-Null
+}
+$kycToken = $registration.kycToken
+if (-not $kycToken) { throw "Registration did not return a KYC onboarding token." }
 
-$kycFile = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes("PAN TEST FILE"))
+$testPdf = "%PDF-1.4`n1 0 obj<</Type/Catalog>>endobj`ntrailer<</Root 1 0 R>>`n%%EOF"
+$kycFile = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($testPdf))
 $kyc = Invoke-JsonPost "/kyc/submit" @{
   phone = $phone
   documentType = "PAN"
   fileName = "pan-card-test.pdf"
   mimeType = "application/pdf"
   contentBase64 = $kycFile
-}
+} $kycToken
 
 $pendingKyc = Invoke-JsonGet "/kyc/business/pending" $businessToken
 $submission = $pendingKyc | Where-Object { $_.phone -eq $phone } | Select-Object -First 1
@@ -115,23 +130,31 @@ Invoke-JsonPost "/support/messages" @{
 
 $support = Invoke-JsonPost "/auth/login" @{
   employeeNo = "SUPPORT001"
-  password = "Support@123456"
+  password = $requiredPasswords.SUPPORT
 }
+$supportToken = $support.accessToken
 Invoke-JsonPost "/support/conversations/$($conversation.id)/tags" @{
   tags = @("deposit-support", "priority-client", "pan-submitted")
-} $support.accessToken | Out-Null
+} $supportToken | Out-Null
 
 $finance = Invoke-JsonPost "/auth/login" @{
   employeeNo = "FINANCE001"
-  password = "Finance@123456"
+  password = $requiredPasswords.FINANCE
 }
 $financeToken = $finance.accessToken
 
-Invoke-JsonPost "/admin/accounts/$accountNumber/credit" @{
+$deposit = Invoke-JsonPost "/deposit/support-submit" @{
+  conversationId = $conversation.id
   amount = "10000.00"
   referenceId = "VERIFY$stamp"
-  note = "Verification top-up"
-} $financeToken | Out-Null
+  paymentMethod = "Verification transfer"
+  note = "Automated verification deposit"
+} $supportToken
+$pendingDeposits = Invoke-JsonGet "/deposit/pending" $financeToken
+if (-not ($pendingDeposits | Where-Object { $_.id -eq $deposit.id })) {
+  throw "Support-confirmed deposit was not visible to finance."
+}
+Invoke-JsonPatch "/deposit/$($deposit.id)/approve" @{} $financeToken | Out-Null
 
 $order = Invoke-JsonPost "/orders" @{
   clientOrderId = "VERIFY-ORDER-$stamp"
@@ -145,7 +168,7 @@ $order = Invoke-JsonPost "/orders" @{
 
 $admin = Invoke-JsonPost "/auth/login" @{
   employeeNo = "ADMIN001"
-  password = "Admin@123456"
+  password = $requiredPasswords.ADMIN
 }
 $adminOrders = Invoke-JsonGet "/admin/orders?pageSize=5&search=VERIFY-ORDER-$stamp" $admin.accessToken
 $financeTrades = Invoke-JsonGet "/admin/trades?pageSize=5&search=VERIFY-ORDER-$stamp" $financeToken
@@ -205,5 +228,3 @@ Invoke-JsonPatch "/withdrawal/$($withdrawal.id)/approve" @{} $financeToken | Out
   withdrawalOrderNo = $withdrawal.orderNo
   businessCanSeeWithdrawal = $businessCanSeeWithdrawal
 } | ConvertTo-Json -Depth 6
-
-

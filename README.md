@@ -38,7 +38,8 @@ docker compose up -d postgres
 ```powershell
 cd apps/api
 Copy-Item .env.example .env
-npm run prisma:migrate
+npm run db:generate
+npm run db:migrate
 npm run seed
 npm run start:dev
 ```
@@ -78,12 +79,19 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 
 | 角色 | 员工编号 | 密码 |
 | --- | --- | --- |
-| 管理员 | `ADMIN001` | `Admin@123456` |
-| 财务 | `FINANCE001` | `Finance@123456` |
-| 客服 | `SUPPORT001` | `Support@123456` |
-| 业务员 | `BUSINESS001` | `Business@123456` |
+| 管理员 | `ADMIN001` | `ADMIN_INITIAL_PASSWORD` 环境变量 |
+| 财务 | `FINANCE001` | `FINANCE_INITIAL_PASSWORD` 环境变量 |
+| 客服 | `SUPPORT001` | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
+| 业务员 | `BUSINESS001` | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 
-生产环境上线后请立即修改默认密码。
+项目不提供固定默认密码。首次初始化前必须在 API 环境变量中设置四个不同的强密码。
+
+## 免账号行情与新闻
+
+- 默认行情来自 Yahoo 公开快照，每 10 秒轮询活跃、持仓和挂单股票，并通过 WebSocket 推送到 App。
+- 该模式无需账号或 API Key，属于近实时/可能延迟行情，不是 NSE/BSE 授权的交易级实时数据。
+- 新闻默认聚合 NSE 公司公告、SEBI 更新和印度股票市场新闻，每 60 秒更新并自动去重。
+- 如需替换新闻源，可在 API 环境中设置逗号分隔的 `MARKET_NEWS_RSS_URLS`。
 
 ## 一键验收
 

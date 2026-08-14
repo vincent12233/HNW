@@ -13,6 +13,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 import { WithdrawalService } from './withdrawal.service';
+import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
 
 @Controller('withdrawal')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,17 +21,11 @@ export class WithdrawalController {
   constructor(private readonly withdrawalService: WithdrawalService) {}
 
   @Post('request')
+  @Roles(UserRole.CLIENT)
   createRequest(
     @Req() req: any,
     @Body()
-    body: {
-      amount: number;
-      bankName?: string;
-      accountNumber?: string;
-      ifscCode?: string;
-      upiId?: string;
-      note?: string;
-    },
+    body: CreateWithdrawalRequestDto,
   ) {
     return this.withdrawalService.createRequest(
       req.user.userId,
@@ -44,6 +39,7 @@ export class WithdrawalController {
   }
 
   @Get('me')
+  @Roles(UserRole.CLIENT)
   myWithdrawals(@Req() req: any) {
     return this.withdrawalService.myWithdrawals(req.user.userId);
   }
@@ -56,13 +52,13 @@ export class WithdrawalController {
 
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  approve(@Param('id') id: string) {
-    return this.withdrawalService.approveWithdrawal(id);
+  approve(@Param('id') id: string, @Req() req: any) {
+    return this.withdrawalService.approveWithdrawal(id, req.user.userId);
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  reject(@Param('id') id: string, @Body() body: { note?: string }) {
-    return this.withdrawalService.rejectWithdrawal(id, body.note);
+  reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
+    return this.withdrawalService.rejectWithdrawal(id, body.note, req.user.userId);
   }
 }

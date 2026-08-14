@@ -108,4 +108,63 @@ describe('QuoteIngestionService', () => {
     );
     expect(snapshot[0]).not.toHaveProperty('source');
   });
+
+  it('ignores an older stock quote instead of overwriting a newer quote', async () => {
+    const latestAt = new Date();
+    const olderAt = new Date(latestAt.getTime() - 60 * 1000);
+    const prisma = {
+      instrument: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'instrument-1',
+          quote: { asOf: latestAt },
+        }),
+      },
+      marketQuote: { upsert: jest.fn() },
+    } as any;
+    const gateway = { emitQuoteUpdate: jest.fn() } as any;
+    const health = { recordQuote: jest.fn() } as any;
+    const service = new QuoteIngestionService(prisma, gateway, health);
+
+    await service.ingest('NSE', {
+      symbol: 'RELIANCE',
+      price: '100',
+      previousClose: '99',
+      openPrice: '99',
+      highPrice: '101',
+      lowPrice: '98',
+      bidPrice: '99.9',
+      askPrice: '100.1',
+      volume: '1000',
+      change: 1.01,
+      source: 'TEST',
+      updatedAt: olderAt,
+    });
+
+    expect(prisma.marketQuote.upsert).not.toHaveBeenCalled();
+    expect(gateway.emitQuoteUpdate).not.toHaveBeenCalled();
+  });
+
+  it('ignores quotes timestamped too far in the future', async () => {
+    const prisma = {} as any;
+    const gateway = { emitQuoteUpdate: jest.fn() } as any;
+    const health = { recordQuote: jest.fn() } as any;
+    const service = new QuoteIngestionService(prisma, gateway, health);
+
+    await service.ingest('NSE', {
+      symbol: 'RELIANCE',
+      price: '100',
+      previousClose: '99',
+      openPrice: null,
+      highPrice: null,
+      lowPrice: null,
+      bidPrice: null,
+      askPrice: null,
+      volume: '0',
+      change: 1.01,
+      source: 'TEST',
+      updatedAt: new Date(Date.now() + 10 * 60 * 1000),
+    });
+
+    expect(gateway.emitQuoteUpdate).not.toHaveBeenCalled();
+  });
 });

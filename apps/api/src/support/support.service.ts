@@ -7,12 +7,14 @@ import {
 import { UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { SupportGateway } from './support.gateway';
 
 @Injectable()
 export class SupportService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly gateway: SupportGateway,
   ) {}
 
   async createConversation(clientId: string) {
@@ -154,10 +156,17 @@ export class SupportService {
     senderId: string,
     senderRole: UserRole,
     content: string,
+    attachmentName?: string,
+    attachmentType?: string,
+    attachmentBase64?: string,
   ) {
     const trimmedContent = content?.trim();
 
-    if (!trimmedContent) {
+    if (attachmentBase64 && Buffer.byteLength(attachmentBase64, 'base64') > 8 * 1024 * 1024) {
+      throw new BadRequestException('Attachment must be 8 MB or smaller');
+    }
+
+    if (!trimmedContent && !attachmentBase64) {
       throw new BadRequestException('消息内容不能为空');
     }
 
@@ -192,9 +201,26 @@ export class SupportService {
         conversationId,
         senderId,
         senderType,
-        content: trimmedContent,
+        content: trimmedContent || '',
+        attachmentName: attachmentName?.slice(0, 160) || null,
+        attachmentType: attachmentType?.slice(0, 80) || null,
+        attachmentUrl: attachmentBase64
+          ? `data:${attachmentType || 'application/octet-stream'};base64,${attachmentBase64}`
+          : null,
       },
     });
+
+    if (senderRole !== UserRole.CLIENT) {
+      await this.prisma.notification.create({
+        data: {
+          userId: conversation.clientId,
+          type: 'SUPPORT',
+          title: 'New customer service message',
+          body: (trimmedContent || 'Customer service sent an attachment.').slice(0, 160),
+          referenceId: conversationId,
+        },
+      });
+    }
 
     await this.prisma.supportConversation.update({
       where: {
@@ -205,7 +231,56 @@ export class SupportService {
       },
     });
 
+    this.gateway.conversationUpdated(conversationId);
+
     return message;
+  }
+
+  async markRead(conversationId: string, userId: string, role: UserRole) {
+    const conversation = await this.prisma.supportConversation.findUnique({ where: { id: conversationId } });
+    if (!conversation || (role === UserRole.CLIENT && conversation.clientId !== userId)) {
+      throw new ForbiddenException('You cannot access this conversation');
+    }
+    return this.prisma.supportMessage.updateMany({
+      where: {
+        conversationId,
+        readAt: null,
+        senderType: role === UserRole.CLIENT ? { not: 'CLIENT' } : 'CLIENT',
+      },
+      data: { readAt: new Date() },
+    });
+  }
+
+  async unreadCount(userId: string, role: UserRole) {
+    const count = await this.prisma.supportMessage.count({
+      where: role === UserRole.CLIENT
+        ? { conversation: { clientId: userId }, senderType: { not: 'CLIENT' }, readAt: null }
+        : { senderType: 'CLIENT', readAt: null },
+    });
+    return { count };
+  }
+
+  async status() {
+    const onlineAgents = await this.prisma.userDevice.count({
+      where: { user: { role: { in: ['SUPPORT', 'ADMIN'] }, status: 'ACTIVE' }, revokedAt: null, lastSeenAt: { gte: new Date(Date.now() - 15 * 60 * 1000) } },
+    });
+    return { online: onlineAgents > 0, onlineAgents };
+  }
+
+  async assign(conversationId: string, assignedToId: string, actorId: string) {
+    const agent = await this.prisma.user.findFirst({ where: { id: assignedToId, role: { in: ['SUPPORT', 'ADMIN'] }, status: 'ACTIVE' } });
+    if (!agent) throw new BadRequestException('Support agent not found');
+    const conversation = await this.prisma.supportConversation.update({ where: { id: conversationId }, data: { assignedToId } });
+    await this.auditService.createLog({ actorId, action: 'SUPPORT_CONVERSATION_ASSIGN', resource: 'support_conversation', resourceId: conversationId, metadata: { assignedToId } });
+    this.gateway.conversationUpdated(conversationId);
+    return conversation;
+  }
+
+  async reopen(conversationId: string, actorId: string) {
+    const conversation = await this.prisma.supportConversation.update({ where: { id: conversationId }, data: { status: 'OPEN' } });
+    await this.auditService.createLog({ actorId, action: 'SUPPORT_CONVERSATION_REOPEN', resource: 'support_conversation', resourceId: conversationId });
+    this.gateway.conversationUpdated(conversationId);
+    return conversation;
   }
 
   async getMessages(conversationId: string, userId: string, role: UserRole) {

@@ -1,9 +1,71 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../audit/audit.service';
 
 @Injectable()
 export class DepositService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, private readonly audit: AuditService) {}
+
+  async submitToFinanceBySupport(
+    supportUserId: string,
+    input: { conversationId?: string; amount?: string; referenceId?: string; paymentMethod?: string; note?: string },
+  ) {
+    const conversationId = String(input.conversationId ?? '').trim();
+    const referenceId = String(input.referenceId ?? '').trim().toUpperCase();
+    const amountText = String(input.amount ?? '').trim();
+    if (!conversationId) throw new BadRequestException('Support conversation is required');
+    if (!/^(?!0+(?:\.0{1,2})?$)\d+(?:\.\d{1,2})?$/.test(amountText)) {
+      throw new BadRequestException('Enter a positive deposit amount with up to 2 decimals');
+    }
+    if (!/^[A-Z0-9._:-]{8,100}$/.test(referenceId)) {
+      throw new BadRequestException('Enter a valid payment reference');
+    }
+    const amount = new Prisma.Decimal(amountText);
+    const deposit = await this.prisma.$transaction(async (tx) => {
+      const conversation = await tx.supportConversation.findUnique({
+        where: { id: conversationId },
+        select: { clientId: true, assignedToId: true },
+      });
+      if (!conversation) throw new NotFoundException('Support conversation not found');
+      if (conversation.assignedToId && conversation.assignedToId !== supportUserId) {
+        throw new BadRequestException('This conversation is assigned to another support agent');
+      }
+      const account = await tx.account.findUnique({ where: { userId: conversation.clientId } });
+      if (!account) throw new NotFoundException('Customer account not found');
+      const duplicate = await tx.depositRequest.findUnique({ where: { referenceId } });
+      if (duplicate) throw new BadRequestException('This payment reference has already been confirmed');
+      const created = await tx.depositRequest.create({
+        data: {
+          accountId: account.id,
+          amount,
+          referenceId,
+          paymentMethod: String(input.paymentMethod ?? '').trim().slice(0, 80) || null,
+          note: [String(input.note ?? '').trim(), `Submitted by support ${supportUserId}`].filter(Boolean).join(' | ').slice(0, 500),
+          status: 'PENDING',
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: conversation.clientId,
+          type: 'DEPOSIT',
+          title: 'Deposit details submitted',
+          body: `Your deposit details for ${amount.toFixed(2)} were sent to finance for independent receipt verification.`,
+          referenceId: created.id,
+        },
+      });
+      return created;
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    await this.audit.createLog({
+      actorId: supportUserId,
+      action: 'DEPOSIT_DETAILS_SUBMITTED',
+      resource: 'deposit',
+      resourceId: deposit.id,
+      description: 'Deposit details submitted by support for finance verification',
+      metadata: { referenceId, amount: amount.toFixed(2), conversationId },
+    });
+    return deposit;
+  }
 
   async createDepositRequest(
     userId: string,
@@ -90,7 +152,7 @@ export class DepositService {
     });
   }
 
-  async approveDeposit(depositId: string) {
+  async approveDeposit(depositId: string, actorId?: string) {
     const deposit = await this.prisma.depositRequest.findUnique({
       where: {
         id: depositId,
@@ -102,39 +164,25 @@ export class DepositService {
     });
 
     if (!deposit) {
-      throw new Error('Deposit request not found');
+      throw new NotFoundException('Deposit request not found');
     }
 
     if (deposit.status !== 'PENDING') {
-      throw new Error('Deposit already processed');
+      throw new BadRequestException('Deposit already processed');
     }
-
-    const debts = await this.prisma.ipoDebt.findMany({
-      where: {
-        accountId: deposit.accountId,
-
-        status: {
-          in: ['OPEN', 'PARTIAL'],
-        },
-      },
-      include: {
-        ipoApplication: {
-          include: {
-            ipo: true,
-          },
-        },
-      },
-
-      orderBy: {
-        createdAt: 'asc',
-      },
-    });
 
     let repayAmount = 0;
 
     let availableAmount = Number(deposit.amount);
 
     await this.prisma.$transaction(async (tx) => {
+      const claimed = await tx.depositRequest.updateMany({
+        where: { id: depositId, status: 'PENDING' },
+        data: { status: 'APPROVED' },
+      });
+      if (claimed.count !== 1) {
+        throw new BadRequestException('Deposit already processed');
+      }
       const account = await tx.account.findUnique({
         where: {
           id: deposit.accountId,
@@ -142,10 +190,18 @@ export class DepositService {
       });
 
       if (!account) {
-        throw new Error('Account not found');
+        throw new NotFoundException('Account not found');
       }
 
       const balanceBefore = Number(account.cashBalance);
+      const debts = await tx.ipoDebt.findMany({
+        where: {
+          accountId: deposit.accountId,
+          status: { in: ['OPEN', 'PARTIAL'] },
+        },
+        include: { ipoApplication: { include: { ipo: true } } },
+        orderBy: { createdAt: 'asc' },
+      });
 
       /*
           1.
@@ -232,40 +288,10 @@ export class DepositService {
           Deposit 状态更新
         */
 
-      await tx.depositRequest.update({
-        where: {
-          id: depositId,
-        },
-
-        data: {
-          status: 'APPROVED',
-        },
-      });
-
       /*
           3.
           Deposit 流水
         */
-
-      await tx.accountTransaction.create({
-        data: {
-          accountId: deposit.accountId,
-
-          type: 'DEPOSIT',
-
-          status: 'COMPLETED',
-
-          amount: deposit.amount,
-
-          balanceBefore,
-
-          balanceAfter: balanceBefore + Number(deposit.amount),
-
-          referenceId: depositId,
-
-          note: 'Deposit approved',
-        },
-      });
 
       /*
           4.
@@ -291,29 +317,33 @@ export class DepositService {
           },
         });
 
-        await tx.accountTransaction.create({
-          data: {
-            accountId: deposit.accountId,
-
-            type: 'ADMIN_CREDIT',
-
-            status: 'COMPLETED',
-
-            amount: availableAmount,
-
-            balanceBefore,
-
-            balanceAfter,
-
-            referenceId: depositId,
-
-            note: 'Deposit cash credit',
-          },
-        });
       }
-    });
+      await tx.accountTransaction.create({
+        data: {
+          accountId: deposit.accountId,
+          type: 'DEPOSIT',
+          status: 'COMPLETED',
+          amount: availableAmount,
+          balanceBefore,
+          balanceAfter: balanceBefore + availableAmount,
+          referenceId: depositId,
+          note: repayAmount > 0
+            ? `Deposit approved; ${repayAmount.toFixed(2)} applied to IPO debt`
+            : 'Deposit approved',
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: account.userId,
+          type: 'DEPOSIT',
+          title: 'Deposit approved',
+          body: `${availableAmount.toFixed(2)} has been added to your available balance.`,
+          referenceId: depositId,
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-    return {
+    const result = {
       message: 'Deposit approved',
 
       depositId,
@@ -324,24 +354,36 @@ export class DepositService {
 
       creditedAmount: availableAmount,
     };
+    if (actorId) await this.audit.createLog({ actorId, action: 'DEPOSIT_APPROVED', resource: 'deposit', resourceId: depositId, description: 'Deposit approved by finance operator', metadata: { depositAmount: String(deposit.amount), ipoRepayment: String(repayAmount), creditedAmount: String(availableAmount) } });
+    return result;
   }
 
-  async rejectDeposit(depositId: string, note?: string) {
-    const updated = await this.prisma.depositRequest.updateMany({
-      where: {
-        id: depositId,
-        status: 'PENDING',
-      },
-      data: {
-        status: 'REJECTED',
-        note: note?.trim() || null,
-      },
-    });
+  async rejectDeposit(depositId: string, note?: string, actorId?: string) {
+    await this.prisma.$transaction(async (tx) => {
+      const deposit = await tx.depositRequest.findUnique({
+        where: { id: depositId },
+        include: { account: true },
+      });
+      if (!deposit) throw new NotFoundException('Deposit request not found');
+      const updated = await tx.depositRequest.updateMany({
+        where: { id: depositId, status: 'PENDING' },
+        data: { status: 'REJECTED', note: note?.trim() || null },
+      });
+      if (updated.count !== 1) {
+        throw new BadRequestException('Deposit already processed');
+      }
+      await tx.notification.create({
+        data: {
+          userId: deposit.account.userId,
+          type: 'DEPOSIT',
+          title: 'Deposit rejected',
+          body: note?.trim() || 'Your deposit could not be confirmed. Please contact support.',
+          referenceId: depositId,
+        },
+      });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
 
-    if (updated.count !== 1) {
-      throw new NotFoundException('Pending deposit request not found');
-    }
-
+    if (actorId) await this.audit.createLog({ actorId, action: 'DEPOSIT_REJECTED', resource: 'deposit', resourceId: depositId, description: note?.trim() || 'Deposit rejected by finance operator' });
     return {
       message: 'Deposit rejected',
       depositId,

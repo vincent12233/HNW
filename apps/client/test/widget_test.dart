@@ -8,11 +8,14 @@ void main() {
 
     await tester.pumpWidget(const IndiaTradingApp());
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('India Trading'), findsOneWidget);
+    // Covers the minimum splash duration and the API warm-up timeout.
+    await tester.pump(const Duration(seconds: 5));
+    await tester.pump();
 
     expect(find.text('India Trading'), findsWidgets);
     expect(find.text('Sign In'), findsOneWidget);
-    expect(find.text('Mobile number'), findsOneWidget);
+    expect(find.text('Mobile Number'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
     expect(find.text('Create Account'), findsOneWidget);
   });

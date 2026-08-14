@@ -117,6 +117,7 @@ export default function WithdrawalsPage() {
   }, [keyword, records]);
 
   async function approve(record: WithdrawalRecord) {
+    if (submittingId) return;
     setSubmittingId(record.id);
     try {
       await api.patch(`/withdrawal/${record.id}/approve`);
@@ -136,6 +137,11 @@ export default function WithdrawalsPage() {
 
   async function reject() {
     if (!rejecting) return;
+    if (submittingId) return;
+    if (rejectNote.trim().length < 3) {
+      message.error("请输入至少 3 个字符的拒绝原因");
+      return;
+    }
 
     setSubmittingId(rejecting.id);
     try {
@@ -205,11 +211,12 @@ export default function WithdrawalsPage() {
             size="small"
             icon={<CheckOutlined />}
             loading={submittingId === record.id}
+            disabled={!!submittingId && submittingId !== record.id}
             onClick={() => approve(record)}
           >
             通过
           </Button>
-          <Button danger size="small" icon={<CloseOutlined />} onClick={() => setRejecting(record)}>
+          <Button danger size="small" icon={<CloseOutlined />} disabled={!!submittingId} onClick={() => setRejecting(record)}>
             拒绝
           </Button>
         </Space>

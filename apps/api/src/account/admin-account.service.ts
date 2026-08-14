@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
+import { ApprovalService } from '../approval/approval.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdjustBalanceDto } from './dto/adjust-balance.dto';
@@ -17,17 +18,18 @@ export class AdminAccountService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly approvalService: ApprovalService,
   ) {}
   credit(
     accountNumber: string,
     dto: AdjustBalanceDto,
     administratorId: string,
   ) {
-    return this.adjust(accountNumber, dto, administratorId, 'CREDIT');
+    return this.approvalService.requestBalance(accountNumber, dto, administratorId, 'CREDIT');
   }
 
   debit(accountNumber: string, dto: AdjustBalanceDto, administratorId: string) {
-    return this.adjust(accountNumber, dto, administratorId, 'DEBIT');
+    return this.approvalService.requestBalance(accountNumber, dto, administratorId, 'DEBIT');
   }
   async listAccounts(query: ListAdminAccountsQueryDto) {
     const search = query.search?.trim();

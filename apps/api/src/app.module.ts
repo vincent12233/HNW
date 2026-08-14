@@ -7,6 +7,7 @@ import { join } from 'path';
 import { AccountModule } from './account/account.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { ApprovalModule } from './approval/approval.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health/health.controller';
 import { MarketModule } from './market/market.module';
@@ -20,14 +21,20 @@ import { WithdrawalModule } from './withdrawal/withdrawal.module';
 import { AdminModule } from './admin/admin.module';
 import { BusinessModule } from './business/business.module';
 import { StocksModule } from './stocks/stocks.module';
-import { MarketDataController } from './market-data/market-data.controller';
 import { MarketDataModule } from './market-data/market-data.module';
 import { KycModule } from './kyc/kyc.module';
 import { AdminProductsModule } from './admin-products/admin-products.module';
 import { LoansModule } from './loans/loans.module';
+import { InstrumentMasterModule } from './instrument-master/instrument-master.module';
+import { WatchlistModule } from './watchlist/watchlist.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { OtcModule } from './otc/otc.module';
+import { ClientExperienceModule } from './client-experience/client-experience.module';
+import { StorageModule } from './storage/storage.module';
+
 @Module({
   imports: [
+    ApprovalModule,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: join(process.cwd(), '.env'),
@@ -55,6 +62,11 @@ import { ScheduleModule } from '@nestjs/schedule';
     KycModule,
     AdminProductsModule,
     LoansModule,
+    InstrumentMasterModule,
+    WatchlistModule,
+    OtcModule,
+    ClientExperienceModule,
+    StorageModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

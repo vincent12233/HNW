@@ -1,7 +1,7 @@
 "use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Modal, Space, Table, Tag, Typography, message } from "antd";
+import { Alert, Button, Card, Input, InputNumber, Modal, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -65,13 +65,17 @@ export default function BusinessIpoPage() {
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Text>{record.ipo.symbol} / {record.ipo.companyName}</Text>
           <Text type="secondary">客户现金：{formatMoney(record.account.cashBalance)}。不足部分会自动生成欠款，未补足不会转入持仓。</Text>
-          <Input placeholder="分配数量" onChange={(event) => { quantity = event.target.value; }} />
-          <Input placeholder="分配价格" defaultValue={price} onChange={(event) => { price = event.target.value; }} />
+          <InputNumber min={1} precision={0} style={{ width: "100%" }} placeholder="分配数量" onChange={(value) => { quantity = String(value ?? ""); }} />
+          <InputNumber min={0.01} precision={2} style={{ width: "100%" }} placeholder="分配价格" defaultValue={Number(price)} onChange={(value) => { price = String(value ?? ""); }} />
         </Space>
       ),
       okText: "确认分配",
       cancelText: "取消",
       async onOk() {
+        if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0 || !Number.isFinite(Number(price)) || Number(price) <= 0) {
+          message.error("请输入有效的分配数量和价格");
+          throw new Error("Invalid IPO allocation values");
+        }
         await api.patch(`/business/my-ipo-applications/${record.id}/allocate`, {
           quantity: Number(quantity),
           price: Number(price),

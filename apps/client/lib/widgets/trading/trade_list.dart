@@ -2,57 +2,469 @@ import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/stock_quote.dart';
+import '../../models/portfolio_position.dart';
+import '../../services/trading_service.dart';
+import '../../utils/number_formatters.dart';
+import '../stock_logo.dart';
 
 class TradeList extends StatelessWidget {
-  const TradeList({super.key, required this.stocks, required this.onTrade});
+  const TradeList({
+    super.key,
+    required this.stocks,
+    required this.positions,
+    required this.account,
+    required this.onTrade,
+    required this.indexQuotes,
+    required this.onViewMarkets,
+  });
 
   final List<StockQuote> stocks;
+  final Map<String, PortfolioPosition> positions;
+  final TradingAccountSnapshot? account;
   final ValueChanged<StockQuote> onTrade;
+  final Map<String, (double, double)> indexQuotes;
+  final VoidCallback onViewMarkets;
 
   @override
   Widget build(BuildContext context) {
+    final invested = positions.values.fold<double>(
+      0,
+      (sum, position) => sum + position.averageCost * position.quantity,
+    );
+    final holdings = positions.values.fold<double>(0, (sum, position) {
+      final quote = stocks.where(
+        (item) =>
+            item.symbol == position.symbol &&
+            item.exchange == position.exchange,
+      );
+      return sum +
+          position.marketValue(
+            quote.isEmpty ? position.averageCost : quote.first.price,
+          );
+    });
+    final total = (account?.cashBalance ?? 0) + holdings;
+    final pnl = holdings - invested;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
       children: [
-        _OverviewCard(
-          icon: Icons.swap_horiz_rounded,
-          title: 'Trades',
-          tag: 'TRD',
-          description: 'Trading overview and live execution entries',
-          color: AppConfig.primaryColor,
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Text(
+                      'Trading Summary',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(Icons.visibility_outlined, size: 17),
+                  ],
+                ),
+                const SizedBox(height: 18),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final compact = constraints.maxWidth < 380;
+                    if (compact) {
+                      return Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _summary(
+                                  'Total Portfolio Value',
+                                  formatPrice(total),
+                                  AppConfig.textPrimaryColor,
+                                ),
+                              ),
+                              Expanded(
+                                child: _summary(
+                                  'Total Invested',
+                                  formatPrice(invested),
+                                  AppConfig.textPrimaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 18),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _summary(
+                                  'Total P&L',
+                                  '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                                  pnl >= 0
+                                      ? AppConfig.gainColor
+                                      : AppConfig.lossColor,
+                                ),
+                              ),
+                              Expanded(
+                                child: _summary(
+                                  'Available Balance',
+                                  formatPrice(account?.cashBalance ?? 0),
+                                  AppConfig.textPrimaryColor,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    }
+                    return IntrinsicHeight(
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: _summary(
+                              'Total Portfolio Value',
+                              formatPrice(total),
+                              AppConfig.textPrimaryColor,
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _summary(
+                              'Total Invested',
+                              formatPrice(invested),
+                              AppConfig.textPrimaryColor,
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _summary(
+                              'Total P&L',
+                              '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                              pnl >= 0
+                                  ? AppConfig.gainColor
+                                  : AppConfig.lossColor,
+                            ),
+                          ),
+                          const VerticalDivider(width: 1),
+                          Expanded(
+                            child: _summary(
+                              'Available Balance',
+                              formatPrice(account?.cashBalance ?? 0),
+                              AppConfig.textPrimaryColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
         ),
-        _OverviewCard(
-          icon: Icons.campaign_outlined,
-          title: 'IPO',
-          tag: 'IPO',
-          description: 'Apply first, then wait for business allocation',
-          color: const Color(0xFFEF4444),
+        const SizedBox(height: 14),
+        Row(
+          children: ['All', 'Inst.', 'OTC', 'IPO']
+              .asMap()
+              .entries
+              .map(
+                (entry) => Container(
+                  margin: const EdgeInsets.only(right: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 17,
+                    vertical: 9,
+                  ),
+                  decoration: BoxDecoration(
+                    color: entry.key == 0
+                        ? AppConfig.primaryColor
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: entry.key == 0
+                          ? AppConfig.primaryColor
+                          : const Color(0xFFE2E8F0),
+                    ),
+                  ),
+                  child: Text(
+                    entry.value,
+                    style: TextStyle(
+                      color: entry.key == 0
+                          ? Colors.white
+                          : const Color(0xFF334155),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
         ),
-        _OverviewCard(
-          icon: Icons.handshake_outlined,
-          title: 'OTC',
-          tag: 'OTC',
-          description: 'Over-the-counter opportunities will appear here',
-          color: const Color(0xFF0D9488),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Text(
+              'Open Positions (${positions.length})',
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const Spacer(),
+            const Text(
+              'View All',
+              style: TextStyle(
+                color: AppConfig.primaryColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ],
         ),
-        _OverviewCard(
-          icon: Icons.account_balance_outlined,
-          title: 'Institutional Stocks',
-          tag: 'INST',
-          description: 'New institutional stock offers from the backend',
-          color: const Color(0xFF2563EB),
+        const SizedBox(height: 9),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: const Color(0xFFE8EDF5)),
+          ),
+          child: positions.isEmpty
+              ? const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(
+                    child: Text(
+                      'No open positions',
+                      style: TextStyle(color: Color(0xFF64748B)),
+                    ),
+                  ),
+                )
+              : Column(
+                  children: positions.values
+                      .take(5)
+                      .map((position) => _positionRow(position))
+                      .toList(),
+                ),
         ),
-        _OverviewCard(
-          icon: Icons.history_rounded,
-          title: 'History',
-          tag: 'HIS',
-          description: 'Sold holdings, orders and completed records',
-          color: const Color(0xFFF59E0B),
+        const SizedBox(height: 18),
+        Row(
+          children: [
+            const Text(
+              'Market Overview',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            ),
+            const Spacer(),
+            TextButton(
+              onPressed: onViewMarkets,
+              child: const Text(
+                'View More',
+                style: TextStyle(
+                  color: AppConfig.primaryColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 9),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth < 380 ? 2 : 4;
+            const gap = 7.0;
+            final width =
+                (constraints.maxWidth - gap * (columns - 1)) / columns;
+            final nifty = _indexQuote(const ['NIFTY50']);
+            final sensex = _indexQuote(const ['SENSEX']);
+            final bankNifty = _indexQuote(const ['BANKNIFTY']);
+            final vix = _indexQuote(const ['INDIAVIX', 'INDIA VIX', 'VIX']);
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
+                SizedBox(width: width, child: _indexMini('NIFTY 50', nifty)),
+                SizedBox(width: width, child: _indexMini('SENSEX', sensex)),
+                SizedBox(
+                  width: width,
+                  child: _indexMini('BANK NIFTY', bankNifty),
+                ),
+                SizedBox(width: width, child: _indexMini('INDIA VIX', vix)),
+              ],
+            );
+          },
         ),
         const SizedBox(height: 12),
       ],
     );
   }
+
+  Widget _positionRow(PortfolioPosition position) {
+    final quote = stocks.where(
+      (item) =>
+          item.symbol == position.symbol && item.exchange == position.exchange,
+    );
+    final price = quote.isEmpty ? position.averageCost : quote.first.price;
+    final pnl = position.unrealizedProfitLoss(price);
+    return InkWell(
+      onTap: quote.isEmpty ? null : () => onTrade(quote.first),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+        ),
+        child: Row(
+          children: [
+            StockLogo(symbol: position.symbol, size: 36),
+            const SizedBox(width: 10),
+            Expanded(
+              flex: 4,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    position.symbol,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  Text(
+                    '${position.quantity} Shares · ${position.exchange}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              flex: 3,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatPrice(price),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  Text(
+                    'Avg. ${formatPrice(position.averageCost)}',
+                    style: const TextStyle(
+                      fontSize: 9,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            SizedBox(
+              width: 65,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: pnl >= 0
+                          ? AppConfig.gainColor
+                          : AppConfig.lossColor,
+                    ),
+                  ),
+                  Text(
+                    '${pnl >= 0 ? '+' : ''}${position.averageCost > 0 ? (pnl / (position.averageCost * position.quantity) * 100).toStringAsFixed(2) : '0.00'}%',
+                    style: TextStyle(
+                      fontSize: 9,
+                      color: pnl >= 0
+                          ? AppConfig.gainColor
+                          : AppConfig.lossColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  (double, double)? _indexQuote(List<String> symbols) {
+    for (final symbol in symbols) {
+      final quote = indexQuotes[symbol];
+      if (quote != null) return quote;
+    }
+    return null;
+  }
+
+  Widget _indexMini(String name, (double, double)? quote) {
+    final available = quote != null && quote.$1 > 0;
+    final value = available ? formatIndex(quote.$1) : '--';
+    final change = available ? quote.$2 : 0.0;
+    final color = !available
+        ? AppConfig.neutralColor
+        : change >= 0
+        ? AppConfig.gainColor
+        : AppConfig.lossColor;
+    return Container(
+      height: 94,
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(9),
+        border: Border.all(color: const Color(0xFFE8EDF5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            name,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 5),
+          FittedBox(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+            ),
+          ),
+          Text(
+            available
+                ? '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%'
+                : 'Unavailable',
+            style: TextStyle(fontSize: 9, color: color),
+          ),
+          const Spacer(),
+          Container(
+            height: 2,
+            color: color.withValues(alpha: available ? .7 : .18),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _summary(String label, String value, Color color) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 7),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          maxLines: 2,
+          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+        ),
+        const SizedBox(height: 7),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(color: color, fontWeight: FontWeight.w800),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 class _OverviewCard extends StatelessWidget {

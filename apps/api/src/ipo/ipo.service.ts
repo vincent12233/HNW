@@ -1,10 +1,13 @@
 import {
   BadRequestException,
+  ConflictException,
+  ForbiddenException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
@@ -533,46 +536,47 @@ export class IpoService {
     };
   }
 
-  async allocate(applicationId: string, quantity: number, price: number) {
-    const application = await this.prisma.ipoApplication.findUnique({
-      where: {
-        id: applicationId,
-      },
-      include: {
-        ipo: true,
-        account: true,
-      },
-    });
-
-    if (!application) {
-      throw new NotFoundException('IPO application not found');
+  async allocate(applicationId: string, quantity: number, price: number, businessUserId?: string) {
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1_000_000) {
+      throw new BadRequestException('IPO allocation quantity is invalid');
+    }
+    if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) {
+      throw new BadRequestException('IPO allocation price is invalid');
+    }
+    const totalAmount = Number((quantity * price).toFixed(2));
+    if (!Number.isSafeInteger(Math.round(totalAmount * 100))) {
+      throw new BadRequestException('IPO allocation amount is too large');
     }
 
-    if (application.status !== 'PENDING') {
-      throw new BadRequestException('IPO application already processed');
-    }
-
-    if (!application.ipo.instrumentId) {
-      throw new BadRequestException('IPO instrument not configured');
-    }
-
-    const instrumentId = application.ipo.instrumentId;
-    const totalAmount = quantity * price;
-
-    return await this.prisma.$transaction(async (tx) => {
-      const account = await tx.account.findUnique({
-        where: {
-          id: application.accountId,
-        },
+    return this.prisma.$transaction(async (tx) => {
+      const application = await tx.ipoApplication.findUnique({
+        where: { id: applicationId },
+        include: { ipo: true, account: { include: { user: { select: { assignedBusinessId: true } } } } },
       });
-
-      if (!account) {
-        throw new NotFoundException('Account not found');
+      if (!application) throw new NotFoundException('IPO application not found');
+      if (businessUserId && application.account.user.assignedBusinessId !== businessUserId) {
+        throw new ForbiddenException('IPO application is not assigned to this business account');
       }
+      if (application.status !== 'PENDING') throw new ConflictException('IPO application already processed');
+      if (!application.ipo.instrumentId) throw new BadRequestException('IPO instrument not configured');
+
+      const instrumentId = application.ipo.instrumentId;
+      const account = application.account;
 
       const cashBalance = Number(account.cashBalance);
-
       let debtAmount = 0;
+
+      const claimed = await tx.ipoApplication.updateMany({
+        where: { id: application.id, status: 'PENDING' },
+        data: {
+          allocatedQuantity: quantity,
+          allocatedPrice: price,
+          allocatedAmount: totalAmount,
+          status: 'ALLOTTED',
+          paymentStatus: cashBalance >= totalAmount ? 'PAID' : 'PENDING',
+        },
+      });
+      if (claimed.count !== 1) throw new ConflictException('IPO application was processed by another operator');
 
       if (cashBalance >= totalAmount) {
         await tx.account.update({
@@ -623,19 +627,17 @@ export class IpoService {
         });
       }
 
-      // 更新 IPO Application
+      const updated = await tx.ipoApplication.findUniqueOrThrow({ where: { id: application.id } });
 
-      const updated = await tx.ipoApplication.update({
-        where: {
-          id: application.id,
-        },
-
+      await tx.notification.create({
         data: {
-          allocatedQuantity: quantity,
-          allocatedPrice: price,
-          allocatedAmount: totalAmount,
-          status: 'ALLOTTED',
-          paymentStatus: debtAmount > 0 ? 'PENDING' : 'PAID',
+          userId: account.userId,
+          type: 'IPO',
+          title: debtAmount > 0 ? 'IPO allotment payment required' : 'IPO allotment completed',
+          body: debtAmount > 0
+            ? `${application.ipo.symbol} was allotted. Pay the outstanding amount to complete settlement.`
+            : `${application.ipo.symbol} was settled and added to your holdings.`,
+          referenceId: application.id,
         },
       });
 
@@ -649,7 +651,7 @@ export class IpoService {
             ? 'IPO allocated with outstanding debt'
             : 'IPO allocated and settled successfully',
       };
-    });
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
   }
 
   async settleIpoApplication(
@@ -777,13 +779,15 @@ export class IpoService {
   }
 
   async setInstrument(ipoId: string, instrumentId: string) {
-    return this.prisma.ipo.update({
-      where: {
-        id: ipoId,
-      },
-      data: {
-        instrumentId,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      await tx.instrument.update({
+        where: { id: instrumentId },
+        data: { category: 'IPO' },
+      });
+      return tx.ipo.update({
+        where: { id: ipoId },
+        data: { instrumentId },
+      });
     });
   }
 

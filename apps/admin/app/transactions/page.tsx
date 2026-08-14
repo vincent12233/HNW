@@ -49,6 +49,7 @@ const typeLabels: Record<string, string> = {
   WITHDRAWAL: "提现",
   TRADE_SETTLEMENT: "交易结算",
   IPO_REPAYMENT: "IPO 还款",
+  OTC_SETTLEMENT: "OTC 结算",
 };
 
 function formatMoney(value?: string | number | null) {
@@ -227,6 +228,7 @@ export default function TransactionsPage() {
                 { value: "WITHDRAWAL", label: "提现" },
                 { value: "TRADE_SETTLEMENT", label: "交易结算" },
                 { value: "IPO_REPAYMENT", label: "IPO 还款" },
+                { value: "OTC_SETTLEMENT", label: "OTC 结算" },
                 { value: "ADMIN_DEBIT", label: "后台扣款" },
               ]}
             />

@@ -57,6 +57,8 @@ function Set-FlutterWritableDirectories {
 Invoke-Step "API build" {
   Push-Location (Join-Path $root "apps/api")
   try {
+    if (-not (Test-Path "node_modules")) { Invoke-Native "npm.cmd" @("ci") }
+    Invoke-Native "npm.cmd" @("run", "db:generate")
     Invoke-Native "npm.cmd" @("run", "build")
   } finally {
     Pop-Location
@@ -66,6 +68,7 @@ Invoke-Step "API build" {
 Invoke-Step "Admin build" {
   Push-Location (Join-Path $root "apps/admin")
   try {
+    if (-not (Test-Path "node_modules")) { Invoke-Native "npm.cmd" @("ci") }
     Invoke-Native "npm.cmd" @("run", "build")
   } finally {
     Pop-Location
@@ -75,6 +78,7 @@ Invoke-Step "Admin build" {
 Invoke-Step "Support build" {
   Push-Location (Join-Path $root "apps/support")
   try {
+    if (-not (Test-Path "node_modules")) { Invoke-Native "npm.cmd" @("ci") }
     Invoke-Native "npm.cmd" @("run", "build")
   } finally {
     Pop-Location
@@ -88,6 +92,7 @@ Invoke-Step "Client analyze" {
     Set-FlutterWritableDirectories
     Invoke-Native "flutter" @("pub", "get")
     Invoke-Native "flutter" @("analyze")
+    Invoke-Native "flutter" @("test")
   } finally {
     Pop-Location
   }

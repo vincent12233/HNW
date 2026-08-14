@@ -117,10 +117,19 @@ export class MatchingService {
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
         );
       } catch (error: unknown) {
-        if (this.hasPrismaCode(error, 'P2034') && attempt < 3) continue;
+        if (this.hasPrismaCode(error, 'P2034')) {
+          if (attempt < 3) continue;
+          throw new ConflictException(
+            'Concurrent order update detected; please retry',
+          );
+        }
         throw error;
       }
     }
+
+    throw new ConflictException(
+      'Concurrent order update detected; please retry',
+    );
   }
 
   private async settleFill(
@@ -290,6 +299,20 @@ export class MatchingService {
         completedAt: complete ? new Date() : null,
       },
     });
+    // Some transaction adapters (including focused unit-test doubles) do not
+    // expose the optional notification delegate. Order settlement must remain
+    // atomic and must not fail solely because a notification cannot be queued.
+    if (tx.notification?.create) {
+      await tx.notification.create({
+        data: {
+          userId: order.account.userId,
+          type: 'ORDER',
+          title: complete ? 'Order filled' : 'Order partially filled',
+          body: `${order.side} ${quantity} ${order.instrument.symbol} at ₹${price.toFixed(2)}.`,
+          referenceId: order.id,
+        },
+      });
+    }
   }
 
   private async createSettlement(

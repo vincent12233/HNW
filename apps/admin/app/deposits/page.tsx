@@ -1,291 +1,90 @@
-﻿"use client";
+"use client";
 
-import { DollarOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Space,
-  Table,
-  Tag,
-  Typography,
-  message,
-} from "antd";
+import { CheckOutlined, CloseOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Input, Modal, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
-
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
-
-type AccountRecord = {
-  id: string;
-  accountNumber: string;
-  currency: string;
-  balances: {
-    cashBalance: string;
-    buyingPower: string;
-    frozenBalance: string;
-    holdingsMarketValue: string;
-    totalAsset: string;
-  };
-  user: {
-    id: string;
-    customerNo?: string | null;
-    fullName: string;
-    phone?: string | null;
-    status: string;
-  };
+type Deposit = {
+  id: string; amount: string | number; paymentMethod?: string | null;
+  referenceId?: string | null; note?: string | null; status: string; createdAt: string;
+  account: { accountNumber: string; user: { fullName: string; customerNo?: string | null; phone?: string | null } };
 };
-
-type AccountResponse = {
-  data: AccountRecord[];
-};
-
-function formatMoney(value?: string | number | null) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
-}
+const money = (value: string | number) => new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(Number(value));
 
 export default function DepositsPage() {
-  const [records, setRecords] = useState<AccountRecord[]>([]);
-  const [keyword, setKeyword] = useState("");
+  const [rows, setRows] = useState<Deposit[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
-  const [selected, setSelected] = useState<AccountRecord | null>(null);
-  const [form] = Form.useForm();
+  const [keyword, setKeyword] = useState("");
+  const [rejecting, setRejecting] = useState<Deposit | null>(null);
+  const [rejectNote, setRejectNote] = useState("");
+  const [processingId, setProcessingId] = useState("");
 
-  async function loadRecords() {
+  async function load() {
     setLoading(true);
-    setError("");
-
     try {
-      const response = await api.get<AccountResponse>("/admin/accounts", {
-        params: { page: 1, pageSize: 100, search: keyword.trim() || undefined },
-      });
-
-      setRecords(Array.isArray(response.data.data) ? response.data.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "账户数据加载失败",
-      );
-    } finally {
-      setLoading(false);
-    }
+      const response = await api.get<Deposit[]>("/deposit/pending");
+      setRows(Array.isArray(response.data) ? response.data : []);
+    } catch (error: any) {
+      message.error(error.response?.data?.message || "待上分记录加载失败");
+    } finally { setLoading(false); }
   }
+  useEffect(() => { load(); }, []);
+  const data = useMemo(() => {
+    const query = keyword.trim().toLowerCase();
+    if (!query) return rows;
+    return rows.filter((row) => [row.account.user.fullName, row.account.user.customerNo, row.account.user.phone, row.account.accountNumber, row.referenceId, row.paymentMethod].some((v) => String(v ?? "").toLowerCase().includes(query)));
+  }, [rows, keyword]);
 
-  useEffect(() => {
-    loadRecords();
-  }, []);
-
-  const filteredRecords = useMemo(() => {
-    const normalized = keyword.trim().toLowerCase();
-    if (!normalized) return records;
-
-    return records.filter((record) => {
-      const values = [
-        record.user.fullName,
-        record.user.customerNo,
-        record.user.phone,
-        record.accountNumber,
-      ];
-
-      return values.some((value) =>
-        String(value ?? "").toLowerCase().includes(normalized),
-      );
-    });
-  }, [keyword, records]);
-
-  function openCredit(record: AccountRecord) {
-    setSelected(record);
-    form.setFieldsValue({
-      amount: undefined,
-      referenceId: `DEP-${Date.now()}`,
-      note: "",
+  function approve(row: Deposit) {
+    Modal.confirm({
+      title: "确认资金已经实际到账？",
+      content: <Space orientation="vertical" size={4} style={{ marginTop: 12 }}><Text>客户：{row.account.user.fullName}</Text><Text>金额：{money(row.amount)}</Text><Text>付款流水号：{row.referenceId || "-"}</Text><Text type="danger">请以财务收款渠道的实际到账记录为准。</Text></Space>,
+      okText: "已核实到账并上分",
+      cancelText: "尚未核实",
+      onOk: () => performApproval(row),
     });
   }
-
-  async function submitCredit() {
-    if (!selected) return;
-
-    const values = await form.validateFields();
-    setSubmitting(true);
-
+  async function performApproval(row: Deposit) {
+    setProcessingId(row.id);
     try {
-      await api.post(`/admin/accounts/${selected.accountNumber}/credit`, {
-        amount: Number(values.amount).toFixed(2),
-        referenceId: values.referenceId,
-        note: values.note || "财务手动上分",
-      });
-
-      message.success("上分成功");
-      setSelected(null);
-      await loadRecords();
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "上分失败",
-      );
-    } finally {
-      setSubmitting(false);
-    }
+      await api.patch(`/deposit/${row.id}/approve`);
+      message.success("财务上分完成");
+      await load();
+    } catch (error: any) { message.error(error.response?.data?.message || "上分失败"); }
+    finally { setProcessingId(""); }
+  }
+  async function reject() {
+    if (!rejecting || rejectNote.trim().length < 3) return message.error("请输入至少3个字符的拒绝原因");
+    setProcessingId(rejecting.id);
+    try {
+      await api.patch(`/deposit/${rejecting.id}/reject`, { note: rejectNote.trim() });
+      message.success("已拒绝并通知客户");
+      setRejecting(null); setRejectNote(""); await load();
+    } catch (error: any) { message.error(error.response?.data?.message || "拒绝失败"); }
+    finally { setProcessingId(""); }
   }
 
-  const columns: ColumnsType<AccountRecord> = [
-    {
-      title: "客户",
-      key: "customer",
-      fixed: "left",
-      width: 240,
-      render: (_, record) => (
-        <Space orientation="vertical" size={0}>
-          <Text strong>{record.user.fullName || "未命名客户"}</Text>
-          <Text type="secondary">
-            {record.user.customerNo || "-"} / +91 {record.user.phone || "-"}
-          </Text>
-        </Space>
-      ),
-    },
-    { title: "交易账号", dataIndex: "accountNumber", width: 170 },
-    {
-      title: "现金",
-      key: "cash",
-      align: "right",
-      width: 150,
-      render: (_, record) => formatMoney(record.balances.cashBalance),
-    },
-    {
-      title: "可用资金",
-      key: "buyingPower",
-      align: "right",
-      width: 150,
-      render: (_, record) => formatMoney(record.balances.buyingPower),
-    },
-    {
-      title: "持仓市值",
-      key: "holdings",
-      align: "right",
-      width: 150,
-      render: (_, record) => formatMoney(record.balances.holdingsMarketValue),
-    },
-    {
-      title: "状态",
-      key: "status",
-      width: 110,
-      render: (_, record) => (
-        <Tag color={record.user.status === "ACTIVE" ? "green" : "red"}>
-          {record.user.status === "ACTIVE" ? "正常" : record.user.status}
-        </Tag>
-      ),
-    },
-    {
-      title: "操作",
-      key: "actions",
-      fixed: "right",
-      width: 130,
-      render: (_, record) => (
-        <Button type="primary" icon={<DollarOutlined />} onClick={() => openCredit(record)}>
-          上分
-        </Button>
-      ),
-    },
+  const columns: ColumnsType<Deposit> = [
+    { title: "客户", width: 220, render: (_, r) => <Space orientation="vertical" size={0}><Text strong>{r.account.user.fullName}</Text><Text type="secondary">{r.account.user.customerNo || "-"} / +91 {r.account.user.phone || "-"}</Text></Space> },
+    { title: "交易账号", width: 170, render: (_, r) => r.account.accountNumber },
+    { title: "到账金额", width: 150, align: "right", render: (_, r) => <Text strong>{money(r.amount)}</Text> },
+    { title: "存款方式", width: 140, render: (_, r) => r.paymentMethod || "-" },
+    { title: "付款流水号", width: 210, render: (_, r) => r.referenceId || "-" },
+    { title: "状态", width: 100, render: () => <Tag color="orange">待财务上分</Tag> },
+    { title: "客服备注", width: 240, render: (_, r) => r.note || "-" },
+    { title: "操作", fixed: "right", width: 210, render: (_, r) => <Space><Button type="primary" icon={<CheckOutlined />} loading={processingId === r.id} onClick={() => approve(r)}>确认到账并上分</Button><Button danger icon={<CloseOutlined />} disabled={!!processingId} onClick={() => setRejecting(r)}>拒绝</Button></Space> },
   ];
 
-  return (
-    <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>财务上分</Title>
-          <Paragraph type="secondary">
-            客户通过在线客服获取充值方式，付款确认后由财务在这里按交易账号手动上分。
-          </Paragraph>
-        </div>
-
-        {error && <Alert type="error" title={error} showIcon />}
-
-        <Card>
-          <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input.Search
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索客户姓名、客户编号、手机号或交易账号"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              onSearch={loadRecords}
-              style={{ width: 420 }}
-            />
-
-            <Button icon={<ReloadOutlined />} onClick={loadRecords} loading={loading}>
-              刷新
-            </Button>
-          </Space>
-
-          <Table<AccountRecord>
-            rowKey="id"
-            columns={columns}
-            dataSource={filteredRecords}
-            loading={loading}
-            scroll={{ x: 1250 }}
-          />
-        </Card>
-      </Space>
-
-      <Modal
-        title="财务上分"
-        open={!!selected}
-        onCancel={() => setSelected(null)}
-        onOk={submitCredit}
-        confirmLoading={submitting}
-        okText="确认上分"
-        cancelText="取消"
-      >
-        {selected && (
-          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-            <Alert
-              type="info"
-              showIcon
-              message={`${selected.user.fullName || "未命名客户"} / ${selected.accountNumber}`}
-              description={`当前现金：${formatMoney(selected.balances.cashBalance)}`}
-            />
-
-            <Form form={form} layout="vertical">
-              <Form.Item
-                name="amount"
-                label="上分金额"
-                rules={[{ required: true, message: "请输入上分金额" }]}
-              >
-                <InputNumber min={0.01} precision={2} prefix="₹" style={{ width: "100%" }} />
-              </Form.Item>
-
-              <Form.Item
-                name="referenceId"
-                label="付款流水号"
-                rules={[{ required: true, message: "请输入付款流水号" }]}
-              >
-                <Input />
-              </Form.Item>
-
-              <Form.Item name="note" label="备注">
-                <Input.TextArea rows={3} placeholder="可填写客服确认信息、付款渠道或财务备注" />
-              </Form.Item>
-            </Form>
-          </Space>
-        )}
-      </Modal>
-    </AdminShell>
-  );
+  return <AdminShell>
+    <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <div><Title level={2}>客户存款核对与上分</Title><Paragraph type="secondary">客服仅转交客户申报的存款信息。财务须自行核对收款账户、付款流水号和实际到账金额，确认后直接上分，无需二次审核。</Paragraph></div>
+      <Alert type="warning" showIcon title="只有财务可以确认资金到账。未在收款渠道查到实际资金时，请勿上分。" />
+      <Card><Space style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}><Input.Search allowClear value={keyword} onChange={(e) => setKeyword(e.target.value)} placeholder="搜索客户、账号或付款流水号" style={{ width: 420 }} /><Button icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button></Space><Table rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: 1450 }} /></Card>
+    </Space>
+    <Modal title="拒绝上分" open={!!rejecting} onCancel={() => setRejecting(null)} onOk={reject} confirmLoading={!!processingId} okButtonProps={{ danger: true }} okText="确认拒绝"><Input.TextArea value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} placeholder="填写拒绝原因，客户会收到通知" maxLength={300} /></Modal>
+  </AdminShell>;
 }

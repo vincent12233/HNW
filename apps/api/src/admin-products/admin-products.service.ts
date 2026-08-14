@@ -1,5 +1,6 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
@@ -10,19 +11,27 @@ export class AdminProductsService {
     return this.prisma.adminWatchlistItem.findMany({ orderBy: { createdAt: 'desc' } });
   }
 
-  createWatchlist(body: any) {
+  async createWatchlist(body: any) {
     this.require(body.symbol, '请输入股票代码');
     this.require(body.name, '请输入股票名称');
-    return this.prisma.adminWatchlistItem.create({ data: this.watchlistData(body) });
+    const data = this.watchlistData(body);
+    const duplicate = await this.prisma.adminWatchlistItem.findFirst({ where: { symbol: data.symbol, market: data.market } });
+    if (duplicate) throw new ConflictException('This Inst. stock is already listed');
+    const item = await this.prisma.adminWatchlistItem.create({ data });
+    await this.markInstitutionalInstrument(data.symbol, data.market, data.name);
+    return item;
   }
 
-  updateWatchlist(id: string, body: any) {
-    return this.updateOrThrow(() =>
+  async updateWatchlist(id: string, body: any) {
+    const item = await this.updateOrThrow(() =>
       this.prisma.adminWatchlistItem.update({ where: { id }, data: this.watchlistData(body) }),
     );
+    await this.markInstitutionalInstrument(item.symbol, item.market, item.name);
+    return item;
   }
 
   updateWatchlistStatus(id: string, status: string) {
+    if (!['ACTIVE', 'PAUSED'].includes(status)) throw new BadRequestException('Status must be ACTIVE or PAUSED');
     return this.updateOrThrow(() =>
       this.prisma.adminWatchlistItem.update({ where: { id }, data: { status } }),
     );
@@ -126,6 +135,12 @@ export class AdminProductsService {
   }
 
   private watchlistData(body: any) {
+    const direction = String(body.direction || 'UP').trim().toUpperCase();
+    if (!['UP', 'DOWN'].includes(direction)) throw new BadRequestException('Direction must be UP or DOWN');
+    const referencePrice = body.referencePrice == null || body.referencePrice === '' ? null : new Prisma.Decimal(body.referencePrice);
+    const expectedReturn = body.expectedReturn == null || body.expectedReturn === '' ? null : new Prisma.Decimal(body.expectedReturn);
+    if (referencePrice && referencePrice.lte(0)) throw new BadRequestException('Reference price must be positive');
+    if (expectedReturn && (expectedReturn.lte(0) || expectedReturn.gt(100))) throw new BadRequestException('Expected return must be between 0 and 100');
     return {
       symbol: String(body.symbol).trim().toUpperCase(),
       name: String(body.name).trim(),
@@ -133,6 +148,9 @@ export class AdminProductsService {
       category: String(body.category || '未分类').trim(),
       risk: String(body.risk || '中').trim(),
       reason: body.reason?.trim() || null,
+      direction,
+      referencePrice,
+      expectedReturn,
     };
   }
 
@@ -174,6 +192,16 @@ export class AdminProductsService {
     if (!String(value ?? '').trim()) {
       throw new BadRequestException(message);
     }
+  }
+
+  private async markInstitutionalInstrument(symbol: string, market: string, name: string) {
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    const exchange = market.trim().toUpperCase() === 'BSE' ? Exchange.BSE : Exchange.NSE;
+    await this.prisma.instrument.upsert({
+      where: { exchange_symbol: { symbol: normalizedSymbol, exchange } },
+      update: { name: name.trim(), category: 'INSTITUTIONAL', isActive: true },
+      create: { symbol: normalizedSymbol, exchange, name: name.trim(), category: 'INSTITUTIONAL', type: InstrumentType.EQUITY, currency: 'INR', lotSize: 1, tickSize: '0.05', isActive: true },
+    });
   }
 
   private async updateOrThrow<T>(operation: () => Promise<T>) {

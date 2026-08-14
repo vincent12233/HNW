@@ -394,7 +394,7 @@ export default function MarketAdminPage() {
             <Input placeholder="可选" />
           </Form.Item>
           <Form.Item name="logoUrl" label="公司 Logo URL">
-            <Input placeholder="例如 https://logo.clearbit.com/infosys.com" />
+            <Input placeholder="请使用公司授权的 HTTPS Logo 地址" />
           </Form.Item>
           <Space align="start" style={{ width: "100%" }}>
             <Form.Item name="category" label="分类">

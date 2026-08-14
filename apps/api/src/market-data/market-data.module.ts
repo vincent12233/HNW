@@ -1,8 +1,12 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 import { PrismaModule } from '../prisma/prisma.module';
+import { MarketSessionModule } from '../market-session/market-session.module';
+import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataController } from './market-data.controller';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
+import { MarketNewsService } from './market-news.service';
 import { NseSyncService } from './nse-sync.service';
 import { IndiaStockMcpProvider } from './providers/india-stock-mcp.provider';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
@@ -18,10 +22,12 @@ import { StreamingMarketDataService } from './streaming-market-data.service';
 import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, MarketSessionModule, AuthModule],
   controllers: [MarketDataController],
   providers: [
     MarketDataService,
+    MarketNewsService,
+    HistoricalMarketDataService,
     MarketDataHealthService,
     MarketDataProviderService,
     IndiaStockMcpProvider,
@@ -39,6 +45,7 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
   ],
   exports: [
     MarketDataService,
+    HistoricalMarketDataService,
     MarketDataHealthService,
     MarketDataProviderService,
     QuoteIngestionService,

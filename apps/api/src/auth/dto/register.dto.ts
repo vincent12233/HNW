@@ -1,4 +1,4 @@
-import { IsString, Length, Matches, MinLength } from 'class-validator';
+import { IsString, Matches, MaxLength, MinLength } from 'class-validator';
 
 export class RegisterDto {
   @IsString()
@@ -10,6 +10,7 @@ export class RegisterDto {
   phone: string;
 
   @IsString()
-  @Length(12, 12)
+  @MinLength(7)
+  @MaxLength(20)
   inviteCode: string;
 }

@@ -56,6 +56,7 @@ export class AdminAccountController {
   }
 
   @Post(':accountNumber/credit')
+  @Roles('FINANCE')
   credit(
     @Param('accountNumber') accountNumber: string,
     @Body() dto: AdjustBalanceDto,
@@ -69,6 +70,7 @@ export class AdminAccountController {
   }
 
   @Post(':accountNumber/debit')
+  @Roles('FINANCE')
   debit(
     @Param('accountNumber') accountNumber: string,
     @Body() dto: AdjustBalanceDto,

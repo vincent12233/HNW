@@ -12,19 +12,6 @@ class StockLogo extends StatelessWidget {
   final double size;
   final String? logoUrl;
 
-  static const Map<String, String> _logoUrls = {
-    'RELIANCE': 'https://logo.clearbit.com/ril.com',
-    'TCS': 'https://logo.clearbit.com/tcs.com',
-    'HDFCBANK': 'https://logo.clearbit.com/hdfcbank.com',
-    'INFY': 'https://logo.clearbit.com/infosys.com',
-    'ICICIBANK': 'https://logo.clearbit.com/icicibank.com',
-    'ITC': 'https://logo.clearbit.com/itcportal.com',
-    'HINDUNILVR': 'https://logo.clearbit.com/hul.co.in',
-    'NESTLEIND': 'https://logo.clearbit.com/nestle.in',
-    'TATACAP': 'https://logo.clearbit.com/tatacapital.com',
-    'NSDL': 'https://logo.clearbit.com/nsdl.co.in',
-  };
-
   static const Map<String, _LogoStyle> _styles = {
     'RELIANCE': _LogoStyle(Color(0xFF123B8A), Icons.energy_savings_leaf),
     'TCS': _LogoStyle(Color(0xFF0A6FB7), Icons.hub_outlined),
@@ -34,6 +21,15 @@ class StockLogo extends StatelessWidget {
     'ITC': _LogoStyle(Color(0xFF1D4ED8), Icons.apartment),
     'HINDUNILVR': _LogoStyle(Color(0xFF0EA5E9), Icons.water_drop),
     'NESTLEIND': _LogoStyle(Color(0xFF9D174D), Icons.local_cafe),
+    'SBIN': _LogoStyle(Color(0xFF2563EB), Icons.account_balance),
+    'BHARTIARTL': _LogoStyle(Color(0xFFDC2626), Icons.network_cell),
+    'LT': _LogoStyle(Color(0xFF1E40AF), Icons.engineering),
+    'AXISBANK': _LogoStyle(Color(0xFF9F1239), Icons.account_balance),
+    'KOTAKBANK': _LogoStyle(Color(0xFF1D4ED8), Icons.account_balance),
+    'MARUTI': _LogoStyle(Color(0xFF2563EB), Icons.directions_car),
+    'TITAN': _LogoStyle(Color(0xFF7C2D12), Icons.watch),
+    'BAJFINANCE': _LogoStyle(Color(0xFF0369A1), Icons.payments),
+    'SUNPHARMA': _LogoStyle(Color(0xFFEA580C), Icons.medication),
     'TATACAP': _LogoStyle(Color(0xFF1D4ED8), Icons.business),
     'NSDL': _LogoStyle(Color(0xFF475569), Icons.security),
   };
@@ -42,8 +38,9 @@ class StockLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final style = _styles[normalizedSymbol] ?? _fallbackStyle(normalizedSymbol);
-    final resolvedLogoUrl =
-        logoUrl?.trim().isNotEmpty == true ? logoUrl!.trim() : _logoUrls[normalizedSymbol];
+    final resolvedLogoUrl = logoUrl?.trim().isNotEmpty == true
+        ? logoUrl!.trim()
+        : null;
 
     return Container(
       width: size,
@@ -62,6 +59,11 @@ class StockLogo extends StatelessWidget {
                 width: size - 6,
                 height: size - 6,
                 fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,
+                loadingBuilder: (context, child, progress) {
+                  if (progress == null) return child;
+                  return _FallbackLogo(style: style, size: size);
+                },
                 errorBuilder: (_, _, _) =>
                     _FallbackLogo(style: style, size: size),
               ),
@@ -103,10 +105,7 @@ class _FallbackLogo extends StatelessWidget {
       width: size - 8,
       height: size - 8,
       alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: style.color,
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: style.color, shape: BoxShape.circle),
       child: Icon(style.icon, color: Colors.white, size: size * 0.48),
     );
   }

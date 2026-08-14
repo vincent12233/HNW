@@ -1,0 +1,42 @@
+name: Admin CI
+
+on:
+  pull_request:
+    paths:
+      - 'apps/admin/**'
+      - '.github/workflows/admin-ci.yml'
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/admin/**'
+      - '.github/workflows/admin-ci.yml'
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/admin
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/admin/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint NSE instrument library
+        run: npx eslint app/instruments/page.tsx
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://127.0.0.1:3000

@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
 import '../models/portfolio_position.dart';
+import '../models/account_transaction.dart';
 import '../models/trading_order.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
@@ -12,6 +13,18 @@ import 'session_expiry_service.dart';
 class TradingService {
   final AuthService _authService = AuthService();
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
+
+  static TradingOrder? _lastPlacedOrder;
+
+  static void clearLastPlacedOrder() {
+    _lastPlacedOrder = null;
+  }
+
+  static TradingOrder? takeLastPlacedOrder() {
+    final order = _lastPlacedOrder;
+    _lastPlacedOrder = null;
+    return order;
+  }
 
   Future<TradingAccountSnapshot?> fetchAccountSnapshot() async {
     final session = await _authService.restoreSession();
@@ -36,7 +49,9 @@ class TradingService {
       final decoded = jsonDecode(response.body);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw TradingException(_apiMessage(decoded, 'Unable to load portfolio'));
+        throw TradingException(
+          _apiMessage(decoded, 'Unable to load portfolio'),
+        );
       }
 
       if (decoded is! Map<String, dynamic>) {
@@ -91,11 +106,56 @@ class TradingService {
     }
   }
 
-  Future<TradingOrder> placeMarketOrder(TradingOrder order) async {
+  Future<List<AccountTransaction>> fetchTransactions() async {
+    final session = await _authService.restoreSession();
+    if (session == null || session.accessToken.isEmpty) return const [];
+    final response = await http
+        .get(
+          Uri.parse(
+            '${AppConfig.apiBaseUrl}/account/transactions?pageSize=100',
+          ),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      return const [];
+    }
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw TradingException(
+        _apiMessage(decoded, 'Unable to load transactions'),
+      );
+    }
+    final rows = decoded is Map ? decoded['data'] : null;
+    if (rows is! List) return const [];
+    return rows
+        .whereType<Map>()
+        .map(
+          (row) => AccountTransaction.fromJson(Map<String, dynamic>.from(row)),
+        )
+        .toList();
+  }
+
+  Future<TradingOrder> placeOrder(TradingOrder order) async {
     final session = await _authService.restoreSession();
 
     if (session == null || session.accessToken.isEmpty) {
       throw const TradingException('Please sign in again');
+    }
+
+    final body = <String, dynamic>{
+      'clientOrderId':
+          'APP-${DateTime.now().microsecondsSinceEpoch}-${order.exchange}-${order.symbol}',
+      'exchange': order.exchange,
+      'symbol': order.symbol,
+      'side': order.isBuy ? 'BUY' : 'SELL',
+      'type': order.type,
+      'timeInForce': order.timeInForce,
+      'quantity': order.quantity,
+    };
+    if (order.isLimit && order.limitPrice != null) {
+      body['limitPrice'] = order.limitPrice!.toStringAsFixed(4);
     }
 
     final response = await http
@@ -105,16 +165,7 @@ class TradingService {
             'Authorization': 'Bearer ${session.accessToken}',
             'Content-Type': 'application/json',
           },
-          body: jsonEncode({
-            'clientOrderId':
-                'APP-${DateTime.now().microsecondsSinceEpoch}-${order.symbol}',
-            'exchange': 'NSE',
-            'symbol': order.symbol,
-            'side': order.isBuy ? 'BUY' : 'SELL',
-            'type': 'MARKET',
-            'timeInForce': 'DAY',
-            'quantity': order.quantity,
-          }),
+          body: jsonEncode(body),
         )
         .timeout(const Duration(seconds: 10));
 
@@ -130,12 +181,46 @@ class TradingService {
     }
 
     final apiOrder = decoded is Map ? decoded['order'] : null;
+    final confirmedOrder = apiOrder is Map
+        ? TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder))
+        : order;
 
-    if (apiOrder is! Map) {
-      return order;
+    _lastPlacedOrder = confirmedOrder;
+    return confirmedOrder;
+  }
+
+  Future<TradingOrder> placeMarketOrder(TradingOrder order) {
+    return placeOrder(order);
+  }
+
+  Future<void> cancelOrder(String orderId) async {
+    final session = await _authService.restoreSession();
+    if (session == null || session.accessToken.isEmpty) {
+      throw const TradingException('Please sign in again');
     }
 
-    return TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder));
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/orders/$orderId/cancel'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 10));
+
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw const TradingException('Please sign in again');
+    }
+
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      decoded = null;
+    }
+
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw TradingException(_apiMessage(decoded, 'Order cancellation failed'));
+    }
   }
 }
 
@@ -171,11 +256,15 @@ List<TradingOrder> _ordersFromRows(List<dynamic> rows) {
 class TradingAccountSnapshot {
   const TradingAccountSnapshot({
     required this.cashBalance,
+    required this.buyingPower,
+    required this.frozenBalance,
     required this.realizedProfitLoss,
     required this.positions,
   });
 
   final double cashBalance;
+  final double buyingPower;
+  final double frozenBalance;
   final double realizedProfitLoss;
   final List<PortfolioPosition> positions;
 
@@ -186,6 +275,10 @@ class TradingAccountSnapshot {
 
     return TradingAccountSnapshot(
       cashBalance: _doubleValue(balances['cashBalance']),
+      buyingPower: _doubleValue(
+        balances['buyingPower'] ?? balances['cashBalance'],
+      ),
+      frozenBalance: _doubleValue(balances['frozenBalance']),
       realizedProfitLoss: _doubleValue(pnl['realizedPnl']),
       positions: positionRows is List
           ? positionRows

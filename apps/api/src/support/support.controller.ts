@@ -60,6 +60,34 @@ export class SupportController {
     return this.supportService.getMessages(id, req.user.userId, req.user.role);
   }
 
+  @Post('conversations/:id/read')
+  @Roles(UserRole.SUPPORT, UserRole.ADMIN, UserRole.CLIENT)
+  markRead(@Req() req: any, @Param('id') id: string) {
+    return this.supportService.markRead(id, req.user.userId, req.user.role);
+  }
+
+  @Get('unread-count')
+  unreadCount(@Req() req: any) {
+    return this.supportService.unreadCount(req.user.userId, req.user.role);
+  }
+
+  @Get('status')
+  status() {
+    return this.supportService.status();
+  }
+
+  @Post('conversations/:id/assign')
+  @Roles(UserRole.SUPPORT, UserRole.ADMIN)
+  assign(@Req() req: any, @Param('id') id: string, @Body() body: { assignedToId?: string }) {
+    return this.supportService.assign(id, body.assignedToId || req.user.userId, req.user.userId);
+  }
+
+  @Post('conversations/:id/reopen')
+  @Roles(UserRole.SUPPORT, UserRole.ADMIN)
+  reopen(@Req() req: any, @Param('id') id: string) {
+    return this.supportService.reopen(id, req.user.userId);
+  }
+
   @Post('messages')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN, UserRole.CLIENT)
   sendMessage(
@@ -68,6 +96,9 @@ export class SupportController {
     body: {
       conversationId: string;
       content: string;
+      attachmentName?: string;
+      attachmentType?: string;
+      attachmentBase64?: string;
     },
   ) {
     return this.supportService.sendMessage(
@@ -78,6 +109,9 @@ export class SupportController {
       req.user.role,
 
       body.content,
+      body.attachmentName,
+      body.attachmentType,
+      body.attachmentBase64,
     );
   }
 

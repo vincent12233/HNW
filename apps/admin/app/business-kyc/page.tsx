@@ -35,6 +35,7 @@ type KycSubmission = {
   documentType: string;
   status: string;
   fileName: string;
+  backFileName?: string | null;
   recognizedType?: string | null;
   recognizedText?: string | null;
   reviewNote?: string | null;
@@ -67,12 +68,16 @@ export default function BusinessKycPage() {
   const [error, setError] = useState("");
   const [reviewing, setReviewing] = useState<KycSubmission | null>(null);
   const [previewFile, setPreviewFile] = useState<KycFile | null>(null);
+  const [previewBackFile, setPreviewBackFile] = useState<KycFile | null>(null);
   const [note, setNote] = useState("");
 
   const previewUrl = useMemo(() => {
     if (!previewFile) return "";
     return `data:${previewFile.mimeType};base64,${previewFile.contentBase64}`;
   }, [previewFile]);
+  const previewBackUrl = useMemo(() => previewBackFile
+    ? `data:${previewBackFile.mimeType};base64,${previewBackFile.contentBase64}`
+    : "", [previewBackFile]);
 
   async function loadItems() {
     setLoading(true);
@@ -100,6 +105,7 @@ export default function BusinessKycPage() {
   async function openReview(record: KycSubmission) {
     setReviewing(record);
     setPreviewFile(null);
+    setPreviewBackFile(null);
     setNote(record.reviewNote || "");
     await loadFile(record.id);
   }
@@ -109,8 +115,15 @@ export default function BusinessKycPage() {
     setError("");
 
     try {
-      const response = await api.get<KycFile>(`/kyc/business/${submissionId}/file`);
+      const response = await api.get<KycFile>(`/kyc/business/${submissionId}/file?side=front`);
       setPreviewFile(response.data);
+      const record = items.find((item) => item.id === submissionId);
+      if (record?.backFileName) {
+        const backResponse = await api.get<KycFile>(`/kyc/business/${submissionId}/file?side=back`);
+        setPreviewBackFile(backResponse.data);
+      } else {
+        setPreviewBackFile(null);
+      }
     } catch (requestError: any) {
       const responseMessage = requestError.response?.data?.message;
       setError(
@@ -135,6 +148,7 @@ export default function BusinessKycPage() {
       message.success(decision === "APPROVED" ? "KYC 已通过" : "KYC 已拒绝");
       setReviewing(null);
       setPreviewFile(null);
+      setPreviewBackFile(null);
       setNote("");
       await loadItems();
     } catch (requestError: any) {
@@ -167,7 +181,7 @@ export default function BusinessKycPage() {
       dataIndex: "recognizedType",
       render: (value) => <Tag color="blue">{value || "-"}</Tag>,
     },
-    { title: "文件", dataIndex: "fileName" },
+    { title: "文件", render: (_, record) => record.backFileName ? "正面 + 反面" : record.fileName },
     { title: "状态", dataIndex: "status", render: statusTag },
     { title: "提交时间", dataIndex: "createdAt", render: formatDate },
     {
@@ -221,6 +235,7 @@ export default function BusinessKycPage() {
         onCancel={() => {
           setReviewing(null);
           setPreviewFile(null);
+          setPreviewBackFile(null);
           setNote("");
         }}
         footer={[
@@ -238,6 +253,7 @@ export default function BusinessKycPage() {
               <div>客户：{reviewing.fullName || "未命名客户"}</div>
               <div>手机号：+91 {reviewing.phone || "-"}</div>
               <div>文件：{reviewing.fileName}</div>
+              {reviewing.backFileName && <div>反面：{reviewing.backFileName}</div>}
               <div>自动识别：{reviewing.recognizedType || "-"}</div>
             </Space>
 
@@ -254,6 +270,13 @@ export default function BusinessKycPage() {
                       alt={previewFile.fileName}
                       style={{ maxHeight: 420, objectFit: "contain" }}
                     />
+                  )}
+                  {previewBackFile?.mimeType.startsWith("image/") && (
+                    <>
+                      <Text strong>Aadhaar 反面</Text>
+                      <Button icon={<DownloadOutlined />} href={previewBackUrl} download={previewBackFile.fileName}>下载反面</Button>
+                      <Image src={previewBackUrl} alt={previewBackFile.fileName} style={{ maxHeight: 420, objectFit: "contain" }} />
+                    </>
                   )}
                   {previewFile.mimeType === "application/pdf" && (
                     <iframe

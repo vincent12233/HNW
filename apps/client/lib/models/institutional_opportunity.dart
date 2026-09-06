@@ -40,6 +40,7 @@ class InstitutionalStock {
         symbol: json['symbol']?.toString() ?? '',
         companyName: json['name']?.toString() ?? '',
         price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+        marketPrice: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
         status: json['status']?.toString() ?? '',
         exchange: json['exchange']?.toString() ?? 'NSE',
       );
@@ -72,7 +73,6 @@ class OtcOrderRecord {
       symbol: instrument['symbol']?.toString() ?? '',
       quantity: int.tryParse(json['quantity']?.toString() ?? '') ?? 0,
       price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
-      marketPrice: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? 'PENDING',
       reviewNote: json['reviewNote']?.toString(),
     );

@@ -133,7 +133,7 @@ export class OrderCancellationService {
       },
     });
 
-    await tx.notification.create({
+    await tx.notification?.create({
       data: {
         userId: order.account.userId,
         type: 'TRADE',

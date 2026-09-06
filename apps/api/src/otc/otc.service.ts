@@ -86,7 +86,9 @@ export class OtcService {
     if (!/^\d{4}$/.test(key ?? '') || !offer.keyHashTier1 || !(await bcrypt.compare(key, offer.keyHashTier1))) throw new UnauthorizedException('Invalid 4-digit OTC transaction key');
     const quote = offer.instrument.quote;
     if (!quote?.lastPrice.greaterThan(0) || Date.now() - quote.asOf.getTime() > 5 * 60_000) throw new BadRequestException('Live market price is temporarily unavailable');
-    const selectedPrice = quote.lastPrice;
+    // The quote validates the system's market feed; the published OTC offer
+    // is the contractual discounted settlement price.
+    const selectedPrice = offer.price;
     const amount = selectedPrice.mul(quantity).toDecimalPlaces(2);
     const order = await this.prisma.otcOrder.create({
       data: {

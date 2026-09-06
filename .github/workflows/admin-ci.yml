@@ -1,5 +1,7 @@
 name: Admin CI
 
+# Deposits are submitted through online customer service and credited by finance after verification.
+
 on:
   pull_request:
     paths:

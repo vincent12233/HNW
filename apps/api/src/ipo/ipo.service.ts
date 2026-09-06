@@ -848,6 +848,11 @@ export class IpoService {
         orderBy: {
           createdAt: 'asc',
         },
+        include: {
+          ipoApplication: {
+            include: { ipo: true },
+          },
+        },
       });
 
       for (const debt of debts) {
@@ -870,14 +875,29 @@ export class IpoService {
         });
 
         if (newPaid >= Number(debt.amount)) {
-          await tx.ipoApplication.update({
+          const application = await tx.ipoApplication.update({
             where: {
               id: debt.ipoApplicationId,
             },
             data: {
               paymentStatus: 'PAID',
+              status: 'ALLOTTED',
             },
           });
+
+          if (!application.allocatedQuantity || !application.allocatedPrice || !debt.ipoApplication.ipo.instrumentId) {
+            throw new BadRequestException('IPO allocation is incomplete');
+          }
+
+          await this.settleIpoApplication(tx, {
+            applicationId: application.id,
+            accountId: account.id,
+            instrumentId: debt.ipoApplication.ipo.instrumentId,
+            quantity: application.allocatedQuantity,
+            price: Number(application.allocatedPrice),
+            totalAmount: Number(application.allocatedAmount),
+          });
+
         }
 
         remaining -= pay;

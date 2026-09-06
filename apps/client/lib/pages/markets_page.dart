@@ -344,7 +344,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     child: Text(
                       'Markets',
                       style: TextStyle(
-                        fontSize: 28,
+                        fontSize: 22,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -644,10 +644,10 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Widget _indexGrid(List<(String, double, double)> values) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns = constraints.maxWidth >= 620
+      final columns =
+          constraints.maxWidth >= 320 &&
+              MediaQuery.textScalerOf(context).scale(1) <= 1.15
           ? 4
-          : constraints.maxWidth >= 460
-          ? 3
           : 2;
       final gap = 8.0;
       final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
@@ -671,7 +671,7 @@ class _MarketsPageState extends State<MarketsPage> {
         : AppConfig.lossColor;
     final history = _indexHistory[item.$1] ?? const <double>[];
     return Container(
-      height: 112,
+      height: 110,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -988,9 +988,18 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Widget _marketBreadth(int advances, int declines, int unchanged) {
-    final total = advances + declines + unchanged == 0
-        ? 1
-        : advances + declines + unchanged;
+    final total = advances + declines + unchanged;
+    if (total == 0) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Text(
+            'Market breadth unavailable',
+            style: TextStyle(color: AppConfig.textSecondaryColor),
+          ),
+        ),
+      );
+    }
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -1041,18 +1050,21 @@ class _MarketsPageState extends State<MarketsPage> {
             borderRadius: BorderRadius.circular(99),
             child: Row(
               children: [
-                Expanded(
-                  flex: advances == 0 ? 1 : advances,
-                  child: Container(height: 8, color: AppConfig.gainColor),
-                ),
-                Expanded(
-                  flex: declines == 0 ? 1 : declines,
-                  child: Container(height: 8, color: AppConfig.lossColor),
-                ),
-                Expanded(
-                  flex: unchanged == 0 ? 1 : unchanged,
-                  child: Container(height: 8, color: const Color(0xFF98A2B3)),
-                ),
+                if (advances > 0)
+                  Expanded(
+                    flex: advances,
+                    child: Container(height: 8, color: AppConfig.gainColor),
+                  ),
+                if (declines > 0)
+                  Expanded(
+                    flex: declines,
+                    child: Container(height: 8, color: AppConfig.lossColor),
+                  ),
+                if (unchanged > 0)
+                  Expanded(
+                    flex: unchanged,
+                    child: Container(height: 8, color: const Color(0xFF98A2B3)),
+                  ),
               ],
             ),
           ),

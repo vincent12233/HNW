@@ -88,10 +88,10 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.use(securityMiddleware);
 
-  // Aadhaar KYC can contain two images. Base64 increases payload size by
-  // roughly one third, while KycService still enforces 8 MB per file.
-  app.use(json({ limit: '24mb' }));
-  app.use(urlencoded({ extended: true, limit: '24mb' }));
+  // KYC includes two ID files (8 MB each), a selfie (2 MB) and a signature (1 MB). Base64 increases payload size by
+  // roughly one third; KycService enforces each individual file limit.
+  app.use(json({ limit: '28mb' }));
+  app.use(urlencoded({ extended: true, limit: '28mb' }));
 
   const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
     .split(',')

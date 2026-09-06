@@ -7,6 +7,7 @@ import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
 import 'kyc_upload_page.dart';
+import 'bank_details_page.dart';
 
 class AccountSettingsPage extends StatefulWidget {
   const AccountSettingsPage({super.key, required this.section});
@@ -109,9 +110,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               return;
             }
             if (emailAddress.isNotEmpty &&
-                !RegExp(
-                  r'^[^\s@]+@[^\s@]+\.[^\s@]+$',
-                ).hasMatch(emailAddress)) {
+                !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(emailAddress)) {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Enter a valid email address')),
               );
@@ -156,7 +155,11 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             padding: EdgeInsets.symmetric(vertical: 40),
             child: Column(
               children: [
-                Icon(Icons.account_balance_outlined, size: 48, color: Colors.black38),
+                Icon(
+                  Icons.account_balance_outlined,
+                  size: 48,
+                  color: Colors.black38,
+                ),
                 SizedBox(height: 12),
                 Text('No bank account linked'),
                 SizedBox(height: 4),
@@ -220,9 +223,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       if (mounted) await load();
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(clientErrorMessage(error))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(clientErrorMessage(error))));
       }
     }
   }
@@ -240,93 +243,11 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   }
 
   Future<void> _addBank() async {
-    final bank = TextEditingController(),
-        holder = TextEditingController(),
-        number = TextEditingController(),
-        ifsc = TextEditingController();
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (c) => AlertDialog(
-        title: const Text('Add bank account'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: bank,
-                decoration: const InputDecoration(labelText: 'Bank name'),
-              ),
-              TextField(
-                controller: holder,
-                decoration: const InputDecoration(labelText: 'Account holder'),
-              ),
-              TextField(
-                controller: number,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(labelText: 'Account number'),
-              ),
-              TextField(
-                controller: ifsc,
-                decoration: const InputDecoration(labelText: 'IFSC code'),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(c, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final bankName = bank.text.trim();
-              final holderName = holder.text.trim();
-              final accountNumber = number.text.replaceAll(RegExp(r'\s+'), '');
-              final ifscCode = ifsc.text.trim().toUpperCase();
-              String? message;
-              if (bankName.length < 2) {
-                message = 'Enter a valid bank name';
-              } else if (holderName.length < 2) {
-                message = 'Enter the account holder name';
-              } else if (!RegExp(r'^\d{6,18}$').hasMatch(accountNumber)) {
-                message = 'Account number must contain 6 to 18 digits';
-              } else if (!RegExp(
-                r'^[A-Z]{4}0[A-Z0-9]{6}$',
-              ).hasMatch(ifscCode)) {
-                message = 'Enter a valid 11-character IFSC code';
-              }
-              if (message != null) {
-                ScaffoldMessenger.of(c)
-                  ..hideCurrentSnackBar()
-                  ..showSnackBar(SnackBar(content: Text(message)));
-                return;
-              }
-              number.text = accountNumber;
-              ifsc.text = ifscCode;
-              Navigator.pop(c, true);
-            },
-            child: const Text('Add account'),
-          ),
-        ],
-      ),
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const BankDetailsPage()),
     );
-    if (ok == true) {
-      try {
-        await service.addBank({
-          'bankName': bank.text.trim(),
-          'accountHolder': holder.text.trim(),
-          'accountNumber': number.text.trim(),
-          'ifscCode': ifsc.text.trim().toUpperCase(),
-        });
-        await load();
-      } catch (error) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(clientErrorMessage(error))));
-        }
-      }
-    }
+    if (saved == true && mounted) await load();
   }
 
   Widget _security() => ListView(
@@ -662,9 +583,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       );
       return;
     }
-    await Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const KycUploadPage()),
-    );
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const KycUploadPage()));
     if (mounted) await load();
   }
 }

@@ -40,7 +40,7 @@ class MarketHeader extends StatelessWidget {
               onTap: onAvatarTap,
               customBorder: const CircleBorder(),
               child: CircleAvatar(
-                radius: 27,
+                radius: 22,
                 backgroundColor: const Color(0xFFEAF3FF),
                 backgroundImage: avatarBytes == null
                     ? null
@@ -53,7 +53,7 @@ class MarketHeader extends StatelessWidget {
                             : accountName.trim()[0].toUpperCase(),
                         style: const TextStyle(
                           color: AppConfig.primaryColor,
-                          fontSize: 21,
+                          fontSize: 17,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
@@ -70,7 +70,7 @@ class MarketHeader extends StatelessWidget {
                         greeting,
                         style: const TextStyle(
                           color: AppConfig.textSecondaryColor,
-                          fontSize: 13,
+                          fontSize: 11,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -87,7 +87,7 @@ class MarketHeader extends StatelessWidget {
                     accountName,
                     style: const TextStyle(
                       color: AppConfig.textPrimaryColor,
-                      fontSize: 21,
+                      fontSize: 17,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -97,7 +97,7 @@ class MarketHeader extends StatelessWidget {
             IconButton(
               tooltip: 'Search',
               onPressed: onSearchTap,
-              icon: const Icon(Icons.search_rounded, size: 28),
+              icon: const Icon(Icons.search_rounded, size: 24),
             ),
             Stack(
               clipBehavior: Clip.none,
@@ -108,7 +108,7 @@ class MarketHeader extends StatelessWidget {
                   icon: const Icon(
                     Icons.notifications_none_rounded,
                     color: Color(0xFF334155),
-                    size: 28,
+                    size: 24,
                   ),
                 ),
                 if (notificationCount > 0)

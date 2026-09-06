@@ -46,153 +46,49 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFFF7FAFF),
+    backgroundColor: Colors.white,
     body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth >= 900;
-          return SingleChildScrollView(
-            padding: EdgeInsets.fromLTRB(
-              wide ? 36 : 20,
-              22,
-              wide ? 36 : 20,
-              24,
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1050),
-                child: Column(
-                  children: [
-                    if (wide)
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(child: _hero(height: 590)),
-                          const SizedBox(width: 34),
-                          SizedBox(width: 455, child: _loginCard()),
-                        ],
-                      )
-                    else ...[
-                      _hero(height: constraints.maxWidth < 380 ? 310 : 345),
-                      const SizedBox(height: 14),
-                      _loginCard(),
-                    ],
-                    const SizedBox(height: 16),
-                    _benefits(wide),
-                    const SizedBox(height: 11),
-                    _legal(),
-                  ],
-                ),
-              ),
-            ),
-          );
-        },
-      ),
-    ),
-  );
-
-  Widget _hero({required double height}) => SizedBox(
-    height: height,
-    child: Stack(
-      children: [
-        Positioned.fill(child: CustomPaint(painter: const _LoginHeroPainter())),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 440),
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             children: [
-              Row(
-                children: [
-                  const AppBrandLogo(size: 58),
-                  const SizedBox(width: 13),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'India Trading',
-                        style: TextStyle(
-                          color: Color(0xFF0A1730),
-                          fontSize: 22,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text(
-                        'Smart Investing, Better Future',
-                        style: TextStyle(
-                          color: Color(0xFF718096),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              const Spacer(flex: 2),
+              const SizedBox(height: 24),
+              const Center(child: AppBrandLogo(size: 60)),
+              const SizedBox(height: 12),
               const Text(
-                'Invest Smarter,',
+                'India Trading',
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF0A1730),
-                  fontSize: 34,
-                  height: 1.08,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.7,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                  fontStyle: FontStyle.italic,
+                  color: AppConfig.textPrimaryColor,
                 ),
               ),
+              const SizedBox(height: 4),
               const Text(
-                'Grow Better',
+                AppConfig.slogan,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: Color(0xFF156EF6),
-                  fontSize: 34,
-                  height: 1.08,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -.7,
+                  fontSize: 11,
+                  color: AppConfig.textSecondaryColor,
                 ),
               ),
-              const SizedBox(height: 18),
-              const SizedBox(
-                width: 330,
-                child: Text(
-                  'A focused platform for Inst., OTC and IPO opportunities with live market insights.',
-                  style: TextStyle(
-                    color: Color(0xFF5F6F86),
-                    fontSize: 14,
-                    height: 1.55,
-                  ),
-                ),
-              ),
-              const Spacer(flex: 2),
-              const Wrap(
-                spacing: 18,
-                runSpacing: 9,
-                children: [
-                  _HeroTag(Icons.shield_outlined, 'Secure'),
-                  _HeroTag(Icons.bolt_rounded, 'Fast'),
-                  _HeroTag(Icons.pie_chart_outline_rounded, 'Reliable'),
-                ],
-              ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 36),
+              _loginCard(),
+              const SizedBox(height: 32),
+              _legal(),
             ],
           ),
         ),
-      ],
+      ),
     ),
   );
-
   Widget _loginCard() => Container(
     width: double.infinity,
-    padding: const EdgeInsets.fromLTRB(26, 25, 26, 23),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(24),
-      border: Border.all(color: const Color(0xFFE9EEF7)),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x140E4E9C),
-          blurRadius: 28,
-          offset: Offset(0, 12),
-        ),
-      ],
-    ),
+    padding: const EdgeInsets.symmetric(vertical: 8),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -272,9 +168,9 @@ class _LoginPageState extends State<LoginPage> {
           child: FilledButton.icon(
             onPressed: isSubmitting ? null : _submit,
             style: FilledButton.styleFrom(
-              backgroundColor: const Color(0xFF146EF5),
+              backgroundColor: AppConfig.primaryColor,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(15),
+                borderRadius: BorderRadius.circular(7),
               ),
             ),
             iconAlignment: IconAlignment.end,
@@ -301,39 +197,33 @@ class _LoginPageState extends State<LoginPage> {
             style: const TextStyle(color: AppConfig.lossColor, fontSize: 12),
           ),
         ],
-        const SizedBox(height: 15),
-        const Row(
+        const SizedBox(height: 8),
+        ExpansionTile(
+          tilePadding: EdgeInsets.zero,
+          shape: const Border(),
+          collapsedShape: const Border(),
+          title: const Text(
+            'More sign-in options',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor),
+          ),
           children: [
-            Expanded(child: Divider()),
-            Padding(
-              padding: EdgeInsets.symmetric(horizontal: 12),
-              child: Text('or', style: TextStyle(color: Color(0xFF8894A6))),
+            if (AppConfig.googleClientId.isNotEmpty)
+              OutlinedButton.icon(
+                onPressed: isSubmitting ? null : _googleLogin,
+                icon: const Icon(Icons.account_circle_outlined),
+                label: const Text('Continue with Google'),
+                style: _outlineStyle(),
+              ),
+            OutlinedButton.icon(
+              onPressed: isSubmitting ? null : _biometricLogin,
+              icon: const Icon(Icons.fingerprint_rounded),
+              label: const Text('Continue with Biometrics'),
+              style: _outlineStyle(),
             ),
-            Expanded(child: Divider()),
           ],
         ),
-        const SizedBox(height: 13),
-        OutlinedButton.icon(
-          onPressed: isSubmitting ? null : _googleLogin,
-          icon: const Text(
-            'G',
-            style: TextStyle(
-              color: Color(0xFF4285F4),
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-            ),
-          ),
-          label: const Text('Continue with Google'),
-          style: _outlineStyle(),
-        ),
-        const SizedBox(height: 10),
-        OutlinedButton.icon(
-          onPressed: isSubmitting ? null : _biometricLogin,
-          icon: const Icon(Icons.fingerprint_rounded),
-          label: const Text('Continue with Biometrics'),
-          style: _outlineStyle(),
-        ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Wrap(
           alignment: WrapAlignment.center,
           crossAxisAlignment: WrapCrossAlignment.center,
@@ -366,13 +256,13 @@ class _LoginPageState extends State<LoginPage> {
         prefixIcon: Icon(icon, color: const Color(0xFF263650)),
         filled: true,
         fillColor: Colors.white,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(7)),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(7),
           borderSide: const BorderSide(color: Color(0xFFDDE4EF)),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(7),
           borderSide: const BorderSide(
             color: AppConfig.primaryColor,
             width: 1.5,
@@ -384,88 +274,8 @@ class _LoginPageState extends State<LoginPage> {
     foregroundColor: const Color(0xFF263650),
     side: const BorderSide(color: Color(0xFFDDE4EF)),
     minimumSize: const Size.fromHeight(50),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(26)),
+    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(7)),
   );
-
-  Widget _benefits(bool wide) {
-    const values = [
-      (
-        Icons.shield_outlined,
-        Color(0xFF0F72EA),
-        Color(0xFFE9F3FF),
-        'Bank-level Security',
-        'Protected account access',
-      ),
-      (
-        Icons.bolt_rounded,
-        Color(0xFF17A868),
-        Color(0xFFE9F9EF),
-        'Quick & Easy',
-        'Streamlined onboarding',
-      ),
-      (
-        Icons.trending_up_rounded,
-        Color(0xFF6B57E8),
-        Color(0xFFF1EDFF),
-        'Real-time Data',
-        'Live market updates',
-      ),
-      (
-        Icons.support_agent_rounded,
-        Color(0xFFF08A28),
-        Color(0xFFFFF1E5),
-        'Online Support',
-        'Help when you need it',
-      ),
-    ];
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: const [BoxShadow(color: Color(0x0D21518C), blurRadius: 18)],
-      ),
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        runSpacing: 18,
-        children: values
-            .map(
-              (value) => SizedBox(
-                width: wide ? 245 : 165,
-                child: Column(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: value.$3,
-                      child: Icon(value.$1, color: value.$2),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      value.$4,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF18253D),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      value.$5,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        color: Color(0xFF8290A4),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
-  }
 
   Widget _legal() => Wrap(
     alignment: WrapAlignment.center,
@@ -611,126 +421,6 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) setState(() => isSubmitting = false);
     }
   }
-}
-
-class _HeroTag extends StatelessWidget {
-  const _HeroTag(this.icon, this.label);
-  final IconData icon;
-  final String label;
-  @override
-  Widget build(BuildContext context) => Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      CircleAvatar(
-        radius: 15,
-        backgroundColor: const Color(0xFFEAF3FF),
-        child: Icon(icon, size: 16, color: const Color(0xFF1571EC)),
-      ),
-      const SizedBox(width: 7),
-      Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF263650),
-          fontSize: 12,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    ],
-  );
-}
-
-class _LoginHeroPainter extends CustomPainter {
-  const _LoginHeroPainter();
-  @override
-  void paint(Canvas canvas, Size size) {
-    final glow = Paint()
-      ..shader =
-          const RadialGradient(
-            colors: [Color(0x332D86FF), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * .78, size.height * .48),
-              radius: size.width * .55,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, glow);
-    final candle = Paint()
-      ..color = const Color(0x223D78F0)
-      ..strokeWidth = 2;
-    for (var i = 0; i < 6; i++) {
-      final x = size.width * (.56 + i * .065);
-      final y = size.height * (.36 - i * .035);
-      canvas.drawLine(Offset(x, y - 14), Offset(x, y + 30), candle);
-      canvas.drawRect(Rect.fromLTWH(x - 6, y, 12, 20), candle);
-    }
-    final bars = Paint()
-      ..shader = const LinearGradient(
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
-        colors: [Color(0xFF1531B9), Color(0xFF39A8F8)],
-      ).createShader(Offset.zero & size);
-    for (var i = 0; i < 5; i++) {
-      final height = 35.0 + i * 25;
-      canvas.drawRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            size.width - 145 + i * 27,
-            size.height - 68 - height,
-            18,
-            height,
-          ),
-          const Radius.circular(3),
-        ),
-        bars,
-      );
-    }
-    final growth = Path()
-      ..moveTo(size.width * .57, size.height * .76)
-      ..lineTo(size.width * .69, size.height * .65)
-      ..lineTo(size.width * .79, size.height * .69)
-      ..lineTo(size.width * .92, size.height * .43);
-    canvas.drawPath(
-      growth,
-      Paint()
-        ..color = const Color(0xFF18B98A)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-    canvas.drawLine(
-      Offset(size.width * .92, size.height * .43),
-      Offset(size.width * .89, size.height * .47),
-      Paint()
-        ..color = const Color(0xFF18B98A)
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.drawLine(
-      Offset(size.width * .92, size.height * .43),
-      Offset(size.width * .91, size.height * .49),
-      Paint()
-        ..color = const Color(0xFF18B98A)
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round,
-    );
-    final skyline = Paint()..color = const Color(0x111C75D8);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(
-          size.width * .61,
-          size.height * .49,
-          size.width * .22,
-          size.height * .25,
-        ),
-        const Radius.circular(70),
-      ),
-      skyline,
-    );
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 bool _isIndianMobileNumber(String value) {

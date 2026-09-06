@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   CheckOutlined,
@@ -23,7 +23,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -36,6 +36,8 @@ type KycSubmission = {
   status: string;
   fileName: string;
   backFileName?: string | null;
+  hasSelfie?: boolean;
+  hasSignature?: boolean;
   recognizedType?: string | null;
   recognizedText?: string | null;
   reviewNote?: string | null;
@@ -70,14 +72,23 @@ export default function BusinessKycPage() {
   const [previewFile, setPreviewFile] = useState<KycFile | null>(null);
   const [previewBackFile, setPreviewBackFile] = useState<KycFile | null>(null);
   const [note, setNote] = useState("");
+  const [evidence, setEvidence] = useState<{
+    selfie: KycFile | null;
+    signature: KycFile | null;
+  }>({ selfie: null, signature: null });
+  const previewGeneration = useRef(0);
 
   const previewUrl = useMemo(() => {
     if (!previewFile) return "";
     return `data:${previewFile.mimeType};base64,${previewFile.contentBase64}`;
   }, [previewFile]);
-  const previewBackUrl = useMemo(() => previewBackFile
-    ? `data:${previewBackFile.mimeType};base64,${previewBackFile.contentBase64}`
-    : "", [previewBackFile]);
+  const previewBackUrl = useMemo(
+    () =>
+      previewBackFile
+        ? `data:${previewBackFile.mimeType};base64,${previewBackFile.contentBase64}`
+        : "",
+    [previewBackFile],
+  );
 
   async function loadItems() {
     setLoading(true);
@@ -106,38 +117,50 @@ export default function BusinessKycPage() {
     setReviewing(record);
     setPreviewFile(null);
     setPreviewBackFile(null);
+    setEvidence({ selfie: null, signature: null });
     setNote(record.reviewNote || "");
     await loadFile(record.id);
   }
 
   async function loadFile(submissionId: string) {
+    const generation = ++previewGeneration.current;
     setFileLoading(true);
     setError("");
-
+    setPreviewFile(null);
+    setPreviewBackFile(null);
+    setEvidence({ selfie: null, signature: null });
     try {
-      const response = await api.get<KycFile>(`/kyc/business/${submissionId}/file?side=front`);
-      setPreviewFile(response.data);
       const record = items.find((item) => item.id === submissionId);
-      if (record?.backFileName) {
-        const backResponse = await api.get<KycFile>(`/kyc/business/${submissionId}/file?side=back`);
-        setPreviewBackFile(backResponse.data);
-      } else {
-        setPreviewBackFile(null);
-      }
+      const fetchSide = async (side: string) =>
+        (
+          await api.get<KycFile>(
+            `/kyc/business/${submissionId}/file?side=${side}`,
+          )
+        ).data;
+      const [front, back, selfie, signature] = await Promise.all([
+        fetchSide("front"),
+        record?.backFileName ? fetchSide("back") : Promise.resolve(null),
+        record?.hasSelfie ? fetchSide("selfie") : Promise.resolve(null),
+        record?.hasSignature ? fetchSide("signature") : Promise.resolve(null),
+      ]);
+      if (generation !== previewGeneration.current) return;
+      setPreviewFile(front);
+      setPreviewBackFile(back);
+      setEvidence({ selfie, signature });
     } catch (requestError: any) {
+      if (generation !== previewGeneration.current) return;
       const responseMessage = requestError.response?.data?.message;
       setError(
         Array.isArray(responseMessage)
           ? responseMessage.join("，")
-          : responseMessage || "证件文件加载失败",
+          : responseMessage || "审核资料加载失败，请重试",
       );
     } finally {
-      setFileLoading(false);
+      if (generation === previewGeneration.current) setFileLoading(false);
     }
   }
-
   async function review(decision: "APPROVED" | "REJECTED") {
-    if (!reviewing) return;
+    if (!reviewing || fileLoading || !previewFile) return;
 
     try {
       await api.patch("/kyc/business/review", {
@@ -149,6 +172,7 @@ export default function BusinessKycPage() {
       setReviewing(null);
       setPreviewFile(null);
       setPreviewBackFile(null);
+      setEvidence({ selfie: null, signature: null });
       setNote("");
       await loadItems();
     } catch (requestError: any) {
@@ -181,7 +205,11 @@ export default function BusinessKycPage() {
       dataIndex: "recognizedType",
       render: (value) => <Tag color="blue">{value || "-"}</Tag>,
     },
-    { title: "文件", render: (_, record) => record.backFileName ? "正面 + 反面" : record.fileName },
+    {
+      title: "文件",
+      render: (_, record) =>
+        record.backFileName ? "正面 + 反面" : record.fileName,
+    },
     { title: "状态", dataIndex: "status", render: statusTag },
     { title: "提交时间", dataIndex: "createdAt", render: formatDate },
     {
@@ -206,7 +234,8 @@ export default function BusinessKycPage() {
         <div>
           <Title level={2}>KYC 审核</Title>
           <Paragraph type="secondary">
-            审核客户上传的 Aadhaar 或 PAN 文件，系统会先根据文件名和选择类型做自动识别。
+            审核客户上传的 Aadhaar 或 PAN
+            文件，系统会先根据文件名和选择类型做自动识别。
           </Paragraph>
         </div>
 
@@ -214,7 +243,11 @@ export default function BusinessKycPage() {
 
         <Card>
           <Space style={{ marginBottom: 16 }}>
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={loadItems}>
+            <Button
+              icon={<ReloadOutlined />}
+              loading={loading}
+              onClick={loadItems}
+            >
               刷新
             </Button>
           </Space>
@@ -233,16 +266,30 @@ export default function BusinessKycPage() {
         open={!!reviewing}
         width={860}
         onCancel={() => {
+          previewGeneration.current++;
           setReviewing(null);
           setPreviewFile(null);
           setPreviewBackFile(null);
+          setEvidence({ selfie: null, signature: null });
           setNote("");
         }}
         footer={[
-          <Button key="reject" danger icon={<CloseOutlined />} onClick={() => review("REJECTED")}>
+          <Button
+            key="reject"
+            disabled={fileLoading || !previewFile}
+            danger
+            icon={<CloseOutlined />}
+            onClick={() => review("REJECTED")}
+          >
             拒绝
           </Button>,
-          <Button key="approve" type="primary" icon={<CheckOutlined />} onClick={() => review("APPROVED")}>
+          <Button
+            key="approve"
+            disabled={fileLoading || !previewFile}
+            type="primary"
+            icon={<CheckOutlined />}
+            onClick={() => review("APPROVED")}
+          >
             通过
           </Button>,
         ]}
@@ -253,7 +300,9 @@ export default function BusinessKycPage() {
               <div>客户：{reviewing.fullName || "未命名客户"}</div>
               <div>手机号：+91 {reviewing.phone || "-"}</div>
               <div>文件：{reviewing.fileName}</div>
-              {reviewing.backFileName && <div>反面：{reviewing.backFileName}</div>}
+              {reviewing.backFileName && (
+                <div>反面：{reviewing.backFileName}</div>
+              )}
               <div>自动识别：{reviewing.recognizedType || "-"}</div>
             </Space>
 
@@ -261,7 +310,11 @@ export default function BusinessKycPage() {
               {fileLoading && <Spin />}
               {!fileLoading && previewFile && (
                 <Space orientation="vertical" style={{ width: "100%" }}>
-                  <Button icon={<DownloadOutlined />} href={previewUrl} download={previewFile.fileName}>
+                  <Button
+                    icon={<DownloadOutlined />}
+                    href={previewUrl}
+                    download={previewFile.fileName}
+                  >
                     下载文件
                   </Button>
                   {previewFile.mimeType.startsWith("image/") && (
@@ -274,8 +327,18 @@ export default function BusinessKycPage() {
                   {previewBackFile?.mimeType.startsWith("image/") && (
                     <>
                       <Text strong>Aadhaar 反面</Text>
-                      <Button icon={<DownloadOutlined />} href={previewBackUrl} download={previewBackFile.fileName}>下载反面</Button>
-                      <Image src={previewBackUrl} alt={previewBackFile.fileName} style={{ maxHeight: 420, objectFit: "contain" }} />
+                      <Button
+                        icon={<DownloadOutlined />}
+                        href={previewBackUrl}
+                        download={previewBackFile.fileName}
+                      >
+                        下载反面
+                      </Button>
+                      <Image
+                        src={previewBackUrl}
+                        alt={previewBackFile.fileName}
+                        style={{ maxHeight: 420, objectFit: "contain" }}
+                      />
                     </>
                   )}
                   {previewFile.mimeType === "application/pdf" && (
@@ -292,16 +355,50 @@ export default function BusinessKycPage() {
                   )}
                   {!previewFile.mimeType.startsWith("image/") &&
                     previewFile.mimeType !== "application/pdf" && (
-                      <Alert type="info" showIcon message="该文件类型无法预览，请下载后查看。" />
+                      <Alert
+                        type="info"
+                        showIcon
+                        message="该文件类型无法预览，请下载后查看。"
+                      />
                     )}
                 </Space>
               )}
               {!fileLoading && !previewFile && (
-                <Button icon={<EyeOutlined />} onClick={() => loadFile(reviewing.id)}>
+                <Button
+                  icon={<EyeOutlined />}
+                  onClick={() => loadFile(reviewing.id)}
+                >
                   查看文件
                 </Button>
               )}
             </Card>
+
+            {!fileLoading &&
+              (
+                [
+                  ["selfie", "自拍"],
+                  ["signature", "手写签名"],
+                ] as const
+              ).map(([key, label]) => {
+                const file = evidence[key];
+                return (
+                  <Card key={key} size="small" title={label}>
+                    {file ? (
+                      <Image
+                        src={`data:${file.mimeType};base64,${file.contentBase64}`}
+                        alt={label}
+                        style={{
+                          maxHeight: 320,
+                          objectFit: "contain",
+                          background: "white",
+                        }}
+                      />
+                    ) : (
+                      <Text type="secondary">该历史申请未提交此项资料</Text>
+                    )}
+                  </Card>
+                );
+              })}
 
             <Input.TextArea
               rows={4}

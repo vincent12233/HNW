@@ -38,16 +38,16 @@ class AppConfig {
     return 'http://localhost:3000';
   }
 
-  static const Color primaryColor = Color(0xFF0878F9);
-  static const Color primaryDarkColor = Color(0xFF073B91);
-  static const Color primaryGradientEnd = Color(0xFF075EDF);
+  static const Color primaryColor = Color(0xFF0055F5);
+  static const Color primaryDarkColor = Color(0xFF062477);
+  static const Color primaryGradientEnd = Color(0xFF0346C9);
   static const Color surfaceColor = Colors.white;
   static const Color borderColor = Color(0xFFE8ECF2);
   static const Color gainColor = Color(0xFF12A95B);
   static const Color lossColor = Color(0xFFE83945);
   static const Color neutralColor = Color(0xFF667085);
-  static const Color backgroundColor = Color(0xFFF9FAFD);
-  static const Color textPrimaryColor = Color(0xFF101828);
+  static const Color backgroundColor = Colors.white;
+  static const Color textPrimaryColor = Color(0xFF101638);
   static const Color textSecondaryColor = Color(0xFF667085);
   static const Color chartGainColor = Color(0xFF43C987);
 }

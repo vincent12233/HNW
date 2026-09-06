@@ -1,10 +1,33 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { extname } from 'path';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { PrivateObjectStorageService } from '../storage/private-object-storage.service';
 
-type KycSubmissionRow = {
+export type KycSubmissionInput = {
+  documentType: 'AADHAAR' | 'PAN';
+  fileName: string;
+  mimeType?: string;
+  contentBase64: string;
+  backFileName?: string;
+  backMimeType?: string;
+  backContentBase64?: string;
+  selfieContentBase64: string;
+  selfieMimeType: string;
+  signatureContentBase64: string;
+};
+
+type KycEvidenceRow = {
+  selfieFilePath: string | null;
+  selfieMimeType: string | null;
+  signatureFilePath: string | null;
+};
+
+type KycSubmissionRow = KycEvidenceRow & {
   id: string;
   documentType: string;
   status: string;
@@ -23,7 +46,7 @@ type KycSubmissionRow = {
   phone: string | null;
 };
 
-type KycFileRow = {
+type KycFileRow = KycEvidenceRow & {
   fileName: string;
   filePath: string;
   mimeType: string | null;
@@ -34,17 +57,12 @@ type KycFileRow = {
 
 @Injectable()
 export class KycService {
-  constructor(private readonly prisma: PrismaService, private readonly objects: PrivateObjectStorageService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly objects: PrivateObjectStorageService,
+  ) {}
 
-  async submit(userId: string, input: {
-    documentType: 'AADHAAR' | 'PAN';
-    fileName: string;
-    mimeType?: string;
-    contentBase64: string;
-    backFileName?: string;
-    backMimeType?: string;
-    backContentBase64?: string;
-  }) {
+  async submit(userId: string, input: KycSubmissionInput) {
     if (input.documentType !== 'AADHAAR' && input.documentType !== 'PAN') {
       throw new BadRequestException('Unsupported KYC document type');
     }
@@ -74,43 +92,94 @@ export class KycService {
     const backBuffer = input.backContentBase64
       ? this.decodeBase64(input.backContentBase64, 'KYC back file')
       : null;
-    if (input.documentType === 'AADHAAR' && (!backBuffer || !input.backFileName)) {
-      throw new BadRequestException('Aadhaar front and back files are required');
+    if (
+      input.documentType === 'AADHAAR' &&
+      (!backBuffer || !input.backFileName)
+    ) {
+      throw new BadRequestException(
+        'Aadhaar front and back files are required',
+      );
     }
-    if (backBuffer && (backBuffer.length === 0 || backBuffer.length > 8 * 1024 * 1024)) {
+    if (
+      backBuffer &&
+      (backBuffer.length === 0 || backBuffer.length > 8 * 1024 * 1024)
+    ) {
       throw new BadRequestException('Each KYC file must be 8 MB or smaller');
     }
 
-    const frontObject = await this.objects.putKyc(user.id, fileBuffer, input.mimeType);
-    const filePath = frontObject.key;
-
-    let backFilePath: string | null = null;
-    if (backBuffer && input.backFileName) {
-      backFilePath = (await this.objects.putKyc(user.id, backBuffer, input.backMimeType)).key;
+    if (typeof input.fileName !== 'string' || !input.fileName.trim()) {
+      throw new BadRequestException('KYC file name is required');
+    }
+    const selfie = this.decodeBase64(input.selfieContentBase64, 'Selfie');
+    const signature = this.decodeBase64(
+      input.signatureContentBase64,
+      'Signature',
+    );
+    if (selfie.length > 2 * 1024 * 1024) {
+      throw new BadRequestException('Selfie must be 2 MB or smaller');
+    }
+    if (signature.length > 1024 * 1024) {
+      throw new BadRequestException('Signature must be 1 MB or smaller');
+    }
+    if (
+      !['image/jpeg', 'image/png', 'image/webp'].includes(input.selfieMimeType)
+    ) {
+      throw new BadRequestException('Selfie must be a JPG, PNG or WebP image');
     }
 
-    const recognizedType = this.recognizeDocumentType(
-      input.fileName,
-      input.documentType,
-    );
+    const storedKeys: string[] = [];
+    const store = async (bytes: Buffer, mime?: string) => {
+      const object = await this.objects.putKyc(user.id, bytes, mime);
+      storedKeys.push(object.key);
+      return object;
+    };
+    try {
+      // putKyc verifies the actual file signature and applies the configured
+      // malware scanner. Evidence remains in the same private storage as IDs.
+      const selfieObject = await store(selfie, input.selfieMimeType);
+      const signatureObject = await store(signature, 'image/png');
+      const frontObject = await store(fileBuffer, input.mimeType);
+      const filePath = frontObject.key;
 
-    await this.prisma.$executeRaw`
+      let backFilePath: string | null = null;
+      if (backBuffer && input.backFileName) {
+        backFilePath = (await store(backBuffer, input.backMimeType)).key;
+      }
+
+      const recognizedType = this.recognizeDocumentType(
+        input.fileName,
+        input.documentType,
+      );
+
+      await this.prisma.$executeRaw`
       INSERT INTO "kyc_submissions"
-        ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "updatedAt")
+        ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "selfieFilePath", "selfieMimeType", "signatureFilePath", "updatedAt")
       VALUES
-        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${input.mimeType ?? null}, ${input.backFileName ?? null}, ${backFilePath}, ${input.backMimeType ?? null}, ${recognizedType}, ${`Auto detected as ${recognizedType}`}, CURRENT_TIMESTAMP)
+        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${frontObject.mime}, ${input.backFileName ?? null}, ${backFilePath}, ${input.backMimeType ?? null}, ${recognizedType}, ${`Auto detected as ${recognizedType}`}, ${selfieObject.key}, ${selfieObject.mime}, ${signatureObject.key}, CURRENT_TIMESTAMP)
     `;
 
-    return {
-      message: 'KYC submitted for review',
-      status: 'PENDING',
-      recognizedType,
-    };
+      return {
+        message: 'KYC submitted for review',
+        status: 'PENDING',
+        recognizedType,
+      };
+    } catch (error) {
+      // A rejected upload or failed database insert must not leave new identity
+      // evidence behind without a submission that owns it.
+      await Promise.allSettled(
+        storedKeys.map((key) => this.objects.remove(key)),
+      );
+      throw error;
+    }
   }
-
   private decodeBase64(value: string, label: string) {
-    const normalized = value?.trim() ?? '';
-    if (!normalized || normalized.length > 11_200_000 || normalized.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+    const normalized = typeof value === 'string' ? value.trim() : '';
+    if (
+      !normalized ||
+      normalized.length > 11_200_000 ||
+      normalized.length % 4 !== 0 ||
+      !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)
+    ) {
       throw new BadRequestException(`${label} is not valid base64 data`);
     }
     const bytes = Buffer.from(normalized, 'base64');
@@ -132,6 +201,9 @@ export class KycService {
         k."backFileName",
         k."backFilePath",
         k."backMimeType",
+        k."selfieFilePath",
+        k."selfieMimeType",
+        k."signatureFilePath",
         k."recognizedType",
         k."recognizedText",
         k."reviewNote",
@@ -145,16 +217,32 @@ export class KycService {
       ORDER BY k."createdAt" DESC
     `;
 
-    return rows.map(({ filePath: _frontKey, backFilePath: _backKey, ...row }) => ({
-      ...row,
-      frontFileEndpoint: `/kyc/business/${row.id}/file?side=front`,
-      backFileEndpoint: row.backFileName ? `/kyc/business/${row.id}/file?side=back` : null,
-    }));
+    return rows.map(
+      ({
+        filePath: _frontKey,
+        backFilePath: _backKey,
+        selfieFilePath,
+        signatureFilePath,
+        ...row
+      }) => ({
+        ...row,
+        hasSelfie: Boolean(selfieFilePath),
+        hasSignature: Boolean(signatureFilePath),
+        frontFileEndpoint: `/kyc/business/${row.id}/file?side=front`,
+        backFileEndpoint: row.backFileName
+          ? `/kyc/business/${row.id}/file?side=back`
+          : null,
+      }),
+    );
   }
 
-  async fileForBusiness(businessUserId: string, submissionId: string, side: 'front' | 'back') {
+  async fileForBusiness(
+    businessUserId: string,
+    submissionId: string,
+    side: 'front' | 'back' | 'selfie' | 'signature',
+  ) {
     const rows = await this.prisma.$queryRaw<KycFileRow[]>`
-      SELECT "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType"
+      SELECT "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "selfieFilePath", "selfieMimeType", "signatureFilePath"
       FROM "kyc_submissions"
       WHERE "id" = ${submissionId}
         AND "businessUserId" = ${businessUserId}
@@ -167,9 +255,30 @@ export class KycService {
     }
 
     const isBack = side === 'back';
-    const selectedPath = isBack ? file.backFilePath : file.filePath;
-    const selectedName = isBack ? file.backFileName : file.fileName;
-    const selectedMime = isBack ? file.backMimeType : file.mimeType;
+    const selectedPath =
+      side === 'selfie'
+        ? file.selfieFilePath
+        : side === 'signature'
+          ? file.signatureFilePath
+          : isBack
+            ? file.backFilePath
+            : file.filePath;
+    const selectedName =
+      side === 'selfie'
+        ? `selfie.${file.selfieMimeType === 'image/png' ? 'png' : file.selfieMimeType === 'image/webp' ? 'webp' : 'jpg'}`
+        : side === 'signature'
+          ? 'signature.png'
+          : isBack
+            ? file.backFileName
+            : file.fileName;
+    const selectedMime =
+      side === 'selfie'
+        ? file.selfieMimeType
+        : side === 'signature'
+          ? 'image/png'
+          : isBack
+            ? file.backMimeType
+            : file.mimeType;
     if (!selectedPath || !selectedName) {
       throw new NotFoundException('KYC file side not found');
     }
@@ -184,7 +293,12 @@ export class KycService {
 
   async status(userId: string) {
     const rows = await this.prisma.$queryRaw<
-      { status: string; documentType: string; recognizedType: string | null; createdAt: Date }[]
+      {
+        status: string;
+        documentType: string;
+        recognizedType: string | null;
+        createdAt: Date;
+      }[]
     >`
       SELECT k."status", k."documentType", k."recognizedType", k."createdAt"
       FROM "kyc_submissions" k
@@ -256,7 +370,10 @@ export class KycService {
     return null;
   }
 
-  private recognizeDocumentType(fileName: string, selectedType: 'AADHAAR' | 'PAN') {
+  private recognizeDocumentType(
+    fileName: string,
+    selectedType: 'AADHAAR' | 'PAN',
+  ) {
     const normalized = fileName.toLowerCase();
 
     if (normalized.includes('pan')) {

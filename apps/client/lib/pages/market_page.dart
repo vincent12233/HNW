@@ -808,7 +808,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     Icons.swap_horiz_rounded,
                     color: AppConfig.primaryColor,
                   ),
-                  label: 'Trading',
+                  label: 'Trade',
                 ),
                 NavigationDestination(
                   icon: Icon(Icons.business_center_outlined),
@@ -824,7 +824,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     Icons.person,
                     color: AppConfig.primaryColor,
                   ),
-                  label: 'Account',
+                  label: 'Profile',
                 ),
               ],
             ),
@@ -1091,7 +1091,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
   Widget _homeBalanceValue(String label, double value, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1099,7 +1099,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
           ),
           const SizedBox(height: 8),
           FittedBox(
@@ -1194,10 +1194,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 620
+        final columns =
+            constraints.maxWidth >= 320 &&
+                MediaQuery.textScalerOf(context).scale(1) <= 1.15
             ? 4
-            : constraints.maxWidth >= 460
-            ? 3
             : 2;
         const gap = 8.0;
         final cardWidth =
@@ -1257,9 +1257,13 @@ class _MarketHomePageState extends State<MarketHomePage> {
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
+                      item.$2 == '--'
+                          ? 'Unavailable'
+                          : '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
                       style: TextStyle(
-                        color: positive
+                        color: item.$2 == '--'
+                            ? AppConfig.neutralColor
+                            : positive
                             ? AppConfig.gainColor
                             : AppConfig.lossColor,
                         fontSize: 9,
@@ -1273,7 +1277,9 @@ class _MarketHomePageState extends State<MarketHomePage> {
                       child: (indexHistory[item.$1]?.length ?? 0) >= 2
                           ? CustomPaint(
                               painter: _MiniLineChartPainter(
-                                color: positive
+                                color: item.$2 == '--'
+                                    ? AppConfig.neutralColor
+                                    : positive
                                     ? AppConfig.gainColor
                                     : AppConfig.lossColor,
                                 values: indexHistory[item.$1]!,
@@ -1305,7 +1311,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (constraints.maxWidth < 420) {
+        if (constraints.maxWidth < 300) {
           return Column(
             children: [
               _compactMoverList('Top Gainers', gainers, true),
@@ -2877,7 +2883,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
             const Expanded(
               child: Text(
                 'Portfolio',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
             ),
             IconButton(
@@ -3393,7 +3399,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 child: Text(
                   segment.label,
                   maxLines: 1,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
               const SizedBox(width: 6),
@@ -3415,7 +3424,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 child: Text(
                   '${percent.toStringAsFixed(1)}%',
                   textAlign: TextAlign.right,
-                  style: const TextStyle(fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
             ],
@@ -3436,10 +3448,12 @@ class _MarketHomePageState extends State<MarketHomePage> {
             const SizedBox(height: 16),
             LayoutBuilder(
               builder: (context, constraints) {
-                final compact = constraints.maxWidth < 430;
+                final compact =
+                    constraints.maxWidth < 300 ||
+                    MediaQuery.textScalerOf(context).scale(1) > 1.15;
                 final chart = SizedBox(
-                  width: compact ? 132 : 142,
-                  height: compact ? 132 : 142,
+                  width: compact ? 132 : 100,
+                  height: compact ? 132 : 100,
                   child: CustomPaint(
                     painter: _AllocationDonutPainter(segments),
                     child: Center(
@@ -3483,7 +3497,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
                 return Row(
                   children: [
                     chart,
-                    const SizedBox(width: 22),
+                    const SizedBox(width: 12),
                     Expanded(child: legend),
                   ],
                 );
@@ -3540,59 +3554,6 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _accountFundValue(
-    String label,
-    double value, {
-    String? displayValue,
-    IconData? icon,
-    Color color = AppConfig.primaryColor,
-    VoidCallback? onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(10),
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (icon != null) ...[
-              Icon(icon, color: color, size: 20),
-              const SizedBox(height: 6),
-            ],
-            Text(
-              label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(color: Colors.black54, fontSize: 11),
-            ),
-            const SizedBox(height: 5),
-            Row(
-              children: [
-                Expanded(
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      displayValue ?? formatPrice(value),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                  ),
-                ),
-                if (onTap != null)
-                  const Icon(
-                    Icons.chevron_right_rounded,
-                    size: 17,
-                    color: Color(0xFF64748B),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -3756,7 +3717,7 @@ class _MarketHomePageState extends State<MarketHomePage> {
             const Expanded(
               child: Text(
                 'Profile',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
               ),
             ),
             IconButton(
@@ -3768,219 +3729,135 @@ class _MarketHomePageState extends State<MarketHomePage> {
           ],
         ),
         const SizedBox(height: 14),
-        Card(
-          color: Colors.white,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(18),
-                child: Row(
-                  children: [
-                    InkWell(
-                      onTap: _pickProfileAvatar,
-                      borderRadius: BorderRadius.circular(40),
-                      child: CircleAvatar(
-                        radius: 34,
-                        backgroundColor: const Color(0xFFE7F0FF),
-                        backgroundImage: profileAvatarBytes == null
-                            ? null
-                            : MemoryImage(profileAvatarBytes!),
-                        child: profileAvatarBytes == null
-                            ? Text(
-                                _accountInitials,
-                                style: const TextStyle(
-                                  color: AppConfig.primaryColor,
-                                  fontSize: 27,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              )
-                            : null,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            accountName,
-                            style: const TextStyle(
-                              fontSize: 21,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '+91 $accountPhone',
-                            style: const TextStyle(color: Colors.black54),
-                          ),
-                          const SizedBox(height: 7),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: [
-                              Chip(
-                                avatar: Icon(
-                                  kycStatus == 'APPROVED'
-                                      ? Icons.verified
-                                      : kycStatus == 'PENDING'
-                                      ? Icons.schedule_rounded
-                                      : Icons.info_outline_rounded,
-                                  color: kycStatus == 'APPROVED'
-                                      ? Colors.green
-                                      : kycStatus == 'PENDING'
-                                      ? Colors.orange
-                                      : Colors.blueGrey,
-                                  size: 18,
-                                ),
-                                label: Text(
-                                  kycStatus == 'APPROVED'
-                                      ? 'Verified'
-                                      : kycStatus == 'PENDING'
-                                      ? 'KYC Pending'
-                                      : 'KYC Required',
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Edit profile',
-                      onPressed: _editProfile,
-                      icon: const Icon(Icons.edit_outlined),
-                    ),
-                  ],
-                ),
-              ),
-              const Divider(height: 1),
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                child: LayoutBuilder(
-                  builder: (context, constraints) {
-                    final columns = constraints.maxWidth < 420 ? 2 : 4;
-                    final itemWidth = constraints.maxWidth / columns;
-                    return Wrap(
-                      runSpacing: 14,
-                      children: [
-                        SizedBox(
-                          width: itemWidth,
-                          child: _accountFundValue(
-                            'Balance',
-                            availableBalance,
-                            icon: Icons.account_balance_wallet_outlined,
-                            onTap: () => setState(() => selectedIndex = 2),
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _accountFundValue(
-                            'Portfolio',
-                            totalAssets,
-                            icon: Icons.trending_up_rounded,
-                            color: AppConfig.gainColor,
-                            onTap: () {
-                              setState(() => selectedIndex = 3);
-                              unawaited(
-                                _loadPortfolioHistory(_portfolioPeriod),
-                              );
-                            },
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _accountFundValue(
-                            'Rewards',
-                            0,
-                            displayValue: 'Not active',
-                            icon: Icons.star_border_rounded,
-                            color: const Color(0xFFF59E0B),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const ReferralPage(code: ''),
-                              ),
-                            ),
-                          ),
-                        ),
-                        SizedBox(
-                          width: itemWidth,
-                          child: _accountFundValue(
-                            'Coupons',
-                            0,
-                            displayValue: '0 Available',
-                            icon: Icons.confirmation_number_outlined,
-                            color: const Color(0xFF7C3AED),
-                            onTap: () => Navigator.of(context).push(
-                              MaterialPageRoute<void>(
-                                builder: (_) => const OffersPage(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
         Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
-              colors: [Color(0xFFE9F2FF), Color(0xFFF5F8FF)],
+              colors: [
+                AppConfig.primaryDarkColor,
+                AppConfig.primaryGradientEnd,
+              ],
             ),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
             children: [
-              const CircleAvatar(
-                radius: 27,
-                backgroundColor: Color(0xFFD9E9FF),
-                child: Icon(
-                  Icons.workspace_premium_rounded,
-                  color: AppConfig.primaryColor,
-                  size: 30,
+              InkWell(
+                onTap: _pickProfileAvatar,
+                borderRadius: BorderRadius.circular(30),
+                child: CircleAvatar(
+                  radius: 28,
+                  backgroundColor: Colors.white,
+                  backgroundImage: profileAvatarBytes == null
+                      ? null
+                      : MemoryImage(profileAvatarBytes!),
+                  child: profileAvatarBytes == null
+                      ? Text(
+                          _accountInitials,
+                          style: const TextStyle(
+                            color: AppConfig.primaryColor,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 22,
+                          ),
+                        )
+                      : null,
                 ),
               ),
-              const SizedBox(width: 13),
-              const Expanded(
+              const SizedBox(width: 14),
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Upgrade to Premium',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                      accountName,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    SizedBox(height: 3),
+                    const SizedBox(height: 5),
                     Text(
-                      'Exclusive research and priority support',
-                      style: TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+                      accountPhone.isEmpty
+                          ? 'Phone unavailable'
+                          : '+91 $accountPhone',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Icon(
+                          kycStatus == 'APPROVED'
+                              ? Icons.verified
+                              : Icons.info_outline,
+                          color: kycStatus == 'APPROVED'
+                              ? const Color(0xFF86EFAC)
+                              : Colors.white70,
+                          size: 14,
+                        ),
+                        const SizedBox(width: 5),
+                        Flexible(
+                          child: Text(
+                            kycStatus == 'APPROVED'
+                                ? 'KYC Verified'
+                                : kycStatus == 'PENDING'
+                                ? 'KYC Pending Review'
+                                : kycStatus == 'REJECTED'
+                                ? 'KYC Requires Attention'
+                                : 'KYC Required',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ),
-              FilledButton(
-                onPressed: () => _openCustomerService(
-                  title: 'Premium account',
-                  initialMessage:
-                      'Hello, I would like information about Premium account eligibility.',
-                  icon: Icons.workspace_premium_outlined,
+              IconButton(
+                tooltip: 'Edit profile',
+                onPressed: _editProfile,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  color: Colors.white70,
+                  size: 20,
                 ),
-                child: const Text('Upgrade'),
               ),
             ],
           ),
         ),
         const SizedBox(height: 22),
         const Text(
-          'Account & Settings',
+          'Account Overview',
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _homeBalanceValue(
+                'Available Balance',
+                availableBalance,
+                AppConfig.textPrimaryColor,
+              ),
+            ),
+            Expanded(
+              child: _homeBalanceValue(
+                'Total Portfolio',
+                totalAssets,
+                AppConfig.textPrimaryColor,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 22),
+        const Text(
+          'Account & Security',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
@@ -3999,10 +3876,34 @@ class _MarketHomePageState extends State<MarketHomePage> {
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.verified_user_outlined,
-                title: 'Security',
-                subtitle: 'Password, biometric and device access',
+                title: 'KYC Verification',
+                subtitle: 'Identity documents and verification status',
+                onTap: () => _openAccountSettings('kyc'),
+                color: const Color(0xFF10B981),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.password_outlined,
+                title: 'Change Password',
+                subtitle: 'Update your account password',
+                onTap: () => _openAccountSettings('security'),
+                color: const Color(0xFF2563EB),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.phonelink_lock_outlined,
+                title: 'Two-Factor Authentication',
+                subtitle: 'Protect sign-ins with another verification step',
                 onTap: () => _openAccountSettings('security'),
                 color: const Color(0xFF10B981),
+              ),
+              const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.pin_outlined,
+                title: 'Transaction PIN',
+                subtitle: 'Manage your trading confirmation PIN',
+                onTap: () => _openAccountSettings('security'),
+                color: const Color(0xFFF59E0B),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -4015,10 +3916,10 @@ class _MarketHomePageState extends State<MarketHomePage> {
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.description_outlined,
-                title: 'KYC Details',
-                subtitle: 'View and update your KYC information',
-                onTap: () => _openAccountSettings('kyc'),
-                color: const Color(0xFF8B5CF6),
+                title: 'Bank Accounts',
+                subtitle: 'Manage linked bank accounts and UPI',
+                onTap: () => _openAccountSettings('banks'),
+                color: const Color(0xFFF59E0B),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -4114,25 +4015,21 @@ class _MarketHomePageState extends State<MarketHomePage> {
     Color color = const Color(0xFF143D8D),
   }) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 3),
+      minTileHeight: 44,
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       leading: Container(
-        width: 34,
-        height: 34,
+        width: 28,
+        height: 28,
         decoration: BoxDecoration(
           color: color.withValues(alpha: .10),
           borderRadius: BorderRadius.circular(9),
         ),
-        child: Icon(icon, color: color, size: 20),
+        child: Icon(icon, color: color, size: 18),
       ),
       title: Text(
         title,
         style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-      ),
-      subtitle: Text(
-        subtitle,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
       ),
       trailing: onTap == null ? null : const Icon(Icons.chevron_right),
       onTap: onTap,

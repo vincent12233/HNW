@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
-import { mkdir, readFile, writeFile } from 'fs/promises';
+import { mkdir, readFile, writeFile, unlink } from 'fs/promises';
 import { join, normalize } from 'path';
 
 @Injectable()
@@ -26,6 +26,7 @@ export class PrivateObjectStorageService implements OnModuleInit {
   }
 
   async get(key: string) { return readFile(this.resolve(key)); }
+  async remove(key: string) { await unlink(this.resolve(key)); }
   sign(key: string, ttlSeconds = 300) {
     const expires = Math.floor(Date.now() / 1000) + Math.min(Math.max(ttlSeconds, 30), 600);
     const signature = createHmac('sha256', this.secret).update(`${key}.${expires}`).digest('hex');

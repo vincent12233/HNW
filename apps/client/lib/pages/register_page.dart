@@ -4,6 +4,7 @@ import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../utils/client_error_message.dart';
 import 'kyc_upload_page.dart';
+import 'legal_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -22,6 +23,7 @@ class _RegisterPageState extends State<RegisterPage> {
   bool obscurePassword = true;
   bool obscureConfirmPassword = true;
   bool isSubmitting = false;
+  bool acceptedTerms = false;
   String? errorText;
 
   @override
@@ -36,47 +38,33 @@ class _RegisterPageState extends State<RegisterPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(
+      backgroundColor: Colors.white,
+      appBar: AppBar(),
+      body: Align(
+        alignment: Alignment.topCenter,
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Container(
             width: 420,
-            padding: const EdgeInsets.all(28),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: const [
-                BoxShadow(
-                  color: Color(0x18000000),
-                  blurRadius: 30,
-                  offset: Offset(0, 12),
-                ),
-              ],
-            ),
+            padding: const EdgeInsets.symmetric(vertical: 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Icon(
-                  Icons.person_add_alt_1,
-                  size: 44,
-                  color: AppConfig.primaryColor,
-                ),
-                const SizedBox(height: 14),
                 const Text(
                   'Create Account',
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                   style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'Register with your Indian mobile number, password and invite code',
-                  textAlign: TextAlign.center,
+                  textAlign: TextAlign.start,
                   style: TextStyle(color: Colors.black54),
                 ),
                 const SizedBox(height: 10),
                 const Text(
-                  'Step 1 of 2  •  Account details',
-                  textAlign: TextAlign.center,
+                  'Invite code is required to create an account',
+                  textAlign: TextAlign.start,
                   style: TextStyle(
                     color: AppConfig.primaryColor,
                     fontWeight: FontWeight.w600,
@@ -150,24 +138,54 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Checkbox(
+                      value: acceptedTerms,
+                      onChanged: isSubmitting
+                          ? null
+                          : (value) =>
+                                setState(() => acceptedTerms = value ?? false),
+                    ),
+                    const Text(
+                      'I agree to the',
+                      style: TextStyle(fontSize: 12),
+                    ),
+                    Flexible(
+                      child: TextButton(
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute<void>(
+                            builder: (_) =>
+                                const LegalPage(title: 'Terms & Conditions'),
+                          ),
+                        ),
+                        child: const Text(
+                          'Terms & Conditions',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
                 SizedBox(
                   height: 52,
                   child: FilledButton(
-                    onPressed: isSubmitting ? null : _submit,
+                    onPressed: isSubmitting || !acceptedTerms ? null : _submit,
                     child: isSubmitting
                         ? const SizedBox(
                             width: 22,
                             height: 22,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Register & Continue to KYC'),
+                        : const Text('Sign Up'),
                   ),
                 ),
                 if (errorText != null) ...[
                   const SizedBox(height: 12),
                   Text(
                     errorText!,
-                    textAlign: TextAlign.center,
+                    textAlign: TextAlign.start,
                     style: const TextStyle(color: AppConfig.lossColor),
                   ),
                 ],
@@ -187,6 +205,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _submit() async {
+    if (!acceptedTerms) return;
     final phone = phoneController.text.trim();
     final password = passwordController.text;
     final confirmPassword = confirmPasswordController.text;

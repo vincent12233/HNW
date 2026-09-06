@@ -1,10 +1,21 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 import { KycService } from './kyc.service';
+import type { KycSubmissionInput } from './kyc.service';
 import { KycAccessGuard } from './kyc-access.guard';
 
 @Controller('kyc')
@@ -16,15 +27,7 @@ export class KycController {
   submit(
     @Req() req: any,
     @Body()
-    body: {
-      documentType: 'AADHAAR' | 'PAN';
-      fileName: string;
-      mimeType?: string;
-      contentBase64: string;
-      backFileName?: string;
-      backMimeType?: string;
-      backContentBase64?: string;
-    },
+    body: KycSubmissionInput,
   ) {
     return this.kycService.submit(req.user.userId, body);
   }
@@ -39,8 +42,18 @@ export class KycController {
   @Get('business/:submissionId/file')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.BUSINESS)
-  fileForBusiness(@Req() req: any, @Param('submissionId') submissionId: string, @Query('side') side?: string) {
-    return this.kycService.fileForBusiness(req.user.userId, submissionId, side === 'back' ? 'back' : 'front');
+  fileForBusiness(
+    @Req() req: any,
+    @Param('submissionId') submissionId: string,
+    @Query('side') side?: string,
+  ) {
+    return this.kycService.fileForBusiness(
+      req.user.userId,
+      submissionId,
+      side === 'selfie' || side === 'signature' || side === 'back'
+        ? side
+        : 'front',
+    );
   }
 
   @Get('status')

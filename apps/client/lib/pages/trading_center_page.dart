@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
+import '../utils/number_formatters.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/account_transaction.dart';
 import '../models/ipo.dart';
@@ -12,7 +13,7 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../services/trading_service.dart';
 import '../widgets/trading/history_tab.dart';
-import '../widgets/trading/funds_tab.dart';
+
 import '../widgets/trading/holdings_tab.dart';
 import '../widgets/trading/institutional_tab.dart';
 import '../widgets/trading/ipo_tab.dart';
@@ -277,51 +278,65 @@ class _TradingCenterPageState extends State<TradingCenterPage>
       body: SafeArea(
         child: Column(
           children: [
-            const SizedBox(height: 10),
-            SizedBox(
-              height: 86,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 18),
-                scrollDirection: Axis.horizontal,
-                itemCount: tabs.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 10),
-                itemBuilder: (context, index) {
-                  final module = tabs[index];
-                  final selected = selectedTab == index;
-
-                  return _TradingModuleButton(
-                    module: module,
-                    selected: selected,
-                    onTap: () {
-                      setState(() => selectedTab = index);
-                      if (index >= 2) {
-                        unawaited(_refreshTradingData());
-                      }
-                    },
-                  );
-                },
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Text(
+                      'Trade',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Markets',
+                    onPressed: widget.onViewMarkets,
+                    icon: const Icon(Icons.search),
+                  ),
+                  IconButton(
+                    tooltip: 'Notifications',
+                    onPressed: widget.onAlertsTap,
+                    icon: const Icon(Icons.notifications_none),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: List.generate(
-                tabs.length,
-                (index) => AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  width: selectedTab == index ? 22 : 7,
-                  height: 4,
-                  margin: const EdgeInsets.symmetric(horizontal: 3),
-                  decoration: BoxDecoration(
-                    color: selectedTab == index
-                        ? tabs[index].color
-                        : const Color(0xFFD7DCE5),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
+            Container(
+              margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8),
+                gradient: const LinearGradient(
+                  colors: [
+                    AppConfig.primaryDarkColor,
+                    AppConfig.primaryGradientEnd,
+                  ],
                 ),
               ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: _balanceMetric(
+                      'Available Balance',
+                      _accountSnapshot?.cashBalance,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _balanceMetric(
+                      'Buying Power',
+                      _accountSnapshot?.buyingPower,
+                    ),
+                  ),
+                ],
+              ),
             ),
-            const SizedBox(height: 14),
+            _tabRow(const [0, 1, 5, 6], primary: true),
+            if (![1, 5, 6].contains(selectedTab)) _tabRow(const [4, 3, 2, 7]),
+            const SizedBox(height: 8),
             Expanded(child: _buildContent()),
           ],
         ),
@@ -329,6 +344,60 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     );
   }
 
+  Widget _tabRow(List<int> indices, {bool primary = false}) => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+    child: Row(
+      children: indices.map((index) {
+        final selected =
+            selectedTab == index ||
+            (primary && index == 0 && ![1, 5, 6].contains(selectedTab));
+        return Expanded(
+          child: TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              backgroundColor: selected
+                  ? const Color(0xFFEAF1FF)
+                  : Colors.transparent,
+              foregroundColor: selected
+                  ? AppConfig.primaryColor
+                  : AppConfig.textSecondaryColor,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(6),
+              ),
+              textStyle: const TextStyle(
+                fontFamily: 'Roboto',
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: () {
+              setState(() => selectedTab = index);
+              if (index >= 2) unawaited(_refreshTradingData());
+            },
+            child: Text(tabs[index].label),
+          ),
+        );
+      }).toList(),
+    ),
+  );
+  Widget _balanceMetric(String label, double? value) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
+      const SizedBox(height: 6),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          value == null ? '--' : formatPrice(value),
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 19,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+    ],
+  );
   Widget _buildContent() {
     switch (selectedTab) {
       case 0:
@@ -382,63 +451,4 @@ class _TradingModule {
   final String label;
   final IconData icon;
   final Color color;
-}
-
-class _TradingModuleButton extends StatelessWidget {
-  const _TradingModuleButton({
-    required this.module,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final _TradingModule module;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(14),
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        width: 78,
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 9),
-        decoration: BoxDecoration(
-          color: selected ? Colors.white : const Color(0xFFFBFCFF),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: selected ? module.color : const Color(0xFFE2E8F0),
-            width: selected ? 1.8 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: selected
-                  ? module.color.withValues(alpha: 0.16)
-                  : const Color(0xFF0F172A).withValues(alpha: 0.04),
-              blurRadius: selected ? 16 : 8,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(module.icon, size: 24, color: module.color),
-            const SizedBox(height: 7),
-            Text(
-              module.label,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: selected ? module.color : const Color(0xFF334155),
-                fontSize: 11,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

@@ -192,7 +192,9 @@ class AuthService {
       final message = decoded is Map ? decoded['message']?.toString() : null;
       throw AuthException(message ?? 'Registration failed');
     }
-    final kycToken = decoded is Map ? decoded['kycToken']?.toString() ?? '' : '';
+    final kycToken = decoded is Map
+        ? decoded['kycToken']?.toString() ?? ''
+        : '';
     if (kycToken.isEmpty) {
       throw AuthException('Registration response is missing KYC access');
     }
@@ -204,6 +206,8 @@ class AuthService {
     required String documentType,
     required PlatformFile file,
     PlatformFile? backFile,
+    required PlatformFile selfieFile,
+    required PlatformFile signatureFile,
   }) async {
     final bytes = file.bytes;
     final backBytes = backFile?.bytes;
@@ -229,6 +233,9 @@ class AuthService {
             },
             body: jsonEncode({
               'documentType': documentType,
+              'selfieContentBase64': base64Encode(selfieFile.bytes!),
+              'selfieMimeType': _mimeTypeForFile(selfieFile.name),
+              'signatureContentBase64': base64Encode(signatureFile.bytes!),
               'fileName': file.name,
               'mimeType': _mimeTypeForFile(file.name),
               'contentBase64': base64Encode(bytes),
@@ -239,7 +246,7 @@ class AuthService {
               },
             }),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(const Duration(seconds: 90));
     } catch (_) {
       throw const AuthException(
         'Unable to connect. Please check your network and try again.',

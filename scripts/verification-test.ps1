@@ -95,12 +95,17 @@ if (-not $kycToken) { throw "Registration did not return a KYC onboarding token.
 
 $testPdf = "%PDF-1.4`n1 0 obj<</Type/Catalog>>endobj`ntrailer<</Root 1 0 R>>`n%%EOF"
 $kycFile = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($testPdf))
+# Synthetic PNG fixture used only by the business verification smoke test.
+$testImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ZkAAAAASUVORK5CYII='
 $kyc = Invoke-JsonPost "/kyc/submit" @{
   phone = $phone
   documentType = "PAN"
   fileName = "pan-card-test.pdf"
   mimeType = "application/pdf"
   contentBase64 = $kycFile
+  selfieContentBase64 = $testImage
+  selfieMimeType = 'image/png'
+  signatureContentBase64 = $testImage
 } $kycToken
 
 $pendingKyc = Invoke-JsonGet "/kyc/business/pending" $businessToken

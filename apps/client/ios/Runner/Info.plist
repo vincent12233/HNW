@@ -58,6 +58,10 @@
 	<true/>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID for secure quick login to your India Trading account.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of your identity documents and a selfie for KYC review.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select identity documents and a selfie to submit for KYC review.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

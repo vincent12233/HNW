@@ -257,7 +257,7 @@ class _OtcTabState extends State<OtcTab> {
     );
   }
 
-  Widget _value(String label, String value) {
+  Widget _value(String label, String value, {Color? valueColor}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -266,7 +266,7 @@ class _OtcTabState extends State<OtcTab> {
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: valueColor)),
       ],
     );
   }

@@ -132,10 +132,12 @@ class _OtcTabState extends State<OtcTab> {
                     ],
                   ),
                   const Divider(height: 24),
-                  _value(
-                    'Live Market Price',
-                    item.price > 0 ? formatPrice(item.price) : '--',
-                  ),
+                  Row(children: [
+                    Expanded(child: _value('Market Price', formatPrice(item.marketPrice))),
+                    Expanded(child: _value('Discount Price', formatPrice(item.price), valueColor: AppConfig.gainColor)),
+                  ]),
+                  if (item.marketPrice > item.price && item.price > 0)
+                    Text('Settlement uses discount price · Save ${formatPrice(item.marketPrice - item.price)}', style: const TextStyle(color: AppConfig.gainColor, fontSize: 12, fontWeight: FontWeight.w600)),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
@@ -166,7 +168,8 @@ class _OtcTabState extends State<OtcTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Live market price ${formatPrice(item.price)}'),
+            Text('Market price ${formatPrice(item.marketPrice)}'),
+            Text('Settlement price ${formatPrice(item.price)}', style: const TextStyle(color: AppConfig.gainColor, fontWeight: FontWeight.w600)),
             const SizedBox(height: 14),
             TextField(
               controller: quantity,

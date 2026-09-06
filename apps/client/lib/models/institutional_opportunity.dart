@@ -4,6 +4,7 @@ class InstitutionalStock {
     required this.symbol,
     required this.companyName,
     required this.price,
+    this.marketPrice = 0,
     this.minimumQuantity,
     required this.status,
     this.exchange = 'NSE',
@@ -13,6 +14,7 @@ class InstitutionalStock {
   final String symbol;
   final String companyName;
   final double price;
+  final double marketPrice;
   @Deprecated('Quantity limits are not used for Inst. or OTC orders')
   final int? minimumQuantity;
   final String status;
@@ -25,7 +27,8 @@ class InstitutionalStock {
       id: json['id']?.toString() ?? '',
       symbol: instrument['symbol']?.toString() ?? '',
       companyName: instrument['name']?.toString() ?? '',
-      price: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
+      price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+      marketPrice: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? 'ACTIVE',
       exchange: instrument['exchange']?.toString() ?? 'BSE',
     );
@@ -69,6 +72,7 @@ class OtcOrderRecord {
       symbol: instrument['symbol']?.toString() ?? '',
       quantity: int.tryParse(json['quantity']?.toString() ?? '') ?? 0,
       price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+      marketPrice: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? 'PENDING',
       reviewNote: json['reviewNote']?.toString(),
     );

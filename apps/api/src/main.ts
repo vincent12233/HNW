@@ -52,6 +52,17 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
   res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('cross-origin-resource-policy', 'same-site');
   res.setHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
+  // Staff sessions use an HttpOnly cookie. Require an explicitly allowed
+  // browser origin for state-changing cookie requests to prevent CSRF.
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.headers.cookie?.includes('staff_access=')) {
+    const origin = req.header('origin');
+    const allowedOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
+    const localOrigin = process.env.NODE_ENV !== 'production' && !!origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    if (!origin || (!allowedOrigins.includes(origin) && !localOrigin)) {
+      res.status(403).json({ statusCode: 403, message: 'Origin verification failed', requestId });
+      return;
+    }
+  }
   if (process.env.NODE_ENV === 'production') {
     res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
   }

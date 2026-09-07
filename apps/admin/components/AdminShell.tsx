@@ -26,7 +26,14 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
   ],
   MANAGER: [
-    { key: "/team", icon: <TeamOutlined />, label: "团队与客户" },
+    { key: "/team?view=customers", icon: <TeamOutlined />, label: "客户资料" },
+    { key: "/team?view=deposits", icon: <DollarOutlined />, label: "客户入金" },
+    { key: "/team?view=withdrawals", icon: <BankOutlined />, label: "客户提现" },
+    { key: "/team?view=positions", icon: <BarChartOutlined />, label: "客户持仓" },
+    { key: "/team?view=orders", icon: <StockOutlined />, label: "客户订单" },
+    { key: "/team?view=trades", icon: <TransactionOutlined />, label: "客户成交" },
+    { key: "/team?view=kyc", icon: <IdcardOutlined />, label: "KYC 审核" },
+    { key: "/team?view=team", icon: <UsergroupAddOutlined />, label: "我的业务员" },
   ],
   BUSINESS: [
     { key: "/dashboard", icon: <DashboardOutlined />, label: "业务总览" },
@@ -71,11 +78,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   useEffect(() => { const sync = () => setMobile(window.innerWidth < 900); sync(); window.addEventListener("resize", sync); return () => window.removeEventListener("resize", sync); }, []);
   useEffect(() => { let active=true; api.get<CurrentUser>("/auth/me").then(({data})=>{if(!active)return;if(!data.role||!menus[data.role])throw new Error("No staff access");localStorage.setItem("adminUser",JSON.stringify(data));setUser(data);setVerified(true);}).catch(()=>{if(!active)return;localStorage.removeItem("adminUser");router.replace("/login");});return()=>{active=false;}; }, [router]);
   const role: Role = user?.role || "ADMIN"; const items = useMemo(() => menus[role], [role]); const meta = roleMeta[role];
-  const pageTitle = items.find((item) => pathname.startsWith(item.key))?.label || "工作台";
-  const allowed = pathname === "/" || pathname === "/login" || items.some((item) => pathname.startsWith(item.key));
+  const pageTitle = items.find((item) => pathname.startsWith(item.key.split("?")[0]))?.label || "工作台";
+  const allowed = pathname === "/" || pathname === "/login" || items.some((item) => pathname.startsWith(item.key.split("?")[0]));
   useEffect(() => { if (user && !allowed) router.replace(user.role === "MANAGER" ? "/team" : "/dashboard"); }, [allowed, router, user]);
   const logout = async () => { try { await api.post("/auth/logout"); } finally { localStorage.removeItem("adminUser"); router.replace("/login"); } };
-  const menu = <Menu theme="dark" mode="inline" selectedKeys={[pathname]} items={items} onClick={({ key }) => { router.push(key); setDrawer(false); }} className="ops-menu" />;
+  const menu = <Menu theme="dark" mode="inline" selectedKeys={[items.find((item) => pathname.startsWith(item.key.split("?")[0]))?.key || pathname]} items={items} onClick={({ key }) => { router.push(key); setDrawer(false); }} className="ops-menu" />;
   const brand = <div className="ops-brand"><span className="ops-logo"><StockOutlined /></span>{!collapsed && <div><strong>India Trading</strong><small>{meta.product}</small></div>}</div>;
   if (!verified || !user) return <div style={{ minHeight: "100vh", display: "grid", placeItems: "center", background: "#f4f7fb" }}><Spin size="large" tip="正在验证安全会话" /></div>;
   return <Layout className={`ops-layout role-${role.toLowerCase()}`}>

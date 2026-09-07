@@ -2143,26 +2143,8 @@ class _MarketHomePageState extends State<MarketHomePage> {
                   return;
                 }
 
-                try {
-                  await AuthService().contactSupport(message);
-
-                  if (!dialogContext.mounted) return;
-                  Navigator.pop(dialogContext);
-
-                  if (!mounted) return;
-                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Message sent to online customer service'),
-                    ),
-                  );
-                } on AuthException catch (error) {
-                  if (!dialogContext.mounted) return;
-                  ScaffoldMessenger.of(dialogContext).hideCurrentSnackBar();
-                  ScaffoldMessenger.of(
-                    dialogContext,
-                  ).showSnackBar(SnackBar(content: Text(error.message)));
-                }
+                Navigator.pop(dialogContext);
+                _openSupportChat(initialMessage: message);
               },
               icon: const Icon(Icons.send_outlined),
               label: const Text('Send Message'),

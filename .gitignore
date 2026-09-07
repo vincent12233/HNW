@@ -16,6 +16,7 @@ apps/**/.windsurf/
 .env
 .env.*
 !.env.example
+!.env.docker.example
 apps/**/.env
 apps/**/.env.*
 !apps/**/.env.example
@@ -32,6 +33,7 @@ apps/api/private-objects/
 .dart-state/
 .tool-state/
 .codex-gitconfig
+.gradle-cache/
 
 # Flutter generated metadata and local release artifacts
 apps/client/.dart_tool/

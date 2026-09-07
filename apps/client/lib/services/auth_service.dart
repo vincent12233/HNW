@@ -10,6 +10,7 @@ import '../models/auth_session.dart';
 import '../models/withdrawal_request.dart';
 import 'local_data_cache.dart';
 import 'session_expiry_service.dart';
+import 'salesmartly_service.dart';
 
 class AuthService {
   static const String _sessionKey = 'auth_session';
@@ -298,9 +299,15 @@ class AuthService {
   Future<Map<String, dynamic>> kycDetails({String? accessToken}) async {
     final token = accessToken ?? (await restoreSession())?.accessToken;
     if (token == null) return {'status': 'NOT_SUBMITTED'};
-    final response = await http.get(Uri.parse('${AppConfig.apiBaseUrl}/kyc/status'), headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 12));
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/kyc/status'),
+          headers: {'Authorization': 'Bearer $token'},
+        )
+        .timeout(const Duration(seconds: 12));
     final decoded = _decodeJson(response.body);
-    if (response.statusCode != 200 || decoded is! Map) throw const AuthException('Unable to load verification status');
+    if (response.statusCode != 200 || decoded is! Map)
+      throw const AuthException('Unable to load verification status');
     return Map<String, dynamic>.from(decoded);
   }
 
@@ -654,6 +661,7 @@ class AuthService {
 
   Future<void> clearSession() async {
     await _secureStorage.delete(key: _sessionKey);
+    await SaleSmartlyService().clearUser();
   }
 }
 
@@ -677,7 +685,8 @@ List<WithdrawalRequest> _withdrawalsFromRows(List<dynamic> rows) {
 }
 
 String _normalizeIndianPhone(String value) {
-  if (value.trim().startsWith('+')) return '+${value.replaceAll(RegExp(r'\D'), '')}';
+  if (value.trim().startsWith('+'))
+    return '+${value.replaceAll(RegExp(r'\D'), '')}';
   final digits = value.replaceAll(RegExp(r'\D'), '');
 
   if (digits.length == 12 && digits.startsWith('91')) {

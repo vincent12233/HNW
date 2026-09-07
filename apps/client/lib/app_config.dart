@@ -13,6 +13,10 @@ class AppConfig {
     'GOOGLE_CLIENT_ID',
     defaultValue: '',
   );
+  static const String saleSmartlyScriptUrl = String.fromEnvironment(
+    'SALESMARTLY_SCRIPT_URL',
+    defaultValue: '',
+  );
 
   static String get apiBaseUrl {
     if (_configuredApiBaseUrl.isNotEmpty) {

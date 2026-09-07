@@ -27,21 +27,16 @@
 
 ## 本地启动
 
-先打开 Docker Desktop，然后在项目根目录执行：
+先打开 Docker Desktop，然后复制 `.env.docker.example` 为 `.env.docker`，设置五个后台账号密码，再在项目根目录执行：
 
 ```powershell
-docker compose up -d postgres
+docker compose up -d --build
 ```
 
-初始化 API 数据库：
+API 会在容器启动时自动执行数据库迁移和种子初始化。若只需单独运行 API 数据库迁移：
 
 ```powershell
-cd apps/api
-Copy-Item .env.example .env
-npm run db:generate
-npm run db:migrate
-npm run seed
-npm run start:dev
+docker compose logs -f api
 ```
 
 启动管理后台：

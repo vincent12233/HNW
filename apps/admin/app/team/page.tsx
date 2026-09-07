@@ -52,7 +52,7 @@ export default function TeamPage() {
         {title:"角色",render:(_,r)=>r.role==="MANAGER"?"管理员":"业务员"},
         {title:"状态",render:(_,r)=>r.status==="ACTIVE"?"正常":r.status},
         {title:role==="ADMIN"?"业务员数量":"客户数量",render:(_,r)=>role==="ADMIN"?r._count?.createdBusinessUsers:r._count?.assignedCustomers},
-      ]}/> : <Table<Record<string,unknown>> rowKey={(r,i)=>String(r.id || r.customerId || i)} loading={loading} dataSource={records} scroll={{x:900}} columns={Object.keys(records[0] || {}).filter(k=>!k.toLowerCase().includes("password")).slice(0,8).map(key=>({title:key,dataIndex:key,render:(value:unknown)=>typeof value === "object" ? JSON.stringify(value) : String(value ?? "-")}))}/>} 
+      ]}/> : <Table<Record<string,unknown>> rowKey={(r,i)=>String(r.id || r.customerId || i)} loading={loading} dataSource={records} scroll={{x:900}} columns={Object.keys(records[0] || {}).filter(k=>!k.toLowerCase().includes("password")).slice(0,8).map(key=>({title:key,dataIndex:key,render:(value:unknown)=>typeof value === "object" ? JSON.stringify(value) : String(value ?? "-")}))}/>}
     </Space>
     <Modal title={role==="ADMIN"?"创建管理员":"创建业务员"} open={open} onCancel={()=>setOpen(false)} onOk={()=>form.submit()} confirmLoading={saving} okText="创建" cancelText="取消">
       <Form form={form} layout="vertical" onFinish={create}>

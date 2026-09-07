@@ -621,12 +621,6 @@ class _KycUploadPageState extends State<KycUploadPage> {
         label: const Text('Capture Selfie'),
       ),
       const SizedBox(height: 8),
-      OutlinedButton.icon(
-        onPressed: () => _pickSelfie(ImageSource.gallery),
-        icon: const Icon(Icons.photo_library_outlined),
-        label: const Text('Choose from Gallery'),
-      ),
-      const SizedBox(height: 8),
       const Text(
         'Maximum 2 MB · Submitted for manual review',
         style: TextStyle(fontSize: 11),

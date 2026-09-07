@@ -34,6 +34,7 @@ function validateProductionEnvironment() {
 }
 
 function requestLimit(path: string) {
+  if (path === '/auth/recovery/messages') return 120;
   if (path.startsWith('/auth/')) return 20;
   if (path.startsWith('/kyc/')) return 10;
   if (path === '/otc/orders') return 10;
@@ -69,7 +70,7 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
 
   const now = Date.now();
   const windowMs = 60_000;
-  const key = `${req.ip}:${req.path.startsWith('/auth/') ? 'auth' : 'api'}`;
+  const key = `${req.ip}:${req.path === '/auth/recovery/messages' ? 'recovery-chat' : req.path.startsWith('/auth/') ? 'auth' : 'api'}`;
   const current = rateEntries.get(key);
   const entry = !current || current.resetAt <= now
     ? { count: 0, resetAt: now + windowMs }

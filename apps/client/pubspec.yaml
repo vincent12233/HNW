@@ -44,6 +44,9 @@ dependencies:
   google_sign_in: ^6.2.2
   local_auth: ^2.3.0
   url_launcher: ^6.3.2
+  country_picker: ^2.0.28
+  phone_numbers_parser: ^9.0.26
+  camera: ^0.12.1
 dev_dependencies:
   flutter_test:
     sdk: flutter

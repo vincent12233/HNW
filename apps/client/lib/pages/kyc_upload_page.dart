@@ -7,6 +7,9 @@ import '../services/auth_service.dart';
 import '../app_config.dart';
 import '../widgets/kyc_signature_pad.dart';
 import '../utils/client_error_message.dart';
+import '../widgets/onboarding_widgets.dart';
+import 'bank_details_page.dart';
+import 'selfie_camera_page.dart';
 
 class KycUploadPage extends StatefulWidget {
   const KycUploadPage({super.key, this.accessToken});
@@ -28,6 +31,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   void _goTo(int nextStep) {
+    if (nextStep == 4) { _bankDetails(); return; }
     if (_scrollController.hasClients) _scrollController.jumpTo(0);
     setState(() {
       step = nextStep;
@@ -43,6 +47,18 @@ class _KycUploadPageState extends State<KycUploadPage> {
   int step = 0;
   PlatformFile? selfieFile;
   PlatformFile? signatureFile;
+  Map<String, String>? bankDetails;
+  String fullName = '';
+  String? existingStatus, reviewNote;
+
+  @override
+  void initState() { super.initState(); _loadStatus(); }
+  Future<void> _loadStatus() async {
+    try {
+      final status = await authService.kycDetails(accessToken: widget.accessToken);
+      if (mounted) setState(() { existingStatus = status['status']?.toString(); reviewNote = status['reviewNote']?.toString(); });
+    } catch (e) { if (mounted) setState(() => errorText = clientErrorMessage(e)); }
+  }
 
   bool get documentsReady =>
       selectedFile != null &&
@@ -74,6 +90,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
             documentType == 'PAN' ? 'Upload PAN Card' : 'Aadhaar Verification',
             'Selfie Verification',
             'Signature',
+            'Bank Details',
             'Review Documents',
           ][step],
         ),
@@ -86,6 +103,13 @@ class _KycUploadPageState extends State<KycUploadPage> {
             controller: _scrollController,
             padding: const EdgeInsets.all(20),
             children: [
+              if (existingStatus == 'PENDING' || existingStatus == 'APPROVED') ...[
+                VerificationBanner(title: existingStatus == 'PENDING' ? 'Verification in Progress' : 'Verification Complete', subtitle: existingStatus == 'PENDING' ? 'Your documents are waiting for business review.' : 'Your account has been verified.'),
+                const SizedBox(height: 20),
+                if (reviewNote != null) Text(reviewNote!),
+                TextButton.icon(onPressed: _loadStatus, icon: const Icon(Icons.refresh), label: const Text('Refresh Status')),
+              ] else ...[
+              if (existingStatus == 'REJECTED') Padding(padding: const EdgeInsets.only(bottom: 12), child: Text(reviewNote ?? 'Please update your documents and submit again.', style: const TextStyle(color: AppConfig.lossColor))),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -106,7 +130,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                         children: [
                           Text(
                             step == 0
-                                ? 'Verify your identity'
+                                ? 'Verification in Progress'
                                 : step == 1
                                 ? 'Add your identity document'
                                 : step == 2
@@ -117,8 +141,8 @@ class _KycUploadPageState extends State<KycUploadPage> {
                             style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Use a clear, readable image of your own document.',
+                          Text(
+                            step == 0 ? 'Securely verify your identity to access your account.' : step == 2 ? 'Please take a clear selfie in good lighting. Make sure your face is fully visible.' : step == 3 ? 'Sign on a white page using a dark pen and sign within the lines below.' : 'Use a clear, readable image of your own document.',
                             style: TextStyle(
                               fontSize: 12,
                               color: AppConfig.textSecondaryColor,
@@ -131,30 +155,32 @@ class _KycUploadPageState extends State<KycUploadPage> {
                 ),
               ),
               const SizedBox(height: 22),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              if (step == 0) ...[Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                runSpacing: 8,
                 children: [
                   const Text(
                     'Verification Progress',
                     style: TextStyle(fontWeight: FontWeight.w700, fontSize: 12),
                   ),
-                  Text(
-                    '${step + 1} of 5',
+                  Flexible(child: Text(
+                    '${[fullName.isNotEmpty, documentsReady, selfieFile != null, signatureFile != null, bankDetails != null].where((value) => value).length} of 6 completed',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppConfig.primaryColor,
                     ),
-                  ),
+                  )),
                 ],
               ),
               const SizedBox(height: 8),
               LinearProgressIndicator(
-                value: (step + 1) / 5,
+                value: [fullName.isNotEmpty, documentsReady, selfieFile != null, signatureFile != null, bankDetails != null].where((value) => value).length / 6,
                 minHeight: 4,
                 borderRadius: BorderRadius.circular(4),
                 backgroundColor: const Color(0xFFEBF0FA),
               ),
               const SizedBox(height: 24),
+              ],
               if (step == 0) ...[
                 const Text(
                   'Choose Identity Document',
@@ -190,9 +216,9 @@ class _KycUploadPageState extends State<KycUploadPage> {
                 const SizedBox(height: 10),
                 _stepRow(
                   Icons.badge_outlined,
-                  'Choose document',
-                  'Select PAN or Aadhaar',
-                  true,
+                  'Personal Details',
+                  fullName.isEmpty ? 'Basic identity information' : fullName,
+                  fullName.isNotEmpty,
                 ),
                 _stepRow(
                   Icons.photo_camera_outlined,
@@ -214,11 +240,18 @@ class _KycUploadPageState extends State<KycUploadPage> {
                 ),
                 _stepRow(
                   Icons.fact_check_outlined,
+                  'Bank Details',
+                  'Add your bank account information',
+                  bankDetails != null,
+                ),
+                _stepRow(
+                  Icons.fact_check_outlined,
                   'Review & submit',
                   'Your documents will be reviewed',
                   false,
                 ),
               ] else if (step == 1) ...[
+                if (documentType == 'AADHAAR') const Padding(padding: EdgeInsets.only(bottom: 16), child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text('1  Front', style: TextStyle(color: AppConfig.primaryColor)), Text('2  Back'), Text('3  Review')])),
                 _uploadPanel(back: false),
                 if (documentType == 'AADHAAR') ...[
                   const SizedBox(height: 20),
@@ -261,6 +294,8 @@ class _KycUploadPageState extends State<KycUploadPage> {
                   ),
                 ],
               ] else ...[
+                ListTile(contentPadding: EdgeInsets.zero, title: const Text('Personal Details'), subtitle: Text(fullName), trailing: TextButton(onPressed: _personalDetails, child: const Text('Edit'))),
+                if (bankDetails != null) ListTile(contentPadding: EdgeInsets.zero, title: const Text('Bank Details'), subtitle: Text('${bankDetails!['bankName']}\n${bankDetails!['accountHolder']}\n${bankDetails!['accountNumber']}'), trailing: TextButton(onPressed: _bankDetails, child: const Text('Edit'))),
                 _reviewFile(selfieFile!, 'Selfie', editStep: 2),
                 _reviewFile(signatureFile!, 'Signature', editStep: 3),
                 _reviewFile(
@@ -279,6 +314,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                 ),
               ],
               const SizedBox(height: 24),
+              ],
             ],
           ),
         ),
@@ -310,9 +346,12 @@ class _KycUploadPageState extends State<KycUploadPage> {
               FilledButton(
                 onPressed: isSubmitting
                     ? null
-                    : step == 4
+                    : existingStatus == 'PENDING' || existingStatus == 'APPROVED'
+                    ? () => Navigator.popUntil(context, (route) => route.isFirst)
+                    : step == 5
                     ? _submit
                     : () {
+                        if (step == 0 && fullName.isEmpty) { _personalDetails(); return; }
                         if (step == 1 && !documentsReady) {
                           setState(
                             () => errorText = documentType == 'AADHAAR'
@@ -343,7 +382,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(step == 4 ? 'Submit KYC for Review' : 'Continue'),
+                    : Text(existingStatus == 'PENDING' || existingStatus == 'APPROVED' ? 'Back to Login' : step == 5 ? 'Submit KYC for Review' : step == 0 ? 'Continue Verification' : 'Continue'),
               ),
               const SizedBox(height: 16),
               const Row(
@@ -433,6 +472,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     String subtitle,
     bool complete,
   ) => ListTile(
+    onTap: title == 'Personal Details' ? _personalDetails : null,
     minTileHeight: 48,
     visualDensity: VisualDensity.compact,
     contentPadding: EdgeInsets.zero,
@@ -512,7 +552,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
         OutlinedButton.icon(
           onPressed: isSubmitting ? null : () => _pickFile(back: back),
           icon: const Icon(Icons.photo_library_outlined, size: 18),
-          label: const Text('Choose from Gallery / Files'),
+          label: const Text('Choose from Gallery'),
         ),
         const SizedBox(height: 6),
         Text(
@@ -545,7 +585,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
       Center(
         child: Container(
           width: 210,
-          height: 250,
+          height: 210,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(color: AppConfig.primaryColor),
@@ -592,6 +632,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
 
   Future<void> _pickSelfie(ImageSource source) async {
     try {
+      if (source == ImageSource.camera) {
+        final bytes = await Navigator.push<Uint8List>(context, MaterialPageRoute(builder: (_) => const SelfieCameraPage()));
+        if (bytes != null && mounted) setState(() { selfieFile = PlatformFile(name: 'selfie.png', size: bytes.length, bytes: bytes); errorText = null; });
+        return;
+      }
       final photo = await ImagePicker().pickImage(
         source: source,
         preferredCameraDevice: CameraDevice.front,
@@ -746,6 +791,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Future<void> _submit() async {
+    if (fullName.isEmpty || bankDetails == null) { setState(() => errorText = 'Complete your personal and bank details'); return; }
     final file = selectedFile;
     if (selfieFile == null || signatureFile == null) {
       setState(
@@ -773,6 +819,8 @@ class _KycUploadPageState extends State<KycUploadPage> {
       final recognizedType = await authService.submitKyc(
         accessToken: widget.accessToken,
         documentType: documentType,
+        fullName: fullName,
+        bankDetails: bankDetails,
         selfieFile: selfieFile!,
         signatureFile: signatureFile!,
         file: documentType == 'AADHAAR'
@@ -800,7 +848,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
         builder: (dialogContext) => AlertDialog(
           title: const Text('KYC Submitted'),
           content: Text(
-            'We detected this as $recognizedType. Your account is now waiting for business review.',
+            'Your $recognizedType, selfie, signature and bank details have been submitted to your assigned business representative for review.',
           ),
           actions: [
             FilledButton(
@@ -836,5 +884,16 @@ class _KycUploadPageState extends State<KycUploadPage> {
         });
       }
     }
+  }
+
+  Future<void> _personalDetails() async {
+    final controller = TextEditingController(text: fullName);
+    final value = await showDialog<String>(context: context, builder: (context) => AlertDialog(title: const Text('Personal Details'), content: TextField(controller: controller, autofocus: true, textCapitalization: TextCapitalization.words, decoration: const InputDecoration(labelText: 'Full name as on your identity document')), actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')), FilledButton(onPressed: () { if (controller.text.trim().length >= 2) Navigator.pop(context, controller.text.trim()); }, child: const Text('Save'))]));
+    if (value != null && mounted) setState(() => fullName = value);
+  }
+
+  Future<void> _bankDetails() async {
+    await Navigator.push(context, MaterialPageRoute<void>(builder: (context) => BankDetailsPage(initial: bankDetails ?? {'accountHolder': fullName}, onContinue: (value) { setState(() => bankDetails = value); Navigator.pop(context); })));
+    if (mounted && bankDetails != null) _goTo(5);
   }
 }

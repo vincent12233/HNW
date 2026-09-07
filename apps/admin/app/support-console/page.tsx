@@ -26,6 +26,7 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import RecoveryInbox from "@/components/RecoveryInbox";
 import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
@@ -215,6 +216,7 @@ export default function SupportConsolePage() {
 
   return (
     <AdminShell>
+      <RecoveryInbox />
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>在线客服后台</Title>

@@ -1,11 +1,11 @@
 import { BadRequestException, Injectable, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { mkdir, readFile, writeFile, unlink } from 'fs/promises';
-import { join, normalize } from 'path';
+import { isAbsolute, join, relative, resolve, sep } from 'path';
 
 @Injectable()
 export class PrivateObjectStorageService implements OnModuleInit {
-  private readonly root = join(process.cwd(), process.env.PRIVATE_OBJECT_ROOT || 'private-objects');
+  private readonly root = resolve(process.cwd(), process.env.PRIVATE_OBJECT_ROOT || 'private-objects');
   private readonly secret = process.env.OBJECT_SIGNING_SECRET || process.env.JWT_SECRET || 'development-only-change-me';
 
   onModuleInit() {
@@ -38,8 +38,9 @@ export class PrivateObjectStorageService implements OnModuleInit {
     return signature.length === expected.length && timingSafeEqual(Buffer.from(signature), Buffer.from(expected));
   }
   private resolve(key: string) {
-    const path = normalize(join(this.root, key));
-    if (!path.startsWith(normalize(this.root))) throw new BadRequestException('Invalid object key');
+    const path = resolve(this.root, key);
+    const withinRoot = relative(this.root, path);
+    if (!withinRoot || withinRoot === '..' || withinRoot.startsWith(`..${sep}`) || isAbsolute(withinRoot)) throw new BadRequestException('Invalid object key');
     return path;
   }
   private detectMime(bytes: Buffer) {

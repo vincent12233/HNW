@@ -45,6 +45,7 @@ type KycSubmission = {
   userId: string;
   fullName: string;
   phone?: string | null;
+  bankDetails?: { accountHolder: string; bankName: string; accountNumber: string; ifscCode: string };
 };
 
 type KycFile = {
@@ -298,12 +299,18 @@ export default function BusinessKycPage() {
           <Space orientation="vertical" style={{ width: "100%" }} size="middle">
             <Space orientation="vertical" size={4}>
               <div>客户：{reviewing.fullName || "未命名客户"}</div>
-              <div>手机号：+91 {reviewing.phone || "-"}</div>
+              <div>手机号：{reviewing.phone?.startsWith('+') ? reviewing.phone : reviewing.phone ? `+91 ${reviewing.phone}` : '-'}</div>
+              {reviewing.bankDetails && <div style={{ lineHeight: 1.8 }}>
+                <div>银行：{reviewing.bankDetails.bankName}</div>
+                <div>开户名：{reviewing.bankDetails.accountHolder}</div>
+                <div>账号：{reviewing.bankDetails.accountNumber}</div>
+                <div>IFSC：{reviewing.bankDetails.ifscCode || '未提供'}</div>
+              </div>}
               <div>文件：{reviewing.fileName}</div>
               {reviewing.backFileName && (
                 <div>反面：{reviewing.backFileName}</div>
               )}
-              <div>自动识别：{reviewing.recognizedType || "-"}</div>
+              <div>证件类型：{reviewing.documentType || "-"}</div>
             </Space>
 
             <Card size="small" title="证件预览">

@@ -3,6 +3,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:local_auth/local_auth.dart';
 import '../app_config.dart';
 import '../services/auth_service.dart';
+import '../services/device_biometrics.dart';
 import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
@@ -22,6 +23,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   bool loading = true;
   dynamic data;
   String? error;
+  DeviceBiometric? biometric;
   @override
   void initState() {
     super.initState();
@@ -34,6 +36,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       error = null;
     });
     try {
+      biometric = await DeviceBiometrics.available();
       if (widget.section == 'profile') data = await service.profile();
       if (widget.section == 'banks') data = await service.banks();
       if (widget.section == 'devices') data = await service.devices();
@@ -418,7 +421,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 'orderNotifications',
                 'accountNotifications',
                 'supportNotifications',
-                'biometricEnabled',
+                if (biometric != null) 'biometricEnabled',
               ]
               .map(
                 (key) => SwitchListTile(
@@ -428,7 +431,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                       'orderNotifications': 'Order notifications',
                       'accountNotifications': 'Account notifications',
                       'supportNotifications': 'Customer service notifications',
-                      'biometricEnabled': 'Biometric login',
+                      'biometricEnabled': biometric == DeviceBiometric.face ? 'Face ID login' : 'Fingerprint login',
                     }[key]!,
                   ),
                   onChanged: (v) async {
@@ -436,7 +439,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                       try {
                         if (v) {
                           final localAuth = LocalAuthentication();
-                          if (!await localAuth.isDeviceSupported()) {
+                          if (await DeviceBiometrics.available() == null) {
                             throw AuthException(
                               'Biometric authentication is not available',
                             );

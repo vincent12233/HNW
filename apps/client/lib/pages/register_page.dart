@@ -1,279 +1,60 @@
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
-
 import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../utils/client_error_message.dart';
+import '../widgets/international_phone_field.dart';
+import '../widgets/onboarding_widgets.dart';
 import 'kyc_upload_page.dart';
 import 'legal_page.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
-
   @override
   State<RegisterPage> createState() => _RegisterPageState();
 }
-
 class _RegisterPageState extends State<RegisterPage> {
-  final phoneController = TextEditingController();
-  final passwordController = TextEditingController();
-  final confirmPasswordController = TextEditingController();
-  final inviteCodeController = TextEditingController();
-  final authService = AuthService();
-
-  bool obscurePassword = true;
-  bool obscureConfirmPassword = true;
-  bool isSubmitting = false;
-  bool acceptedTerms = false;
-  String? errorText;
-
+  final phone = TextEditingController(), password = TextEditingController(), confirm = TextEditingController(), invite = TextEditingController();
+  Country country = Country.parse('IN');
+  bool obscure = true, obscureConfirm = true, accepted = false, busy = false;
+  String? error;
   @override
-  void dispose() {
-    phoneController.dispose();
-    passwordController.dispose();
-    confirmPasswordController.dispose();
-    inviteCodeController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(),
-      body: Align(
-        alignment: Alignment.topCenter,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: Container(
-            width: 420,
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Create Account',
-                  textAlign: TextAlign.start,
-                  style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Register with your Indian mobile number, password and invite code',
-                  textAlign: TextAlign.start,
-                  style: TextStyle(color: Colors.black54),
-                ),
-                const SizedBox(height: 10),
-                const Text(
-                  'Invite code is required to create an account',
-                  textAlign: TextAlign.start,
-                  style: TextStyle(
-                    color: AppConfig.primaryColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                TextField(
-                  controller: phoneController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(
-                    labelText: 'Mobile number',
-                    prefixText: '+91 ',
-                    prefixIcon: Icon(Icons.phone_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: passwordController,
-                  obscureText: obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          obscurePassword = !obscurePassword;
-                        });
-                      },
-                      icon: Icon(
-                        obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: confirmPasswordController,
-                  obscureText: obscureConfirmPassword,
-                  textInputAction: TextInputAction.next,
-                  decoration: InputDecoration(
-                    labelText: 'Confirm password',
-                    prefixIcon: const Icon(Icons.lock_reset_outlined),
-                    border: const OutlineInputBorder(),
-                    suffixIcon: IconButton(
-                      onPressed: () {
-                        setState(() {
-                          obscureConfirmPassword = !obscureConfirmPassword;
-                        });
-                      },
-                      icon: Icon(
-                        obscureConfirmPassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: inviteCodeController,
-                  textCapitalization: TextCapitalization.characters,
-                  autocorrect: false,
-                  decoration: const InputDecoration(
-                    labelText: 'Invite code',
-                    prefixIcon: Icon(Icons.confirmation_number_outlined),
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Checkbox(
-                      value: acceptedTerms,
-                      onChanged: isSubmitting
-                          ? null
-                          : (value) =>
-                                setState(() => acceptedTerms = value ?? false),
-                    ),
-                    const Text(
-                      'I agree to the',
-                      style: TextStyle(fontSize: 12),
-                    ),
-                    Flexible(
-                      child: TextButton(
-                        onPressed: () => Navigator.push(
-                          context,
-                          MaterialPageRoute<void>(
-                            builder: (_) =>
-                                const LegalPage(title: 'Terms & Conditions'),
-                          ),
-                        ),
-                        child: const Text(
-                          'Terms & Conditions',
-                          style: TextStyle(fontSize: 12),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(
-                  height: 52,
-                  child: FilledButton(
-                    onPressed: isSubmitting || !acceptedTerms ? null : _submit,
-                    child: isSubmitting
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Text('Sign Up'),
-                  ),
-                ),
-                if (errorText != null) ...[
-                  const SizedBox(height: 12),
-                  Text(
-                    errorText!,
-                    textAlign: TextAlign.start,
-                    style: const TextStyle(color: AppConfig.lossColor),
-                  ),
-                ],
-                const SizedBox(height: 12),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Already registered? Sign in'),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
+  void dispose() { for (final c in [phone, password, confirm, invite]) { c.dispose(); } super.dispose(); }
   Future<void> _submit() async {
-    if (!acceptedTerms) return;
-    final phone = phoneController.text.trim();
-    final password = passwordController.text;
-    final confirmPassword = confirmPasswordController.text;
-    final inviteCode = inviteCodeController.text.trim();
-
-    if (!_isIndianMobileNumber(phone)) {
-      setState(() => errorText = 'Enter a valid Indian mobile number');
-      return;
-    }
-
-    if (inviteCode.length < 7 || inviteCode.length > 20) {
-      setState(() => errorText = 'Enter a valid invite code');
-      return;
-    }
-
-    if (password.length < 8) {
-      setState(() => errorText = 'Password must be at least 8 characters');
-      return;
-    }
-
-    if (password != confirmPassword) {
-      setState(() => errorText = 'Passwords do not match');
-      return;
-    }
-
-    setState(() {
-      isSubmitting = true;
-      errorText = null;
-    });
-
+    if (busy || !accepted) return;
+    final normalized = internationalPhone(phone.text, country.countryCode);
+    if (normalized == null) { setState(() => error = 'Enter a valid mobile number'); return; }
+    if (password.text.length < 8) { setState(() => error = 'Password must be at least 8 characters'); return; }
+    if (password.text != confirm.text) { setState(() => error = 'Passwords do not match'); return; }
+    if (invite.text.trim().length < 7 || invite.text.trim().length > 20) { setState(() => error = 'Enter a valid invite code'); return; }
+    setState(() { busy = true; error = null; });
     try {
-      final kycToken = await authService.register(
-        phone: phone,
-        password: password,
-        inviteCode: inviteCode,
-      );
-
-      if (!mounted) {
-        return;
-      }
-
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute<void>(
-          builder: (_) => KycUploadPage(accessToken: kycToken),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      setState(() {
-        errorText = clientErrorMessage(
-          error,
-          fallback: 'Unable to register. Please try again.',
-        );
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          isSubmitting = false;
-        });
-      }
-    }
+      final token = await AuthService().register(phone: normalized, password: password.text, inviteCode: invite.text);
+      if (mounted) Navigator.pushReplacement(context, MaterialPageRoute<void>(builder: (_) => KycUploadPage(accessToken: token)));
+    } catch (e) { if (mounted) setState(() => error = clientErrorMessage(e)); }
+    finally { if (mounted) setState(() => busy = false); }
   }
-}
-
-bool _isIndianMobileNumber(String value) {
-  final digits = value.replaceAll(RegExp(r'\D'), '');
-  return RegExp(r'^(91)?[6-9]\d{9}$').hasMatch(digits);
+  @override
+  Widget build(BuildContext context) => Scaffold(backgroundColor: Colors.white, appBar: AppBar(),
+    body: Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 440), child: ListView(
+      padding: const EdgeInsets.fromLTRB(24, 8, 24, 24), children: [
+        const Text('Create Account', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
+        const SizedBox(height: 8), const Text('Join Finvest and start your investing journey', style: TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor)),
+        const SizedBox(height: 24),
+        const VerificationBanner(title: 'Invite Code is Mandatory', subtitle: 'You need an invite code to create an account', icon: Icons.card_giftcard),
+        const SizedBox(height: 24),
+        InternationalPhoneField(controller: phone, country: country, enabled: !busy, onCountryChanged: (v) => setState(() => country = v)),
+        const SizedBox(height: 16),
+        TextField(controller: password, enabled: !busy, obscureText: obscure, autofillHints: const [AutofillHints.newPassword], decoration: onboardingInput('Password').copyWith(suffixIcon: IconButton(tooltip: 'Show password', icon: Icon(obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18), onPressed: () => setState(() => obscure = !obscure)))),
+        const SizedBox(height: 16),
+        TextField(controller: confirm, enabled: !busy, obscureText: obscureConfirm, decoration: onboardingInput('Confirm Password').copyWith(suffixIcon: IconButton(tooltip: 'Show password', icon: Icon(obscureConfirm ? Icons.visibility_outlined : Icons.visibility_off_outlined, size: 18), onPressed: () => setState(() => obscureConfirm = !obscureConfirm)))),
+        const SizedBox(height: 16),
+        TextField(controller: invite, enabled: !busy, textCapitalization: TextCapitalization.characters, decoration: onboardingInput('Invite Code').copyWith(suffixIcon: const Icon(Icons.card_giftcard, size: 18))),
+        const SizedBox(height: 18),
+        Row(children: [SizedBox(width: 24, child: Checkbox(value: accepted, onChanged: busy ? null : (v) => setState(() => accepted = v ?? false))), const SizedBox(width: 6), const Text('I agree to the', style: TextStyle(fontSize: 11)), Flexible(child: TextButton(onPressed: () => Navigator.push(context, MaterialPageRoute<void>(builder: (_) => const LegalPage(title: 'Terms & Conditions'))), child: const Text('Terms & Conditions', style: TextStyle(fontSize: 11))))]),
+        const SizedBox(height: 12), FilledButton(onPressed: busy || !accepted ? null : _submit, child: busy ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Sign Up')),
+        if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: AppConfig.lossColor))),
+        const SizedBox(height: 16), Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('Already have an account?', style: TextStyle(fontSize: 11, color: AppConfig.textSecondaryColor)), TextButton(onPressed: busy ? null : () => Navigator.pop(context), child: const Text('Login', style: TextStyle(fontSize: 11)))]),
+      ]))),
+  );
 }

@@ -47,6 +47,9 @@ class AuthService {
     final decoded = _decodeJson(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (decoded is Map && decoded['kycToken'] is String) {
+        throw KycRequiredException(decoded['kycToken'] as String);
+      }
       final message = decoded is Map ? decoded['message']?.toString() : null;
       throw AuthException(message ?? 'Login failed');
     }
@@ -208,6 +211,8 @@ class AuthService {
     PlatformFile? backFile,
     required PlatformFile selfieFile,
     required PlatformFile signatureFile,
+    String? fullName,
+    Map<String, String>? bankDetails,
   }) async {
     final bytes = file.bytes;
     final backBytes = backFile?.bytes;
@@ -233,6 +238,8 @@ class AuthService {
             },
             body: jsonEncode({
               'documentType': documentType,
+              if (fullName != null) 'fullName': fullName,
+              if (bankDetails != null) 'bankDetails': bankDetails,
               'selfieContentBase64': base64Encode(selfieFile.bytes!),
               'selfieMimeType': _mimeTypeForFile(selfieFile.name),
               'signatureContentBase64': base64Encode(signatureFile.bytes!),
@@ -286,6 +293,15 @@ class AuthService {
     } catch (_) {
       return 'NOT_SUBMITTED';
     }
+  }
+
+  Future<Map<String, dynamic>> kycDetails({String? accessToken}) async {
+    final token = accessToken ?? (await restoreSession())?.accessToken;
+    if (token == null) return {'status': 'NOT_SUBMITTED'};
+    final response = await http.get(Uri.parse('${AppConfig.apiBaseUrl}/kyc/status'), headers: {'Authorization': 'Bearer $token'}).timeout(const Duration(seconds: 12));
+    final decoded = _decodeJson(response.body);
+    if (response.statusCode != 200 || decoded is! Map) throw const AuthException('Unable to load verification status');
+    return Map<String, dynamic>.from(decoded);
   }
 
   Future<List<WithdrawalRequest>> fetchWithdrawals() async {
@@ -661,6 +677,7 @@ List<WithdrawalRequest> _withdrawalsFromRows(List<dynamic> rows) {
 }
 
 String _normalizeIndianPhone(String value) {
+  if (value.trim().startsWith('+')) return '+${value.replaceAll(RegExp(r'\D'), '')}';
   final digits = value.replaceAll(RegExp(r'\D'), '');
 
   if (digits.length == 12 && digits.startsWith('91')) {
@@ -700,6 +717,11 @@ class AuthException implements Exception {
 
   @override
   String toString() => message;
+}
+
+class KycRequiredException implements Exception {
+  const KycRequiredException(this.token);
+  final String token;
 }
 
 String _englishApiMessage(dynamic decoded, String fallback) {

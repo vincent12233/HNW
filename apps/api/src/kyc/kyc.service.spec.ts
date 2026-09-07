@@ -6,6 +6,8 @@ import { PrivateObjectStorageService } from '../storage/private-object-storage.s
 const png =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ZkAAAAASUVORK5CYII=';
 const submission: KycSubmissionInput = {
+  fullName: 'Test Customer',
+  bankDetails: { accountHolder: 'Test Customer', bankName: 'Test Bank', accountNumber: '123456789', ifscCode: 'SBIN0001234' },
   documentType: 'PAN',
   fileName: 'pan.png',
   mimeType: 'image/png',
@@ -20,6 +22,7 @@ describe('KYC evidence', () => {
     user: { findUnique: jest.fn() },
     $executeRaw: jest.fn(),
     $queryRaw: jest.fn(),
+    $transaction: jest.fn(),
   };
   const objects = { putKyc: jest.fn(), get: jest.fn(), remove: jest.fn() };
   const service = new KycService(
@@ -40,6 +43,8 @@ describe('KYC evidence', () => {
       }),
     );
     prisma.$executeRaw.mockResolvedValue(1);
+    prisma.$queryRaw.mockResolvedValue([]);
+    prisma.$transaction.mockImplementation(async (callback) => callback(prisma));
   });
 
   it.each(['selfieContentBase64', 'signatureContentBase64'] as const)(

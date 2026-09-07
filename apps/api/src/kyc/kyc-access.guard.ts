@@ -26,6 +26,7 @@ export class KycAccessGuard implements CanActivate {
       throw new UnauthorizedException('KYC access token has been revoked');
     }
     const onboarding = payload.purpose === 'KYC_ONBOARDING';
+    if (user.role !== 'CLIENT' || user.status === 'DISABLED' || (payload.purpose && !onboarding)) throw new UnauthorizedException('Invalid KYC access');
     if (!onboarding && user.status !== 'ACTIVE') {
       throw new UnauthorizedException('User account is not active');
     }

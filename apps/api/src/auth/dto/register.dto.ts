@@ -6,7 +6,7 @@ export class RegisterDto {
   password: string;
 
   @IsString()
-  @Matches(/^(91)?[6-9]\d{9}$/)
+  @Matches(/^(?:\+[1-9]\d{6,14}|(?:91)?[6-9]\d{9})$/)
   phone: string;
 
   @IsString()

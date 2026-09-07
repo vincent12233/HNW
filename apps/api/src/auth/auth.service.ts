@@ -22,6 +22,7 @@ import { UsersService } from '../users/users.service';
 
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { normalizePhone, internationalPhone } from './phone-number';
 @Injectable()
 export class AuthService {
   constructor(
@@ -32,10 +33,10 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const phone = this.normalizeIndianPhone(dto.phone);
+    const phone = normalizePhone(dto.phone);
 
     if (!phone) {
-      throw new BadRequestException('Invalid Indian mobile number');
+      throw new BadRequestException('Invalid mobile number');
     }
 
     const email = this.phoneEmail(phone);
@@ -184,7 +185,7 @@ export class AuthService {
       userAgent?: string | null;
     },
   ) {
-    const phone = dto.phone ? this.normalizeIndianPhone(dto.phone) : null;
+    const phone = dto.phone ? normalizePhone(dto.phone) : null;
     const employeeNo = dto.employeeNo?.trim().toUpperCase();
 
     if (!phone && !employeeNo) {
@@ -243,6 +244,12 @@ export class AuthService {
       });
 
       if (user.role === UserRole.CLIENT && user.status === UserStatus.SUSPENDED) {
+        const approved = await this.prisma.$queryRaw<{ id: string }[]>`SELECT "id" FROM "kyc_submissions" WHERE "userId" = ${user.id} AND "status" = 'APPROVED' LIMIT 1`;
+        if (!approved.length) {
+          throw new UnauthorizedException({ message: 'KYC verification required', kycToken: await this.jwtService.signAsync(
+            { sub: user.id, role: user.role, version: user.authVersion, purpose: 'KYC_ONBOARDING' }, { expiresIn: '30m' },
+          ) });
+        }
         throw new UnauthorizedException('KYC pending approval');
       }
 
@@ -307,51 +314,11 @@ export class AuthService {
   }
 
   async requestPasswordReset(phoneValue: string) {
-    const phone = this.normalizeIndianPhone(phoneValue || '');
-    if (!phone) throw new BadRequestException('Invalid Indian mobile number');
-    const user = await this.prisma.user.findFirst({ where: { phone, status: UserStatus.ACTIVE } });
-    if (!user) return { sent: true };
-    const recentRequests = await this.prisma.passwordResetCode.count({
-      where: { userId: user.id, createdAt: { gte: new Date(Date.now() - 15 * 60 * 1000) } },
-    });
-    if (recentRequests >= 3) {
-      throw new HttpException('Too many reset requests. Try again later.', HttpStatus.TOO_MANY_REQUESTS);
-    }
-    await this.prisma.passwordResetCode.updateMany({ where: { userId: user.id, usedAt: null }, data: { usedAt: new Date() } });
-    const code = String(randomInt(100000, 1000000));
-    const reset = await this.prisma.passwordResetCode.create({ data: { userId: user.id, codeHash: await bcrypt.hash(code, 12), expiresAt: new Date(Date.now() + 10 * 60 * 1000) } });
-    const webhook = this.config.get<string>('SMS_OTP_WEBHOOK_URL')?.trim();
-    if (!webhook) throw new BadRequestException('Password reset service is temporarily unavailable');
-    const webhookToken = this.config.get<string>('SMS_OTP_WEBHOOK_TOKEN')?.trim();
-    try {
-      await axios.post(
-        webhook,
-        { phone: `91${phone}`, message: `Your India Trading password reset code is ${code}. It expires in 10 minutes.` },
-        { timeout: 10000, headers: webhookToken ? { Authorization: `Bearer ${webhookToken}` } : undefined },
-      );
-    } catch {
-      await this.prisma.passwordResetCode.update({ where: { id: reset.id }, data: { usedAt: new Date() } });
-      throw new BadRequestException('Password reset service is temporarily unavailable');
-    }
-    return { sent: true };
+    throw new BadRequestException('Contact customer support to reset your password');
   }
 
   async confirmPasswordReset(phoneValue: string, code: string, newPassword: string) {
-    const phone = this.normalizeIndianPhone(phoneValue || '');
-    if (!phone || !/^\d{6}$/.test(code || '') || String(newPassword || '').length < 8) throw new BadRequestException('Invalid password reset details');
-    const user = await this.prisma.user.findFirst({ where: { phone } });
-    if (!user) throw new BadRequestException('Invalid or expired reset code');
-    const reset = await this.prisma.passwordResetCode.findFirst({ where: { userId: user.id, usedAt: null, expiresAt: { gt: new Date() }, attempts: { lt: 5 } }, orderBy: { createdAt: 'desc' } });
-    if (!reset || !(await bcrypt.compare(code, reset.codeHash))) {
-      if (reset) await this.prisma.passwordResetCode.update({ where: { id: reset.id }, data: { attempts: { increment: 1 } } });
-      throw new BadRequestException('Invalid or expired reset code');
-    }
-    await this.prisma.$transaction([
-      this.prisma.user.update({ where: { id: user.id }, data: { passwordHash: await bcrypt.hash(newPassword, 12), authVersion: { increment: 1 } } }),
-      this.prisma.passwordResetCode.update({ where: { id: reset.id }, data: { usedAt: new Date() } }),
-      this.prisma.notification.create({ data: { userId: user.id, type: 'SECURITY', title: 'Password changed', body: 'Your account password was reset successfully.' } }),
-    ]);
-    return { changed: true };
+    throw new BadRequestException('Use the reset code in your customer support session');
   }
 
   async googleLogin(idToken: string) {
@@ -440,7 +407,7 @@ export class AuthService {
   }
 
   private phoneEmail(phone: string): string {
-    return `91${phone}@phone.hnw.local`;
+    return `${internationalPhone(phone).slice(1)}@phone.hnw.local`;
   }
 
   private defaultCustomerName(phone: string): string {

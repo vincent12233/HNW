@@ -11,6 +11,7 @@ interface JwtPayload {
   sub: string;
   role: string;
   version?: number;
+  purpose?: string;
 }
 
 @Injectable()
@@ -34,7 +35,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
   }
 
   async validate(payload: JwtPayload) {
-    if (!payload.sub) {
+    if (!payload.sub || payload.purpose) {
       throw new UnauthorizedException('Invalid access token');
     }
 

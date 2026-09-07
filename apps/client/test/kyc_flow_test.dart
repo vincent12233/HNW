@@ -13,9 +13,14 @@ void main() {
       MaterialApp(theme: AppTheme.light(), home: const KycUploadPage()),
     );
     await tester.tap(find.text('Aadhaar Card'));
-    await tester.ensureVisible(find.text('Continue'));
+    await tester.ensureVisible(find.text('Continue Verification'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Continue'));
+    await tester.tap(find.text('Continue Verification'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Test Customer');
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue Verification'));
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.text('Aadhaar Front (Required)'),

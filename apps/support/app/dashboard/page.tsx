@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 import { api } from "@/lib/api";
+import RecoveryInbox from "@/components/RecoveryInbox";
 
 type Conversation = {
   id: string;
@@ -300,6 +301,7 @@ export default function Dashboard() {
       </aside>
 
       <section className="flex-1 flex flex-col">
+        <RecoveryInbox />
         <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between">
           <div>
             <h2 className="font-bold text-slate-900">{customerTitle}</h2>

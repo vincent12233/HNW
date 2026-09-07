@@ -1,253 +1,114 @@
 import 'dart:async';
-
+import 'dart:convert';
+import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:http/http.dart' as http;
 import '../app_config.dart';
 import '../services/auth_service.dart';
+import '../utils/client_error_message.dart';
+import '../widgets/international_phone_field.dart';
+import '../widgets/onboarding_widgets.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
   @override
   State<ForgotPasswordPage> createState() => _ForgotPasswordPageState();
 }
-
 class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
-  final phone = TextEditingController(),
-      code = TextEditingController(),
-      password = TextEditingController();
-  final service = AuthService();
-  bool codeSent = false, loading = false, obscure = true;
-  int resendSeconds = 0;
-  Timer? resendTimer;
-  String? error;
+  final phone = TextEditingController(), message = TextEditingController(), code = TextEditingController(), password = TextEditingController(), confirm = TextEditingController();
+  final storage = const FlutterSecureStorage();
+  Country country = Country.parse('IN');
+  String? token, error;
+  bool busy = false, polling = false, ready = false, obscure = true, closed = false;
+  List<Map<String, dynamic>> messages = [];
+  Timer? timer;
   @override
-  void dispose() {
-    phone.dispose();
-    code.dispose();
-    password.dispose();
-    resendTimer?.cancel();
-    super.dispose();
+  void initState() { super.initState(); _restore(); }
+  Future<void> _restore() async {
+    token = await storage.read(key: 'recovery_token');
+    if (!mounted) return;
+    if (token != null) { await _poll(); _startPolling(); }
+    if (mounted) setState(() => ready = true);
   }
-
+  void _startPolling() { timer?.cancel(); timer = Timer.periodic(const Duration(seconds: 5), (_) => _poll()); }
+  Future<dynamic> _request(String path, {Map<String, dynamic>? body}) async {
+    final headers = {'Content-Type': 'application/json', if (token != null) 'x-recovery-token': token!};
+    final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/recovery/$path');
+    final response = await (body == null ? http.get(uri, headers: headers) : http.post(uri, headers: headers, body: jsonEncode(body))).timeout(const Duration(seconds: 15));
+    final data = jsonDecode(response.body);
+    if (response.statusCode == 401) { await storage.delete(key: 'recovery_token'); token = null; timer?.cancel(); }
+    if (response.statusCode < 200 || response.statusCode >= 300) throw AuthException(data is Map ? data['message']?.toString() ?? 'Request failed' : 'Request failed');
+    return data;
+  }
+  Future<void> _poll() async {
+    if (polling || token == null || !mounted) return;
+    polling = true;
+    try {
+      final data = await _request('messages');
+      if (mounted) setState(() { messages = (data['messages'] as List).map((e) => Map<String,dynamic>.from(e)).toList(); closed = data['status'] == 'CLOSED'; error = null; });
+    } catch (e) { if (mounted) setState(() => error = clientErrorMessage(e)); }
+    finally { polling = false; }
+  }
+  Future<void> _run(Future<void> Function() action) async {
+    if (busy) return;
+    setState(() { busy = true; error = null; });
+    try { await action(); } catch (e) { if (mounted) setState(() => error = clientErrorMessage(e)); }
+    finally { if (mounted) setState(() => busy = false); }
+  }
+  Future<void> _connect() => _run(() async {
+    final number = internationalPhone(phone.text, country.countryCode);
+    if (number == null) throw const AuthException('Enter your registered mobile number');
+    final data = await _request('open', body: {'phone': number});
+    token = data['token'] as String;
+    await storage.write(key: 'recovery_token', value: token);
+    if (!mounted) return;
+    await _poll(); _startPolling();
+  });
+  Future<void> _send() => _run(() async {
+    if (message.text.trim().isEmpty) return;
+    await _request('messages', body: {'content': message.text.trim()});
+    message.clear(); await _poll();
+  });
+  Future<void> _reset() => _run(() async {
+    if (password.text.length < 8 || password.text != confirm.text) throw const AuthException('Enter matching passwords of at least 8 characters');
+    await _request('reset', body: {'code': code.text.trim(), 'newPassword': password.text});
+    await storage.delete(key: 'recovery_token');
+    await AuthService().disableBiometricQuickLogin();
+    if (!mounted) return;
+    timer?.cancel();
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Password updated. Please log in.')));
+    Navigator.pop(context);
+  });
   @override
-  Widget build(BuildContext context) => Scaffold(
-    backgroundColor: const Color(0xFF07111F),
-    appBar: AppBar(
-      backgroundColor: Colors.transparent,
-      foregroundColor: Colors.white,
-      title: const Text('Forgot Password'),
-    ),
-    body: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(22),
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 460),
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: const Color(0xE6122034),
-            borderRadius: BorderRadius.circular(24),
-            border: Border.all(color: Colors.white12),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Icon(
-                Icons.lock_reset_rounded,
-                color: AppConfig.primaryColor,
-                size: 48,
-              ),
-              const SizedBox(height: 12),
-              const Text(
-                'Reset your password',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-              const SizedBox(height: 22),
-              _field(
-                phone,
-                'Mobile Number',
-                Icons.phone_outlined,
-                prefix: '+91 ',
-                enabled: !codeSent,
-              ),
-              if (codeSent) ...[
-                const SizedBox(height: 14),
-                _field(code, '6-digit OTP', Icons.sms_outlined),
-                const SizedBox(height: 14),
-                TextField(
-                  controller: password,
-                  obscureText: obscure,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: _decoration('New password', Icons.lock_outline)
-                      .copyWith(
-                        suffixIcon: IconButton(
-                          onPressed: () => setState(() => obscure = !obscure),
-                          icon: Icon(
-                            obscure
-                                ? Icons.visibility_outlined
-                                : Icons.visibility_off_outlined,
-                            color: Colors.white70,
-                          ),
-                        ),
-                      ),
-                ),
-              ],
-              if (error != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.redAccent),
-                ),
-              ],
-              const SizedBox(height: 20),
-              FilledButton(
-                onPressed: loading ? null : _submit,
-                style: FilledButton.styleFrom(
-                  minimumSize: const Size.fromHeight(54),
-                ),
-                child: loading
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(codeSent ? 'Reset Password' : 'Send OTP'),
-              ),
-              if (codeSent) ...[
-                const SizedBox(height: 8),
-                TextButton(
-                  onPressed: loading || resendSeconds > 0 ? null : _resendCode,
-                  child: Text(
-                    resendSeconds > 0
-                        ? 'Resend OTP in ${resendSeconds}s'
-                        : 'Resend OTP',
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    ),
+  void dispose() { timer?.cancel(); for (final c in [phone,message,code,password,confirm]) { c.dispose(); } super.dispose(); }
+  @override
+  Widget build(BuildContext context) => Scaffold(backgroundColor: Colors.white,
+    appBar: AppBar(title: const Text('Customer Support')),
+    body: !ready ? const Center(child: CircularProgressIndicator()) : Center(child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 480), child: ListView(padding: const EdgeInsets.all(20), children: [
+      const VerificationBanner(title: 'Password Recovery', subtitle: 'Customer Support', icon: Icons.support_agent),
+      const SizedBox(height: 20),
+      if (token == null) ...[
+        InternationalPhoneField(controller: phone, country: country, enabled: !busy, onCountryChanged: (c) => setState(() => country = c)),
+        const SizedBox(height: 16), FilledButton.icon(onPressed: busy ? null : _connect, icon: const Icon(Icons.chat_bubble_outline), label: const Text('Connect to Support')),
+      ] else ...[
+        if (messages.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: Text('Waiting for a support agent', textAlign: TextAlign.center)),
+        for (final item in messages) Align(alignment: item['sender'] == 'CLIENT' ? Alignment.centerRight : Alignment.centerLeft,
+          child: Container(constraints: const BoxConstraints(maxWidth: 330), margin: const EdgeInsets.only(bottom: 12), padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: item['sender'] == 'CLIENT' ? const Color(0xFFEAF1FF) : const Color(0xFFF5F6F8), borderRadius: BorderRadius.circular(6)), child: SelectableText(item['content'] as String))),
+        if (!closed) ...[
+          Row(children: [Expanded(child: TextField(controller: message, minLines: 1, maxLines: 4, maxLength: 2000, decoration: onboardingInput('Message').copyWith(counterText: ''))), IconButton(tooltip: 'Send message', onPressed: busy ? null : _send, icon: const Icon(Icons.send, color: AppConfig.primaryColor))]),
+          const SizedBox(height: 24), const Divider(), const SizedBox(height: 12),
+          const Text('Reset Password', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)), const SizedBox(height: 16),
+          TextField(controller: code, textCapitalization: TextCapitalization.characters, decoration: onboardingInput('Reset code from support')),
+          const SizedBox(height: 12), TextField(controller: password, obscureText: obscure, decoration: onboardingInput('New password').copyWith(suffixIcon: IconButton(tooltip: 'Show password', onPressed: () => setState(() => obscure = !obscure), icon: const Icon(Icons.visibility_outlined)))),
+          const SizedBox(height: 12), TextField(controller: confirm, obscureText: obscure, decoration: onboardingInput('Confirm password')),
+          const SizedBox(height: 16), FilledButton(onPressed: busy ? null : _reset, child: const Text('Update Password')),
+        ] else ...[
+          const Text('This support request is closed.'), TextButton(onPressed: () async { await storage.delete(key: 'recovery_token'); if (mounted) setState(() { token = null; closed = false; messages = []; }); }, child: const Text('New support request')),
+        ],
+      ],
+      if (busy) const LinearProgressIndicator(),
+      if (error != null) Padding(padding: const EdgeInsets.only(top: 12), child: Text(error!, style: const TextStyle(color: AppConfig.lossColor))),
+    ]))),
   );
-  Widget _field(
-    TextEditingController c,
-    String label,
-    IconData icon, {
-    String? prefix,
-    bool enabled = true,
-  }) => TextField(
-    controller: c,
-    enabled: enabled,
-    keyboardType: TextInputType.phone,
-    style: const TextStyle(color: Colors.white),
-    decoration: _decoration(label, icon).copyWith(prefixText: prefix),
-  );
-  InputDecoration _decoration(String label, IconData icon) => InputDecoration(
-    labelText: label,
-    labelStyle: const TextStyle(color: Colors.white60),
-    prefixIcon: Icon(icon, color: Colors.white70),
-    filled: true,
-    fillColor: Colors.white.withValues(alpha: .06),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Colors.white12),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(14),
-      borderSide: const BorderSide(color: Colors.white12),
-    ),
-  );
-  Future<void> _submit() async {
-    final normalizedPhone = phone.text.replaceAll(RegExp(r'\D'), '');
-    if (!RegExp(r'^(91)?[6-9]\d{9}$').hasMatch(normalizedPhone)) {
-      setState(() => error = 'Enter a valid Indian mobile number');
-      return;
-    }
-    if (codeSent && !RegExp(r'^\d{6}$').hasMatch(code.text.trim())) {
-      setState(() => error = 'Enter the 6-digit OTP');
-      return;
-    }
-    if (codeSent && password.text.length < 8) {
-      setState(() => error = 'New password must contain at least 8 characters');
-      return;
-    }
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      if (!codeSent) {
-        await service.requestPasswordReset(phone.text);
-        if (mounted) {
-          setState(() => codeSent = true);
-          _startResendTimer();
-        }
-      } else {
-        await service.confirmPasswordReset(
-          phone: phone.text,
-          code: code.text,
-          newPassword: password.text,
-        );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Password reset successfully')),
-          );
-          Navigator.pop(context);
-        }
-      }
-    } catch (exception) {
-      if (mounted) {
-        setState(
-          () => error = exception is AuthException
-              ? exception.message
-              : 'Unable to connect. Please check your network and try again.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
-
-  void _startResendTimer() {
-    resendTimer?.cancel();
-    setState(() => resendSeconds = 60);
-    resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (!mounted || resendSeconds <= 1) {
-        timer.cancel();
-        if (mounted) setState(() => resendSeconds = 0);
-        return;
-      }
-      setState(() => resendSeconds--);
-    });
-  }
-
-  Future<void> _resendCode() async {
-    setState(() {
-      loading = true;
-      error = null;
-    });
-    try {
-      await service.requestPasswordReset(phone.text);
-      if (mounted) {
-        _startResendTimer();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('A new OTP has been sent')),
-        );
-      }
-    } catch (exception) {
-      if (mounted) {
-        setState(
-          () => error = exception is AuthException
-              ? exception.message
-              : 'Unable to resend OTP. Please try again.',
-        );
-      }
-    } finally {
-      if (mounted) setState(() => loading = false);
-    }
-  }
 }

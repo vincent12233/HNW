@@ -4,7 +4,9 @@ import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
 
 class BankDetailsPage extends StatefulWidget {
-  const BankDetailsPage({super.key});
+  const BankDetailsPage({super.key, this.onContinue, this.initial = const {}});
+  final ValueChanged<Map<String, String>>? onContinue;
+  final Map<String, String> initial;
 
   @override
   State<BankDetailsPage> createState() => _BankDetailsPageState();
@@ -21,6 +23,16 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    _holder.text = widget.initial['accountHolder'] ?? '';
+    _number.text = widget.initial['accountNumber'] ?? '';
+    _confirm.text = _number.text;
+    _ifsc.text = widget.initial['ifscCode'] ?? '';
+    _bank.text = widget.initial['bankName'] ?? '';
+  }
+
+  @override
   void dispose() {
     for (final controller in [_holder, _number, _confirm, _ifsc, _bank]) {
       controller.dispose();
@@ -30,6 +42,10 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
 
   Future<void> _save() async {
     if (_saving || !_form.currentState!.validate()) return;
+    if (widget.onContinue != null) {
+      widget.onContinue!({'bankName': _bank.text.trim(), 'accountHolder': _holder.text.trim(), 'accountNumber': _number.text.trim(), 'ifscCode': _ifsc.text.trim().toUpperCase()});
+      return;
+    }
     setState(() {
       _saving = true;
       _error = null;
@@ -123,10 +139,10 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                       : null,
                 ),
                 _field(
-                  'IFSC Code',
+                  widget.onContinue != null ? 'IFSC Code (Optional)' : 'IFSC Code',
                   'Enter the 11-character IFSC code',
                   _ifsc,
-                  validator: (value) =>
+                  validator: (value) => widget.onContinue != null && (value?.trim().isEmpty ?? true) ? null :
                       !RegExp(
                         r'^[A-Z]{4}0[A-Z0-9]{6}$',
                       ).hasMatch(value?.trim().toUpperCase() ?? '')

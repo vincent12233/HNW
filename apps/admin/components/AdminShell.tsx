@@ -8,12 +8,13 @@ import { api } from "@/lib/api";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
-type Role = "ADMIN" | "BUSINESS" | "FINANCE" | "SUPPORT";
+type Role = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE" | "SUPPORT";
 type CurrentUser = { id?: string; fullName?: string; phone?: string; role?: Role };
 type MenuItem = { key: string; icon: ReactNode; label: string };
 
 const menus: Record<Role, MenuItem[]> = {
   ADMIN: [
+    { key: "/team", icon: <UsergroupAddOutlined />, label: "管理员管理" },
     { key: "/dashboard", icon: <DashboardOutlined />, label: "管理总览" },
     { key: "/business-users", icon: <UsergroupAddOutlined />, label: "员工与权限" },
     { key: "/customers", icon: <TeamOutlined />, label: "客户总览" },
@@ -23,6 +24,9 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/block-trades", icon: <BankOutlined />, label: "OTC 上架" },
     { key: "/ipo-management", icon: <GiftOutlined />, label: "IPO 上架" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
+  ],
+  MANAGER: [
+    { key: "/team", icon: <TeamOutlined />, label: "团队与客户" },
   ],
   BUSINESS: [
     { key: "/dashboard", icon: <DashboardOutlined />, label: "业务总览" },
@@ -55,6 +59,7 @@ const menus: Record<Role, MenuItem[]> = {
 
 const roleMeta: Record<Role, { label: string; product: string; color: string }> = {
   ADMIN: { label: "超级管理员", product: "平台治理后台", color: "purple" },
+  MANAGER: { label: "管理员", product: "客户业务管理后台", color: "cyan" },
   BUSINESS: { label: "业务员", product: "客户业务后台", color: "green" },
   FINANCE: { label: "财务", product: "资金结算后台", color: "gold" },
   SUPPORT: { label: "客服", product: "客户服务后台", color: "blue" },
@@ -68,7 +73,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const role: Role = user?.role || "ADMIN"; const items = useMemo(() => menus[role], [role]); const meta = roleMeta[role];
   const pageTitle = items.find((item) => pathname.startsWith(item.key))?.label || "工作台";
   const allowed = pathname === "/" || pathname === "/login" || items.some((item) => pathname.startsWith(item.key));
-  useEffect(() => { if (user && !allowed) router.replace("/dashboard"); }, [allowed, router, user]);
+  useEffect(() => { if (user && !allowed) router.replace(user.role === "MANAGER" ? "/team" : "/dashboard"); }, [allowed, router, user]);
   const logout = async () => { try { await api.post("/auth/logout"); } finally { localStorage.removeItem("adminUser"); router.replace("/login"); } };
   const menu = <Menu theme="dark" mode="inline" selectedKeys={[pathname]} items={items} onClick={({ key }) => { router.push(key); setDrawer(false); }} className="ops-menu" />;
   const brand = <div className="ops-brand"><span className="ops-logo"><StockOutlined /></span>{!collapsed && <div><strong>India Trading</strong><small>{meta.product}</small></div>}</div>;
@@ -79,3 +84,4 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     <Layout><Header className="ops-header"><Space><Button type="text" aria-label="切换导航" icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />} onClick={() => mobile ? setDrawer(true) : setCollapsed(!collapsed)} /><div className="ops-title"><Text type="secondary">OPERATIONS WORKSPACE</Text><strong>{pageTitle}</strong></div></Space><Space size={mobile ? 8 : 14}><Tag color={meta.color}>{meta.label}</Tag>{!mobile && <><Avatar className="ops-avatar">{(user?.fullName || "管").charAt(0)}</Avatar><div className="ops-user"><strong>{user?.fullName || meta.label}</strong><small>安全登录</small></div></>}<Button type="text" danger icon={<LogoutOutlined />} onClick={logout}>{mobile ? null : "退出"}</Button></Space></Header><Content className="ops-content">{verified && allowed ? children : null}</Content></Layout>
   </Layout>;
 }
+

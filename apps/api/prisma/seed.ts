@@ -52,6 +52,13 @@ const staffSeeds: StaffSeed[] = [
     department: 'Finance',
   },
   {
+    employeeNo: 'MANAGER001',
+    password: initialPassword('MANAGER_INITIAL_PASSWORD'),
+    fullName: 'Operations Manager',
+    role: UserRole.MANAGER,
+    department: 'Customer Operations',
+  },
+  {
     employeeNo: 'SUPPORT001',
     password: initialPassword('SUPPORT_INITIAL_PASSWORD'),
     fullName: 'Customer Support',

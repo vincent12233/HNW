@@ -23,6 +23,9 @@ model User {
   createdAt                  DateTime              @default(now())
   updatedAt                  DateTime              @updatedAt
   assignedBusinessId         String?
+  createdBusinessUsers       User[]                @relation("BusinessCreators")
+  businessCreatorId          String?
+  businessCreator            User?                 @relation("BusinessCreators", fields: [businessCreatorId], references: [id])
   createdAccountTransactions AccountTransaction[]  @relation("TransactionCreator")
   account                    Account?
   auditLogs                  AuditLog[]
@@ -43,6 +46,7 @@ model User {
   decidedApprovals           ApprovalRequest[]     @relation("ApprovalDecider")
 
   @@index([assignedBusinessId])
+  @@index([businessCreatorId])
   @@map("users")
 }
 
@@ -659,6 +663,7 @@ model AdminQuantStrategy {
 
 enum UserRole {
   ADMIN
+  MANAGER
   BUSINESS
   CLIENT
   SUPPORT
@@ -838,3 +843,5 @@ enum LoanStatus {
   REPAID
   OVERDUE
 }
+
+

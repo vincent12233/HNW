@@ -15,9 +15,9 @@ export default function AdminLoginPage() {
     setError(""); setSubmitting(true);
     try {
       const { data } = await api.post("/auth/login", { employeeNo: values.employeeNo.trim().toUpperCase(), password: values.password });
-      if (!["ADMIN", "FINANCE", "BUSINESS", "SUPPORT"].includes(data.user?.role)) { setError("此账号没有后台访问权限。"); return; }
+      if (!["ADMIN", "MANAGER", "FINANCE", "BUSINESS", "SUPPORT"].includes(data.user?.role)) { setError("此账号没有后台访问权限。"); return; }
       localStorage.setItem("adminUser", JSON.stringify(data.user));
-      const home: Record<string,string> = { ADMIN:"/dashboard", FINANCE:"/deposits", SUPPORT:"/support-console", BUSINESS:"/business-customers" };
+      const home: Record<string,string> = { ADMIN:"/dashboard", MANAGER:"/team", FINANCE:"/deposits", SUPPORT:"/support-console", BUSINESS:"/business-customers" };
       router.push(home[data.user.role] || "/dashboard");
     } catch (e: any) {
       const message=e.response?.data?.message;

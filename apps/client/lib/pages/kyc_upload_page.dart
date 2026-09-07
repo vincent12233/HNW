@@ -6,6 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
 import '../app_config.dart';
 import '../widgets/kyc_signature_pad.dart';
+import '../widgets/aadhaar_mark.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/onboarding_widgets.dart';
 import 'bank_details_page.dart';
@@ -444,7 +445,10 @@ class _KycUploadPageState extends State<KycUploadPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Icon(icon, color: AppConfig.primaryColor),
+                if (value == 'AADHAAR')
+                  const AadhaarMark()
+                else
+                  Icon(icon, color: AppConfig.primaryColor),
                 Icon(
                   selected
                       ? Icons.radio_button_checked

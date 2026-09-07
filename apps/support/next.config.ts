@@ -3,6 +3,7 @@ import type { NextConfig } from "next";
 const devScriptPolicy = process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: ['127.0.0.6'],
   devIndicators: false,
   poweredByHeader: false,
   async headers() {

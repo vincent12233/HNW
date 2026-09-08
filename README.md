@@ -11,6 +11,7 @@
 | 管理员后台 | `apps/admin` | 客户、KYC、业务员管理，端口 `3004` |
 | 财务后台 | `apps/admin` | 入金、提现、资金流水，端口 `3005` |
 | 业务员后台 | `apps/admin` | 自有客户与业务数据，端口 `3006` |
+| 专用运营员后台 | `apps/admin` | 受限客户服务与恢复工单，端口 `3007` |
 | 客户 App | `apps/client` | Flutter 客户端，界面英文 |
 | 数据库 | `compose.yaml` | 本地 PostgreSQL |
 
@@ -41,7 +42,7 @@ API 会在容器启动时自动执行数据库迁移和种子初始化。若只�
 docker compose logs -f api
 ```
 
-启动四个分离的运营后台（共用同一个 API 和数据库）：
+启动五个分离的运营后台（共用同一个 API 和数据库）：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-backends.ps1
@@ -55,6 +56,7 @@ API: http://localhost:3000
 管理员: http://localhost:3004/login
 财务: http://localhost:3005/login
 业务员: http://localhost:3006/login
+专用运营员: http://localhost:3007/login
 ```
 
 客户 App：

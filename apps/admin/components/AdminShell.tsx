@@ -1,6 +1,6 @@
 "use client";
 
-import { AuditOutlined, BankOutlined, BarChartOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
+import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import { Avatar, Button, Drawer, Layout, Menu, Space, Spin, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
@@ -9,7 +9,7 @@ import { getBackendRole } from "@/lib/backend-role";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
-type Role = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE";
+type Role = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE" | "SUPPORT";
 type CurrentUser = { id?: string; fullName?: string; phone?: string; role?: Role };
 type MenuItem = { key: string; icon: ReactNode; label: string };
 const menus: Record<Role, MenuItem[]> = {
@@ -57,6 +57,9 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/bank-accounts", icon: <BankOutlined />, label: "银行账户" },
     { key: "/loans", icon: <DollarOutlined />, label: "贷款处理" },
   ],
+  SUPPORT: [
+    { key: "/support-console", icon: <CustomerServiceOutlined />, label: "客户服务工作台" },
+  ],
 };
 
 const roleMeta: Record<Role, { label: string; product: string; color: string }> = {
@@ -64,6 +67,7 @@ const roleMeta: Record<Role, { label: string; product: string; color: string }> 
   MANAGER: { label: "管理员", product: "客户业务管理后台", color: "cyan" },
   BUSINESS: { label: "业务员", product: "客户业务后台", color: "green" },
   FINANCE: { label: "财务", product: "资金结算后台", color: "gold" },
+  SUPPORT: { label: "专用运营员", product: "受限客户服务后台", color: "blue" },
 };
 
 export default function AdminShell({ children }: { children: ReactNode }) {

@@ -1,6 +1,6 @@
 # HNW 管理后台
 
-这是平台后台入口，按端口提供超级管理员、管理员、财务、业务员四个独立入口；四个入口共用同一个 API 和数据库。
+这是平台后台入口，按端口提供超级管理员、管理员、财务、业务员、专用运营员五个独立入口；五个入口共用同一个 API 和数据库，但按角色严格隔离会话和菜单。
 
 ## 本地启动
 
@@ -58,5 +58,6 @@ npm run build
 | 管理员 | MANAGER001 | `MANAGER_INITIAL_PASSWORD` 环境变量 |
 | 财务 | FINANCE001 | `FINANCE_INITIAL_PASSWORD` 环境变量 |
 | 业务员 | BUSINESS001 | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
+| 专用运营员 | SUPPORT001 | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 
 生产环境上线后请立即修改默认密码。

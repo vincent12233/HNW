@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getBackendRole } from './backend-role';
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 const isLoopbackHttp = !!configuredApiUrl && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl);
@@ -13,4 +14,12 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+});
+
+api.interceptors.request.use((config) => {
+  const role = getBackendRole();
+  if (role) {
+    config.headers.set('X-Backend-Role', role);
+  }
+  return config;
 });

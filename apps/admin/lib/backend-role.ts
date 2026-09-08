@@ -1,15 +1,16 @@
-export type BackendRole = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE";
+export type BackendRole = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE" | "SUPPORT";
 
 const roleByPort: Record<string, BackendRole> = {
   "3002": "ADMIN",
   "3004": "MANAGER",
   "3005": "FINANCE",
   "3006": "BUSINESS",
+  "3007": "SUPPORT",
 };
 
 export function getBackendRole(): BackendRole | undefined {
   const configured = process.env.NEXT_PUBLIC_BACKEND_ROLE?.trim().toUpperCase();
-  if (configured && ["ADMIN", "MANAGER", "FINANCE", "BUSINESS"].includes(configured)) return configured as BackendRole;
+  if (configured && ["ADMIN", "MANAGER", "FINANCE", "BUSINESS", "SUPPORT"].includes(configured)) return configured as BackendRole;
   if (typeof window === "undefined") return undefined;
   return roleByPort[window.location.port];
 }
@@ -19,4 +20,5 @@ export const backendRoleLabels: Record<BackendRole, string> = {
   MANAGER: "管理员后台",
   FINANCE: "财务后台",
   BUSINESS: "业务员后台",
+  SUPPORT: "专用运营员后台",
 };

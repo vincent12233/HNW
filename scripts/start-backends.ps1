@@ -2,7 +2,7 @@ param([switch]$SkipBuild)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $adminRoot = Join-Path $projectRoot "apps\admin"
-$ports = @(3002, 3004, 3005, 3006)
+$ports = @(3002, 3004, 3005, 3006, 3007)
 
 if (-not $SkipBuild) {
   Push-Location $adminRoot

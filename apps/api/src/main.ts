@@ -55,7 +55,7 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
   res.setHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
   // Staff sessions use an HttpOnly cookie. Require an explicitly allowed
   // browser origin for state-changing cookie requests to prevent CSRF.
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.headers.cookie?.includes('staff_access=')) {
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.headers.cookie?.match(/(?:^|;\s*)staff_access(?:_[a-z]+)?=/)) {
     const origin = req.header('origin');
     const allowedOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
     const localOrigin = process.env.NODE_ENV !== 'production' && !!origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);

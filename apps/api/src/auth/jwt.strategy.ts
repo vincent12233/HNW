@@ -14,6 +14,8 @@ interface JwtPayload {
   purpose?: string;
 }
 
+const backendRoles = new Set(['ADMIN', 'MANAGER', 'FINANCE', 'BUSINESS', 'SUPPORT']);
+
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor(
@@ -25,7 +27,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         (request: Request) => {
           const cookie = request?.headers?.cookie ?? '';
-          const match = cookie.match(/(?:^|;\s*)staff_access=([^;]+)/);
+          const backendRole = request.header('x-backend-role')?.trim().toUpperCase();
+          const cookieName = backendRole && backendRoles.has(backendRole)
+            ? `staff_access_${backendRole.toLowerCase()}`
+            : 'staff_access';
+          const match = cookie.match(new RegExp(`(?:^|;\\s*)${cookieName}=([^;]+)`));
           return match ? decodeURIComponent(match[1]) : null;
         },
       ]),

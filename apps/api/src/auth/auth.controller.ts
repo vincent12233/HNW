@@ -6,6 +6,13 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
+const backendRoles = new Set(['ADMIN', 'MANAGER', 'FINANCE', 'BUSINESS', 'SUPPORT']);
+
+function staffCookieName(role?: string) {
+  const normalized = role?.trim().toUpperCase();
+  return normalized && backendRoles.has(normalized) ? `staff_access_${normalized.toLowerCase()}` : 'staff_access';
+}
+
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -31,10 +38,15 @@ export class AuthController {
       ipAddress,
       userAgent,
     });
+    const backendRole = req.header('x-backend-role')?.trim().toUpperCase();
+    if (backendRole && backendRoles.has(backendRole) && result.user.role !== backendRole) {
+      response.status(403);
+      return { message: `This account belongs to the ${result.user.role} backend.` };
+    }
     // Browser staff consoles use an HttpOnly cookie. Non-browser verification
     // and operational clients retain the Bearer-token response contract.
     if (dto.employeeNo && result.user.role !== 'CLIENT' && req.headers.origin) {
-      response.cookie('staff_access', result.accessToken, {
+      response.cookie(staffCookieName(backendRole), result.accessToken, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
@@ -47,13 +59,15 @@ export class AuthController {
   }
 
   @Post('logout')
-  logout(@Res({ passthrough: true }) response: Response) {
-    response.clearCookie('staff_access', {
+  logout(@Req() req: Request, @Res({ passthrough: true }) response: Response) {
+    const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
-    });
+    } as const;
+    response.clearCookie(staffCookieName(req.header('x-backend-role')), cookieOptions);
+    response.clearCookie('staff_access', cookieOptions);
     return { loggedOut: true };
   }
 

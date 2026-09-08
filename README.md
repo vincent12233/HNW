@@ -1,15 +1,17 @@
 # HNW Trading Platform
 
-这是一个面向印度手机号客户注册的交易平台项目，包含客户 App、API 后端、管理后台、独立客服端和本地数据库编排。
+这是一个面向印度手机号客户注册的交易平台项目，包含客户 App、四个分离的运营后台、API 后端和本地数据库编排。客服通过客户端内的 SaleSmartly 原生 SDK 接入，不再运行独立客服后台。
 
 ## 项目组成
 
 | 模块 | 路径 | 说明 |
 | --- | --- | --- |
 | API 后端 | `apps/api` | 注册、KYC、账户资金、交易、提现、客服、后台管理接口 |
-| 管理后台 | `apps/admin` | 管理员、财务、客服、业务员统一后台，界面中文 |
+| 超级管理员后台 | `apps/admin` | 平台治理与员工管理，端口 `3002` |
+| 管理员后台 | `apps/admin` | 客户、KYC、业务员管理，端口 `3004` |
+| 财务后台 | `apps/admin` | 入金、提现、资金流水，端口 `3005` |
+| 业务员后台 | `apps/admin` | 自有客户与业务数据，端口 `3006` |
 | 客户 App | `apps/client` | Flutter 客户端，界面英文 |
-| 独立客服端 | `apps/support` | 独立在线客服工作台，界面中文 |
 | 数据库 | `compose.yaml` | 本地 PostgreSQL |
 
 ## 核心规则
@@ -21,7 +23,7 @@
 - 注册后进入 KYC，可上传 Aadhaar 或 PAN，业务员后台审核。
 - 客户入金不在 App 内提交申请，点击 Deposit / Contact Support 后进入在线客服，由财务后台手动上分。
 - 客户提现在 App 内提交申请，系统生成提现订单号，客户记录和后台都可查看。
-- 管理员、财务、客服可以查看所有客户；业务员只能查看自己的客户。
+- 超级管理员、管理员、财务可以查看其授权范围内的客户；业务员只能查看自己的客户。
 - 业务员可查看自己客户的入金、提现、订单、成交记录，但不能审核提现。
 - 后台统一中文，客户 App 统一英文。
 
@@ -39,27 +41,20 @@ API 会在容器启动时自动执行数据库迁移和种子初始化。若只�
 docker compose logs -f api
 ```
 
-启动管理后台：
+启动四个分离的运营后台（共用同一个 API 和数据库）：
 
 ```powershell
-cd ..\admin
-Copy-Item .env.example .env.local
-npm run dev
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-backends.ps1
 ```
 
 默认访问：
 
 ```text
 API: http://localhost:3000
-管理后台: http://localhost:3002/login
-```
-
-如需独立客服端：
-
-```powershell
-cd ..\support
-Copy-Item .env.example .env.local
-npm run dev
+超级管理员: http://localhost:3002/login
+管理员: http://localhost:3004/login
+财务: http://localhost:3005/login
+业务员: http://localhost:3006/login
 ```
 
 客户 App：
@@ -74,9 +69,9 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 
 | 角色 | 员工编号 | 密码 |
 | --- | --- | --- |
-| 管理员 | `ADMIN001` | `ADMIN_INITIAL_PASSWORD` 环境变量 |
+| 超级管理员 | `ADMIN001` | `ADMIN_INITIAL_PASSWORD` 环境变量 |
+| 管理员 | `MANAGER001` | `MANAGER_INITIAL_PASSWORD` 环境变量 |
 | 财务 | `FINANCE001` | `FINANCE_INITIAL_PASSWORD` 环境变量 |
-| 客服 | `SUPPORT001` | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 | 业务员 | `BUSINESS001` | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 
 项目不提供固定默认密码。首次初始化前必须在 API 环境变量中设置四个不同的强密码。
@@ -102,7 +97,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -SkipVerification
 ```
 
-验证脚本会检查 API、管理后台、独立客服端和客户 App，并覆盖注册、KYC、客服标签、财务上分、交易、提现订单号和角色数据权限。
+验证脚本会检查 API、运营后台和客户 App，并覆盖注册、KYC、SaleSmartly 客服标签、财务上分、交易、提现订单号和角色数据权限。
 
 ## 文档
 

@@ -1,17 +1,17 @@
 "use client";
 
-import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
+import { AuditOutlined, BankOutlined, BarChartOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import { Avatar, Button, Drawer, Layout, Menu, Space, Spin, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { api } from "@/lib/api";
+import { getBackendRole } from "@/lib/backend-role";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
-type Role = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE" | "SUPPORT";
+type Role = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE";
 type CurrentUser = { id?: string; fullName?: string; phone?: string; role?: Role };
 type MenuItem = { key: string; icon: ReactNode; label: string };
-
 const menus: Record<Role, MenuItem[]> = {
   ADMIN: [
     { key: "/team", icon: <UsergroupAddOutlined />, label: "管理员管理" },
@@ -57,11 +57,6 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/bank-accounts", icon: <BankOutlined />, label: "银行账户" },
     { key: "/loans", icon: <DollarOutlined />, label: "贷款处理" },
   ],
-  SUPPORT: [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "客服工作台" },
-    { key: "/support-console", icon: <CustomerServiceOutlined />, label: "在线会话" },
-    { key: "/customers", icon: <TeamOutlined />, label: "客户资料查询" },
-  ],
 };
 
 const roleMeta: Record<Role, { label: string; product: string; color: string }> = {
@@ -69,14 +64,13 @@ const roleMeta: Record<Role, { label: string; product: string; color: string }> 
   MANAGER: { label: "管理员", product: "客户业务管理后台", color: "cyan" },
   BUSINESS: { label: "业务员", product: "客户业务后台", color: "green" },
   FINANCE: { label: "财务", product: "资金结算后台", color: "gold" },
-  SUPPORT: { label: "客服", product: "客户服务后台", color: "blue" },
 };
 
 export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter(); const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false); const [mobile, setMobile] = useState(false); const [drawer, setDrawer] = useState(false); const [user, setUser] = useState<CurrentUser | null>(null); const [verified, setVerified] = useState(false);
   useEffect(() => { const sync = () => setMobile(window.innerWidth < 900); sync(); window.addEventListener("resize", sync); return () => window.removeEventListener("resize", sync); }, []);
-  useEffect(() => { let active=true; api.get<CurrentUser>("/auth/me").then(({data})=>{if(!active)return;if(!data.role||!menus[data.role])throw new Error("No staff access");localStorage.setItem("adminUser",JSON.stringify(data));setUser(data);setVerified(true);}).catch(()=>{if(!active)return;localStorage.removeItem("adminUser");router.replace("/login");});return()=>{active=false;}; }, [router]);
+  useEffect(() => { let active=true; const deploymentRole = getBackendRole(); api.get<CurrentUser>("/auth/me").then(({data})=>{if(!active)return;if(!data.role||!menus[data.role]||(deploymentRole && data.role !== deploymentRole))throw new Error("Role not allowed on this backend");localStorage.setItem("adminUser",JSON.stringify(data));setUser(data);setVerified(true);}).catch(()=>{if(!active)return;localStorage.removeItem("adminUser");router.replace("/login");});return()=>{active=false;}; }, [router]);
   const role: Role = user?.role || "ADMIN"; const items = useMemo(() => menus[role], [role]); const meta = roleMeta[role];
   const pageTitle = items.find((item) => pathname.startsWith(item.key.split("?")[0]))?.label || "工作台";
   const allowed = pathname === "/" || pathname === "/login" || items.some((item) => pathname.startsWith(item.key.split("?")[0]));

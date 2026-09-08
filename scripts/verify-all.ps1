@@ -75,16 +75,6 @@ Invoke-Step "Admin build" {
   }
 }
 
-Invoke-Step "Support build" {
-  Push-Location (Join-Path $root "apps/support")
-  try {
-    if (-not (Test-Path "node_modules")) { Invoke-Native "npm.cmd" @("ci") }
-    Invoke-Native "npm.cmd" @("run", "build")
-  } finally {
-    Pop-Location
-  }
-}
-
 Invoke-Step "Client analyze" {
   Push-Location (Join-Path $root "apps/client")
   try {

@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-if (process.env.NODE_ENV === 'production' && (!configuredApiUrl || !configuredApiUrl.startsWith('https://'))) {
+const isLoopbackHttp = !!configuredApiUrl && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl);
+if (process.env.NODE_ENV === 'production' && (!configuredApiUrl || (!configuredApiUrl.startsWith('https://') && !isLoopbackHttp))) {
   throw new Error('NEXT_PUBLIC_API_URL must be an HTTPS URL in production');
 }
 const API_URL = configuredApiUrl || 'http://localhost:3000';

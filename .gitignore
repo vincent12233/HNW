@@ -50,6 +50,7 @@ apps/client/android/key.properties
 # Dependency and build output fallbacks for workspace-level status
 node_modules/
 .next/
+.next-*/
 dist/
 build/
 coverage/

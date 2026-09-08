@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
       const { data } = await api.post("/auth/login", { employeeNo: values.employeeNo.trim().toUpperCase(), password: values.password });
       if (!["ADMIN", "MANAGER", "FINANCE", "BUSINESS", "SUPPORT"].includes(data.user?.role) || (deploymentRole && data.user?.role !== deploymentRole)) { setError(deploymentRole ? `此入口仅允许${backendRoleLabels[deploymentRole]}登录。` : "此账号没有后台访问权限。"); return; }
       localStorage.setItem("adminUser", JSON.stringify(data.user));
-      const home: Record<string,string> = { ADMIN:"/dashboard", MANAGER:"/team", FINANCE:"/deposits", BUSINESS:"/business-customers", SUPPORT:"/support-console" };
+      const home: Record<string,string> = { ADMIN:"/dashboard", MANAGER:"/team", FINANCE:"/deposits", BUSINESS:"/business-customers", SUPPORT:"/operator-console" };
       router.push(home[data.user.role] || "/dashboard");
     } catch (error: unknown) {
       const message = (error as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;

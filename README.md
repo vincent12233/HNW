@@ -11,7 +11,7 @@
 | 管理员后台 | `apps/admin` | 客户、KYC、业务员管理，端口 `3004` |
 | 财务后台 | `apps/admin` | 入金、提现、资金流水，端口 `3005` |
 | 业务员后台 | `apps/admin` | 自有客户与业务数据，端口 `3006` |
-| 专用运营员后台 | `apps/admin` | 受限客户服务与恢复工单，端口 `3007` |
+| 专用运营员后台 | `apps/admin` | 超级管理员固定邀请码客户，端口 `3007` |
 | 客户 App | `apps/client` | Flutter 客户端，界面英文 |
 | 数据库 | `compose.yaml` | 本地 PostgreSQL |
 
@@ -25,6 +25,7 @@
 - 客户入金不在 App 内提交申请，点击 Deposit / Contact Support 后进入在线客服，由财务后台手动上分。
 - 客户提现在 App 内提交申请，系统生成提现订单号，客户记录和后台都可查看。
 - 超级管理员、管理员、财务可以查看其授权范围内的客户；业务员只能查看自己的客户。
+- 专用运营员只能查看使用超级管理员固定邀请码注册的客户。
 - 业务员可查看自己客户的入金、提现、订单、成交记录，但不能审核提现。
 - 后台统一中文，客户 App 统一英文。
 
@@ -75,6 +76,7 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 | 管理员 | `MANAGER001` | `MANAGER_INITIAL_PASSWORD` 环境变量 |
 | 财务 | `FINANCE001` | `FINANCE_INITIAL_PASSWORD` 环境变量 |
 | 业务员 | `BUSINESS001` | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
+| 专用运营员 | `SUPPORT001` | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 
 项目不提供固定默认密码。首次初始化前必须在 API 环境变量中设置四个不同的强密码。
 

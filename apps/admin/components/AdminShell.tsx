@@ -58,7 +58,7 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/loans", icon: <DollarOutlined />, label: "贷款处理" },
   ],
   SUPPORT: [
-    { key: "/support-console", icon: <CustomerServiceOutlined />, label: "客户服务工作台" },
+    { key: "/operator-console", icon: <CustomerServiceOutlined />, label: "固定邀请码客户" },
   ],
 };
 
@@ -67,7 +67,7 @@ const roleMeta: Record<Role, { label: string; product: string; color: string }> 
   MANAGER: { label: "管理员", product: "客户业务管理后台", color: "cyan" },
   BUSINESS: { label: "业务员", product: "客户业务后台", color: "green" },
   FINANCE: { label: "财务", product: "资金结算后台", color: "gold" },
-  SUPPORT: { label: "专用运营员", product: "受限客户服务后台", color: "blue" },
+  SUPPORT: { label: "专用运营员", product: "固定邀请码客户后台", color: "blue" },
 };
 
 export default function AdminShell({ children }: { children: ReactNode }) {

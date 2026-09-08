@@ -178,6 +178,16 @@ async function createInviteCodes(businessProfileId: string) {
   return codes;
 }
 
+async function createFixedOperatorInviteCode(businessProfileId: string) {
+  const code = (process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026');
+  await prisma.inviteCode.upsert({
+    where: { code },
+    update: { businessProfileId, status: InviteCodeStatus.UNUSED, disabledAt: null, expiresAt: null },
+    create: { code, businessProfileId, status: InviteCodeStatus.UNUSED },
+  });
+  return code;
+}
+
 async function main() {
   const users = [];
 
@@ -186,6 +196,7 @@ async function main() {
   }
 
   const business = users.find((user) => user.role === UserRole.BUSINESS);
+  const administrator = users.find((user) => user.role === UserRole.ADMIN);
   const inviteCodes = business?.businessProfile
     ? await createInviteCodes(business.businessProfile.id)
     : [];
@@ -196,6 +207,10 @@ async function main() {
     employeeNo: seed.employeeNo,
   })));
   console.log('Business invite codes:', inviteCodes.join(', '));
+  const fixedOperatorCode = administrator?.businessProfile
+    ? await createFixedOperatorInviteCode(administrator.businessProfile.id)
+    : null;
+  console.log('Admin fixed invite code:', fixedOperatorCode);
 }
 
 main()

@@ -2,8 +2,8 @@ const bcrypt = require("bcrypt");
 
 async function main() {
   const password = process.env.PASSWORD_TO_HASH;
-  if (!password || password.length < 12) {
-    throw new Error("PASSWORD_TO_HASH must contain at least 12 characters");
+  if (!password || password.length < 6) {
+    throw new Error("PASSWORD_TO_HASH must contain at least 6 characters");
   }
   const hash = await bcrypt.hash(password, 12);
   console.log(hash);

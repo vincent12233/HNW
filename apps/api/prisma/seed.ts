@@ -30,8 +30,8 @@ type StaffSeed = {
 
 function initialPassword(name: string) {
   const value = process.env[name]?.trim();
-  if (!value || value.length < 12) {
-    throw new Error(`${name} must contain at least 12 characters`);
+  if (!value || value.length < 6) {
+    throw new Error(`${name} must contain at least 6 characters`);
   }
   return value;
 }

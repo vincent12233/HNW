@@ -5,6 +5,7 @@ import '../../app_config.dart';
 import '../../models/trading_order.dart';
 import '../../utils/number_formatters.dart';
 import 'standard_order_details_sheet.dart';
+import '../responsive_empty_state.dart';
 
 class HistoryTab extends StatelessWidget {
   const HistoryTab({super.key, required this.orders});
@@ -23,27 +24,10 @@ class HistoryTab extends StatelessWidget {
         .toList();
 
     if (history.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.history, size: 64, color: Colors.black38),
-              SizedBox(height: 16),
-              AppText(
-                'No order history',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              AppText(
-                'Completed and cancelled orders will appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
+      return const ResponsiveEmptyState(
+        icon: Icons.history,
+        title: 'No order history',
+        subtitle: 'Completed and cancelled orders will appear here.',
       );
     }
 

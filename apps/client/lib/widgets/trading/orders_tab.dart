@@ -5,6 +5,7 @@ import '../../app_config.dart';
 import '../../models/trading_order.dart';
 import '../../utils/number_formatters.dart';
 import 'standard_order_details_sheet.dart';
+import '../responsive_empty_state.dart';
 
 class OrdersTab extends StatefulWidget {
   const OrdersTab({super.key, required this.orders, this.onCancel});
@@ -23,31 +24,10 @@ class _OrdersTabState extends State<OrdersTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.orders.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 64,
-                color: Colors.black38,
-              ),
-              SizedBox(height: 16),
-              AppText(
-                'No orders',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              AppText(
-                'Your order activity will appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
+      return const ResponsiveEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No orders',
+        subtitle: 'Your order activity will appear here.',
       );
     }
 

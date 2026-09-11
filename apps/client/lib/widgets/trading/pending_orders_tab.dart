@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app_config.dart';
 import '../../models/pending_order.dart';
 import '../../utils/number_formatters.dart';
+import '../responsive_empty_state.dart';
 
 class PendingOrdersTab extends StatelessWidget {
   const PendingOrdersTab({super.key, required this.orders, this.onCancel});
@@ -14,31 +15,10 @@ class PendingOrdersTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (orders.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.pending_actions_outlined,
-                size: 64,
-                color: Colors.black38,
-              ),
-              SizedBox(height: 16),
-              AppText(
-                'No pending orders',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              AppText(
-                'Open orders waiting for execution will appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
+      return const ResponsiveEmptyState(
+        icon: Icons.pending_actions_outlined,
+        title: 'No pending orders',
+        subtitle: 'Open orders waiting for execution will appear here.',
       );
     }
 

@@ -7,6 +7,7 @@ import '../../models/stock_quote.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/product_category.dart';
 import '../stock_logo.dart';
+import '../responsive_empty_state.dart';
 
 class HoldingsTab extends StatefulWidget {
   const HoldingsTab({
@@ -258,31 +259,10 @@ class _HoldingsTabState extends State<HoldingsTab> {
   }
 
   Widget _emptyState(String title, String subtitle) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.account_balance_wallet_outlined,
-              size: 64,
-              color: Colors.black38,
-            ),
-            const SizedBox(height: 16),
-            AppText(
-              title,
-              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            AppText(
-              subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ],
-        ),
-      ),
+    return ResponsiveEmptyState(
+      icon: Icons.account_balance_wallet_outlined,
+      title: title,
+      subtitle: subtitle,
     );
   }
 

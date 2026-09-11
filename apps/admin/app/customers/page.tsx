@@ -5,12 +5,15 @@ import {
   ReloadOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
   Button,
   Card,
   Input,
+  Select,
+  message,
   Modal,
   Space,
   Statistic,
@@ -23,6 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
+import { getBackendRole } from "@/lib/backend-role";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -69,6 +73,7 @@ type LoginRisk = {
 type Customer = {
   id: string;
   customerNo?: string | null;
+  clientTier?: string | null;
   fullName: string;
   phone?: string | null;
   role: string;
@@ -159,6 +164,30 @@ function getRiskConfig(riskLevel?: string) {
 }
 
 export default function CustomersPage() {
+  const [tierSaving, setTierSaving] = useState<string | null>(null);
+  const [tierCustomer, setTierCustomer] = useState<Customer | null>(null);
+  const [tier, setTier] = useState('STANDARD');
+  const tiers = [
+    { value: 'STANDARD', label: '标准 Standard' },
+    { value: 'SILVER', label: '白银 Silver' },
+    { value: 'GOLD', label: '黄金 Gold' },
+    { value: 'PLATINUM', label: '铂金 Platinum' },
+  ];
+  async function saveTier() {
+    if (!tierCustomer || tierSaving) return;
+    setTierSaving(tierCustomer.id);
+    try {
+      const { data } = await api.patch<{ id: string; clientTier: string }>(
+        `/admin/clients/${tierCustomer.id}/tier`, { tier },
+      );
+      setCustomers(current => current.map(customer => customer.id === data.id
+        ? { ...customer, clientTier: data.clientTier } : customer));
+      setTierCustomer(null);
+      message.success('会员等级已保存，客户重新进入个人资料页后同步');
+    } catch {
+      message.error('会员等级保存失败，请重试');
+    } finally { setTierSaving(null); }
+  }
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(false);
   const [keyword, setKeyword] = useState("");
@@ -306,6 +335,17 @@ export default function CustomersPage() {
   }, [customers, keyword]);
 
   const columns: ColumnsType<Customer> = [
+    {
+      title: '会员等级', key: 'clientTier', width: 180,
+      render: (_, customer) => <Space direction="vertical" size={4}>
+        <Tag icon={<CrownOutlined />} color={customer.clientTier === 'GOLD' ? 'gold' : 'blue'}>
+          {tiers.find(item => item.value === customer.clientTier)?.label ?? '未设置'}
+        </Tag>
+        {getBackendRole() === 'ADMIN' && <Button size="small" type="link" onClick={() => {
+          setTierCustomer(customer); setTier(customer.clientTier ?? 'STANDARD');
+        }}>修改等级</Button>}
+      </Space>,
+    },
     {
       title: "客户姓名",
       dataIndex: "fullName",
@@ -550,6 +590,15 @@ export default function CustomersPage() {
         </Card>
       </Space>
 
+      <Modal title="修改会员等级" open={tierCustomer !== null}
+        closable={tierSaving === null} maskClosable={tierSaving === null} keyboard={tierSaving === null}
+        onCancel={() => { if (!tierSaving) setTierCustomer(null); }}
+        onOk={saveTier} confirmLoading={tierSaving !== null}
+        cancelButtonProps={{ disabled: tierSaving !== null }} okText="保存" cancelText="取消">
+        <Paragraph>{tierCustomer?.fullName} · {tierCustomer?.customerNo}</Paragraph>
+        <Select aria-label="会员等级" style={{ width: '100%' }} value={tier}
+          options={tiers} onChange={setTier} disabled={tierSaving !== null} />
+      </Modal>
       <Modal
         title={
           selectedCustomer

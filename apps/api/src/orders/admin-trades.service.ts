@@ -11,7 +11,7 @@ import { ListAdminTradesQueryDto } from './dto/list-admin-trades-query.dto';
 export class AdminTradesService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listTrades(query: ListAdminTradesQueryDto) {
+  async listTrades(query: ListAdminTradesQueryDto, role: string) {
     if (
       query.dateFrom &&
       query.dateTo &&
@@ -26,6 +26,7 @@ export class AdminTradesService {
     const normalizedSymbol = query.symbol?.trim().toUpperCase();
 
     const where: Prisma.TradeWhereInput = {
+      ...this.financeTradeScope(role),
       ...(query.side
         ? {
             order: {
@@ -175,13 +176,11 @@ export class AdminTradesService {
     };
   }
 
-  async getTrade(executionId: string) {
+  async getTrade(executionId: string, role: string) {
     const normalizedExecutionId = executionId.trim();
 
-    const trade = await this.prisma.trade.findUnique({
-      where: {
-        executionId: normalizedExecutionId,
-      },
+    const trade = await this.prisma.trade.findFirst({
+      where: { executionId: normalizedExecutionId, ...this.financeTradeScope(role) },
       include: {
         account: {
           select: {
@@ -225,5 +224,11 @@ export class AdminTradesService {
           : null,
       },
     };
+  }
+
+  private financeTradeScope(role: string): Prisma.TradeWhereInput {
+    if (role !== 'FINANCE') return {};
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    return { account: { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } } };
   }
 }

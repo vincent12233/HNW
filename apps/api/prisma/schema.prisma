@@ -12,6 +12,12 @@ model User {
   id                         String                @id @default(uuid())
   email                      String                @unique
   passwordHash               String
+  clientTier                 String                @default("STANDARD")
+  avatarData                 String?
+  twoFactor                  TwoFactorCredential?
+  withdrawalPinHash          String?
+  withdrawalPinAttempts      Int                   @default(0)
+  withdrawalPinLockedUntil   DateTime?
   transactionKeyHash        String?
   googleSubject             String?               @unique
   authVersion               Int                   @default(0)
@@ -20,6 +26,7 @@ model User {
   customerNo                 String?               @unique
   role                       UserRole              @default(CLIENT)
   status                     UserStatus            @default(ACTIVE)
+  deletedAt                  DateTime?
   createdAt                  DateTime              @default(now())
   updatedAt                  DateTime              @updatedAt
   assignedBusinessId         String?
@@ -30,7 +37,8 @@ model User {
   account                    Account?
   auditLogs                  AuditLog[]
   businessProfile            BusinessProfile?
-  usedInviteCode             InviteCode?           @relation("InviteCodeCustomer")
+  usedInviteCodeId           String?
+  usedInviteCode             InviteCode?           @relation("InviteCodeCustomers", fields: [usedInviteCodeId], references: [id])
   loginAudits                LoginAudit[]
   supportConversations       SupportConversation[]
   supportMessages            SupportMessage[]
@@ -47,7 +55,22 @@ model User {
 
   @@index([assignedBusinessId])
   @@index([businessCreatorId])
+  @@index([usedInviteCodeId])
   @@map("users")
+}
+
+model TwoFactorCredential {
+  userId String @id
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secret String?
+  pendingSecret String?
+  pendingExpiresAt DateTime?
+  enabled Boolean @default(false)
+  lastStep Int @default(-1)
+  recoveryHashes String[] @default([])
+  attempts Int @default(0)
+  lockedUntil DateTime?
+  @@map("two_factor_credentials")
 }
 
 model BusinessProfile {
@@ -68,7 +91,6 @@ model InviteCode {
   id                String           @id @default(uuid())
   code              String           @unique
   businessProfileId String
-  customerId        String?          @unique
   status            InviteCodeStatus @default(UNUSED)
   expiresAt         DateTime?
   usedAt            DateTime?
@@ -76,7 +98,7 @@ model InviteCode {
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
   businessProfile   BusinessProfile  @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
-  customer          User?            @relation("InviteCodeCustomer", fields: [customerId], references: [id])
+  customers         User[]           @relation("InviteCodeCustomers")
 
   @@index([businessProfileId])
   @@index([status])
@@ -320,6 +342,9 @@ model Ipo {
 }
 
 model IpoApplication {
+  draftQuantity Int?
+  draftPrice Decimal? @db.Decimal(18, 2)
+  publishedAt DateTime?
   id                String               @id @default(uuid())
   ipoId             String
   accountId         String
@@ -433,6 +458,7 @@ model UserPreference {
   supportNotifications Boolean @default(true)
   biometricEnabled   Boolean  @default(false)
   language           String   @default("en")
+  theme              String   @default("light")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
   user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -479,6 +505,8 @@ model PortfolioSnapshot {
   otcValue    Decimal  @db.Decimal(18, 2)
   ipoValue    Decimal  @db.Decimal(18, 2)
   totalValue  Decimal  @db.Decimal(18, 2)
+  profitValue Decimal? @db.Decimal(18, 2)
+  productProfitValue Decimal? @db.Decimal(18, 2)
   capturedAt  DateTime @default(now())
   account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 

@@ -42,8 +42,13 @@ export class ApprovalService {
       const payload = request.payload as { accountNumber: string; amount: string; referenceId: string; note?: string };
       const amount = new Prisma.Decimal(payload.amount);
       if (!amount.isPositive()) throw new BadRequestException('Amount must be positive');
-      const account = await tx.account.findUnique({ where: { accountNumber: payload.accountNumber } });
+      const account = await tx.account.findUnique({ where: { accountNumber: payload.accountNumber }, include: { user: { include: { usedInviteCode: true } } } });
       if (!account) throw new NotFoundException('Account not found');
+      const decider = await tx.user.findUnique({ where: { id: deciderId }, select: { role: true } });
+      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      if (decider?.role === 'FINANCE' && account.user.usedInviteCode?.code === fixedCode) {
+        throw new ForbiddenException('Finance cannot adjust dedicated operator accounts');
+      }
       const debit = request.action === 'ACCOUNT_DEBIT';
       if (debit && (account.cashBalance.lt(amount) || account.buyingPower.lt(amount))) throw new BadRequestException('Insufficient available balance');
       const existing = await tx.accountTransaction.findFirst({ where: { referenceId: payload.referenceId } });

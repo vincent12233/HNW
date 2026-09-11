@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -32,6 +33,7 @@ class _StandardOrderDetailsSheet extends StatefulWidget {
 class _StandardOrderDetailsSheetState
     extends State<_StandardOrderDetailsSheet> {
   bool cancelling = false;
+  bool confirmingCancellation = false;
 
   @override
   Widget build(BuildContext context) {
@@ -39,6 +41,9 @@ class _StandardOrderDetailsSheetState
     final sideColor = order.isBuy ? AppConfig.gainColor : AppConfig.lossColor;
     final statusColor = _statusColor(order.status);
     final displayPrice = order.limitPrice ?? order.price;
+    final averageFillPrice = order.filledQuantity > 0
+        ? order.averageFillPrice
+        : null;
 
     return SafeArea(
       top: false,
@@ -48,7 +53,7 @@ class _StandardOrderDetailsSheetState
         ),
         decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
         ),
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -66,29 +71,24 @@ class _StandardOrderDetailsSheetState
                 ),
               ),
               const SizedBox(height: 20),
-              Row(
+              AppText(
+                order.symbol,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: 6),
+              AppText(
+                '${tr(order.type == 'LIMIT' ? 'Limit Order' : 'Market Order')} · ${order.timeInForce}',
+                style: const TextStyle(color: AppConfig.textSecondaryColor),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
                 children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          order.symbol,
-                          style: const TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${order.type == 'LIMIT' ? 'Limit' : 'Market'} Order • ${order.timeInForce}',
-                          style: const TextStyle(color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                  ),
                   _pill(order.isBuy ? 'BUY' : 'SELL', sideColor),
-                  const SizedBox(width: 8),
                   _pill(_statusLabel(order.status), statusColor),
                 ],
               ),
@@ -97,7 +97,7 @@ class _StandardOrderDetailsSheetState
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                 ),
                 child: Column(
@@ -105,14 +105,17 @@ class _StandardOrderDetailsSheetState
                     Row(
                       children: [
                         Expanded(
-                          child: _value('Order Qty', '${order.quantity}'),
-                        ),
-                        Expanded(
-                          child: _value('Filled', '${order.filledQuantity}'),
+                          child: _value('Order Quantity', '${order.quantity}'),
                         ),
                         Expanded(
                           child: _value(
-                            'Remaining',
+                            'Filled Quantity',
+                            '${order.filledQuantity}',
+                          ),
+                        ),
+                        Expanded(
+                          child: _value(
+                            'Remaining Quantity',
                             '${order.remainingQuantity}',
                           ),
                         ),
@@ -130,7 +133,9 @@ class _StandardOrderDetailsSheetState
                         Expanded(
                           child: _value(
                             'Avg. Fill Price',
-                            order.price > 0 ? formatPrice(order.price) : '--',
+                            averageFillPrice != null && averageFillPrice > 0
+                                ? formatPrice(averageFillPrice)
+                                : '--',
                           ),
                         ),
                         Expanded(
@@ -149,7 +154,7 @@ class _StandardOrderDetailsSheetState
               const SizedBox(height: 18),
               _detailRow(
                 'Order Type',
-                order.type == 'LIMIT' ? 'Limit' : 'Market',
+                order.type == 'LIMIT' ? 'Limit Order' : 'Market Order',
               ),
               _detailRow('Exchange', order.exchange),
               _detailRow('Validity', order.timeInForce),
@@ -159,7 +164,7 @@ class _StandardOrderDetailsSheetState
               if (order.orderId?.isNotEmpty == true)
                 _detailRow('Order ID', order.orderId!),
               const SizedBox(height: 18),
-              const Text(
+              const AppText(
                 'Order timeline',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
               ),
@@ -198,7 +203,7 @@ class _StandardOrderDetailsSheetState
                 ),
               if (order.fills.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                const Text(
+                const AppText(
                   'Executions',
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
                 ),
@@ -235,7 +240,9 @@ class _StandardOrderDetailsSheetState
                       foregroundColor: AppConfig.lossColor,
                       side: BorderSide(color: AppConfig.lossColor),
                     ),
-                    child: Text(cancelling ? 'Cancelling...' : 'Cancel Order'),
+                    child: AppText(
+                      cancelling ? 'Cancelling...' : 'Cancel Order',
+                    ),
                   ),
                 ),
               ],
@@ -247,44 +254,55 @@ class _StandardOrderDetailsSheetState
   }
 
   Future<void> _cancel() async {
+    if (cancelling || confirmingCancellation || widget.onCancel == null) return;
+    confirmingCancellation = true;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Cancel Order?'),
-        content: Text(
+        title: const AppText('Cancel Order?'),
+        content: AppText(
           'Cancel the remaining ${widget.order.remainingQuantity} shares of '
           '${widget.order.symbol} ${widget.order.isBuy ? 'BUY' : 'SELL'} order?',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Keep Order'),
+            child: const AppText('Keep Order'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: FilledButton.styleFrom(backgroundColor: AppConfig.lossColor),
-            child: const Text('Cancel Order'),
+            child: const AppText('Cancel Order'),
           ),
         ],
       ),
     );
+    confirmingCancellation = false;
     if (confirmed != true || !mounted) return;
 
     setState(() => cancelling = true);
-    final error = await widget.onCancel!(widget.order);
+    String? error;
+    try {
+      error = await widget.onCancel!(widget.order);
+    } catch (_) {
+      error =
+          'Unable to confirm cancellation. Refresh your orders to check the latest status.';
+    } finally {
+      if (mounted) setState(() => cancelling = false);
+    }
     if (!mounted) return;
-    setState(() => cancelling = false);
 
     if (error != null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(error)));
+      ).showSnackBar(SnackBar(content: AppText(error)));
       return;
     }
 
+    final messenger = ScaffoldMessenger.of(context);
     Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${widget.order.symbol} order cancelled')),
+    messenger.showSnackBar(
+      SnackBar(content: AppText('${widget.order.symbol} order cancelled')),
     );
   }
 
@@ -295,7 +313,7 @@ class _StandardOrderDetailsSheetState
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(
+      child: AppText(
         label,
         style: TextStyle(
           color: color,
@@ -310,12 +328,12 @@ class _StandardOrderDetailsSheetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
         ),
         const SizedBox(height: 5),
-        Text(
+        AppText(
           value,
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
         ),
@@ -331,14 +349,14 @@ class _StandardOrderDetailsSheetState
         children: [
           SizedBox(
             width: 110,
-            child: Text(
+            child: AppText(
               label,
               style: const TextStyle(color: Color(0xFF64748B)),
             ),
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Text(
+            child: AppText(
               value,
               textAlign: TextAlign.right,
               style: const TextStyle(fontWeight: FontWeight.w700),
@@ -382,15 +400,15 @@ class _StandardOrderDetailsSheetState
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 14),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      label,
-                      style: const TextStyle(fontWeight: FontWeight.w700),
-                    ),
+                  AppText(
+                    label,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
                   ),
-                  Text(
+                  const SizedBox(height: 4),
+                  AppText(
                     _formatTimelineTime(time),
                     style: const TextStyle(
                       color: Color(0xFF64748B),
@@ -422,19 +440,19 @@ class _StandardOrderDetailsSheetState
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   '${fill.quantity} @ ${formatPrice(fill.price)}',
                   style: const TextStyle(fontWeight: FontWeight.w800),
                 ),
               ),
-              Text(
+              AppText(
                 _formatTimelineTime(fill.executedAt),
                 style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
               ),
             ],
           ),
           const SizedBox(height: 6),
-          Text(
+          AppText(
             'Gross ${formatPrice(fill.grossAmount)}  |  '
             'Fees ${formatPrice(fill.fees)}',
             style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),

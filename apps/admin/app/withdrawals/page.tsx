@@ -7,6 +7,7 @@ import {
   Card,
   Input,
   Modal,
+  Popconfirm,
   Space,
   Table,
   Tag,
@@ -14,7 +15,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -69,6 +70,7 @@ export default function WithdrawalsPage() {
   const [rejecting, setRejecting] = useState<WithdrawalRecord | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [submittingId, setSubmittingId] = useState("");
+  const submitting = useRef(false);
 
   async function loadRecords() {
     setLoading(true);
@@ -117,7 +119,8 @@ export default function WithdrawalsPage() {
   }, [keyword, records]);
 
   async function approve(record: WithdrawalRecord) {
-    if (submittingId) return;
+    if (submitting.current || loading || error) return;
+    submitting.current = true;
     setSubmittingId(record.id);
     try {
       await api.patch(`/withdrawal/${record.id}/approve`);
@@ -131,18 +134,20 @@ export default function WithdrawalsPage() {
           : responseMessage || "提现通过失败",
       );
     } finally {
+      submitting.current = false;
       setSubmittingId("");
     }
   }
 
   async function reject() {
     if (!rejecting) return;
-    if (submittingId) return;
+    if (submitting.current || loading || error) return;
     if (rejectNote.trim().length < 3) {
       message.error("请输入至少 3 个字符的拒绝原因");
       return;
     }
 
+    submitting.current = true;
     setSubmittingId(rejecting.id);
     try {
       await api.patch(`/withdrawal/${rejecting.id}/reject`, {
@@ -160,6 +165,7 @@ export default function WithdrawalsPage() {
           : responseMessage || "提现拒绝失败",
       );
     } finally {
+      submitting.current = false;
       setSubmittingId("");
     }
   }
@@ -206,16 +212,18 @@ export default function WithdrawalsPage() {
       width: 180,
       render: (_, record) => (
         <Space>
+          <Popconfirm title="确认通过提现申请？" description={`${record.account.user.fullName} · ${formatMoney(record.amount)} · ${payoutMethod(record)}`}
+            okText="确认通过" cancelText="取消" onConfirm={() => approve(record)} disabled={!!submittingId}>
           <Button
             type="primary"
             size="small"
             icon={<CheckOutlined />}
             loading={submittingId === record.id}
             disabled={!!submittingId && submittingId !== record.id}
-            onClick={() => approve(record)}
           >
             通过
           </Button>
+          </Popconfirm>
           <Button danger size="small" icon={<CloseOutlined />} disabled={!!submittingId} onClick={() => setRejecting(record)}>
             拒绝
           </Button>
@@ -265,6 +273,7 @@ export default function WithdrawalsPage() {
         title="拒绝提现"
         open={!!rejecting}
         onCancel={() => {
+          if (submitting.current) return;
           setRejecting(null);
           setRejectNote("");
         }}

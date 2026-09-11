@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -13,6 +14,7 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../services/trading_service.dart';
 import '../widgets/trading/history_tab.dart';
+import '../widgets/trading/funds_tab.dart';
 
 import '../widgets/trading/holdings_tab.dart';
 import '../widgets/trading/institutional_tab.dart';
@@ -35,8 +37,10 @@ class TradingCenterPage extends StatefulWidget {
     required this.onTrade,
     required this.onApplyIpo,
     required this.onAlertsTap,
+    required this.notificationCount,
     required this.indexQuotes,
     required this.onViewMarkets,
+    this.tradingService,
   });
 
   final List<StockQuote> stocks;
@@ -50,8 +54,10 @@ class TradingCenterPage extends StatefulWidget {
   final ValueChanged<StockQuote> onTrade;
   final ValueChanged<Ipo> onApplyIpo;
   final VoidCallback onAlertsTap;
+  final int notificationCount;
   final Map<String, (double, double)> indexQuotes;
   final VoidCallback onViewMarkets;
+  final TradingService? tradingService;
 
   @override
   State<TradingCenterPage> createState() => _TradingCenterPageState();
@@ -59,11 +65,16 @@ class TradingCenterPage extends StatefulWidget {
 
 class _TradingCenterPageState extends State<TradingCenterPage>
     with WidgetsBindingObserver {
-  final TradingService _tradingService = TradingService();
+  late final TradingService _tradingService =
+      widget.tradingService ?? TradingService();
+  bool _ordersFailed = false;
+  bool _accountFailed = false;
   final List<TradingOrder> _orders = <TradingOrder>[];
   final Map<String, PortfolioPosition> _positions =
       <String, PortfolioPosition>{};
   final List<AccountTransaction> _transactions = <AccountTransaction>[];
+  bool _transactionsLoading = true;
+  bool _transactionsFailed = false;
   TradingAccountSnapshot? _accountSnapshot;
 
   Timer? _refreshTimer;
@@ -72,17 +83,30 @@ class _TradingCenterPageState extends State<TradingCenterPage>
 
   final List<_TradingModule> tabs = const [
     _TradingModule('Overview', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
-    _TradingModule('Inst.', Icons.account_balance_outlined, Color(0xFF1D4ED8)),
+    _TradingModule(
+      'Institutional',
+      Icons.account_balance_outlined,
+      Color(0xFF1D4ED8),
+    ),
     _TradingModule(
       'Holdings',
       Icons.account_balance_wallet_outlined,
       Color(0xFF059669),
     ),
-    _TradingModule('Pending', Icons.schedule_rounded, Color(0xFFF97316)),
-    _TradingModule('Orders', Icons.receipt_long_outlined, Color(0xFF7C3AED)),
+    _TradingModule('Pending Orders', Icons.schedule_rounded, Color(0xFFF97316)),
+    _TradingModule(
+      'Order Book',
+      Icons.receipt_long_outlined,
+      Color(0xFF7C3AED),
+    ),
     _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
     _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
-    _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
+    _TradingModule('Order History', Icons.history_rounded, Color(0xFFF59E0B)),
+    _TradingModule(
+      'Funds Ledger',
+      Icons.account_balance_wallet_outlined,
+      Color(0xFF64748B),
+    ),
   ];
 
   @override
@@ -171,17 +195,19 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   }
 
   Future<void> _performTradingRefresh() async {
+    if (!mounted) return;
+    setState(() => _transactionsLoading = true);
     final previousById = <String, TradingOrder>{
       for (final order in _orders)
         if (order.orderId?.isNotEmpty == true) order.orderId!: order,
     };
     final results = await Future.wait<Object?>([
       _tradingService
-          .fetchOrders()
+          .fetchOrders(allowCached: false)
           .then<Object?>((value) => value)
           .catchError((_) => null),
       _tradingService
-          .fetchAccountSnapshot()
+          .fetchAccountSnapshot(allowCached: false)
           .then<Object?>((value) => value)
           .catchError((_) => null),
       _tradingService
@@ -196,6 +222,10 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     final transactions = results[2] as List<AccountTransaction>?;
 
     setState(() {
+      _transactionsLoading = false;
+      _transactionsFailed = transactions == null;
+      _ordersFailed = latestOrders == null;
+      _accountFailed = snapshot == null;
       if (latestOrders != null) {
         _orders
           ..clear()
@@ -243,7 +273,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                 '${latest.status.toLowerCase().replaceAll('_', ' ')}';
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
+        ..showSnackBar(SnackBar(content: AppText(message)));
       break;
     }
   }
@@ -279,14 +309,14 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
               child: Row(
                 children: [
                   const Expanded(
-                    child: Text(
+                    child: AppText(
                       'Trade',
                       style: TextStyle(
-                        fontSize: 22,
+                        fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
                     ),
@@ -294,18 +324,62 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                   IconButton(
                     tooltip: 'Markets',
                     onPressed: widget.onViewMarkets,
-                    icon: const Icon(Icons.search),
+                    icon: const Icon(Icons.search_rounded, size: 22),
                   ),
                   IconButton(
-                    tooltip: 'Notifications',
-                    onPressed: widget.onAlertsTap,
-                    icon: const Icon(Icons.notifications_none),
+                    tooltip: tr('Funds Ledger'),
+                    onPressed: () => _selectTab(8),
+                    icon: Icon(
+                      Icons.account_balance_wallet_outlined,
+                      size: 22,
+                      color: selectedTab == 8 ? AppConfig.primaryColor : null,
+                    ),
+                  ),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        tooltip: 'Notifications',
+                        onPressed: widget.onAlertsTap,
+                        icon: const Icon(
+                          Icons.notifications_none_rounded,
+                          size: 22,
+                        ),
+                      ),
+                      if (widget.notificationCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 4,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 17,
+                              minHeight: 17,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            alignment: Alignment.center,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFEF233C),
+                              shape: BoxShape.circle,
+                            ),
+                            child: AppText(
+                              widget.notificationCount > 9
+                                  ? '9+'
+                                  : widget.notificationCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
             ),
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+              margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(8),
@@ -319,24 +393,66 @@ class _TradingCenterPageState extends State<TradingCenterPage>
               child: Row(
                 children: [
                   Expanded(
-                    child: _balanceMetric(
-                      'Available Balance',
-                      _accountSnapshot?.cashBalance,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _balanceMetric(
+                          'Available Funds',
+                          _accountSnapshot?.availableBalance,
+                        ),
+                        const SizedBox(height: 12),
+                        _balanceMetric(
+                          'Buying Power',
+                          _accountSnapshot?.buyingPower,
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: _balanceMetric(
-                      'Buying Power',
-                      _accountSnapshot?.buyingPower,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _balanceMetric(
+                          'Realized P&L',
+                          _accountSnapshot?.realizedProfitLoss,
+                          valueColor:
+                              (_accountSnapshot?.realizedProfitLoss ?? 0) >= 0
+                              ? const Color(0xff70e0ba)
+                              : const Color(0xffffa6b1),
+                        ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
-            _tabRow(const [0, 1, 5, 6], primary: true),
-            if (![1, 5, 6].contains(selectedTab)) _tabRow(const [4, 3, 2, 7]),
+            _productTabs(),
+            if (![1, 5, 6].contains(selectedTab)) _tradingShortcuts(),
             const SizedBox(height: 8),
+            if (_ordersFailed || _accountFailed)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: AppText(
+                        _ordersFailed && _accountFailed
+                            ? 'Orders and balances could not be updated.'
+                            : _ordersFailed
+                            ? 'Orders could not be updated.'
+                            : 'Balances and holdings could not be updated.',
+                      ),
+                    ),
+                    TextButton(
+                      onPressed: _transactionsLoading
+                          ? null
+                          : () => _refreshTradingData(),
+                      child: const AppText('Retry'),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(child: _buildContent()),
           ],
         ),
@@ -344,64 +460,141 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     );
   }
 
-  Widget _tabRow(List<int> indices, {bool primary = false}) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+  void _selectTab(int index) {
+    setState(() => selectedTab = index);
+    if (index >= 2) unawaited(_refreshTradingData());
+  }
+
+  Widget _productTabs() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
     child: Row(
-      children: indices.map((index) {
-        final selected =
-            selectedTab == index ||
-            (primary && index == 0 && ![1, 5, 6].contains(selectedTab));
-        return Expanded(
-          child: TextButton(
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              backgroundColor: selected
-                  ? const Color(0xFFEAF1FF)
-                  : Colors.transparent,
-              foregroundColor: selected
-                  ? AppConfig.primaryColor
-                  : AppConfig.textSecondaryColor,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(6),
-              ),
-              textStyle: const TextStyle(
-                fontFamily: 'Roboto',
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+      children: [
+        for (final index in [0, 1, 5, 6])
+          Expanded(
+            child: Semantics(
+              selected:
+                  selectedTab == index ||
+                  (index == 0 && [2, 3, 4, 7].contains(selectedTab)),
+              child: TextButton(
+                onPressed: () => _selectTab(index),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 3),
+                  minimumSize: const Size(0, 48),
+                  foregroundColor:
+                      selectedTab == index ||
+                          (index == 0 && [2, 3, 4, 7].contains(selectedTab))
+                      ? AppConfig.primaryColor
+                      : AppConfig.textSecondaryColor,
+                ),
+                child: AppText(
+                  tabs[index].label,
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
               ),
             ),
-            onPressed: () {
-              setState(() => selectedTab = index);
-              if (index >= 2) unawaited(_refreshTradingData());
-            },
-            child: Text(tabs[index].label),
           ),
-        );
-      }).toList(),
+      ],
     ),
   );
-  Widget _balanceMetric(String label, double? value) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(label, style: const TextStyle(color: Colors.white70, fontSize: 11)),
-      const SizedBox(height: 6),
-      FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          value == null ? '--' : formatPrice(value),
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 19,
-            fontWeight: FontWeight.w700,
+
+  Widget _tradingShortcuts() => Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+      children: [
+        for (final item in <(int, String, IconData)>[
+          (4, 'Orders', Icons.receipt_long_outlined),
+          (3, 'Pending', Icons.pending_actions_outlined),
+          (2, 'Holdings', Icons.account_balance_outlined),
+          (7, 'History', Icons.history),
+        ])
+          Expanded(
+            child: Semantics(
+              selected: selectedTab == item.$1,
+              child: Tooltip(
+                message: tr(tabs[item.$1].label),
+                child: InkWell(
+                  onTap: () => _selectTab(item.$1),
+                  child: SizedBox(
+                    height: MediaQuery.textScalerOf(context).scale(1) > 1.2
+                        ? 68
+                        : 64,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          item.$3,
+                          size: 21,
+                          color: selectedTab == item.$1
+                              ? AppConfig.primaryColor
+                              : const Color(0xFF0F9D92),
+                        ),
+                        const SizedBox(height: 6),
+                        AppText(
+                          item.$2,
+                          maxLines: 2,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: selectedTab == item.$1
+                                ? AppConfig.primaryColor
+                                : AppConfig.textSecondaryColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-      ),
-    ],
+      ],
+    ),
   );
+  Widget _balanceMetric(String label, double? value, {Color? valueColor}) =>
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(
+            label,
+            style: const TextStyle(color: Colors.white70, fontSize: 11),
+          ),
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: AppText(
+              value == null ? '--' : formatPrice(value),
+              style: TextStyle(
+                color: valueColor ?? Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      );
   Widget _buildContent() {
+    final missingOrders = _orders.isEmpty && [0, 4, 7].contains(selectedTab);
+    final missingAccount = _positions.isEmpty && [0, 2].contains(selectedTab);
+    if ((missingOrders || missingAccount) && _transactionsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if ((missingOrders && _ordersFailed) ||
+        (missingAccount && _accountFailed)) {
+      return const Center(
+        child: AppText('Trading data is temporarily unavailable.'),
+      );
+    }
     switch (selectedTab) {
       case 0:
         return TradeList(
+          orders: _orders,
+          onViewOrders: () => setState(() => selectedTab = 4),
+          onCancel: _cancelStandardOrder,
           stocks: widget.stocks,
           positions: _positions,
           account: _accountSnapshot,
@@ -439,6 +632,13 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         );
       case 7:
         return HistoryTab(orders: _orders);
+      case 8:
+        return FundsTab(
+          transactions: _transactions,
+          loading: _transactionsLoading,
+          loadFailed: _transactionsFailed,
+          onRefresh: () => _refreshTradingData(ensureAfterCurrent: true),
+        );
       default:
         return const SizedBox.shrink();
     }

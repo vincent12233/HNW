@@ -6,6 +6,9 @@ String clientErrorMessage(Object error, {String fallback = 'Request failed'}) {
   }
 
   final raw = error.toString();
+  if (RegExp(r'[\u3400-\u9fff]').hasMatch(raw)) {
+    return fallback;
+  }
 
   if (raw.contains('ClientException') ||
       raw.contains('Failed to fetch') ||

@@ -31,32 +31,34 @@ export class AdminAccountController {
   constructor(private readonly adminAccountService: AdminAccountService) {}
 
   @Get()
-  listAccounts(@Query() query: ListAdminAccountsQueryDto) {
-    return this.adminAccountService.listAccounts(query);
+  listAccounts(@Query() query: ListAdminAccountsQueryDto, @Req() request: AuthenticatedRequest) {
+    return this.adminAccountService.listAccounts(query, request.user.role);
   }
 
   @Get('transactions')
-  listTransactions(@Query() query: ListAdminAccountTransactionsQueryDto) {
-    return this.adminAccountService.listTransactions(query);
+  listTransactions(@Query() query: ListAdminAccountTransactionsQueryDto, @Req() request: AuthenticatedRequest) {
+    return this.adminAccountService.listTransactions(query, request.user.role);
   }
 
   @Get(':accountNumber/transactions')
   getAccountTransactions(
     @Param('accountNumber') accountNumber: string,
     @Query() query: ListAdminAccountTransactionsQueryDto,
+    @Req() request: AuthenticatedRequest,
   ) {
     return this.adminAccountService.getAccountTransactions(
       accountNumber,
       query,
+      request.user.role,
     );
   }
   @Get(':accountNumber')
-  getAccount(@Param('accountNumber') accountNumber: string) {
-    return this.adminAccountService.getAccount(accountNumber);
+  getAccount(@Param('accountNumber') accountNumber: string, @Req() request: AuthenticatedRequest) {
+    return this.adminAccountService.getAccount(accountNumber, request.user.role);
   }
 
   @Post(':accountNumber/credit')
-  @Roles('FINANCE')
+  @Roles('FINANCE', 'SUPPORT')
   credit(
     @Param('accountNumber') accountNumber: string,
     @Body() dto: AdjustBalanceDto,
@@ -66,20 +68,17 @@ export class AdminAccountController {
       accountNumber,
       dto,
       request.user.userId,
+      request.user.role,
     );
   }
 
   @Post(':accountNumber/debit')
-  @Roles('FINANCE')
+  @Roles('FINANCE', 'SUPPORT')
   debit(
     @Param('accountNumber') accountNumber: string,
     @Body() dto: AdjustBalanceDto,
     @Req() request: AuthenticatedRequest,
   ) {
-    return this.adminAccountService.debit(
-      accountNumber,
-      dto,
-      request.user.userId,
-    );
+    return this.adminAccountService.debit(accountNumber, dto, request.user.userId, request.user.role);
   }
 }

@@ -5,9 +5,11 @@ import { UsersModule } from '../users/users.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { TwoFactorModule } from './two-factor.module';
 
 @Module({
   imports: [
+    TwoFactorModule,
     UsersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
@@ -15,7 +17,7 @@ import { JwtStrategy } from './jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: '1h',
+          expiresIn: '7d',
         },
       }),
     }),

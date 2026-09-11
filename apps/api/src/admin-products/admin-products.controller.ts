@@ -11,7 +11,7 @@ export class AdminProductsController {
   constructor(private readonly service: AdminProductsService) {}
 
   @Get('watchlist')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   watchlist() {
     return this.service.listWatchlist();
   }
@@ -41,7 +41,7 @@ export class AdminProductsController {
   }
 
   @Get('block-trades')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   blockTrades() {
     return this.service.listBlockTrades();
   }
@@ -71,7 +71,7 @@ export class AdminProductsController {
   }
 
   @Get('funds')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   funds() {
     return this.service.listFunds();
   }
@@ -101,7 +101,7 @@ export class AdminProductsController {
   }
 
   @Get('quant')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   quant() {
     return this.service.listQuant();
   }

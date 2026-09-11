@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -17,19 +18,16 @@ class SectorPerformance extends StatelessWidget {
       grouped.putIfAbsent(category, () => <StockQuote>[]).add(stock);
     }
     final sectors = grouped.entries.map((entry) {
-      final change = entry.value.fold<double>(
-            0,
-            (total, stock) => total + stock.change,
-          ) /
+      final change =
+          entry.value.fold<double>(0, (total, stock) => total + stock.change) /
           entry.value.length;
       return (name: entry.key, change: change, count: entry.value.length);
-    }).toList()
-      ..sort((left, right) => right.count.compareTo(left.count));
+    }).toList()..sort((left, right) => right.count.compareTo(left.count));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const AppText(
           'Sector Performance',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
@@ -70,12 +68,12 @@ class SectorPerformance extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           sector.name,
                           style: const TextStyle(fontWeight: FontWeight.w700),
                         ),
                         const SizedBox(height: 4),
-                        Text(
+                        AppText(
                           '${change > 0 ? '+' : ''}'
                           '${change.toStringAsFixed(2)}%',
                           style: TextStyle(
@@ -83,7 +81,7 @@ class SectorPerformance extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                           ),
                         ),
-                        Text(
+                        AppText(
                           '${sector.count} stocks',
                           style: const TextStyle(
                             color: Colors.black45,

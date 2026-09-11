@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
@@ -40,33 +41,33 @@ class MarketHeader extends StatelessWidget {
               onTap: onAvatarTap,
               customBorder: const CircleBorder(),
               child: CircleAvatar(
-                radius: 22,
+                radius: 20,
                 backgroundColor: const Color(0xFFEAF3FF),
                 backgroundImage: avatarBytes == null
                     ? null
                     : MemoryImage(avatarBytes!),
                 child: avatarBytes != null
                     ? null
-                    : Text(
+                    : AppText(
                         accountName.trim().isEmpty
                             ? 'C'
                             : accountName.trim()[0].toUpperCase(),
                         style: const TextStyle(
                           color: AppConfig.primaryColor,
-                          fontSize: 17,
+                          fontSize: 16,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 10),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text(
+                      AppText(
                         greeting,
                         style: const TextStyle(
                           color: AppConfig.textSecondaryColor,
@@ -83,11 +84,13 @@ class MarketHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 2),
-                  Text(
+                  AppText(
                     accountName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: AppConfig.textPrimaryColor,
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -97,7 +100,7 @@ class MarketHeader extends StatelessWidget {
             IconButton(
               tooltip: 'Search',
               onPressed: onSearchTap,
-              icon: const Icon(Icons.search_rounded, size: 24),
+              icon: const Icon(Icons.search_rounded, size: 22),
             ),
             Stack(
               clipBehavior: Clip.none,
@@ -108,7 +111,7 @@ class MarketHeader extends StatelessWidget {
                   icon: const Icon(
                     Icons.notifications_none_rounded,
                     color: Color(0xFF334155),
-                    size: 24,
+                    size: 22,
                   ),
                 ),
                 if (notificationCount > 0)
@@ -123,7 +126,7 @@ class MarketHeader extends StatelessWidget {
                         color: Color(0xFFEF4444),
                         shape: BoxShape.circle,
                       ),
-                      child: Text(
+                      child: AppText(
                         notificationCount > 9
                             ? '9+'
                             : notificationCount.toString(),

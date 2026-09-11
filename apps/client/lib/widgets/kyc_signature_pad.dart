@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -81,7 +82,7 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const Text(
+      const AppText(
         'Sign in the box below',
         style: TextStyle(fontWeight: FontWeight.w700),
       ),
@@ -124,10 +125,10 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
                   widget.onChanged();
                 },
           icon: const Icon(Icons.refresh, size: 16),
-          label: const Text('Clear'),
+          label: const AppText('Clear'),
         ),
       ),
-      const Text(
+      const AppText(
         'Use your finger or a stylus. Your signature will be submitted with your identity documents.',
         style: TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor),
       ),
@@ -135,10 +136,10 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
       OutlinedButton.icon(
         onPressed: _saving ? null : _save,
         icon: const Icon(Icons.draw_outlined, size: 18),
-        label: Text(_saving ? 'Saving…' : 'Save Signature'),
+        label: AppText(_saving ? 'Saving…' : 'Save Signature'),
       ),
       if (_error != null)
-        Text(_error!, style: const TextStyle(color: AppConfig.lossColor)),
+        AppText(_error!, style: const TextStyle(color: AppConfig.lossColor)),
     ],
   );
 }

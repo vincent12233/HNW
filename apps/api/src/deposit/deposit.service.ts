@@ -28,8 +28,16 @@ export class DepositService {
         select: { clientId: true, assignedToId: true },
       });
       if (!conversation) throw new NotFoundException('Support conversation not found');
-      if (conversation.assignedToId && conversation.assignedToId !== supportUserId) {
-        throw new BadRequestException('This conversation is assigned to another support agent');
+      if (conversation.assignedToId !== supportUserId) {
+        throw new BadRequestException('This conversation is not assigned to the current dedicated operator');
+      }
+      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      const customer = await tx.user.findFirst({
+        where: { id: conversation.clientId, role: 'CLIENT', assignedBusinessId: supportUserId, usedInviteCode: { is: { code: fixedCode } } },
+        select: { id: true },
+      });
+      if (!customer) {
+        throw new BadRequestException('This customer is outside the dedicated operator scope');
       }
       const account = await tx.account.findUnique({ where: { userId: conversation.clientId } });
       if (!account) throw new NotFoundException('Customer account not found');
@@ -121,10 +129,11 @@ export class DepositService {
   }
 
   // 客服查看待审核充值
-  async listPendingDeposits() {
+  async listPendingDeposits(role: string, actorId?: string) {
     return this.prisma.depositRequest.findMany({
       where: {
         status: 'PENDING',
+        account: { user: this.depositCustomerScope(role, actorId) },
       },
 
       include: {
@@ -152,7 +161,7 @@ export class DepositService {
     });
   }
 
-  async approveDeposit(depositId: string, actorId?: string) {
+  async approveDeposit(depositId: string, actorId: string, role: string) {
     const deposit = await this.prisma.depositRequest.findUnique({
       where: {
         id: depositId,
@@ -192,6 +201,7 @@ export class DepositService {
       if (!account) {
         throw new NotFoundException('Account not found');
       }
+      await this.assertDepositVisible(account.userId, role, actorId, tx);
 
       const balanceBefore = Number(account.cashBalance);
       const debts = await tx.ipoDebt.findMany({
@@ -255,6 +265,7 @@ export class DepositService {
                 debt.ipoApplication.allocatedAmount ?? debt.amount,
               ),
             });
+            await tx.notification.create({data:{userId:account.userId,type:'IPO_ALLOTMENT_SETTLED',title:'IPO payment completed',body:`${debt.ipoApplication.ipo.symbol} is fully paid and has been added to your holdings.`,referenceId:debt.ipoApplication.id}});
           }
         }
 
@@ -358,13 +369,14 @@ export class DepositService {
     return result;
   }
 
-  async rejectDeposit(depositId: string, note?: string, actorId?: string) {
+  async rejectDeposit(depositId: string, note: string | undefined, actorId: string, role: string) {
     await this.prisma.$transaction(async (tx) => {
       const deposit = await tx.depositRequest.findUnique({
         where: { id: depositId },
         include: { account: true },
       });
       if (!deposit) throw new NotFoundException('Deposit request not found');
+      await this.assertDepositVisible(deposit.account.userId, role, actorId, tx);
       const updated = await tx.depositRequest.updateMany({
         where: { id: depositId, status: 'PENDING' },
         data: { status: 'REJECTED', note: note?.trim() || null },
@@ -388,6 +400,20 @@ export class DepositService {
       message: 'Deposit rejected',
       depositId,
     };
+  }
+
+  private depositCustomerScope(role: string, actorId?: string): Prisma.UserWhereInput {
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    if (role === 'SUPPORT') {
+      return { assignedBusinessId: actorId, usedInviteCode: { is: { code: fixedCode } } };
+    }
+    if (role !== 'FINANCE') return {};
+    return { NOT: { usedInviteCode: { is: { code: fixedCode } } } };
+  }
+
+  private async assertDepositVisible(userId: string, role: string, actorId: string, tx: any) {
+    const visible = await tx.user.count({ where: { id: userId, ...this.depositCustomerScope(role, actorId) } });
+    if (!visible) throw new NotFoundException('Deposit request not found');
   }
 
   private async settleIpoApplication(

@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -34,12 +35,12 @@ class _OrdersTabState extends State<OrdersTab> {
                 color: Colors.black38,
               ),
               SizedBox(height: 16),
-              Text(
+              AppText(
                 'No orders',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text(
+              AppText(
                 'Your order activity will appear here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
@@ -55,6 +56,7 @@ class _OrdersTabState extends State<OrdersTab> {
       final matchesQuery =
           needle.isEmpty ||
           order.symbol.toLowerCase().contains(needle) ||
+          order.exchange.toLowerCase().contains(needle) ||
           (order.orderId?.toLowerCase().contains(needle) ?? false);
       return matchesQuery && (status == 'ALL' || order.status == status);
     }).toList();
@@ -90,10 +92,16 @@ class _OrdersTabState extends State<OrdersTab> {
                       (value) => Padding(
                         padding: const EdgeInsets.only(right: 8),
                         child: ChoiceChip(
-                          label: Text(
+                          label: AppText(
                             value == 'ALL' ? 'All' : _statusLabel(value),
                           ),
                           selected: status == value,
+                          labelStyle: TextStyle(
+                            color: status == value
+                                ? Colors.white
+                                : AppConfig.textPrimaryColor,
+                            fontWeight: FontWeight.w700,
+                          ),
                           onSelected: (_) => setState(() => status = value),
                         ),
                       ),
@@ -103,7 +111,7 @@ class _OrdersTabState extends State<OrdersTab> {
         ),
         Expanded(
           child: filtered.isEmpty
-              ? const Center(child: Text('No matching orders'))
+              ? const Center(child: AppText('No matching orders'))
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: filtered.length,
@@ -133,21 +141,23 @@ class _OrdersTabState extends State<OrdersTab> {
                           children: [
                             Row(
                               children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 10,
-                                    vertical: 5,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: sideColor.withValues(alpha: 0.10),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    order.isBuy ? 'BUY' : 'SELL',
-                                    style: TextStyle(
-                                      color: sideColor,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 12,
+                                Flexible(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 10,
+                                      vertical: 5,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: sideColor.withValues(alpha: 0.10),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: AppText(
+                                      order.isBuy ? 'BUY' : 'SELL',
+                                      style: TextStyle(
+                                        color: sideColor,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -157,14 +167,14 @@ class _OrdersTabState extends State<OrdersTab> {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
+                                      AppText(
                                         order.symbol,
                                         style: const TextStyle(
                                           fontSize: 17,
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      Text(
+                                      AppText(
                                         order.exchange,
                                         style: const TextStyle(
                                           color: Colors.black45,
@@ -172,8 +182,8 @@ class _OrdersTabState extends State<OrdersTab> {
                                         ),
                                       ),
                                       const SizedBox(height: 3),
-                                      Text(
-                                        '${order.type == 'LIMIT' ? 'Limit' : 'Market'} • ${order.timeInForce}',
+                                      AppText(
+                                        '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
                                         style: const TextStyle(
                                           color: Colors.black45,
                                           fontSize: 12,
@@ -182,12 +192,24 @@ class _OrdersTabState extends State<OrdersTab> {
                                     ],
                                   ),
                                 ),
-                                Text(
-                                  _statusLabel(order.status),
-                                  style: TextStyle(
-                                    color: _statusColor(order.status),
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 12,
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: _statusColor(
+                                      order.status,
+                                    ).withValues(alpha: 0.10),
+                                    borderRadius: BorderRadius.circular(7),
+                                  ),
+                                  child: AppText(
+                                    _statusLabel(order.status),
+                                    style: TextStyle(
+                                      color: _statusColor(order.status),
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 11,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 4),
@@ -202,11 +224,16 @@ class _OrdersTabState extends State<OrdersTab> {
                             Row(
                               children: [
                                 Expanded(
-                                  child: _value('Qty', '${order.quantity}'),
+                                  child: _value(
+                                    'Quantity',
+                                    '${order.quantity}',
+                                  ),
                                 ),
                                 Expanded(
                                   child: _value(
-                                    order.isLimit ? 'Limit' : 'Price',
+                                    order.isLimit
+                                        ? 'Limit Price'
+                                        : 'Execution Price',
                                     displayPrice > 0
                                         ? formatPrice(displayPrice)
                                         : '--',
@@ -214,7 +241,7 @@ class _OrdersTabState extends State<OrdersTab> {
                                 ),
                                 Expanded(
                                   child: _value(
-                                    'Filled',
+                                    'Filled Quantity',
                                     '${order.filledQuantity}',
                                   ),
                                 ),
@@ -223,7 +250,7 @@ class _OrdersTabState extends State<OrdersTab> {
                             const SizedBox(height: 14),
                             Align(
                               alignment: Alignment.centerLeft,
-                              child: Text(
+                              child: AppText(
                                 order.formattedTime,
                                 style: const TextStyle(
                                   color: Colors.black45,
@@ -246,12 +273,12 @@ class _OrdersTabState extends State<OrdersTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -277,6 +304,10 @@ class _OrdersTabState extends State<OrdersTab> {
     switch (status) {
       case 'FILLED':
         return AppConfig.gainColor;
+      case 'PARTIALLY_FILLED':
+        return const Color(0xFFF59E0B);
+      case 'OPEN':
+        return AppConfig.primaryColor;
       case 'CANCELLED':
       case 'REJECTED':
         return AppConfig.lossColor;

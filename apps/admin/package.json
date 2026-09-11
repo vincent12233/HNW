@@ -10,6 +10,7 @@
     "start:manager": "next start -p 3004",
     "start:finance": "next start -p 3005",
     "start:business": "next start -p 3006",
+    "start:support": "next start -p 3007 -H 0.0.0.0",
     "lint": "eslint"
   },
   "dependencies": {

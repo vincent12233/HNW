@@ -11,6 +11,12 @@ import 'package:india_trading_app/pages/kyc_upload_page.dart';
 import 'package:india_trading_app/pages/bank_details_page.dart';
 import 'package:india_trading_app/widgets/kyc_signature_pad.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
+import 'package:india_trading_app/pages/account_security_page.dart';
+import 'package:india_trading_app/pages/account_content_page.dart';
+import 'package:india_trading_app/pages/language_page.dart';
+import 'package:india_trading_app/pages/appearance_page.dart';
+import 'package:india_trading_app/pages/legal_page.dart';
+import 'package:india_trading_app/pages/notifications_page.dart';
 
 // Opt-in renders of the production widgets, with no customer data or mock API.
 // flutter test test/ui_capture_test.dart --update-goldens
@@ -18,6 +24,13 @@ import 'package:india_trading_app/theme/app_theme.dart';
 void main() {
   const output = String.fromEnvironment('UI_CAPTURE_DIR');
   final pages = <String, Widget>{
+    'password': const AccountSecurityPage(),
+    'learning': const LearningCenterPage(),
+    'article': const LearningArticlePage(index: 0),
+    'language': const LanguagePage(),
+    'appearance': const AppearancePage(),
+    'privacy': const LegalPage(title: 'Privacy'),
+    'notifications': const NotificationsPage(),
     'login': LoginPage(onSignedIn: (_) {}),
     'register': const RegisterPage(),
     'kyc': const KycUploadPage(),

@@ -1,6 +1,5 @@
 import {
   Controller,
-  Body,
   Get,
   Param,
   Post,
@@ -10,7 +9,6 @@ import {
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IpoService } from './ipo.service';
-import { PayIpoDebtDto } from './dto/pay-ipo-debt.dto';
 interface AuthenticatedRequest extends Request {
   user: {
     userId: string;
@@ -52,8 +50,4 @@ export class ClientIpoController {
     return this.ipoService.listMyDebts(request.user.userId);
   }
 
-  @Post('debts/pay')
-  payDebt(@Req() request: AuthenticatedRequest, @Body() dto: PayIpoDebtDto) {
-    return this.ipoService.payDebt(request.user.userId, dto.amount);
-  }
 }

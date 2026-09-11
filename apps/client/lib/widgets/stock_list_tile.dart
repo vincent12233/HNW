@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -12,12 +13,14 @@ class StockListTile extends StatelessWidget {
     required this.onTap,
     this.isFavorite = false,
     this.onFavorite,
+    this.onLogoLoadFailed,
   });
 
   final StockQuote stock;
   final bool isFavorite;
   final VoidCallback onTap;
   final VoidCallback? onFavorite;
+  final VoidCallback? onLogoLoadFailed;
 
   @override
   Widget build(BuildContext context) {
@@ -26,16 +29,20 @@ class StockListTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-        decoration: BoxDecoration(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: const BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE8EDF5)),
+          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
         ),
         child: Row(
           children: [
-            StockLogo(symbol: stock.symbol, size: 42, logoUrl: stock.logoUrl),
+            StockLogo(
+              symbol: stock.symbol,
+              size: 40,
+              logoUrl: stock.logoUrl,
+              onLoadFailed: onLogoLoadFailed,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -44,12 +51,13 @@ class StockListTile extends StatelessWidget {
                   Row(
                     children: [
                       Flexible(
-                        child: Text(
+                        child: AppText(
                           stock.symbol,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontWeight: FontWeight.w800,
-                            fontSize: 15,
+                            fontSize: 14,
+                            letterSpacing: 0.15,
                           ),
                         ),
                       ),
@@ -63,7 +71,7 @@ class StockListTile extends StatelessWidget {
                           color: const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(4),
                         ),
-                        child: Text(
+                        child: AppText(
                           stock.exchange,
                           style: const TextStyle(
                             color: Color(0xFF64748B),
@@ -74,30 +82,35 @@ class StockListTile extends StatelessWidget {
                       ),
                     ],
                   ),
-                  Text(
+                  AppText(
                     stock.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 13,
+                      color: Color(0xFF475569),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Volume ${formatVolume(stock.volume)}',
+                  const SizedBox(height: 2),
+                  AppText(
+                    'Traded volume · ${formatVolume(stock.volume)}',
                     style: const TextStyle(
                       color: Color(0xFF94A3B8),
-                      fontSize: 12,
+                      fontSize: 10,
                     ),
                   ),
                   if (!stock.quoteFresh) ...[
                     const SizedBox(height: 3),
                     const Row(
                       children: [
-                        Icon(Icons.schedule, size: 11, color: Color(0xFFF59E0B)),
+                        Icon(
+                          Icons.schedule,
+                          size: 11,
+                          color: Color(0xFFF59E0B),
+                        ),
                         SizedBox(width: 4),
-                        Text(
+                        AppText(
                           'Price delayed',
                           style: TextStyle(
                             color: Color(0xFFB45309),
@@ -111,18 +124,38 @@ class StockListTile extends StatelessWidget {
                 ],
               ),
             ),
+            const SizedBox(width: 10),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
+                AppText(
                   formatPrice(stock.price),
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-                Text(
-                  '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                  style: TextStyle(
-                    color: positive ? AppConfig.gainColor : AppConfig.lossColor,
-                    fontWeight: FontWeight.w600,
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 7,
+                    vertical: 3,
+                  ),
+                  decoration: BoxDecoration(
+                    color:
+                        (positive ? AppConfig.gainColor : AppConfig.lossColor)
+                            .withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: AppText(
+                    '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
+                    style: TextStyle(
+                      color: positive
+                          ? AppConfig.gainColor
+                          : AppConfig.lossColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                 ),
               ],
@@ -130,8 +163,11 @@ class StockListTile extends StatelessWidget {
             if (onFavorite != null)
               IconButton(
                 onPressed: onFavorite,
+                visualDensity: VisualDensity.compact,
+                constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
                 icon: Icon(
                   isFavorite ? Icons.star : Icons.star_border,
+                  size: 21,
                   color: isFavorite ? Colors.amber : Colors.grey,
                 ),
               ),

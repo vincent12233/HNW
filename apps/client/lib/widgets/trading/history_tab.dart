@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -30,12 +31,12 @@ class HistoryTab extends StatelessWidget {
             children: [
               Icon(Icons.history, size: 64, color: Colors.black38),
               SizedBox(height: 16),
-              Text(
+              AppText(
                 'No order history',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text(
+              AppText(
                 'Completed and cancelled orders will appear here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
@@ -86,7 +87,7 @@ class HistoryTab extends StatelessWidget {
                         color: sideColor.withValues(alpha: 0.10),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Text(
+                      child: AppText(
                         order.isBuy ? 'BUY' : 'SELL',
                         style: TextStyle(
                           color: sideColor,
@@ -100,14 +101,14 @@ class HistoryTab extends StatelessWidget {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          AppText(
                             order.symbol,
                             style: const TextStyle(
                               fontSize: 17,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
-                          Text(
+                          AppText(
                             order.exchange,
                             style: const TextStyle(
                               color: Colors.black45,
@@ -115,8 +116,8 @@ class HistoryTab extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 3),
-                          Text(
-                            '${order.type == 'LIMIT' ? 'Limit' : 'Market'} • ${order.timeInForce}',
+                          AppText(
+                            '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
                             style: const TextStyle(
                               color: Colors.black45,
                               fontSize: 12,
@@ -125,12 +126,22 @@ class HistoryTab extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Text(
-                      _statusLabel(order.status),
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.10),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
+                      child: AppText(
+                        _statusLabel(order.status),
+                        style: TextStyle(
+                          color: statusColor,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 11,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 4),
@@ -147,19 +158,22 @@ class HistoryTab extends StatelessWidget {
                     Expanded(child: _value('Quantity', '${order.quantity}')),
                     Expanded(
                       child: _value(
-                        order.isLimit ? 'Limit' : 'Price',
+                        order.isLimit ? 'Limit Price' : 'Execution Price',
                         displayPrice > 0 ? formatPrice(displayPrice) : '--',
                       ),
                     ),
                     Expanded(
-                      child: _value('Filled', '${order.filledQuantity}'),
+                      child: _value(
+                        'Filled Quantity',
+                        '${order.filledQuantity}',
+                      ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: Text(
+                  child: AppText(
                     order.formattedTime,
                     style: const TextStyle(color: Colors.black45, fontSize: 12),
                   ),
@@ -189,12 +203,12 @@ class HistoryTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     );
   }

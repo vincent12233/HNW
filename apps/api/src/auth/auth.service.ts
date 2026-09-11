@@ -23,6 +23,7 @@ import { UsersService } from '../users/users.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { normalizePhone, internationalPhone } from './phone-number';
+import { TwoFactorService } from './two-factor.service';
 @Injectable()
 export class AuthService {
   constructor(
@@ -30,6 +31,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
+    private readonly twoFactor: TwoFactorService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -41,6 +43,8 @@ export class AuthService {
 
     const email = this.phoneEmail(phone);
     const inviteCodeValue = dto.inviteCode.trim().toUpperCase();
+    const fixedInviteCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const reusableInvite = inviteCodeValue === fixedInviteCode;
 
     const existingUser = await this.usersService.findByPhone(phone);
 
@@ -71,7 +75,7 @@ export class AuthService {
         throw new BadRequestException('Invalid invite code');
       }
 
-      if (inviteCode.status === InviteCodeStatus.USED) {
+      if (!reusableInvite && inviteCode.status === InviteCodeStatus.USED) {
         throw new BadRequestException('Invite code has already been used');
       }
 
@@ -103,20 +107,14 @@ export class AuthService {
         );
       }
 
-      const claimedInviteCode = await tx.inviteCode.updateMany({
-        where: {
-          id: inviteCode.id,
-          status: InviteCodeStatus.UNUSED,
-          customerId: null,
-        },
-        data: {
-          status: InviteCodeStatus.USED,
-          usedAt: new Date(),
-        },
-      });
-
-      if (claimedInviteCode.count !== 1) {
-        throw new BadRequestException('Invite code has already been used');
+      if (!reusableInvite) {
+        const claimedInviteCode = await tx.inviteCode.updateMany({
+          where: { id: inviteCode.id, status: InviteCodeStatus.UNUSED },
+          data: { status: InviteCodeStatus.USED, usedAt: new Date() },
+        });
+        if (claimedInviteCode.count !== 1) {
+          throw new BadRequestException('Invite code has already been used');
+        }
       }
 
       const user = await tx.user.create({
@@ -128,6 +126,7 @@ export class AuthService {
           role: UserRole.CLIENT,
           status: UserStatus.SUSPENDED,
           assignedBusinessId: inviteCode.businessProfile.userId,
+          usedInviteCodeId: inviteCode.id,
           account: {
             create: {
               accountNumber,
@@ -148,15 +147,6 @@ export class AuthService {
         SET "customerNo" = ${customerNo}
         WHERE "id" = ${user.id}
       `;
-
-      await tx.inviteCode.update({
-        where: {
-          id: inviteCode.id,
-        },
-        data: {
-          customerId: user.id,
-        },
-      });
 
       return user;
     });
@@ -272,13 +262,10 @@ export class AuthService {
       throw new UnauthorizedException('该业务员账号已被停用');
     }
 
+    await this.twoFactor.verifyLogin(user.id, dto.verificationCode);
+
     await this.prisma.loginAudit.create({
-      data: {
-        userId: user.id,
-        ipAddress: context?.ipAddress || null,
-        userAgent: context?.userAgent || null,
-        success: true,
-      },
+      data: { userId: user.id, ipAddress: context?.ipAddress || null, userAgent: context?.userAgent || null, success: true },
     });
 
     await this.prisma.userDevice.create({
@@ -325,6 +312,7 @@ export class AuthService {
     const { subject, email } = await this.verifyGoogleToken(idToken);
     const user = await this.prisma.user.findFirst({ where: { OR: [{ googleSubject: subject }, { email }] }, include: { account: true } });
     if (!user || user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Google account is not linked to an active trading account');
+    if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
     if (!user.googleSubject) await this.prisma.user.update({ where: { id: user.id }, data: { googleSubject: subject } });
     const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role, version: user.authVersion });
     return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
@@ -368,6 +356,7 @@ export class AuthService {
     if (payload?.purpose !== 'BIOMETRIC_LOGIN' || !payload?.sub) throw new UnauthorizedException('Invalid biometric quick login');
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, include: { account: true } });
     if (!user || user.status !== UserStatus.ACTIVE || payload.version !== user.authVersion) throw new UnauthorizedException('Biometric quick login must be enabled again');
+    if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
     const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role, version: user.authVersion });
     return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
   }

@@ -1,6 +1,9 @@
+import '../widgets/app_page_scaffold.dart';
+import '../l10n/app_language.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app_config.dart';
 import '../models/market_history.dart';
@@ -91,8 +94,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   double? get limitDeviationPercent {
-    if (!isLimit || selectedOrderPrice <= 0 || liveStock.price <= 0)
+    if (!isLimit || selectedOrderPrice <= 0 || liveStock.price <= 0) {
       return null;
+    }
     return (selectedOrderPrice - liveStock.price) / liveStock.price * 100;
   }
 
@@ -192,8 +196,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final exchange = data['exchange']?.toString().trim().toUpperCase();
     if (exchange != null &&
         exchange.isNotEmpty &&
-        exchange != liveStock.exchange)
+        exchange != liveStock.exchange) {
       return;
+    }
 
     final price = double.tryParse(data['price']?.toString() ?? '');
     if (price == null || price <= 0 || !mounted) return;
@@ -259,10 +264,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(isBuy ? 'Confirm Buy Order' : 'Confirm Sell Order'),
-        content: Text(
+        title: AppText(isBuy ? 'Confirm Buy Order' : 'Confirm Sell Order'),
+        content: AppText(
           '${isBuy ? 'Buy' : 'Sell'} $quantity shares of ${liveStock.symbol}\n\n'
-          '${isLimit ? 'Limit' : 'Market'} • $timeInForce\n'
+          '${isLimit ? 'Limit Order' : 'Market Order'} • $timeInForce\n'
           '$priceLabel\n\n'
           'Estimated amount: ${formatPrice(estimatedAmount)}'
           '$quoteNotice',
@@ -270,7 +275,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           FilledButton(
             onPressed: isSubmitting
@@ -308,7 +313,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                         : orderResultMessage(confirmedOrder);
                     _showMessage(message, order: confirmedOrder);
                   },
-            child: Text(isSubmitting ? 'Submitting...' : 'Confirm'),
+            child: AppText(isSubmitting ? 'Submitting...' : 'Confirm'),
           ),
         ],
       ),
@@ -321,7 +326,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
       ..hideCurrentSnackBar()
       ..showSnackBar(
         SnackBar(
-          content: Text(message),
+          content: AppText(message),
           action: order == null
               ? null
               : SnackBarAction(
@@ -349,7 +354,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         '${order.symbol} Order',
                         style: const TextStyle(
                           fontSize: 20,
@@ -357,17 +362,23 @@ class _StockDetailPageState extends State<StockDetailPage> {
                         ),
                       ),
                     ),
-                    Text(order.status.replaceAll('_', ' ')),
+                    AppText(order.status.replaceAll('_', ' ')),
                   ],
                 ),
                 const SizedBox(height: 18),
                 _detailRow('Side', order.isBuy ? 'BUY' : 'SELL'),
                 _detailRow('Exchange', order.exchange),
-                _detailRow('Type', '${order.type} • ${order.timeInForce}'),
-                _detailRow('Quantity', '${order.quantity}'),
-                _detailRow('Filled', '${order.filledQuantity}'),
-                _detailRow('Remaining', '${order.remainingQuantity}'),
-                _detailRow('Price', price > 0 ? formatPrice(price) : '--'),
+                _detailRow(
+                  'Order Type',
+                  '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
+                ),
+                _detailRow('Order Quantity', '${order.quantity}'),
+                _detailRow('Filled Quantity', '${order.filledQuantity}'),
+                _detailRow('Remaining Quantity', '${order.remainingQuantity}'),
+                _detailRow(
+                  order.isLimit ? 'Limit Price' : 'Execution Price',
+                  price > 0 ? formatPrice(price) : '--',
+                ),
                 if (order.orderId?.isNotEmpty == true)
                   _detailRow('Order ID', order.orderId!),
               ],
@@ -384,11 +395,14 @@ class _StockDetailPageState extends State<StockDetailPage> {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: AppText(
+              label,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
           const SizedBox(width: 12),
           Flexible(
-            child: Text(
+            child: AppText(
               value,
               textAlign: TextAlign.right,
               style: const TextStyle(fontWeight: FontWeight.w700),
@@ -418,14 +432,14 @@ class _StockDetailPageState extends State<StockDetailPage> {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withAlpha(24),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(Icons.circle, size: 8, color: color),
           const SizedBox(width: 5),
-          Text(
+          AppText(
             label,
             style: TextStyle(
               color: color,
@@ -468,14 +482,14 @@ class _StockDetailPageState extends State<StockDetailPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Market Range',
+            const AppText(
+              'Market Snapshot',
               style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
             ),
             if (liveStock.low != null && liveStock.high != null) ...[
               const SizedBox(height: 16),
               _priceRange(
-                label: 'Day range',
+                label: "Day's Range",
                 low: liveStock.low!,
                 high: liveStock.high!,
                 price: liveStock.price,
@@ -484,7 +498,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
             if (_yearLow != null && _yearHigh != null) ...[
               const SizedBox(height: 18),
               _priceRange(
-                label: '52-week range',
+                label: '52-Week Range',
                 low: _yearLow!,
                 high: _yearHigh!,
                 price: liveStock.price,
@@ -495,12 +509,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
               Row(
                 children: [
                   const Expanded(
-                    child: Text(
-                      'Bid-ask spread',
+                    child: AppText(
+                      'Bid-Ask Spread',
                       style: TextStyle(color: Colors.black54),
                     ),
                   ),
-                  Text(
+                  AppText(
                     '${formatPrice(spread)}'
                     '${spreadPercent == null ? '' : ' (${spreadPercent.toStringAsFixed(3)}%)'}',
                     style: const TextStyle(fontWeight: FontWeight.w700),
@@ -525,7 +539,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontWeight: FontWeight.w700)),
+        AppText(label, style: const TextStyle(fontWeight: FontWeight.w700)),
         const SizedBox(height: 10),
         LayoutBuilder(
           builder: (context, constraints) {
@@ -564,12 +578,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
         Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 'Low ${formatPrice(low)}',
                 style: const TextStyle(color: Colors.black54, fontSize: 11),
               ),
             ),
-            Text(
+            AppText(
               'High ${formatPrice(high)}',
               style: const TextStyle(color: Colors.black54, fontSize: 11),
             ),
@@ -584,21 +598,17 @@ class _StockDetailPageState extends State<StockDetailPage> {
     final absoluteChange = liveStock.previousClose == null
         ? null
         : liveStock.price - liveStock.previousClose!;
-    final changeColor = liveStock.change > 0
-        ? AppConfig.gainColor
-        : liveStock.change < 0
-        ? AppConfig.lossColor
-        : AppConfig.neutralColor;
-
-    return Scaffold(
+    return AppPageScaffold(
       appBar: AppBar(
-        backgroundColor: AppConfig.primaryColor,
-        foregroundColor: Colors.white,
+        backgroundColor: Colors.white,
+        foregroundColor: AppConfig.textPrimaryColor,
+        surfaceTintColor: Colors.white,
+        elevation: 0,
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(liveStock.symbol),
-            Text(
+            AppText(liveStock.symbol),
+            AppText(
               liveStock.exchange,
               style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
             ),
@@ -616,53 +626,76 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     height: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      color: Colors.white,
+                      color: AppConfig.primaryColor,
                     ),
                   )
-                : Icon(isWatched ? Icons.star : Icons.star_border),
+                : Icon(
+                    isWatched ? Icons.star : Icons.star_border,
+                    color: isWatched
+                        ? const Color(0xFFFFB000)
+                        : AppConfig.textPrimaryColor,
+                  ),
           ),
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
           Card(
-            color: Colors.white,
+            color: AppConfig.primaryColor,
+            elevation: 0,
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Expanded(child: Text(liveStock.name)),
+                      Expanded(
+                        child: AppText(
+                          liveStock.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
                       _quoteStatus(),
                     ],
                   ),
                   const SizedBox(height: 5),
-                  Text(
+                  AppText(
                     '${liveStock.exchange}  |  Updated ${_updatedTime(liveStock.updatedAt)} IST',
-                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                    style: const TextStyle(
+                      color: Color(0xFFCAD9FF),
+                      fontSize: 11,
+                    ),
                   ),
-                  const SizedBox(height: 12),
-                  Text(
+                  const SizedBox(height: 10),
+                  AppText(
                     formatPrice(liveStock.price),
                     style: TextStyle(
                       color: priceDirection > 0
-                          ? AppConfig.gainColor
+                          ? const Color(0xFF67E8A5)
                           : priceDirection < 0
-                          ? AppConfig.lossColor
-                          : AppConfig.textPrimaryColor,
-                      fontSize: 32,
+                          ? const Color(0xFFFFA6A6)
+                          : Colors.white,
+                      fontSize: 30,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-                  Text(
+                  AppText(
                     '${absoluteChange == null ? '' : '${formatSignedPrice(absoluteChange)}  '}'
                     '(${liveStock.change > 0 ? '+' : ''}${liveStock.change.toStringAsFixed(2)}%)',
                     style: TextStyle(
-                      color: changeColor,
-                      fontSize: 17,
+                      color: liveStock.change > 0
+                          ? const Color(0xFF67E8A5)
+                          : liveStock.change < 0
+                          ? const Color(0xFFFFA6A6)
+                          : const Color(0xFFCAD9FF),
+                      fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -687,10 +720,16 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   Row(
                     children: [
                       Expanded(
-                        child: _marketStat('Bid', _statPrice(liveStock.bid)),
+                        child: _marketStat(
+                          'Best Bid',
+                          _statPrice(liveStock.bid),
+                        ),
                       ),
                       Expanded(
-                        child: _marketStat('Ask', _statPrice(liveStock.ask)),
+                        child: _marketStat(
+                          'Best Ask',
+                          _statPrice(liveStock.ask),
+                        ),
                       ),
                     ],
                   ),
@@ -713,13 +752,13 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     children: [
                       Expanded(
                         child: _marketStat(
-                          'Day High',
+                          "Day's High",
                           _statPrice(liveStock.high),
                         ),
                       ),
                       Expanded(
                         child: _marketStat(
-                          'Day Low',
+                          "Day's Low",
                           _statPrice(liveStock.low),
                         ),
                       ),
@@ -746,15 +785,15 @@ class _StockDetailPageState extends State<StockDetailPage> {
             _marketRangeCard(),
           ],
           const SizedBox(height: 18),
-          const Text(
+          const AppText(
             'Place Order',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           SegmentedButton<bool>(
             segments: const [
-              ButtonSegment<bool>(value: true, label: Text('Buy')),
-              ButtonSegment<bool>(value: false, label: Text('Sell')),
+              ButtonSegment<bool>(value: true, label: AppText('Buy')),
+              ButtonSegment<bool>(value: false, label: AppText('Sell')),
             ],
             selected: {isBuy},
             onSelectionChanged: (selection) =>
@@ -763,8 +802,14 @@ class _StockDetailPageState extends State<StockDetailPage> {
           const SizedBox(height: 14),
           SegmentedButton<String>(
             segments: const [
-              ButtonSegment<String>(value: 'MARKET', label: Text('Market')),
-              ButtonSegment<String>(value: 'LIMIT', label: Text('Limit')),
+              ButtonSegment<String>(
+                value: 'MARKET',
+                label: AppText('Market Order'),
+              ),
+              ButtonSegment<String>(
+                value: 'LIMIT',
+                label: AppText('Limit Order'),
+              ),
             ],
             selected: {orderType},
             onSelectionChanged: (selection) {
@@ -783,6 +828,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
           TextField(
             controller: quantityController,
             keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
             onChanged: (_) => setState(() {}),
             decoration: const InputDecoration(
               labelText: 'Quantity',
@@ -797,6 +843,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
               keyboardType: const TextInputType.numberWithOptions(
                 decimal: true,
               ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
                 labelText: 'Limit Price',
@@ -806,16 +855,39 @@ class _StockDetailPageState extends State<StockDetailPage> {
             ),
           ],
           const SizedBox(height: 16),
-          const Text('Validity', style: TextStyle(fontWeight: FontWeight.w700)),
+          const AppText(
+            'Validity',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: ['DAY', 'IOC', 'FOK']
                 .map(
-                  (value) => ChoiceChip(
-                    label: Text(value),
-                    selected: timeInForce == value,
-                    onSelected: (_) => setState(() => timeInForce = value),
+                  (value) => Tooltip(
+                    message: switch (value) {
+                      'IOC' => 'Immediate or Cancel',
+                      'FOK' => 'Fill or Kill',
+                      _ => 'Valid for the trading day',
+                    },
+                    child: ChoiceChip(
+                      label: AppText(value),
+                      selected: timeInForce == value,
+                      selectedColor: AppConfig.primaryColor,
+                      backgroundColor: Colors.white,
+                      labelStyle: TextStyle(
+                        color: timeInForce == value
+                            ? Colors.white
+                            : AppConfig.textPrimaryColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      side: BorderSide(
+                        color: timeInForce == value
+                            ? AppConfig.primaryColor
+                            : AppConfig.borderColor,
+                      ),
+                      onSelected: (_) => setState(() => timeInForce = value),
+                    ),
                   ),
                 )
                 .toList(),
@@ -832,7 +904,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     ? AppConfig.gainColor
                     : AppConfig.lossColor,
               ),
-              child: Text(isBuy ? 'Place Buy Order' : 'Place Sell Order'),
+              child: AppText(isBuy ? 'Place Buy Order' : 'Place Sell Order'),
             ),
           ),
         ],
@@ -856,12 +928,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
             Row(
               children: [
                 const Expanded(
-                  child: Text(
+                  child: AppText(
                     'Order details',
                     style: TextStyle(fontWeight: FontWeight.w800),
                   ),
                 ),
-                Text(
+                AppText(
                   selectedOrderPrice > 0 ? formatPrice(estimatedAmount) : '--',
                   style: const TextStyle(
                     fontSize: 17,
@@ -892,7 +964,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: Text(
+                      child: AppText(
                         '${isBuy ? 'Maximum quantity' : 'Available quantity'}: '
                         '$maxQuantity',
                         style: const TextStyle(color: Colors.black54),
@@ -905,7 +977,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                               quantityController.text = '$maxQuantity';
                               setState(() {});
                             },
-                      child: const Text('Use max'),
+                      child: const AppText('Use max'),
                     ),
                   ],
                 ),
@@ -913,7 +985,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
             const Divider(height: 20),
             const Align(
               alignment: Alignment.centerLeft,
-              child: Text(
+              child: AppText(
                 'Final execution price and applicable charges are confirmed by the order result.',
                 style: TextStyle(color: Colors.black54, fontSize: 11),
               ),
@@ -927,7 +999,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   color: const Color(0xFFFFF7ED),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(
+                child: AppText(
                   exceedsAvailable
                       ? isBuy
                             ? 'Estimated amount exceeds available buying power.'
@@ -947,7 +1019,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
               Row(
                 children: [
                   const Expanded(
-                    child: Text(
+                    child: AppText(
                       'A current market quote is required before submission.',
                       style: TextStyle(
                         color: AppConfig.lossColor,
@@ -959,7 +1031,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                   TextButton.icon(
                     onPressed: marketSocket.refreshSnapshot,
                     icon: const Icon(Icons.refresh, size: 17),
-                    label: const Text('Refresh'),
+                    label: const AppText('Refresh'),
                   ),
                 ],
               ),
@@ -976,9 +1048,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
       child: Row(
         children: [
           Expanded(
-            child: Text(label, style: const TextStyle(color: Colors.black54)),
+            child: AppText(
+              label,
+              style: const TextStyle(color: Colors.black54),
+            ),
           ),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -988,12 +1063,12 @@ class _StockDetailPageState extends State<StockDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black54, fontSize: 12),
         ),
         const SizedBox(height: 5),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        AppText(value, style: const TextStyle(fontWeight: FontWeight.w700)),
       ],
     );
   }

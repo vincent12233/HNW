@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -45,7 +46,7 @@ class IndexCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
 
             children: [
-              Text(
+              AppText(
                 name,
                 style: const TextStyle(
                   fontSize: 15,
@@ -63,7 +64,7 @@ class IndexCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(20),
                 ),
 
-                child: Text(
+                child: AppText(
                   'NSE',
 
                   style: TextStyle(
@@ -80,7 +81,7 @@ class IndexCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          Text(
+          AppText(
             value,
 
             style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
@@ -100,7 +101,7 @@ class IndexCard extends StatelessWidget {
 
               const SizedBox(width: 4),
 
-              Text(
+              AppText(
                 change,
 
                 style: TextStyle(
@@ -116,7 +117,7 @@ class IndexCard extends StatelessWidget {
 
           const SizedBox(height: 10),
 
-          const Text(
+          const AppText(
             'Market Overview',
 
             style: TextStyle(color: Colors.black45, fontSize: 12),

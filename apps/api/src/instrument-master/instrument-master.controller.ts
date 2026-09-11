@@ -6,6 +6,7 @@ import {
   Patch,
   Post,
   Query,
+  Req,
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -26,9 +27,11 @@ export class InstrumentMasterController {
     @Query('active') active?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
+    @Query('exchange') exchange?: string,
   ) {
     return this.instruments.list({
       search,
+      exchange,
       active:
         active === undefined
           ? undefined
@@ -44,11 +47,26 @@ export class InstrumentMasterController {
     return this.instruments.syncNseEquities();
   }
 
+  @Patch('enable-all')
+  @Roles(UserRole.ADMIN)
+  enableAll(@Req() req: { user: { userId: string } }, @Query('exchange') exchange?: string) {
+    return this.instruments.enableAll(req.user.userId, exchange);
+  }
+
+  @Post('sync/bse')
+  @Roles(UserRole.ADMIN)
+  syncBse() {
+    return this.instruments.syncBseEquities();
+  }
+
   @Patch('bulk-status')
   @Roles(UserRole.ADMIN)
   setBulkStatus(
-    @Body() body: { symbols?: string[]; isActive?: boolean },
+    @Body() body: { symbols?: string[]; instrumentIds?: string[]; isActive?: boolean },
   ) {
+    if (Array.isArray(body.instrumentIds)) {
+      return this.instruments.setBulkActiveByIds(body.instrumentIds, body.isActive === true);
+    }
     return this.instruments.setBulkActive(
       Array.isArray(body.symbols) ? body.symbols : [],
       body.isActive === true,

@@ -1,20 +1,28 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_language.dart';
 import 'package:http/http.dart' as http;
 
 import 'app_config.dart';
 import 'models/auth_session.dart';
 import 'pages/login_page.dart';
 import 'pages/market_page.dart';
+import 'pages/register_page.dart';
 import 'pages/splash_page.dart';
 import 'services/auth_service.dart';
 import 'services/local_data_cache.dart';
 import 'services/session_expiry_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/appearance_settings.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppLanguage.instance.load();
+  await AppearanceSettings.instance.load();
   SessionExpiryService().onExpired = _showExpiredSessionLogin;
 
   ErrorWidget.builder = (details) {
@@ -85,11 +93,19 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AppLanguage.instance.addListener(_languageChanged);
+    AppearanceSettings.instance.addListener(_languageChanged);
+  }
+
+  void _languageChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AppLanguage.instance.removeListener(_languageChanged);
+    AppearanceSettings.instance.removeListener(_languageChanged);
     super.dispose();
   }
 
@@ -106,10 +122,15 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: Locale(AppLanguage.instance.code),
+      supportedLocales: const [Locale('en'), Locale('hi')],
+      localizationsDelegates: GlobalMaterialLocalizations.delegates,
       navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,
       title: AppConfig.appName,
-      theme: AppTheme.light(),
+      theme: AppearanceSettings.instance.value == 'highContrast'
+          ? AppTheme.highContrast()
+          : AppTheme.light(),
       builder: (context, child) {
         final media = MediaQuery.of(context);
         return MediaQuery(
@@ -121,10 +142,43 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
               maxScaleFactor: 1.4,
             ),
           ),
-          child: child ?? const SizedBox.shrink(),
+          child: Column(
+            children: [
+              Expanded(child: child ?? const SizedBox.shrink()),
+              Material(
+                color: Colors.white,
+                child: SafeArea(
+                  top: false,
+                  child: InkWell(
+                    onTap: () => launchUrl(
+                      Uri.parse('https://elbstream.com'),
+                      mode: LaunchMode.externalApplication,
+                    ),
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 4,
+                      ),
+                      child: Text(
+                        'Logos by Elbstream',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Color(0xFF52637A),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         );
       },
-      home: const AuthGate(),
+      initialRoute: kIsWeb && Uri.base.path == '/register' ? '/register' : '/',
+      routes: {
+        '/': (_) => const AuthGate(),
+        '/register': (_) => const RegisterPage(),
+      },
     );
   }
 }

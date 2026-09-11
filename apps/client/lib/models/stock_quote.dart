@@ -96,18 +96,20 @@ class StockQuote {
 
   factory StockQuote.fromMarketDataJson(Map<String, dynamic> json) {
     final price = _doubleValue(json['price']) ?? 0;
-    final rawChange = _doubleValue(json['change']) ??
+    final rawChange =
+        _doubleValue(json['change']) ??
         _doubleValue(json['changePercent']) ??
         0;
     final previousClose = _doubleValue(json['previousClose']) ?? 0;
     final change = rawChange != 0 || previousClose <= 0
         ? rawChange
         : ((price - previousClose) / previousClose) * 100;
-    final updatedAt = DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+    final updatedAt =
+        DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
         DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
     final age = DateTime.now().difference(updatedAt);
-    final quoteFresh = json['quoteFresh'] == true &&
-        age <= const Duration(minutes: 2);
+    final quoteFresh =
+        json['quoteFresh'] == true && age <= const Duration(minutes: 2);
 
     return StockQuote(
       json['symbol']?.toString() ?? '',
@@ -144,9 +146,11 @@ class StockQuote {
 
     final price = _positiveDoubleValue(json['price']);
     if (price == null) return null;
-    final updatedAt = DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
+    final updatedAt =
+        DateTime.tryParse(json['updatedAt']?.toString() ?? '') ??
         current.updatedAt;
-    final change = _doubleValue(json['change']) ??
+    final change =
+        _doubleValue(json['change']) ??
         (current.previousClose != null && current.previousClose! > 0
             ? ((price - current.previousClose!) / current.previousClose!) * 100
             : current.change);

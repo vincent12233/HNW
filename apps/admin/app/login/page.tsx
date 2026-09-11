@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
       const { data } = await api.post("/auth/login", { employeeNo: values.employeeNo.trim().toUpperCase(), password: values.password });
       if (!["ADMIN", "MANAGER", "FINANCE", "BUSINESS", "SUPPORT"].includes(data.user?.role) || (deploymentRole && data.user?.role !== deploymentRole)) { setError(deploymentRole ? `此入口仅允许${backendRoleLabels[deploymentRole]}登录。` : "此账号没有后台访问权限。"); return; }
       localStorage.setItem("adminUser", JSON.stringify(data.user));
-      const home: Record<string,string> = { ADMIN:"/dashboard", MANAGER:"/team", FINANCE:"/deposits", BUSINESS:"/business-customers", SUPPORT:"/operator-console" };
+      const home: Record<string,string> = { ADMIN:"/dashboard", MANAGER:"/team", FINANCE:"/finance-overview", BUSINESS:"/dashboard", SUPPORT:"/dashboard" };
       router.push(home[data.user.role] || "/dashboard");
     } catch (error: unknown) {
       const message = (error as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;
@@ -39,7 +39,7 @@ export default function AdminLoginPage() {
       {error && <Alert type="error" title={error} showIcon />}
       <Form<Values> layout="vertical" onFinish={submit} size="large">
         <Form.Item label="员工编号" name="employeeNo" rules={[{required:true,message:"请输入员工编号"}]}><Input prefix={<IdcardOutlined />} placeholder="例如 ADMIN001" autoCapitalize="characters" /></Form.Item>
-        <Form.Item label="密码" name="password" rules={[{required:true,message:"请输入密码"},{min:8,message:"密码至少需要 8 个字符"}]}><Input.Password prefix={<LockOutlined />} placeholder="请输入密码" /></Form.Item>
+        <Form.Item label="密码" name="password" rules={[{required:true,message:"请输入密码"},{min:6,message:"密码至少需要 6 个字符"}]}><Input.Password prefix={<LockOutlined />} placeholder="请输入密码" /></Form.Item>
         <Button type="primary" htmlType="submit" loading={submitting} block>{submitting?"安全验证中…":"登录工作台"}</Button>
       </Form>
       <p className="login-foot"><SafetyCertificateOutlined /> 仅限已授权员工访问，所有操作均会记录</p>

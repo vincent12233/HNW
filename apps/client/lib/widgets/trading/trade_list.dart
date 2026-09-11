@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -6,6 +7,8 @@ import '../../models/portfolio_position.dart';
 import '../../services/trading_service.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
+import '../../models/trading_order.dart';
+import 'standard_order_details_sheet.dart';
 
 class TradeList extends StatelessWidget {
   const TradeList({
@@ -16,6 +19,9 @@ class TradeList extends StatelessWidget {
     required this.onTrade,
     required this.indexQuotes,
     required this.onViewMarkets,
+    this.orders = const [],
+    this.onViewOrders,
+    this.onCancel,
   });
 
   final List<StockQuote> stocks;
@@ -24,6 +30,9 @@ class TradeList extends StatelessWidget {
   final ValueChanged<StockQuote> onTrade;
   final Map<String, (double, double)> indexQuotes;
   final VoidCallback onViewMarkets;
+  final List<TradingOrder> orders;
+  final VoidCallback? onViewOrders;
+  final Future<String?> Function(TradingOrder)? onCancel;
 
   @override
   Widget build(BuildContext context) {
@@ -42,29 +51,20 @@ class TradeList extends StatelessWidget {
             quote.isEmpty ? position.averageCost : quote.first.price,
           );
     });
-    final total = (account?.cashBalance ?? 0) + holdings;
+    final total = holdings;
     final pnl = holdings - invested;
     return ListView(
       padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
       children: [
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(18),
+            padding: const EdgeInsets.all(14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Row(
-                  children: [
-                    Text(
-                      'Trading Summary',
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    SizedBox(width: 6),
-                    Icon(Icons.visibility_outlined, size: 17),
-                  ],
+                const AppText(
+                  'Trading Summary',
+                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
                 ),
                 const SizedBox(height: 18),
                 LayoutBuilder(
@@ -77,7 +77,7 @@ class TradeList extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: _summary(
-                                  'Total Portfolio Value',
+                                  'Trading Positions Value',
                                   formatPrice(total),
                                   AppConfig.textPrimaryColor,
                                 ),
@@ -96,7 +96,7 @@ class TradeList extends StatelessWidget {
                             children: [
                               Expanded(
                                 child: _summary(
-                                  'Total P&L',
+                                  'Unrealized P&L',
                                   '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
                                   pnl >= 0
                                       ? AppConfig.gainColor
@@ -105,8 +105,10 @@ class TradeList extends StatelessWidget {
                               ),
                               Expanded(
                                 child: _summary(
-                                  'Available Balance',
-                                  formatPrice(account?.cashBalance ?? 0),
+                                  'Available Funds',
+                                  account == null
+                                      ? '--'
+                                      : formatPrice(account!.availableBalance),
                                   AppConfig.textPrimaryColor,
                                 ),
                               ),
@@ -120,7 +122,7 @@ class TradeList extends StatelessWidget {
                         children: [
                           Expanded(
                             child: _summary(
-                              'Total Portfolio Value',
+                              'Trading Positions Value',
                               formatPrice(total),
                               AppConfig.textPrimaryColor,
                             ),
@@ -136,7 +138,7 @@ class TradeList extends StatelessWidget {
                           const VerticalDivider(width: 1),
                           Expanded(
                             child: _summary(
-                              'Total P&L',
+                              'Unrealized P&L',
                               '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
                               pnl >= 0
                                   ? AppConfig.gainColor
@@ -146,8 +148,10 @@ class TradeList extends StatelessWidget {
                           const VerticalDivider(width: 1),
                           Expanded(
                             child: _summary(
-                              'Available Balance',
-                              formatPrice(account?.cashBalance ?? 0),
+                              'Available Funds',
+                              account == null
+                                  ? '--'
+                                  : formatPrice(account!.availableBalance),
                               AppConfig.textPrimaryColor,
                             ),
                           ),
@@ -160,57 +164,76 @@ class TradeList extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 14),
-        Row(
-          children: ['All', 'Inst.', 'OTC', 'IPO']
-              .asMap()
-              .entries
-              .map(
-                (entry) => Container(
-                  margin: const EdgeInsets.only(right: 9),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 17,
-                    vertical: 9,
-                  ),
-                  decoration: BoxDecoration(
-                    color: entry.key == 0
-                        ? AppConfig.primaryColor
-                        : Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                      color: entry.key == 0
-                          ? AppConfig.primaryColor
-                          : const Color(0xFFE2E8F0),
-                    ),
-                  ),
-                  child: Text(
-                    entry.value,
-                    style: TextStyle(
-                      color: entry.key == 0
-                          ? Colors.white
-                          : const Color(0xFF334155),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        ),
         const SizedBox(height: 16),
         Row(
           children: [
-            Text(
-              'Open Positions (${positions.length})',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            const Expanded(
+              child: AppText(
+                'Recent Orders',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+              ),
             ),
-            const Spacer(),
-            const Text(
-              'View All',
-              style: TextStyle(
-                color: AppConfig.primaryColor,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
+            if (onViewOrders != null)
+              TextButton(
+                onPressed: onViewOrders,
+                child: const AppText('View All'),
+              ),
+          ],
+        ),
+        if (orders.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 20),
+            child: AppText('No orders yet'),
+          ),
+        ...orders
+            .take(4)
+            .map(
+              (order) => ListTile(
+                contentPadding: EdgeInsets.zero,
+                leading: Icon(
+                  order.isBuy ? Icons.call_received : Icons.call_made,
+                  color: order.isBuy
+                      ? AppConfig.gainColor
+                      : AppConfig.lossColor,
+                ),
+                title: AppText(
+                  order.symbol,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
+                subtitle: AppText(
+                  '${order.exchange} · ${order.quantity} · ${tr(order.status)}',
+                ),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showStandardOrderDetails(
+                  context,
+                  order: order,
+                  onCancel: onCancel,
+                ),
+              ),
+            ),
+        const Divider(height: 28),
+        Row(
+          children: [
+            Expanded(
+              child: AppText(
+                '${tr('Open Holdings')} (${positions.length})',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+            TextButton(
+              onPressed: positions.isEmpty
+                  ? null
+                  : () => _showAllPositions(context),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+              ),
+              child: const AppText(
+                'View All',
+                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
               ),
             ),
           ],
@@ -219,14 +242,14 @@ class TradeList extends StatelessWidget {
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: const Color(0xFFE8EDF5)),
           ),
           child: positions.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(24),
                   child: Center(
-                    child: Text(
+                    child: AppText(
                       'No open positions',
                       style: TextStyle(color: Color(0xFF64748B)),
                     ),
@@ -239,55 +262,71 @@ class TradeList extends StatelessWidget {
                       .toList(),
                 ),
         ),
-        const SizedBox(height: 18),
+        const Divider(height: 24),
         Row(
           children: [
-            const Text(
-              'Market Overview',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+            const Expanded(
+              child: AppText(
+                'Total Holdings Value',
+                style: TextStyle(fontWeight: FontWeight.w700),
+              ),
             ),
-            const Spacer(),
-            TextButton(
-              onPressed: onViewMarkets,
-              child: const Text(
-                'View More',
-                style: TextStyle(
-                  color: AppConfig.primaryColor,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+            AppText(
+              formatPrice(holdings),
+              style: const TextStyle(fontWeight: FontWeight.w800),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Align(
+          alignment: Alignment.centerRight,
+          child: AppText(
+            '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+            style: TextStyle(
+              color: pnl >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
+  }
+
+  void _showAllPositions(BuildContext context) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (sheetContext) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: .68,
+        minChildSize: .45,
+        maxChildSize: .92,
+        builder: (context, controller) => Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: AppText(
+                '${tr('Open Holdings')} (${positions.length})',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
                 ),
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: ListView.builder(
+                controller: controller,
+                itemCount: positions.length,
+                itemBuilder: (context, index) =>
+                    _positionRow(positions.values.elementAt(index)),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 9),
-        LayoutBuilder(
-          builder: (context, constraints) {
-            final columns = constraints.maxWidth < 380 ? 2 : 4;
-            const gap = 7.0;
-            final width =
-                (constraints.maxWidth - gap * (columns - 1)) / columns;
-            final nifty = _indexQuote(const ['NIFTY50']);
-            final sensex = _indexQuote(const ['SENSEX']);
-            final bankNifty = _indexQuote(const ['BANKNIFTY']);
-            final vix = _indexQuote(const ['INDIAVIX', 'INDIA VIX', 'VIX']);
-            return Wrap(
-              spacing: gap,
-              runSpacing: gap,
-              children: [
-                SizedBox(width: width, child: _indexMini('NIFTY 50', nifty)),
-                SizedBox(width: width, child: _indexMini('SENSEX', sensex)),
-                SizedBox(
-                  width: width,
-                  child: _indexMini('BANK NIFTY', bankNifty),
-                ),
-                SizedBox(width: width, child: _indexMini('INDIA VIX', vix)),
-              ],
-            );
-          },
-        ),
-        const SizedBox(height: 12),
-      ],
+      ),
     );
   }
 
@@ -314,13 +353,13 @@ class TradeList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     position.symbol,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w800),
                   ),
-                  Text(
+                  AppText(
                     '${position.quantity} Shares · ${position.exchange}',
                     style: const TextStyle(
                       fontSize: 10,
@@ -335,14 +374,14 @@ class TradeList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
+                  AppText(
                     formatPrice(price),
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  Text(
+                  AppText(
                     'Avg. ${formatPrice(position.averageCost)}',
                     style: const TextStyle(
                       fontSize: 9,
@@ -358,7 +397,7 @@ class TradeList extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
+                  AppText(
                     '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
                     style: TextStyle(
                       fontSize: 11,
@@ -368,7 +407,7 @@ class TradeList extends StatelessWidget {
                           : AppConfig.lossColor,
                     ),
                   ),
-                  Text(
+                  AppText(
                     '${pnl >= 0 ? '+' : ''}${position.averageCost > 0 ? (pnl / (position.averageCost * position.quantity) * 100).toStringAsFixed(2) : '0.00'}%',
                     style: TextStyle(
                       fontSize: 9,
@@ -386,69 +425,12 @@ class TradeList extends StatelessWidget {
     );
   }
 
-  (double, double)? _indexQuote(List<String> symbols) {
-    for (final symbol in symbols) {
-      final quote = indexQuotes[symbol];
-      if (quote != null) return quote;
-    }
-    return null;
-  }
-
-  Widget _indexMini(String name, (double, double)? quote) {
-    final available = quote != null && quote.$1 > 0;
-    final value = available ? formatIndex(quote.$1) : '--';
-    final change = available ? quote.$2 : 0.0;
-    final color = !available
-        ? AppConfig.neutralColor
-        : change >= 0
-        ? AppConfig.gainColor
-        : AppConfig.lossColor;
-    return Container(
-      height: 94,
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(9),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            name,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 5),
-          FittedBox(
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-            ),
-          ),
-          Text(
-            available
-                ? '${change >= 0 ? '+' : ''}${change.toStringAsFixed(2)}%'
-                : 'Unavailable',
-            style: TextStyle(fontSize: 9, color: color),
-          ),
-          const Spacer(),
-          Container(
-            height: 2,
-            color: color.withValues(alpha: available ? .7 : .18),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _summary(String label, String value, Color color) => Padding(
     padding: const EdgeInsets.symmetric(horizontal: 7),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           maxLines: 2,
           style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
@@ -457,7 +439,7 @@ class TradeList extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
-          child: Text(
+          child: AppText(
             value,
             style: TextStyle(color: color, fontWeight: FontWeight.w800),
           ),
@@ -465,102 +447,4 @@ class TradeList extends StatelessWidget {
       ],
     ),
   );
-}
-
-class _OverviewCard extends StatelessWidget {
-  const _OverviewCard({
-    required this.icon,
-    required this.title,
-    required this.tag,
-    required this.description,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String title;
-  final String tag;
-  final String description;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 42,
-            height: 42,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.10),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Text(
-                      title,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 7,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        tag,
-                        style: TextStyle(
-                          color: color,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  description,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 13,
-                    height: 1.25,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right_rounded, color: Color(0xFF94A3B8)),
-        ],
-      ),
-    );
-  }
 }

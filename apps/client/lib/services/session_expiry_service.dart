@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'market_socket_service.dart';
@@ -10,6 +11,9 @@ class SessionExpiryService {
 
   static final SessionExpiryService _instance = SessionExpiryService._();
   static const String _sessionKey = 'auth_session';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   VoidCallback? onExpired;
   Future<void>? _expiryInFlight;
@@ -32,6 +36,7 @@ class SessionExpiryService {
   Future<void> _performExpiry() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
+    await _secureStorage.delete(key: _sessionKey);
     MarketSocketService().dispose();
     onExpired?.call();
   }

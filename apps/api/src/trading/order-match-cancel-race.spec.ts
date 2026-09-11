@@ -108,7 +108,7 @@ describe('order match/cancel race guards', () => {
     expect(secondTx.trade.create).not.toHaveBeenCalled();
     expect(secondTx.accountTransaction.create).not.toHaveBeenCalled();
     expect(secondTx.account.update).not.toHaveBeenCalled();
-    expect(result.status).toBe('CANCELLED');
+    expect(result?.status).toBe('CANCELLED');
   });
 
   it('cancellation retries after a commit conflict and stops when matching won', async () => {

@@ -196,7 +196,7 @@ async function main() {
   }
 
   const business = users.find((user) => user.role === UserRole.BUSINESS);
-  const administrator = users.find((user) => user.role === UserRole.ADMIN);
+  const support = users.find((user) => user.role === UserRole.SUPPORT);
   const inviteCodes = business?.businessProfile
     ? await createInviteCodes(business.businessProfile.id)
     : [];
@@ -207,10 +207,17 @@ async function main() {
     employeeNo: seed.employeeNo,
   })));
   console.log('Business invite codes:', inviteCodes.join(', '));
-  const fixedOperatorCode = administrator?.businessProfile
-    ? await createFixedOperatorInviteCode(administrator.businessProfile.id)
+  const fixedOperatorCode = support?.businessProfile
+    ? await createFixedOperatorInviteCode(support.businessProfile.id)
     : null;
-  console.log('Admin fixed invite code:', fixedOperatorCode);
+  console.log('Dedicated operator fixed invite code:', fixedOperatorCode);
+
+  if (fixedOperatorCode && support) {
+    await prisma.user.updateMany({
+      where: { usedInviteCode: { code: fixedOperatorCode } },
+      data: { assignedBusinessId: support.id },
+    });
+  }
 }
 
 main()

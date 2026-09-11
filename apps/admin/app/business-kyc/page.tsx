@@ -78,6 +78,8 @@ export default function BusinessKycPage() {
     signature: KycFile | null;
   }>({ selfie: null, signature: null });
   const previewGeneration = useRef(0);
+  const reviewLock = useRef(false);
+  const [reviewSaving, setReviewSaving] = useState(false);
 
   const previewUrl = useMemo(() => {
     if (!previewFile) return "";
@@ -115,6 +117,7 @@ export default function BusinessKycPage() {
   }, []);
 
   async function openReview(record: KycSubmission) {
+    if (reviewLock.current) return;
     setReviewing(record);
     setPreviewFile(null);
     setPreviewBackFile(null);
@@ -138,16 +141,35 @@ export default function BusinessKycPage() {
             `/kyc/business/${submissionId}/file?side=${side}`,
           )
         ).data;
-      const [front, back, selfie, signature] = await Promise.all([
+      // Load each evidence item independently. A missing optional side must
+      // not hide the valid identity document or turn the whole review into a
+      // generic “KYC failed to load” error.
+      const results = await Promise.allSettled([
         fetchSide("front"),
         record?.backFileName ? fetchSide("back") : Promise.resolve(null),
         record?.hasSelfie ? fetchSide("selfie") : Promise.resolve(null),
         record?.hasSignature ? fetchSide("signature") : Promise.resolve(null),
       ]);
+      const [frontResult, backResult, selfieResult, signatureResult] = results;
+      const front = frontResult.status === "fulfilled" ? frontResult.value : null;
+      const back = backResult.status === "fulfilled" ? backResult.value : null;
+      const selfie = selfieResult.status === "fulfilled" ? selfieResult.value : null;
+      const signature = signatureResult.status === "fulfilled" ? signatureResult.value : null;
+      if (!front) {
+        throw frontResult.status === "rejected" ? frontResult.reason : new Error("Front document is unavailable");
+      }
       if (generation !== previewGeneration.current) return;
       setPreviewFile(front);
       setPreviewBackFile(back);
       setEvidence({ selfie, signature });
+      const missing = [
+        backResult.status === "rejected" ? "证件反面" : "",
+        selfieResult.status === "rejected" ? "自拍" : "",
+        signatureResult.status === "rejected" ? "签名" : "",
+      ].filter(Boolean);
+      if (missing.length) {
+        setError(`部分资料暂时无法加载：${missing.join("、")}。证件正面仍可审核。`);
+      }
     } catch (requestError: any) {
       if (generation !== previewGeneration.current) return;
       const responseMessage = requestError.response?.data?.message;
@@ -161,7 +183,9 @@ export default function BusinessKycPage() {
     }
   }
   async function review(decision: "APPROVED" | "REJECTED") {
-    if (!reviewing || fileLoading || !previewFile) return;
+    if (!reviewing || fileLoading || !previewFile || reviewLock.current) return;
+    reviewLock.current = true;
+    setReviewSaving(true);
 
     try {
       await api.patch("/kyc/business/review", {
@@ -181,8 +205,11 @@ export default function BusinessKycPage() {
       message.error(
         Array.isArray(responseMessage)
           ? responseMessage.join("，")
-          : responseMessage || "KYC 审核失败",
+          : responseMessage || "KYC 审核失败，请刷新确认最新状态后重试",
       );
+    } finally {
+      reviewLock.current = false;
+      setReviewSaving(false);
     }
   }
 
@@ -267,6 +294,7 @@ export default function BusinessKycPage() {
         open={!!reviewing}
         width={860}
         onCancel={() => {
+          if (reviewLock.current) return;
           previewGeneration.current++;
           setReviewing(null);
           setPreviewFile(null);
@@ -277,7 +305,7 @@ export default function BusinessKycPage() {
         footer={[
           <Button
             key="reject"
-            disabled={fileLoading || !previewFile}
+            disabled={fileLoading || !previewFile || reviewSaving}
             danger
             icon={<CloseOutlined />}
             onClick={() => review("REJECTED")}
@@ -286,7 +314,8 @@ export default function BusinessKycPage() {
           </Button>,
           <Button
             key="approve"
-            disabled={fileLoading || !previewFile}
+            disabled={fileLoading || !previewFile || reviewSaving}
+            loading={reviewSaving}
             type="primary"
             icon={<CheckOutlined />}
             onClick={() => review("APPROVED")}

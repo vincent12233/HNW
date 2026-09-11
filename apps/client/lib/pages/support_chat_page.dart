@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -50,7 +51,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Online Customer Service')),
+      appBar: AppBar(title: const AppText('Online Customer Service')),
       body: Center(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -63,7 +64,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
                 color: AppConfig.primaryColor,
               ),
               const SizedBox(height: 18),
-              Text(
+              AppText(
                 _error ??
                     (_opening
                         ? 'Opening secure customer service…'
@@ -80,7 +81,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Icon(Icons.chat_bubble_outline_rounded),
-                label: Text(_error == null ? 'Open Chat' : 'Try Again'),
+                label: AppText(_error == null ? 'Open Chat' : 'Try Again'),
               ),
             ],
           ),

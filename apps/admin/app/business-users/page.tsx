@@ -12,7 +12,6 @@ import {
   Button,
   Card,
   Input,
-  InputNumber,
   message,
   Modal,
   Popconfirm,
@@ -96,9 +95,6 @@ export default function BusinessUsersPage() {
     null,
   );
 
-  const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteCount, setInviteCount] = useState(10);
-  const [inviteLoading, setInviteLoading] = useState(false);
 
   const [passwordOpen, setPasswordOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -179,40 +175,6 @@ export default function BusinessUsersPage() {
     }
   }
 
-  function openInviteModal(record: BusinessUser) {
-    setSelectedBusiness(record);
-    setInviteCount(10);
-    setInviteOpen(true);
-  }
-
-  async function generateInviteCodes() {
-    if (!selectedBusiness) {
-      return;
-    }
-
-    setInviteLoading(true);
-
-    try {
-      await api.post(`/business/${selectedBusiness.userId}/invite-codes`, {
-        count: inviteCount,
-      });
-
-      message.success("邀请码生成成功");
-      setInviteOpen(false);
-      await loadRecords();
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "邀请码生成失败",
-      );
-    } finally {
-      setInviteLoading(false);
-    }
-  }
-
   async function changeBusinessStatus(record: BusinessUser, isActive: boolean) {
     try {
       await api.patch(`/business/${record.userId}/status`, {
@@ -243,8 +205,8 @@ export default function BusinessUsersPage() {
       return;
     }
 
-    if (newPassword.length < 8) {
-      message.error("新密码至少需要 8 个字符");
+    if (newPassword.length < 6) {
+      message.error("新密码至少需要 6 个字符");
       return;
     }
 
@@ -415,14 +377,6 @@ export default function BusinessUsersPage() {
             查看客户
           </Button>
 
-          <Button
-            size="small"
-            icon={<GiftOutlined />}
-            onClick={() => openInviteModal(record)}
-          >
-            生成邀请码
-          </Button>
-
           <Popconfirm
             title={record.isActive ? "确认停用业务员？" : "确认启用业务员？"}
             description={
@@ -531,33 +485,6 @@ export default function BusinessUsersPage() {
       </Modal>
 
       <Modal
-        title="生成邀请码"
-        open={inviteOpen}
-        onCancel={() => setInviteOpen(false)}
-        onOk={generateInviteCodes}
-        confirmLoading={inviteLoading}
-        okText="生成"
-        cancelText="取消"
-      >
-        <Space orientation="vertical" style={{ width: "100%" }}>
-          <Typography.Text>
-            业务员：
-            {selectedBusiness?.user.fullName || "-"}
-          </Typography.Text>
-
-          <Typography.Text>生成数量</Typography.Text>
-
-          <InputNumber
-            min={1}
-            max={100}
-            value={inviteCount}
-            onChange={(value) => setInviteCount(Number(value ?? 1))}
-            style={{ width: "100%" }}
-          />
-        </Space>
-      </Modal>
-
-      <Modal
         title="重置业务员密码"
         open={passwordOpen}
         onCancel={() => setPasswordOpen(false)}
@@ -575,7 +502,7 @@ export default function BusinessUsersPage() {
           <Input.Password
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
-            placeholder="请输入至少 8 个字符的新密码"
+            placeholder="请输入至少 6 个字符的新密码"
             prefix={<LockOutlined />}
           />
         </Space>

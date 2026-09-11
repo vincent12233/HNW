@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -45,8 +46,14 @@ class _IpoTabState extends State<IpoTab> {
             separatorBuilder: (_, _) => const SizedBox(width: 8),
             itemBuilder: (context, index) {
               return ChoiceChip(
-                label: Text(sections[index]),
+                label: AppText(sections[index]),
                 selected: selectedSection == index,
+                labelStyle: TextStyle(
+                  color: selectedSection == index
+                      ? Colors.white
+                      : AppConfig.textPrimaryColor,
+                  fontWeight: FontWeight.w700,
+                ),
                 onSelected: (_) {
                   setState(() {
                     selectedSection = index;
@@ -83,7 +90,7 @@ class _IpoTabState extends State<IpoTab> {
                 color: Colors.black38,
               ),
               const SizedBox(height: 16),
-              Text(
+              AppText(
                 selectedSection == 1
                     ? 'No IPOs open for application'
                     : 'No IPO records',
@@ -128,7 +135,7 @@ class _IpoTabState extends State<IpoTab> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           ipo.companyName,
                           style: const TextStyle(
                             fontSize: 16,
@@ -136,14 +143,14 @@ class _IpoTabState extends State<IpoTab> {
                           ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
+                        AppText(
                           ipo.symbol,
                           style: const TextStyle(color: Colors.black54),
                         ),
                       ],
                     ),
                   ),
-                  Text(
+                  AppText(
                     ipo.statusLabel,
                     style: TextStyle(
                       color: ipo.status == IpoStatus.open
@@ -197,7 +204,7 @@ class _IpoTabState extends State<IpoTab> {
                 if (applicationCount > 0)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 8),
-                    child: Text(
+                    child: AppText(
                       'Applications: $applicationCount / 5',
                       style: const TextStyle(
                         color: Colors.black54,
@@ -214,9 +221,7 @@ class _IpoTabState extends State<IpoTab> {
                         : () {
                             _confirmApply(ipo);
                           },
-                    child: Text(
-                      reachedLimit ? 'Applied 5/5' : 'Apply Now',
-                    ),
+                    child: AppText(reachedLimit ? 'Applied 5/5' : 'Apply Now'),
                   ),
                 ),
               ],
@@ -231,12 +236,12 @@ class _IpoTabState extends State<IpoTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(
+        AppText(
           value,
           style: TextStyle(color: valueColor, fontWeight: FontWeight.w600),
         ),
@@ -255,12 +260,12 @@ class _IpoTabState extends State<IpoTab> {
       context: context,
       builder: (dialogContext) {
         return AlertDialog(
-          title: const Text('IPO Application'),
+          title: const AppText('IPO Application'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              AppText(
                 ipo.companyName,
                 style: const TextStyle(
                   fontSize: 16,
@@ -268,14 +273,16 @@ class _IpoTabState extends State<IpoTab> {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(ipo.symbol, style: const TextStyle(color: Colors.black54)),
+              AppText(
+                ipo.symbol,
+                style: const TextStyle(color: Colors.black54),
+              ),
               const SizedBox(height: 18),
-              Text(
+              AppText(
                 'Submit IPO application ${currentCount + 1} of 5?\n\n'
-                'No quantity is required now. Allocation will be assigned '
-                'by your relationship manager. After allocation, the system '
-                'will automatically deduct available cash. Any shortfall '
-                'will stay pending as IPO debt until fully settled.',
+                'You will be notified when your allotment is announced. '
+                'Payment is automatic after allotment. If more funds are '
+                'needed, we will show the amount to add.',
               ),
             ],
           ),
@@ -284,13 +291,13 @@ class _IpoTabState extends State<IpoTab> {
               onPressed: () {
                 Navigator.pop(dialogContext, false);
               },
-              child: const Text('Cancel'),
+              child: const AppText('Cancel'),
             ),
             FilledButton(
               onPressed: () {
                 Navigator.pop(dialogContext, true);
               },
-              child: const Text('Apply'),
+              child: const AppText('Apply'),
             ),
           ],
         );

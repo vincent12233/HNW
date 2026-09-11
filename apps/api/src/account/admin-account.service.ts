@@ -20,22 +20,98 @@ export class AdminAccountService {
     private readonly auditService: AuditService,
     private readonly approvalService: ApprovalService,
   ) {}
-  credit(
+  private financeScope(role: string): Prisma.AccountWhereInput {
+    if (role !== 'FINANCE') return {};
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    return { NOT: { user: { usedInviteCode: { is: { code: fixedCode } } } } };
+  }
+
+  async credit(
     accountNumber: string,
     dto: AdjustBalanceDto,
     administratorId: string,
+    role: string,
   ) {
+    if (role === 'SUPPORT' || role === 'FINANCE') return this.directOperatorAdjustment(accountNumber, dto, administratorId, 'CREDIT', role);
+    await this.assertAccountVisible(accountNumber, role);
     return this.approvalService.requestBalance(accountNumber, dto, administratorId, 'CREDIT');
   }
 
-  debit(accountNumber: string, dto: AdjustBalanceDto, administratorId: string) {
+  async debit(accountNumber: string, dto: AdjustBalanceDto, administratorId: string, role: string) {
+    if (role === 'SUPPORT' || role === 'FINANCE') return this.directOperatorAdjustment(accountNumber, dto, administratorId, 'DEBIT', role);
+    await this.assertAccountVisible(accountNumber, role);
     return this.approvalService.requestBalance(accountNumber, dto, administratorId, 'DEBIT');
   }
-  async listAccounts(query: ListAdminAccountsQueryDto) {
+
+  private async directOperatorAdjustment(
+    accountNumber: string,
+    dto: AdjustBalanceDto,
+    operatorId: string,
+    direction: AdjustmentDirection,
+    role: string,
+  ) {
+    const normalizedAccountNumber = accountNumber.trim().toUpperCase();
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const amount = new Prisma.Decimal(dto.amount);
+    if (!amount.isFinite() || !amount.isPositive()) throw new BadRequestException('Amount must be positive');
+    const referenceId = dto.referenceId.trim();
+    if (!referenceId) throw new BadRequestException('Reference number is required');
+    const result = await this.prisma.$transaction(async (tx) => {
+      const userScope = role === 'SUPPORT'
+        ? { role: 'CLIENT' as const, assignedBusinessId: operatorId, usedInviteCode: { is: { code: fixedCode } } }
+        : { role: 'CLIENT' as const, NOT: { usedInviteCode: { is: { code: fixedCode } } } };
+      const account = await tx.account.findFirst({
+        where: {
+          accountNumber: normalizedAccountNumber,
+          user: userScope,
+        },
+        include: { user: { select: { id: true } } },
+      });
+      if (!account) throw new NotFoundException('Dedicated operator customer account not found');
+      const duplicate = await tx.accountTransaction.findFirst({ where: { referenceId } });
+      if (duplicate) throw new ConflictException('Reference number has already been processed');
+      if (direction === 'DEBIT' && (account.cashBalance.lt(amount) || account.buyingPower.lt(amount))) {
+        throw new BadRequestException('Insufficient available balance');
+      }
+      const balanceBefore = account.cashBalance;
+      const updated = await tx.account.update({
+        where: { id: account.id },
+        data: direction === 'CREDIT'
+          ? { cashBalance: { increment: amount }, buyingPower: { increment: amount } }
+          : { cashBalance: { decrement: amount }, buyingPower: { decrement: amount } },
+      });
+      await tx.accountTransaction.create({
+        data: {
+          accountId: account.id,
+          type: direction === 'CREDIT' ? 'ADMIN_CREDIT' : 'ADMIN_DEBIT',
+          status: 'COMPLETED',
+          amount,
+          balanceBefore,
+          balanceAfter: updated.cashBalance,
+          referenceId,
+          note: dto.note?.trim() || `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`,
+          createdById: operatorId,
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: account.user.id,
+          type: 'ACCOUNT',
+          title: direction === 'CREDIT' ? 'Funds credited' : 'Funds adjusted',
+          body: `${direction === 'CREDIT' ? amount.toFixed(2) : amount.negated().toFixed(2)} has been applied to your account balance.`,
+          referenceId,
+        },
+      });
+      return { accountNumber: normalizedAccountNumber, direction, amount: amount.toFixed(2), balance: updated.cashBalance.toFixed(2) };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    await this.auditService.createLog({ actorId: operatorId, action: `${role === 'FINANCE' ? 'FINANCE' : 'DEDICATED'}_${direction}`, resource: 'ACCOUNT_BALANCE', resourceId: normalizedAccountNumber, description: `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} directly adjusted customer funds`, metadata: { referenceId, amount: amount.toFixed(2) } });
+    return { message: direction === 'CREDIT' ? 'Funds credited' : 'Funds debited', ...result };
+  }
+  async listAccounts(query: ListAdminAccountsQueryDto, role: string) {
     const search = query.search?.trim();
     const skip = (query.page - 1) * query.pageSize;
 
-    const where: Prisma.AccountWhereInput = search
+    const searchWhere: Prisma.AccountWhereInput = search
       ? {
           OR: [
             {
@@ -71,6 +147,7 @@ export class AdminAccountService {
           ],
         }
       : {};
+    const where: Prisma.AccountWhereInput = { AND: [this.financeScope(role), searchWhere] };
 
     const [total, accounts] = await this.prisma.$transaction([
       this.prisma.account.count({ where }),
@@ -153,12 +230,13 @@ export class AdminAccountService {
       data,
     };
   }
-  async getAccount(accountNumber: string) {
+  async getAccount(accountNumber: string, role: string) {
     const normalizedAccountNumber = accountNumber.trim().toUpperCase();
 
-    const account = await this.prisma.account.findUnique({
+    const account = await this.prisma.account.findFirst({
       where: {
         accountNumber: normalizedAccountNumber,
+        ...this.financeScope(role),
       },
       include: {
         user: {
@@ -263,12 +341,14 @@ export class AdminAccountService {
   async getAccountTransactions(
     accountNumber: string,
     query: ListAdminAccountTransactionsQueryDto,
+    role: string,
   ) {
     const normalizedAccountNumber = accountNumber.trim().toUpperCase();
 
-    const account = await this.prisma.account.findUnique({
+    const account = await this.prisma.account.findFirst({
       where: {
         accountNumber: normalizedAccountNumber,
+        ...this.financeScope(role),
       },
       select: {
         id: true,
@@ -365,7 +445,7 @@ export class AdminAccountService {
     };
   }
 
-  async listTransactions(query: ListAdminAccountTransactionsQueryDto) {
+  async listTransactions(query: ListAdminAccountTransactionsQueryDto, role: string) {
     if (
       query.dateFrom &&
       query.dateTo &&
@@ -377,6 +457,7 @@ export class AdminAccountService {
     }
 
     const where: Prisma.AccountTransactionWhereInput = {
+      ...(role === 'FINANCE' ? { account: this.financeScope(role) } : {}),
       ...(query.type ? { type: query.type } : {}),
       ...(query.status ? { status: query.status } : {}),
       ...(query.dateFrom || query.dateTo
@@ -617,5 +698,16 @@ export class AdminAccountService {
       'code' in error &&
       (error as { code?: unknown }).code === expectedCode
     );
+  }
+
+  private async assertAccountVisible(accountNumber: string, role: string) {
+    const account = await this.prisma.account.findFirst({
+      where: {
+        accountNumber: accountNumber.trim().toUpperCase(),
+        ...this.financeScope(role),
+      },
+      select: { id: true },
+    });
+    if (!account) throw new NotFoundException('未找到账户');
   }
 }

@@ -1,3 +1,5 @@
+import '../widgets/app_page_scaffold.dart';
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 class LegalPage extends StatelessWidget {
@@ -10,19 +12,21 @@ class LegalPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final sections = _isPrivacy ? _privacySections : _termsSections;
-    return Scaffold(
-      appBar: AppBar(title: Text(_isPrivacy ? 'Privacy Policy' : 'Terms of Service')),
+    return AppPageScaffold(
+      appBar: AppBar(
+        title: AppText(_isPrivacy ? 'Privacy Policy' : 'Terms of Service'),
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
         children: [
-          Text(
+          AppText(
             _isPrivacy ? 'Privacy Policy' : 'Terms of Service',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 6),
-          Text(
+          AppText(
             'Effective 13 August 2026  •  Version 1.0',
             style: Theme.of(context).textTheme.bodySmall,
           ),
@@ -33,18 +37,18 @@ class LegalPage extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
+                  AppText(
                     section.heading,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 7),
-                  Text(
+                  AppText(
                     section.body,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          height: 1.55,
-                        ),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(height: 1.55),
                   ),
                 ],
               ),
@@ -120,7 +124,7 @@ const _termsSections = <_LegalSection>[
   ),
   _LegalSection(
     '3. Services and product workflows',
-    'The application provides market information and product-specific transaction workflows. Ordinary-stock orders follow the market hours, price, order-state and settlement rules disclosed in the application. Inst., IPO and OTC products are available only through Trading and use their separately displayed eligibility, pricing, allocation, review and settlement rules. OTC purchases require quantity and transaction-key confirmation, remain Pending Review until approved by the backend, and appear in the relevant completed position only after approval. Inst. and OTC have no minimum quantity unless a specific product disclosure states otherwise.',
+    'The application provides market information and product-specific transaction workflows. Ordinary-stock orders follow the market hours, price, order-state and settlement rules disclosed in the application. Institutional offers, IPOs and OTC products are available only through Trading and use their separately displayed eligibility, pricing, allocation, review and settlement rules. OTC purchases require quantity and transaction-key confirmation, remain Pending Review until approved by the backend, and appear in the relevant completed position only after approval. Institutional and OTC products have no minimum quantity unless a specific product disclosure states otherwise.',
   ),
   _LegalSection(
     '4. Execution and settlement disclosure',
@@ -136,7 +140,7 @@ const _termsSections = <_LegalSection>[
   ),
   _LegalSection(
     '7. Money, bank accounts, charges and taxes',
-    'Add Money opens Online Customer Service; it is not an automatic deposit or payment confirmation. Follow only verified in-app instructions and confirm that funds are credited to your account record. A bank account you add is recorded in the backend without a separate approval step, but ownership or compliance checks may still be required before withdrawal or settlement. Applicable prices, fees, taxes, deductions and settlement amounts must be shown or otherwise disclosed before they are charged.',
+    'Add Funds opens Online Customer Service; it is not an automatic deposit or payment confirmation. Follow only verified in-app instructions and confirm that funds are credited to your account record. A bank account you add is recorded in the backend without a separate approval step, but ownership or compliance checks may still be required before withdrawal or settlement. Applicable prices, fees, taxes, deductions and settlement amounts must be shown or otherwise disclosed before they are charged.',
   ),
   _LegalSection(
     '8. Prohibited use',

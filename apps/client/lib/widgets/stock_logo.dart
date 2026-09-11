@@ -6,11 +6,13 @@ class StockLogo extends StatelessWidget {
     required this.symbol,
     this.size = 42,
     this.logoUrl,
+    this.onLoadFailed,
   });
 
   final String symbol;
   final double size;
   final String? logoUrl;
+  final VoidCallback? onLoadFailed;
 
   static const Map<String, _LogoStyle> _styles = {
     'RELIANCE': _LogoStyle(Color(0xFF123B8A), Icons.energy_savings_leaf),
@@ -38,6 +40,12 @@ class StockLogo extends StatelessWidget {
   Widget build(BuildContext context) {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final style = _styles[normalizedSymbol] ?? _fallbackStyle(normalizedSymbol);
+    final letters = normalizedSymbol.replaceAll(RegExp('[^A-Z0-9]'), '');
+    final monogram = _styles.containsKey(normalizedSymbol)
+        ? null
+        : letters.isEmpty
+        ? '?'
+        : letters.substring(0, letters.length > 2 ? 2 : letters.length);
     final resolvedLogoUrl = logoUrl?.trim().isNotEmpty == true
         ? logoUrl!.trim()
         : null;
@@ -53,19 +61,36 @@ class StockLogo extends StatelessWidget {
       ),
       child: ClipOval(
         child: resolvedLogoUrl == null
-            ? _FallbackLogo(style: style, size: size)
+            ? _FallbackLogo(style: style, size: size, monogram: monogram)
             : Image.network(
                 resolvedLogoUrl,
+                webHtmlElementStrategy: WebHtmlElementStrategy.fallback,
                 width: size - 6,
                 height: size - 6,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
+                semanticLabel: '$normalizedSymbol logo',
                 filterQuality: FilterQuality.medium,
                 loadingBuilder: (context, child, progress) {
                   if (progress == null) return child;
-                  return _FallbackLogo(style: style, size: size);
+                  return _FallbackLogo(
+                    style: style,
+                    size: size,
+                    monogram: monogram,
+                  );
                 },
-                errorBuilder: (_, _, _) =>
-                    _FallbackLogo(style: style, size: size),
+                errorBuilder: (_, _, _) {
+                  if (onLoadFailed != null) {
+                    WidgetsBinding.instance.addPostFrameCallback(
+                      (_) => onLoadFailed!(),
+                    );
+                    return const SizedBox.shrink();
+                  }
+                  return _FallbackLogo(
+                    style: style,
+                    size: size,
+                    monogram: monogram,
+                  );
+                },
               ),
       ),
     );
@@ -94,7 +119,8 @@ class _LogoStyle {
 }
 
 class _FallbackLogo extends StatelessWidget {
-  const _FallbackLogo({required this.style, required this.size});
+  const _FallbackLogo({required this.style, required this.size, this.monogram});
+  final String? monogram;
 
   final _LogoStyle style;
   final double size;
@@ -106,7 +132,21 @@ class _FallbackLogo extends StatelessWidget {
       height: size - 8,
       alignment: Alignment.center,
       decoration: BoxDecoration(color: style.color, shape: BoxShape.circle),
-      child: Icon(style.icon, color: Colors.white, size: size * 0.48),
+      child: monogram == null
+          ? Icon(style.icon, color: Colors.white, size: size * 0.48)
+          : Padding(
+              padding: const EdgeInsets.all(3),
+              child: FittedBox(
+                child: Text(
+                  monogram!,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: size * 0.34,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ),
     );
   }
 }

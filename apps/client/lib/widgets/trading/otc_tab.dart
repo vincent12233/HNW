@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -52,12 +53,12 @@ class _OtcTabState extends State<OtcTab> {
             children: [
               Icon(Icons.handshake_outlined, size: 64, color: Colors.black38),
               SizedBox(height: 16),
-              Text(
+              AppText(
                 'No OTC opportunities available',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text(
+              AppText(
                 'Backend-approved opportunities will appear here during the trading session.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
@@ -75,8 +76,9 @@ class _OtcTabState extends State<OtcTab> {
         itemCount: items.length + orders.length,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          if (index >= items.length)
+          if (index >= items.length) {
             return _orderCard(orders[index - items.length]);
+          }
           final item = items[index];
 
           return Card(
@@ -105,7 +107,7 @@ class _OtcTabState extends State<OtcTab> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            AppText(
                               item.symbol,
                               style: const TextStyle(
                                 fontWeight: FontWeight.bold,
@@ -113,7 +115,7 @@ class _OtcTabState extends State<OtcTab> {
                               ),
                             ),
                             const SizedBox(height: 2),
-                            Text(
+                            AppText(
                               item.companyName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -122,7 +124,7 @@ class _OtcTabState extends State<OtcTab> {
                           ],
                         ),
                       ),
-                      Text(
+                      AppText(
                         item.status,
                         style: const TextStyle(
                           color: AppConfig.primaryColor,
@@ -132,12 +134,32 @@ class _OtcTabState extends State<OtcTab> {
                     ],
                   ),
                   const Divider(height: 24),
-                  Row(children: [
-                    Expanded(child: _value('Market Price', formatPrice(item.marketPrice))),
-                    Expanded(child: _value('Discount Price', formatPrice(item.price), valueColor: AppConfig.gainColor)),
-                  ]),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _value(
+                          'Market Price',
+                          formatPrice(item.marketPrice),
+                        ),
+                      ),
+                      Expanded(
+                        child: _value(
+                          'Discount Price',
+                          formatPrice(item.price),
+                          valueColor: AppConfig.gainColor,
+                        ),
+                      ),
+                    ],
+                  ),
                   if (item.marketPrice > item.price && item.price > 0)
-                    Text('Settlement uses discount price · Save ${formatPrice(item.marketPrice - item.price)}', style: const TextStyle(color: AppConfig.gainColor, fontSize: 12, fontWeight: FontWeight.w600)),
+                    AppText(
+                      'Settlement uses discount price · Save ${formatPrice(item.marketPrice - item.price)}',
+                      style: const TextStyle(
+                        color: AppConfig.gainColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   const SizedBox(height: 14),
                   SizedBox(
                     width: double.infinity,
@@ -146,7 +168,7 @@ class _OtcTabState extends State<OtcTab> {
                           ? () => _submitDialog(item)
                           : null,
                       icon: const Icon(Icons.shopping_cart_checkout_rounded),
-                      label: const Text('Buy'),
+                      label: const AppText('Buy'),
                     ),
                   ),
                 ],
@@ -164,12 +186,18 @@ class _OtcTabState extends State<OtcTab> {
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text('Buy ${item.symbol}'),
+        title: AppText('Buy ${item.symbol}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Market price ${formatPrice(item.marketPrice)}'),
-            Text('Settlement price ${formatPrice(item.price)}', style: const TextStyle(color: AppConfig.gainColor, fontWeight: FontWeight.w600)),
+            AppText('Market price ${formatPrice(item.marketPrice)}'),
+            AppText(
+              'Settlement price ${formatPrice(item.price)}',
+              style: const TextStyle(
+                color: AppConfig.gainColor,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
             const SizedBox(height: 14),
             TextField(
               controller: quantity,
@@ -191,11 +219,11 @@ class _OtcTabState extends State<OtcTab> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Submit'),
+            child: const AppText('Submit'),
           ),
         ],
       ),
@@ -206,13 +234,16 @@ class _OtcTabState extends State<OtcTab> {
       await _refresh();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('OTC order submitted · Pending review')),
+        const SnackBar(
+          content: AppText('OTC order submitted · Pending review'),
+        ),
       );
     } on OtcException catch (error) {
-      if (mounted)
+      if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        ).showSnackBar(SnackBar(content: AppText(error.message)));
+      }
     }
   }
 
@@ -230,11 +261,11 @@ class _OtcTabState extends State<OtcTab> {
     return Card(
       child: ListTile(
         leading: Icon(Icons.schedule_rounded, color: color),
-        title: Text(
+        title: AppText(
           '${order.symbol} · ${order.quantity} shares',
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: Text(
+        subtitle: AppText(
           order.reviewNote?.isNotEmpty == true
               ? order.reviewNote!
               : order.orderNo,
@@ -243,11 +274,11 @@ class _OtcTabState extends State<OtcTab> {
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            Text(
+            AppText(
               label,
               style: TextStyle(color: color, fontWeight: FontWeight.w700),
             ),
-            Text(
+            AppText(
               formatPrice(order.price),
               style: const TextStyle(fontSize: 12),
             ),
@@ -261,12 +292,15 @@ class _OtcTabState extends State<OtcTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(value, style: TextStyle(fontWeight: FontWeight.w600, color: valueColor)),
+        AppText(
+          value,
+          style: TextStyle(fontWeight: FontWeight.w600, color: valueColor),
+        ),
       ],
     );
   }

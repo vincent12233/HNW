@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 class MarketStatusCard extends StatelessWidget {
@@ -47,7 +48,7 @@ class MarketStatusCard extends StatelessWidget {
           Icon(Icons.circle, size: 12, color: statusColor),
           const SizedBox(width: 10),
           Expanded(
-            child: Text(
+            child: AppText(
               statusText,
               style: const TextStyle(
                 color: Colors.white,
@@ -56,7 +57,7 @@ class MarketStatusCard extends StatelessWidget {
               ),
             ),
           ),
-          const Text(
+          const AppText(
             '09:15 - 15:30 IST',
             style: TextStyle(color: Colors.white70, fontSize: 13),
           ),

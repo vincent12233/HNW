@@ -83,7 +83,6 @@ export class MarketDataController {
   }
 
   @Get('news')
-  @UseGuards(JwtAuthGuard)
   getNews(@Query('limit') limit = '8') {
     return this.marketNews.latest(Number(limit));
   }

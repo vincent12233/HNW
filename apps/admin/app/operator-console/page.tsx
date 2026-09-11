@@ -4,6 +4,7 @@ import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Input, Space, Table, Tag, Typography } from "antd";
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
+import ScopedEditButton from "@/components/ScopedEditButton";
 import { api } from "@/lib/api";
 
 type Customer = {
@@ -58,6 +59,9 @@ export default function OperatorConsolePage() {
       </Space>
       <Table<Customer> rowKey="id" loading={loading} dataSource={filtered} scroll={{ x: 1000 }} columns={[
         { title: "客户姓名", dataIndex: "fullName" },
+        { title: "操作", fixed: "right", width: 160, render: (_, row) =>
+          <ScopedEditButton name={row.fullName} current={row.status} kind="status"
+            endpoint={`/business/customers/${row.id}/status`} onSaved={load} /> },
         { title: "手机号", dataIndex: "phone", render: (value) => value || "-" },
         { title: "内部用户号", dataIndex: "customerNo", render: (value) => value || "-" },
         { title: "账户号", render: (_, row) => row.account?.accountNumber || "-" },

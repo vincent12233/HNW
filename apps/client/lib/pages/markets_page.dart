@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/stock_quote.dart';
 import '../services/market_data_service.dart';
+import '../services/logo_market_page.dart';
 import '../services/market_socket_service.dart';
 import '../services/watchlist_service.dart';
 import '../utils/number_formatters.dart';
@@ -57,12 +59,15 @@ class _MarketsPageState extends State<MarketsPage> {
   Timer? _searchDebounce;
   List<StockQuote> _remoteSearchResults = <StockQuote>[];
   List<StockQuote> _watchlistStocks = <StockQuote>[];
-  Set<String> _watchlistSymbols = <String>{};
   bool _searchLoading = false;
+  bool _searchFailed = false;
+  bool _failedSearchWasReset = true;
   bool _searchHasMore = false;
-  bool _watchlistLoading = true;
   final Map<String, List<double>> _indexHistory = <String, List<double>>{};
   final Map<String, List<double>> _stockHistory = <String, List<double>>{};
+  final Map<String, (double, double)> _yearRanges =
+      <String, (double, double)>{};
+  bool _yearRangesLoading = false;
   int _searchPage = 1;
   int _searchGeneration = 0;
 
@@ -77,36 +82,16 @@ class _MarketsPageState extends State<MarketsPage> {
   ];
 
   List<StockQuote> get _filteredStocks {
-    final normalizedQuery = query.trim();
-    if (normalizedQuery.isEmpty) return widget.stocks;
-    return _remoteSearchResults;
+    return _remoteSearchResults
+        .where(
+          (stock) =>
+              stock.logoUrl?.trim().isNotEmpty == true &&
+              !_failedLogoUrls.contains(stock.logoUrl),
+        )
+        .toList();
   }
 
-  List<StockQuote> get _filteredWatchlistStocks {
-    final byInstrument = <String, StockQuote>{};
-    for (final stock in _watchlistStocks) {
-      final key = WatchlistService.key(stock.exchange, stock.symbol);
-      if (_watchlistSymbols.contains(key)) {
-        byInstrument[key] = stock;
-      }
-    }
-    for (final stock in widget.stocks) {
-      final key = WatchlistService.key(stock.exchange, stock.symbol);
-      if (_watchlistSymbols.contains(key)) {
-        byInstrument[key] = stock;
-      }
-    }
-
-    final normalized = query.trim().toLowerCase();
-    final stocks = byInstrument.values.where((stock) {
-      if (normalized.isEmpty) return true;
-      return stock.symbol.toLowerCase().contains(normalized) ||
-          stock.name.toLowerCase().contains(normalized);
-    }).toList();
-
-    stocks.sort((left, right) => left.symbol.compareTo(right.symbol));
-    return stocks;
-  }
+  final Set<String> _failedLogoUrls = {};
 
   @override
   void initState() {
@@ -115,6 +100,7 @@ class _MarketsPageState extends State<MarketsPage> {
     _loadWatchlist();
     unawaited(_loadIndexHistory());
     unawaited(_loadFeaturedStockHistory());
+    unawaited(_searchStocks(reset: true));
   }
 
   Future<void> _loadFeaturedStockHistory() async {
@@ -186,6 +172,44 @@ class _MarketsPageState extends State<MarketsPage> {
     });
   }
 
+  String _instrumentKey(StockQuote stock) =>
+      '${stock.exchange}:${stock.symbol}';
+
+  Future<void> _loadYearRanges({bool force = false}) async {
+    if (_yearRangesLoading || (!force && _yearRanges.isNotEmpty)) return;
+    if (mounted) setState(() => _yearRangesLoading = true);
+    final candidates = widget.stocks.where((stock) => stock.price > 0).toList()
+      ..sort((left, right) => right.volume.compareTo(left.volume));
+    final results = await Future.wait(
+      candidates.take(20).map((stock) async {
+        try {
+          final history = await _marketDataService.fetchHistory(
+            symbol: stock.symbol,
+            exchange: stock.exchange,
+            range: '1Y',
+          );
+          final prices = history.data
+              .map((point) => point.close)
+              .where((price) => price > 0)
+              .toList();
+          if (prices.length < 2) return (_instrumentKey(stock), null);
+          prices.sort();
+          return (_instrumentKey(stock), (prices.first, prices.last));
+        } catch (_) {
+          return (_instrumentKey(stock), null);
+        }
+      }),
+    );
+    if (!mounted) return;
+    setState(() {
+      if (force) _yearRanges.clear();
+      for (final result in results) {
+        if (result.$2 != null) _yearRanges[result.$1] = result.$2!;
+      }
+      _yearRangesLoading = false;
+    });
+  }
+
   @override
   void dispose() {
     _searchDebounce?.cancel();
@@ -212,10 +236,6 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Future<void> _loadWatchlist() async {
-    if (mounted) {
-      setState(() => _watchlistLoading = true);
-    }
-
     try {
       final instrumentKeys = await _watchlistService.fetchSymbols();
       var stocks = <StockQuote>[];
@@ -226,7 +246,6 @@ class _MarketsPageState extends State<MarketsPage> {
         final bootstrap = await _marketDataService.fetchHomeBootstrap(
           symbols: symbols,
           limit: 10,
-          preserveExchanges: true,
         );
         stocks = bootstrap
             .where(
@@ -239,59 +258,44 @@ class _MarketsPageState extends State<MarketsPage> {
 
       if (!mounted) return;
       setState(() {
-        _watchlistSymbols = instrumentKeys;
         _watchlistStocks = stocks;
-        _watchlistLoading = false;
       });
     } catch (_) {
-      if (!mounted) return;
-      setState(() => _watchlistLoading = false);
+      return;
     }
   }
 
   Future<void> _refreshAll() async {
+    _failedLogoUrls.clear();
     await widget.onRefresh();
     await _loadWatchlist();
     await _loadIndexHistory();
     await _loadFeaturedStockHistory();
-    if (query.trim().isNotEmpty) {
-      await _searchStocks(reset: true);
-    }
-  }
-
-  void _onSearchChanged(String value) {
-    _searchGeneration++;
-    setState(() {
-      query = value;
-      if (value.trim().isEmpty) {
-        _remoteSearchResults = <StockQuote>[];
-        _searchHasMore = false;
-        _searchLoading = false;
-      }
-    });
-
-    _searchDebounce?.cancel();
-    if (value.trim().isEmpty) return;
-    _searchDebounce = Timer(const Duration(milliseconds: 300), () {
-      _searchStocks(reset: true);
-    });
+    if (selectedMoverFilter >= 3) await _loadYearRanges(force: true);
+    await _searchStocks(reset: true);
   }
 
   Future<void> _searchStocks({required bool reset}) async {
     final normalizedQuery = query.trim();
-    if (normalizedQuery.isEmpty || _searchLoading) return;
+    if (_searchLoading) return;
 
     final generation = reset ? ++_searchGeneration : _searchGeneration;
     final nextPage = reset ? 1 : _searchPage + 1;
     setState(() {
       _searchLoading = true;
+      _searchFailed = false;
     });
 
     try {
-      final result = await _marketDataService.searchSnapshot(
-        query: normalizedQuery,
+      final result = await loadLogoMarketPage(
         page: nextPage,
-        pageSize: 50,
+        fetch: (page) => _marketDataService.searchSnapshot(
+          query: normalizedQuery,
+          page: page,
+          pageSize: 50,
+        ),
+        failedUrls: _failedLogoUrls,
+        isCurrent: () => mounted && generation == _searchGeneration,
       );
       if (!mounted || generation != _searchGeneration) return;
 
@@ -300,10 +304,12 @@ class _MarketsPageState extends State<MarketsPage> {
           _remoteSearchResults = result.data;
         } else {
           final existing = _remoteSearchResults
-              .map((item) => item.symbol)
+              .map((item) => '${item.exchange}:${item.symbol}')
               .toSet();
           _remoteSearchResults.addAll(
-            result.data.where((item) => !existing.contains(item.symbol)),
+            result.data.where(
+              (item) => !existing.contains('${item.exchange}:${item.symbol}'),
+            ),
           );
         }
         _searchPage = result.page;
@@ -311,6 +317,10 @@ class _MarketsPageState extends State<MarketsPage> {
       });
     } catch (_) {
       if (!mounted || generation != _searchGeneration) return;
+      setState(() {
+        _searchFailed = true;
+        _failedSearchWasReset = reset;
+      });
       if (reset) {
         final normalized = normalizedQuery.toLowerCase();
         setState(() {
@@ -337,15 +347,15 @@ class _MarketsPageState extends State<MarketsPage> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(22, 20, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
               child: Row(
                 children: [
                   const Expanded(
-                    child: Text(
+                    child: AppText(
                       'Markets',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
                   ),
@@ -360,7 +370,7 @@ class _MarketsPageState extends State<MarketsPage> {
                         ),
                       ),
                     ),
-                    icon: const Icon(Icons.search_rounded, size: 28),
+                    icon: const Icon(Icons.search_rounded, size: 22),
                   ),
                   const SizedBox(width: 4),
                   Stack(
@@ -371,7 +381,7 @@ class _MarketsPageState extends State<MarketsPage> {
                         onPressed: widget.onNotifications,
                         icon: const Icon(
                           Icons.notifications_none_rounded,
-                          size: 28,
+                          size: 22,
                         ),
                       ),
                       if (widget.notificationCount > 0)
@@ -389,7 +399,7 @@ class _MarketsPageState extends State<MarketsPage> {
                               color: Color(0xFFEF233C),
                               shape: BoxShape.circle,
                             ),
-                            child: Text(
+                            child: AppText(
                               widget.notificationCount > 9
                                   ? '9+'
                                   : widget.notificationCount.toString(),
@@ -407,7 +417,7 @@ class _MarketsPageState extends State<MarketsPage> {
               ),
             ),
             SizedBox(
-              height: 48,
+              height: 40,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 scrollDirection: Axis.horizontal,
@@ -442,12 +452,13 @@ class _MarketsPageState extends State<MarketsPage> {
                           ),
                         ),
                       ),
-                      child: Text(
+                      child: AppText(
                         tabs[index],
                         style: TextStyle(
                           color: selected
                               ? AppConfig.primaryColor
                               : const Color(0xFF475569),
+                          fontSize: 11,
                           fontWeight: selected
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -535,7 +546,7 @@ class _MarketsPageState extends State<MarketsPage> {
   Widget _indicesContent() {
     final horizontalPadding = MediaQuery.sizeOf(context).width < 360
         ? 14.0
-        : 22.0;
+        : 16.0;
     final vix = _indexQuote(const ['INDIAVIX', 'INDIA VIX', 'VIX']);
     final dow = _indexQuote(const ['DJI', 'DOWJONES', 'DOW JONES']);
     final nasdaq = _indexQuote(const ['IXIC', 'NASDAQ']);
@@ -560,10 +571,34 @@ class _MarketsPageState extends State<MarketsPage> {
     final unchanged = widget.stocks.where((stock) => stock.change == 0).length;
     final mostActive = [...widget.stocks]
       ..sort((a, b) => b.volume.compareTo(a.volume));
+    final yearHigh =
+        widget.stocks
+            .where((stock) => _yearRanges.containsKey(_instrumentKey(stock)))
+            .toList()
+          ..sort((left, right) {
+            final leftHigh = _yearRanges[_instrumentKey(left)]!.$2;
+            final rightHigh = _yearRanges[_instrumentKey(right)]!.$2;
+            return ((leftHigh - left.price).abs() / leftHigh).compareTo(
+              (rightHigh - right.price).abs() / rightHigh,
+            );
+          });
+    final yearLow =
+        widget.stocks
+            .where((stock) => _yearRanges.containsKey(_instrumentKey(stock)))
+            .toList()
+          ..sort((left, right) {
+            final leftLow = _yearRanges[_instrumentKey(left)]!.$1;
+            final rightLow = _yearRanges[_instrumentKey(right)]!.$1;
+            return ((left.price - leftLow).abs() / leftLow).compareTo(
+              (right.price - rightLow).abs() / rightLow,
+            );
+          });
     final moverRows = switch (selectedMoverFilter) {
-      0 => mostActive.take(5).toList(),
-      1 => gainers.take(5).toList(),
-      2 => losers.take(5).toList(),
+      0 => mostActive,
+      1 => gainers,
+      2 => losers,
+      3 => yearHigh,
+      4 => yearLow,
       _ => <StockQuote>[],
     };
 
@@ -571,19 +606,35 @@ class _MarketsPageState extends State<MarketsPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 24),
       children: [
-        _marketSectionHeading('Indian Indices'),
+        _marketSectionHeading(
+          'Indian Indices',
+          onViewAll: () => _showIndices('Indian Indices', indices),
+        ),
         const SizedBox(height: 12),
         _indexGrid(indices),
-        const SizedBox(height: 24),
-        _marketSectionHeading('Global Indices'),
+        const SizedBox(height: 18),
+        _marketSectionHeading(
+          'Global Indices',
+          onViewAll: () => _showIndices('Global Indices', globalIndices),
+        ),
         const SizedBox(height: 12),
         _indexGrid(globalIndices),
-        const SizedBox(height: 24),
-        _marketSectionHeading('Market Movers'),
+        const SizedBox(height: 18),
+        _marketSectionHeading(
+          'Market Movers',
+          onViewAll: () => Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                appBar: AppBar(title: const AppText('Market Movers')),
+                body: _stockList(moverRows, emptyTitle: 'No stocks found'),
+              ),
+            ),
+          ),
+        ),
         const SizedBox(height: 10),
         _moverFilters(),
         const SizedBox(height: 8),
-        _moverTable(moverRows),
+        _moverTable(moverRows.take(5).toList()),
         const SizedBox(height: 22),
         _marketSectionHeading('Market Breadth', showViewAll: false),
         const SizedBox(height: 12),
@@ -615,21 +666,25 @@ class _MarketsPageState extends State<MarketsPage> {
     return ordered;
   }
 
-  Widget _marketSectionHeading(String title, {bool showViewAll = true}) => Row(
+  Widget _marketSectionHeading(
+    String title, {
+    bool showViewAll = true,
+    VoidCallback? onViewAll,
+  }) => Row(
     children: [
       Expanded(
-        child: Text(
+        child: AppText(
           title,
           style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
         ),
       ),
-      if (showViewAll)
+      if (showViewAll && onViewAll != null)
         InkWell(
           borderRadius: BorderRadius.circular(6),
-          onTap: () => setState(() => selectedTab = 1),
+          onTap: onViewAll,
           child: const Padding(
             padding: EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-            child: Text(
+            child: AppText(
               'View All',
               style: TextStyle(
                 color: AppConfig.primaryColor,
@@ -645,7 +700,7 @@ class _MarketsPageState extends State<MarketsPage> {
   Widget _indexGrid(List<(String, double, double)> values) => LayoutBuilder(
     builder: (context, constraints) {
       final columns =
-          constraints.maxWidth >= 320 &&
+          constraints.maxWidth >= 600 &&
               MediaQuery.textScalerOf(context).scale(1) <= 1.15
           ? 4
           : 2;
@@ -661,6 +716,47 @@ class _MarketsPageState extends State<MarketsPage> {
     },
   );
 
+  void _showIndices(String title, List<(String, double, double)> items) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => Scaffold(
+          appBar: AppBar(title: AppText(title)),
+          body: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              for (final item in items)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _indexCard(item),
+                      const SizedBox(height: 12),
+                      if ((_indexHistory[item.$1]?.length ?? 0) >= 2)
+                        SizedBox(
+                          height: 140,
+                          width: double.infinity,
+                          child: CustomPaint(
+                            painter: _IndexSparklinePainter(
+                              item.$3 >= 0
+                                  ? AppConfig.gainColor
+                                  : AppConfig.lossColor,
+                              _indexHistory[item.$1]!,
+                            ),
+                          ),
+                        )
+                      else
+                        const AppText('Insufficient history'),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _indexCard((String, double, double) item) {
     final available = item.$2 > 0;
     final positive = item.$3 >= 0;
@@ -670,12 +766,22 @@ class _MarketsPageState extends State<MarketsPage> {
         ? AppConfig.gainColor
         : AppConfig.lossColor;
     final history = _indexHistory[item.$1] ?? const <double>[];
+    final venue = item.$1.toUpperCase().contains('SENSEX')
+        ? 'BSE'
+        : const {
+            'DOW JONES',
+            'NASDAQ',
+            'S&P 500',
+            'FTSE 100',
+          }.contains(item.$1.toUpperCase())
+        ? 'GLOBAL'
+        : 'NSE';
     return Container(
-      height: 110,
-      padding: const EdgeInsets.all(10),
+      height: 116,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
@@ -684,7 +790,7 @@ class _MarketsPageState extends State<MarketsPage> {
           Row(
             children: [
               Expanded(
-                child: Text(
+                child: AppText(
                   item.$1,
                   style: const TextStyle(
                     fontSize: 9,
@@ -699,22 +805,38 @@ class _MarketsPageState extends State<MarketsPage> {
                       : Icons.keyboard_arrow_down_rounded,
                   size: 15,
                   color: color,
+                )
+              else
+                const Icon(
+                  Icons.schedule_rounded,
+                  size: 13,
+                  color: AppConfig.neutralColor,
                 ),
             ],
+          ),
+          const SizedBox(height: 2),
+          AppText(
+            venue,
+            style: const TextStyle(
+              color: Color(0xFF94A3B8),
+              fontSize: 8,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0,
+            ),
           ),
           const SizedBox(height: 5),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: AppText(
               item.$2 > 0 ? item.$2.toStringAsFixed(2) : '--',
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
             ),
           ),
-          Text(
+          AppText(
             available
                 ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
-                : 'Unavailable',
+                : 'Awaiting live quote',
             style: TextStyle(
               color: color,
               fontSize: 10,
@@ -731,7 +853,18 @@ class _MarketsPageState extends State<MarketsPage> {
               ),
             )
           else
-            const SizedBox(height: 25),
+            const SizedBox(
+              height: 25,
+              child: Align(
+                alignment: Alignment.bottomLeft,
+                child: AppText(
+                  'Data will refresh automatically',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 8),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -753,7 +886,10 @@ class _MarketsPageState extends State<MarketsPage> {
               .map(
                 (entry) => InkWell(
                   borderRadius: BorderRadius.circular(7),
-                  onTap: () => setState(() => selectedMoverFilter = entry.key),
+                  onTap: () {
+                    setState(() => selectedMoverFilter = entry.key);
+                    if (entry.key >= 3) unawaited(_loadYearRanges());
+                  },
                   child: Container(
                     margin: const EdgeInsets.only(right: 8),
                     padding: const EdgeInsets.symmetric(
@@ -767,7 +903,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       borderRadius: BorderRadius.circular(7),
                       border: Border.all(color: AppConfig.borderColor),
                     ),
-                    child: Text(
+                    child: AppText(
                       entry.value,
                       style: TextStyle(
                         fontSize: 11,
@@ -786,18 +922,26 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Widget _moverTable(List<StockQuote> rows) {
     if (rows.isEmpty) {
-      final unavailable = selectedMoverFilter >= 3;
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              const Icon(Icons.query_stats_rounded, color: Color(0xFF64748B)),
+              if (_yearRangesLoading && selectedMoverFilter >= 3)
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              else
+                const Icon(Icons.query_stats_rounded, color: Color(0xFF64748B)),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  unavailable
-                      ? '52-week statistics are not provided by the current market feed.'
+                child: AppText(
+                  _yearRangesLoading && selectedMoverFilter >= 3
+                      ? 'Loading one-year market history...'
+                      : selectedMoverFilter >= 3
+                      ? 'One-year history is unavailable for these instruments.'
                       : 'No instruments match this market filter.',
                   style: const TextStyle(color: Color(0xFF64748B)),
                 ),
@@ -810,7 +954,7 @@ class _MarketsPageState extends State<MarketsPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
@@ -822,7 +966,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 SizedBox(width: 39),
                 Expanded(
                   flex: 3,
-                  child: Text(
+                  child: AppText(
                     'Name',
                     style: TextStyle(
                       fontSize: 9,
@@ -834,7 +978,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 SizedBox(width: 47),
                 Expanded(
                   flex: 2,
-                  child: Text(
+                  child: AppText(
                     'Price',
                     textAlign: TextAlign.right,
                     style: TextStyle(
@@ -846,7 +990,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 ),
                 Expanded(
                   flex: 2,
-                  child: Text(
+                  child: AppText(
                     '% Change',
                     textAlign: TextAlign.right,
                     style: TextStyle(
@@ -858,7 +1002,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 ),
                 SizedBox(
                   width: 55,
-                  child: Text(
+                  child: AppText(
                     'Volume',
                     textAlign: TextAlign.right,
                     style: TextStyle(
@@ -894,7 +1038,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          AppText(
                             _displayStockName(stock),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
@@ -903,7 +1047,7 @@ class _MarketsPageState extends State<MarketsPage> {
                               fontWeight: FontWeight.w800,
                             ),
                           ),
-                          Text(
+                          AppText(
                             stock.exchange,
                             style: const TextStyle(
                               fontSize: 10,
@@ -930,7 +1074,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     const SizedBox(width: 5),
                     Expanded(
                       flex: 2,
-                      child: Text(
+                      child: AppText(
                         stock.price.toStringAsFixed(2),
                         textAlign: TextAlign.right,
                         style: const TextStyle(
@@ -941,7 +1085,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     ),
                     Expanded(
                       flex: 2,
-                      child: Text(
+                      child: AppText(
                         '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
                         textAlign: TextAlign.right,
                         style: TextStyle(
@@ -956,7 +1100,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     const SizedBox(width: 7),
                     SizedBox(
                       width: 48,
-                      child: Text(
+                      child: AppText(
                         formatVolume(stock.volume),
                         textAlign: TextAlign.right,
                         style: const TextStyle(
@@ -993,7 +1137,7 @@ class _MarketsPageState extends State<MarketsPage> {
       return const Card(
         child: Padding(
           padding: EdgeInsets.all(16),
-          child: Text(
+          child: AppText(
             'Market breadth unavailable',
             style: TextStyle(color: AppConfig.textSecondaryColor),
           ),
@@ -1004,14 +1148,14 @@ class _MarketsPageState extends State<MarketsPage> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
         children: [
           const Align(
             alignment: Alignment.centerLeft,
-            child: Text(
+            child: AppText(
               'Loaded instruments',
               style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
             ),
@@ -1022,21 +1166,21 @@ class _MarketsPageState extends State<MarketsPage> {
             spacing: 12,
             runSpacing: 5,
             children: [
-              Text(
+              AppText(
                 'Advances  $advances',
                 style: const TextStyle(
                   color: AppConfig.gainColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              Text(
+              AppText(
                 'Declines  $declines',
                 style: const TextStyle(
                   color: AppConfig.lossColor,
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              Text(
+              AppText(
                 'Unchanged  $unchanged',
                 style: const TextStyle(
                   color: AppConfig.neutralColor,
@@ -1068,7 +1212,7 @@ class _MarketsPageState extends State<MarketsPage> {
               ],
             ),
           ),
-          Text(
+          AppText(
             '${(advances / total * 100).toStringAsFixed(0)}% advancing',
             style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
           ),
@@ -1081,7 +1225,7 @@ class _MarketsPageState extends State<MarketsPage> {
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     decoration: BoxDecoration(
       color: const Color(0xFFEEF5FF),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
     ),
     child: const Row(
       children: [
@@ -1089,12 +1233,12 @@ class _MarketsPageState extends State<MarketsPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
+              AppText(
                 'Track live markets & place orders on the go',
                 style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
               ),
               SizedBox(height: 4),
-              Text(
+              AppText(
                 'Live prices, company logos and secure execution',
                 style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
               ),
@@ -1111,71 +1255,38 @@ class _MarketsPageState extends State<MarketsPage> {
     ),
   );
 
-  Widget _moverColumn(String title, List<StockQuote> rows, bool positive) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: AppConfig.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(title, style: const TextStyle(fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          ...rows.map(
-            (stock) => InkWell(
-              onTap: () => widget.onStockTap(stock),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 7),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        stock.symbol,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Text(
-                      '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: positive
-                            ? AppConfig.gainColor
-                            : AppConfig.lossColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _stockList(
     List<StockQuote> stocks, {
     required String emptyTitle,
     String emptySubtitle = 'Try a different search or market filter.',
     bool allowPagination = true,
   }) {
-    if (_searchLoading && query.trim().isNotEmpty && stocks.isEmpty) {
+    stocks = stocks
+        .where(
+          (stock) =>
+              stock.logoUrl?.trim().isNotEmpty == true &&
+              !_failedLogoUrls.contains(stock.logoUrl),
+        )
+        .toList();
+    if (_searchLoading && stocks.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (stocks.isEmpty) {
-      return _emptyState(Icons.star_border, emptyTitle, emptySubtitle);
+    if (allowPagination && _searchFailed && stocks.isEmpty) {
+      return _emptyState(
+        Icons.cloud_off,
+        'Unable to load stocks',
+        'Live search is unavailable. Please refresh to try again.',
+      );
+    }
+    if (stocks.isEmpty && !(allowPagination && _searchHasMore)) {
+      return _emptyState(
+        Icons.search_off,
+        emptyTitle,
+        '$emptySubtitle Only stocks with available logos are shown. Refresh to retry.',
+      );
     }
 
-    final showMore =
-        allowPagination && query.trim().isNotEmpty && _searchHasMore;
+    final showMore = allowPagination && (_searchHasMore || _searchFailed);
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
@@ -1189,14 +1300,20 @@ class _MarketsPageState extends State<MarketsPage> {
               child: OutlinedButton(
                 onPressed: _searchLoading
                     ? null
-                    : () => _searchStocks(reset: false),
+                    : () => _searchStocks(
+                        reset: _searchFailed && _failedSearchWasReset,
+                      ),
                 child: _searchLoading
                     ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
-                    : const Text('Load more'),
+                    : AppText(
+                        _searchFailed
+                            ? 'Unable to load stocks. Retry'
+                            : 'Load more',
+                      ),
               ),
             ),
           );
@@ -1204,7 +1321,16 @@ class _MarketsPageState extends State<MarketsPage> {
 
         final stock = stocks[index];
         return StockListTile(
+          key: ValueKey('${stock.exchange}:${stock.symbol}:${stock.logoUrl}'),
           stock: stock,
+          onLogoLoadFailed: () {
+            if (!mounted ||
+                stock.logoUrl == null ||
+                _failedLogoUrls.contains(stock.logoUrl)) {
+              return;
+            }
+            setState(() => _failedLogoUrls.add(stock.logoUrl!));
+          },
           onTap: () {
             widget.onStockTap(stock);
           },
@@ -1232,7 +1358,7 @@ class _MarketsPageState extends State<MarketsPage> {
               Icon(Icons.category_outlined, color: Colors.blueGrey),
               SizedBox(width: 12),
               Expanded(
-                child: Text(
+                child: AppText(
                   'Sector classifications are currently unavailable.',
                   style: TextStyle(color: Colors.black54),
                 ),
@@ -1246,7 +1372,7 @@ class _MarketsPageState extends State<MarketsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const AppText(
           'Sector Constituents',
           style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
         ),
@@ -1262,9 +1388,9 @@ class _MarketsPageState extends State<MarketsPage> {
                 Icons.category_outlined,
                 color: AppConfig.primaryColor,
               ),
-              title: Text(row.key),
-              subtitle: Text(symbols),
-              trailing: Text('${row.value.length}'),
+              title: AppText(row.key),
+              subtitle: AppText(symbols),
+              trailing: AppText('${row.value.length}'),
             ),
           );
         }),
@@ -1311,16 +1437,29 @@ class _MarketsPageState extends State<MarketsPage> {
         const SizedBox(height: 100),
         Icon(icon, size: 64, color: Colors.blueGrey),
         const SizedBox(height: 16),
-        Text(
+        AppText(
           title,
           textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 8),
-        Text(
+        AppText(
           subtitle,
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.black54),
+        ),
+        const SizedBox(height: 18),
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: _searchLoading ? null : _refreshAll,
+            icon: _searchLoading
+                ? const SizedBox.square(
+                    dimension: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh_rounded, size: 18),
+            label: const AppText('Refresh market data'),
+          ),
         ),
       ],
     );

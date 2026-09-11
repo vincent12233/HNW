@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -31,7 +32,7 @@ class MarketMovers extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        const AppText(
           'Market Movers',
           style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
         ),
@@ -90,7 +91,7 @@ class _MoverCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
+          AppText(
             title,
             style: TextStyle(
               color: color,
@@ -100,7 +101,25 @@ class _MoverCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           if (stocks.isEmpty)
-            const Text('No data', style: TextStyle(color: Colors.black45))
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.insights_outlined,
+                    size: 18,
+                    color: color.withValues(alpha: 0.7),
+                  ),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: AppText(
+                      'No market data available',
+                      style: TextStyle(color: Colors.black45),
+                    ),
+                  ),
+                ],
+              ),
+            )
           else
             ...stocks.map(
               (stock) => InkWell(
@@ -110,13 +129,13 @@ class _MoverCard extends StatelessWidget {
                   child: Row(
                     children: [
                       Expanded(
-                        child: Text(
+                        child: AppText(
                           stock.symbol,
                           overflow: TextOverflow.ellipsis,
                           style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
-                      Text(
+                      AppText(
                         '${stock.change > 0 ? '+' : ''}'
                         '${stock.change.toStringAsFixed(2)}%',
                         style: TextStyle(

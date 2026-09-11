@@ -24,9 +24,12 @@ import {
 } from "antd";
 
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 
 import AdminShell from "@/components/AdminShell";
+import ScopedEditButton from "@/components/ScopedEditButton";
+import { getBackendRole } from "@/lib/backend-role";
 import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
@@ -122,6 +125,7 @@ type SharedDeviceRisk = {
 };
 
 type Customer = {
+  clientTier?: string;
   id: string;
 
   customerNo?: string | null;
@@ -196,6 +200,9 @@ function getDeviceLabel(userAgent?: string | null) {
 }
 
 function riskTag(level?: string) {
+  if (!level || !["LOW", "MEDIUM", "HIGH"].includes(level)) {
+    return { color: "default", text: "未获取" };
+  }
   if (level === "HIGH") {
     return {
       color: "red",
@@ -220,6 +227,9 @@ function riskTag(level?: string) {
 }
 
 export default function BusinessCustomersPage() {
+  const detailRequest = useRef(0);
+  const listRequest = useRef(0);
+  const [detailError, setDetailError] = useState("");
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   const [keyword, setKeyword] = useState("");
@@ -229,6 +239,8 @@ export default function BusinessCustomersPage() {
   const [error, setError] = useState("");
 
   const [sharedIpRisks, setSharedIpRisks] = useState<SharedIpRisk[]>([]);
+  const [sharedIpReady, setSharedIpReady] = useState(false);
+  const [sharedDeviceReady, setSharedDeviceReady] = useState(false);
 
   const [sharedDeviceRisks, setSharedDeviceRisks] = useState<
     SharedDeviceRisk[]
@@ -254,30 +266,40 @@ export default function BusinessCustomersPage() {
     null,
   );
 
-  async function loadCustomers() {
+  const loadCustomers = useCallback(async () => {
+    const request = ++listRequest.current;
     setLoading(true);
 
     setError("");
+    setSharedIpReady(false);
+    setSharedDeviceReady(false);
 
     try {
       const customerResponse = await api.get<Customer[]>(
         "/business/my-customers",
       );
+      if (request !== listRequest.current) return;
 
-      const list = Array.isArray(customerResponse.data)
-        ? customerResponse.data
-        : [];
+      if (!Array.isArray(customerResponse.data)) throw new Error("Invalid customer list");
+      const list = customerResponse.data;
+      setCustomers(list);
+      setLoading(false);
 
-      const [ipResponse, deviceResponse] = await Promise.all([
+      const [ipResponse, deviceResponse] = await Promise.allSettled([
         api.get<SharedIpRisk[]>("/business/shared-ip-risks"),
 
         api.get<SharedDeviceRisk[]>("/business/shared-device-risks"),
       ]);
+      if (request !== listRequest.current) return;
 
-      setSharedIpRisks(Array.isArray(ipResponse.data) ? ipResponse.data : []);
+      const ipAvailable = ipResponse.status === "fulfilled" && Array.isArray(ipResponse.value.data);
+      const deviceAvailable = deviceResponse.status === "fulfilled" && Array.isArray(deviceResponse.value.data);
+      setSharedIpReady(ipAvailable);
+      setSharedDeviceReady(deviceAvailable);
+      setSharedIpRisks(ipAvailable && ipResponse.status === "fulfilled" ? ipResponse.value.data : []);
 
       setSharedDeviceRisks(
-        Array.isArray(deviceResponse.data) ? deviceResponse.data : [],
+        deviceAvailable && deviceResponse.status === "fulfilled" ? deviceResponse.value.data : [],
       );
 
       const riskResults = await Promise.allSettled(
@@ -285,6 +307,10 @@ export default function BusinessCustomersPage() {
           api.get<LoginRisk>(`/business/customers/${customer.id}/login-risk`),
         ),
       );
+      if (request !== listRequest.current) return;
+      if (!ipAvailable || !deviceAvailable || riskResults.some((result) => result.status === "rejected")) {
+        setError("客户列表已加载，部分风险信息获取失败；风险结果不完整，请刷新重试");
+      }
 
       setCustomers(
         list.map((customer, index) => {
@@ -301,8 +327,10 @@ export default function BusinessCustomersPage() {
           return customer;
         }),
       );
-    } catch (error: any) {
-      const message = error.response?.data?.message;
+    } catch (error: unknown) {
+      if (request !== listRequest.current) return;
+      const message = isAxiosError<{ message?: string | string[] }>(error)
+        ? error.response?.data?.message : undefined;
 
       setError(
         Array.isArray(message)
@@ -310,13 +338,20 @@ export default function BusinessCustomersPage() {
           : message || "客户数据加载失败",
       );
     } finally {
-      setLoading(false);
+      if (request === listRequest.current) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadCustomers();
-  }, []);
+    const requestState = detailRequest;
+    const listState = listRequest;
+    const initialLoad = window.setTimeout(() => { void loadCustomers(); }, 0);
+    return () => {
+      window.clearTimeout(initialLoad);
+      requestState.current++;
+      listState.current++;
+    };
+  }, [loadCustomers]);
 
   function customerHasSharedIp(id: string) {
     return sharedIpRisks.some((risk) =>
@@ -331,6 +366,10 @@ export default function BusinessCustomersPage() {
   }
 
   async function openLoginHistory(customer: Customer) {
+    const request = ++detailRequest.current;
+    setRiskOpen(false);
+    setDetailError("");
+    setLoginHistory([]);
     setSelectedCustomer(customer);
 
     setHistoryOpen(true);
@@ -342,15 +381,20 @@ export default function BusinessCustomersPage() {
         `/business/customers/${customer.id}/login-audits`,
       );
 
-      setLoginHistory(Array.isArray(response.data) ? response.data : []);
+      if (request !== detailRequest.current) return;
+      if (!Array.isArray(response.data)) throw new Error("Invalid login history");
+      setLoginHistory(response.data);
     } catch {
-      setLoginHistory([]);
+      if (request === detailRequest.current) setDetailError("登录记录加载失败，请重试");
     } finally {
-      setHistoryLoading(false);
+      if (request === detailRequest.current) setHistoryLoading(false);
     }
   }
 
   async function openLoginRisk(customer: Customer) {
+    const request = ++detailRequest.current;
+    setHistoryOpen(false);
+    setDetailError("");
     setSelectedCustomer(customer);
 
     setRiskOpen(true);
@@ -364,9 +408,13 @@ export default function BusinessCustomersPage() {
         `/business/customers/${customer.id}/login-risk`,
       );
 
+      if (request !== detailRequest.current) return;
+      if (response.data?.customer?.id !== customer.id) throw new Error("Invalid risk customer");
       setSelectedRisk(response.data);
+    } catch {
+      if (request === detailRequest.current) setDetailError("登录风险加载失败，请重试");
     } finally {
-      setRiskLoading(false);
+      if (request === detailRequest.current) setRiskLoading(false);
     }
   }
 
@@ -505,7 +553,7 @@ export default function BusinessCustomersPage() {
       width: 120,
 
       render: (_, record) =>
-        customerHasSharedIp(record.id) ? (
+        !sharedIpReady ? <Tag>未获取</Tag> : customerHasSharedIp(record.id) ? (
           <Tag color="red">共享IP</Tag>
         ) : (
           <Tag color="green">正常</Tag>
@@ -518,7 +566,7 @@ export default function BusinessCustomersPage() {
       width: 130,
 
       render: (_, record) =>
-        customerHasSharedDevice(record.id) ? (
+        !sharedDeviceReady ? <Tag>未获取</Tag> : customerHasSharedDevice(record.id) ? (
           <Tag color="orange">共享设备</Tag>
         ) : (
           <Tag color="green">正常</Tag>
@@ -547,7 +595,11 @@ export default function BusinessCustomersPage() {
       fixed: "right",
 
       render: (_, record) => (
-        <Space>
+        <Space wrap>
+          {getBackendRole() === 'BUSINESS' && <ScopedEditButton name={record.fullName} kind="tier"
+            current={record.clientTier} endpoint={`/business/customers/${record.id}/tier`} onSaved={loadCustomers} />}
+          <ScopedEditButton name={record.fullName} current={record.status} kind="status"
+            endpoint={`/business/customers/${record.id}/status`} onSaved={loadCustomers} />
           <Button
             size="small"
 
@@ -615,7 +667,7 @@ export default function BusinessCustomersPage() {
                 title="共享IP风险客户"
 
                 value={
-                  new Set(
+                  !sharedIpReady ? "—" : new Set(
                     sharedIpRisks.flatMap((item) =>
                       item.customers.map((c) => c.id),
                     ),
@@ -638,7 +690,7 @@ export default function BusinessCustomersPage() {
                 title="共享设备风险客户"
 
                 value={
-                  new Set(
+                  !sharedDeviceReady ? "—" : new Set(
                     sharedDeviceRisks.flatMap((item) =>
                       item.customers.map((c) => c.id),
                     ),
@@ -727,10 +779,12 @@ export default function BusinessCustomersPage() {
 
         footer={null}
 
-        onCancel={() => setHistoryOpen(false)}
+        onCancel={() => { detailRequest.current++; setHistoryOpen(false); }}
 
         width={1000}
       >
+        {detailError && <Alert type="error" showIcon title={detailError}
+          action={<Button onClick={() => selectedCustomer && openLoginHistory(selectedCustomer)}>重试</Button>} />}
         <Table<LoginAudit>
           rowKey={(record) =>
             record.id ?? `${record.createdAt}-${record.ipAddress}`
@@ -791,10 +845,13 @@ export default function BusinessCustomersPage() {
 
         footer={null}
 
-        onCancel={() => setRiskOpen(false)}
+        onCancel={() => { detailRequest.current++; setRiskOpen(false); }}
 
         confirmLoading={riskLoading}
       >
+        {riskLoading && <Text type="secondary">正在加载登录风险…</Text>}
+        {detailError && <Alert type="error" showIcon title={detailError}
+          action={<Button onClick={() => selectedCustomer && openLoginRisk(selectedCustomer)}>重试</Button>} />}
         {selectedRisk && (
           <Space orientation="vertical" size="large" style={{ width: "100%" }}>
             <Space size="large" wrap>
@@ -846,7 +903,10 @@ export default function BusinessCustomersPage() {
         width={1100}
         onCancel={() => setSharedOpen(false)}
       >
-        <Table<any>
+        {!(sharedType === "IP" ? sharedIpReady : sharedDeviceReady) ?
+          <Alert type="warning" showIcon title="风险信息尚未获取，不能判断是否存在共享风险"
+            action={<Button loading={loading} onClick={loadCustomers}>重新加载</Button>} /> :
+        <Table<SharedIpRisk | SharedDeviceRisk>
           rowKey={sharedType === "IP" ? "ipAddress" : "userAgent"}
 
           dataSource={sharedType === "IP" ? sharedIpRisks : sharedDeviceRisks}
@@ -867,7 +927,7 @@ export default function BusinessCustomersPage() {
                   {
                     title: "客户",
 
-                    render: (_: any, record: SharedIpRisk) => (
+                    render: (_: unknown, record: SharedIpRisk | SharedDeviceRisk) => (
                       <Space orientation="vertical">
                         {record.customers.map((customer) => (
                           <div key={customer.id}>
@@ -900,7 +960,7 @@ export default function BusinessCustomersPage() {
                   {
                     title: "客户",
 
-                    render: (_: any, record: SharedDeviceRisk) => (
+                    render: (_: unknown, record: SharedIpRisk | SharedDeviceRisk) => (
                       <Space orientation="vertical">
                         {record.customers.map((customer) => (
                           <div key={customer.id}>
@@ -914,9 +974,9 @@ export default function BusinessCustomersPage() {
                       </Space>
                     ),
                   },
-                ]) as any
+                ]) as ColumnsType<SharedIpRisk | SharedDeviceRisk>
           }
-        />
+        />}
       </Modal>
     </AdminShell>
   );

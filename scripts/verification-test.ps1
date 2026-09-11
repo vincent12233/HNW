@@ -99,6 +99,13 @@ $kycFile = [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes($testPdf))
 $testImage = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a1ZkAAAAASUVORK5CYII='
 $kyc = Invoke-JsonPost "/kyc/submit" @{
   phone = $phone
+  fullName = "Verification Customer"
+  bankDetails = @{
+    accountHolder = "Verification Customer"
+    bankName = "HDFC Bank"
+    accountNumber = "1234567890"
+    ifscCode = "HDFC0001234"
+  }
   documentType = "PAN"
   fileName = "pan-card-test.pdf"
   mimeType = "application/pdf"
@@ -161,10 +168,12 @@ if (-not ($pendingDeposits | Where-Object { $_.id -eq $deposit.id })) {
 }
 Invoke-JsonPatch "/deposit/$($deposit.id)/approve" @{} $financeToken | Out-Null
 
+$tradableInstrument = (Invoke-JsonGet "/market/instruments").data | Where-Object { $_.isActive -eq $true -and $_.quote } | Select-Object -First 1
+if (-not $tradableInstrument) { throw "No active tradable instrument available for verification." }
 $order = Invoke-JsonPost "/orders" @{
   clientOrderId = "VERIFY-ORDER-$stamp"
-  exchange = "NSE"
-  symbol = "RELIANCE"
+  exchange = $tradableInstrument.exchange
+  symbol = $tradableInstrument.symbol
   side = "BUY"
   type = "MARKET"
   timeInForce = "DAY"
@@ -201,7 +210,13 @@ if (-not $businessCanSeeOrder) {
   throw "Business backend cannot see own customer order VERIFY-ORDER-$stamp."
 }
 
+$testWithdrawalPin = '726194'
+Invoke-JsonPost "/client/security/withdrawal-pin" @{
+  currentPassword = $clientPassword
+  newPin = $testWithdrawalPin
+} $clientToken | Out-Null
 $withdrawal = Invoke-JsonPost "/withdrawal/request" @{
+  withdrawalPin = $testWithdrawalPin
   amount = 1000
   bankName = "HDFC Bank"
   accountNumber = "1234567890"

@@ -27,11 +27,7 @@ void main() {
 
   test('shows completed fill quantity and average fill price', () {
     final message = orderResultMessage(
-      order(
-        status: 'FILLED',
-        filledQuantity: 10,
-        averageFillPrice: 99.75,
-      ),
+      order(status: 'FILLED', filledQuantity: 10, averageFillPrice: 99.75),
     );
 
     expect(message, contains('Completed'));

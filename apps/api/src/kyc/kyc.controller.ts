@@ -17,6 +17,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { KycService } from './kyc.service';
 import type { KycSubmissionInput } from './kyc.service';
 import { KycAccessGuard } from './kyc-access.guard';
+import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scope.guard';
 
 @Controller('kyc')
 export class KycController {
@@ -33,15 +34,15 @@ export class KycController {
   }
 
   @Get('business/pending')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BUSINESS)
+  @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
+  @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   pendingForBusiness(@Req() req: any) {
     return this.kycService.pendingForBusiness(req.user.userId);
   }
 
   @Get('business/:submissionId/file')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BUSINESS)
+  @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
+  @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   fileForBusiness(
     @Req() req: any,
     @Param('submissionId') submissionId: string,
@@ -63,8 +64,8 @@ export class KycController {
   }
 
   @Patch('business/review')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.BUSINESS)
+  @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
+  @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   review(
     @Req() req: any,
     @Body()

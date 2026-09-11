@@ -3,6 +3,11 @@ import { IsOptional, IsString, Length, Matches, MinLength } from 'class-validato
 export class LoginDto {
   @IsOptional()
   @IsString()
+  @Length(6, 64)
+  verificationCode?: string;
+
+  @IsOptional()
+  @IsString()
   @Matches(/^(?:\+[1-9]\d{6,14}|(?:91)?[6-9]\d{9})$/)
   phone?: string;
 
@@ -12,6 +17,6 @@ export class LoginDto {
   employeeNo?: string;
 
   @IsString()
-  @MinLength(8)
+  @MinLength(6)
   password: string;
 }

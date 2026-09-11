@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/institutional_opportunity.dart';
@@ -32,12 +33,12 @@ class InstitutionalTab extends StatelessWidget {
                 color: Colors.black38,
               ),
               SizedBox(height: 16),
-              Text(
-                'No stocks available',
+              AppText(
+                'No institutional offers available',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text(
+              AppText(
                 'Stocks will appear here when live market data is available.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
@@ -91,7 +92,7 @@ class InstitutionalTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           stock.companyName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -101,7 +102,7 @@ class InstitutionalTab extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(height: 3),
-                        Text(
+                        AppText(
                           '${stock.symbol} · ${stock.exchange}',
                           style: const TextStyle(
                             color: Color(0xFF64748B),
@@ -111,7 +112,7 @@ class InstitutionalTab extends StatelessWidget {
                         if (!live)
                           const Padding(
                             padding: EdgeInsets.only(top: 3),
-                            child: Text(
+                            child: AppText(
                               'Live quote unavailable',
                               style: TextStyle(
                                 color: Color(0xFF94A3B8),
@@ -125,7 +126,7 @@ class InstitutionalTab extends StatelessWidget {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
+                      AppText(
                         live ? formatPrice(quote.price) : '--',
                         style: const TextStyle(
                           fontSize: 14,
@@ -133,7 +134,7 @@ class InstitutionalTab extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(height: 4),
-                      Text(
+                      AppText(
                         live
                             ? '${positive ? '+' : ''}${quote.change.toStringAsFixed(2)}%'
                             : '--',

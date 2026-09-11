@@ -19,12 +19,13 @@ import {
   Statistic,
   Switch,
   Table,
+  Tabs,
   Tag,
   Typography,
   message,
 } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -50,6 +51,8 @@ type InstrumentMasterRecord = {
 };
 
 type InstrumentMasterResponse = {
+  statistics: { total: number; enabled: number; quoted: number };
+  autoSync: { nse: boolean; bse: boolean };
   data: InstrumentMasterRecord[];
   total: number;
   page: number;
@@ -93,15 +96,21 @@ export default function InstrumentLibraryPage() {
   const [records, setRecords] = useState<InstrumentMasterRecord[]>([]);
   const [search, setSearch] = useState("");
   const [active, setActive] = useState<boolean | undefined>();
+  const [exchange, setExchange] = useState<"NSE" | "BSE">("NSE");
+  const [statistics, setStatistics] = useState<InstrumentMasterResponse["statistics"]>();
+  const [autoSync, setAutoSync] = useState<InstrumentMasterResponse["autoSync"]>();
+  const requestVersion = useRef(0);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [enablingAll, setEnablingAll] = useState(false);
   const [error, setError] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
 
   async function loadRecords(nextPage = page, nextPageSize = pageSize) {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError("");
     try {
@@ -109,19 +118,24 @@ export default function InstrumentLibraryPage() {
         params: {
           search: search.trim() || undefined,
           active,
+          exchange,
           page: nextPage,
           pageSize: nextPageSize,
         },
       });
+      if (version !== requestVersion.current) return;
+      setStatistics(response.data.statistics);
+      setAutoSync(response.data.autoSync);
       setRecords(Array.isArray(response.data.data) ? response.data.data : []);
       setTotal(Number(response.data.total ?? 0));
       setPage(Number(response.data.page ?? nextPage));
       setPageSize(Number(response.data.pageSize ?? nextPageSize));
       setSelectedRowKeys([]);
     } catch (requestError: unknown) {
-      setError(apiError(requestError, "NSE 股票库加载失败"));
+      if (version !== requestVersion.current) return;
+      setError(apiError(requestError, "股票库加载失败"));
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }
 
@@ -129,21 +143,31 @@ export default function InstrumentLibraryPage() {
     const timer = window.setTimeout(() => {
       void loadRecords(1, 50);
     }, 0);
-    return () => window.clearTimeout(timer);
+    return () => { window.clearTimeout(timer); requestVersion.current++; };
     // Initial server load only; filters are submitted explicitly.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [exchange]);
 
-  async function syncNse() {
+  async function enableAll() {
+    setEnablingAll(true);
+    try {
+      const { data } = await api.patch<{ updated: number }>("/admin/instruments/enable-all", null, { params: { exchange } });
+      message.success(`已启用 ${data.updated} 只股票`);
+      await loadRecords(1, pageSize);
+    } catch (error) { message.error(apiError(error, "全部启用失败，请重试")); }
+    finally { setEnablingAll(false); }
+  }
+
+  async function syncExchange(exchange: "NSE" | "BSE") {
     setSyncing(true);
     try {
-      const response = await api.post<SyncResult>("/admin/instruments/sync/nse");
+      const response = await api.post<SyncResult>(`/admin/instruments/sync/${exchange.toLowerCase()}`);
       message.success(
-        `NSE 股票库同步完成：${response.data.totalRows} 只，新增 ${response.data.created}，更新 ${response.data.updated}`,
+        `${exchange} 股票库同步完成：${response.data.totalRows} 只，新增 ${response.data.created}，更新 ${response.data.updated}`,
       );
       await loadRecords(1, pageSize);
     } catch (requestError: unknown) {
-      message.error(apiError(requestError, "NSE 股票库同步失败"));
+      message.error(apiError(requestError, `${exchange} 股票库同步失败`));
     } finally {
       setSyncing(false);
     }
@@ -162,12 +186,12 @@ export default function InstrumentLibraryPage() {
   async function bulkSetStatus(isActive: boolean) {
     const symbols = records
       .filter((record) => selectedRowKeys.includes(record.id))
-      .map((record) => record.symbol);
+      .map((record) => record.id);
     if (symbols.length === 0) return;
 
     try {
       const response = await api.patch<{ updated: number }>("/admin/instruments/bulk-status", {
-        symbols,
+        instrumentIds: symbols,
         isActive,
       });
       message.success(`已${isActive ? "启用" : "停用"} ${response.data.updated ?? symbols.length} 只股票`);
@@ -176,16 +200,6 @@ export default function InstrumentLibraryPage() {
       message.error(apiError(requestError, "批量状态更新失败"));
     }
   }
-
-  const activeOnPage = useMemo(
-    () => records.filter((record) => record.isActive).length,
-    [records],
-  );
-
-  const quotedOnPage = useMemo(
-    () => records.filter((record) => Number(record.quote?.lastPrice ?? 0) > 0).length,
-    [records],
-  );
 
   const columns: ColumnsType<InstrumentMasterRecord> = [
     {
@@ -281,18 +295,21 @@ export default function InstrumentLibraryPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
-          <Title level={2}>NSE 股票库</Title>
+          <Title level={2}>股票资料库 · NSE / BSE</Title>
           <Paragraph type="secondary">
-            从 NSE 官方 Equity 主列表同步普通股票。新同步股票默认停用；启用后才进入行情轮询并出现在客户 App，无需重新打包 App。
+            NSE 与 BSE 独立统计、独立同步、独立启用。新上市股票自动入库，默认停用；启用后进入行情轮询并展示在客户 App。
           </Paragraph>
         </div>
 
         {error && <Alert type="error" showIcon title={error} />}
 
+        <Tabs activeKey={exchange} onChange={(key) => { requestVersion.current++; setRecords([]); setStatistics(undefined); setSelectedRowKeys([]); setSearch(""); setActive(undefined); setPage(1); setExchange(key as "NSE" | "BSE"); }} items={[{ key: "NSE", label: "NSE 股票库" }, { key: "BSE", label: "BSE 股票库" }]} />
+        <Alert type="info" showIcon title={exchange === "NSE" ? "自动同步已开启 · 每天 06:00（印度时间）" : autoSync?.bse ? "自动同步已开启 · 每天 06:15（印度时间）" : "BSE 股票库已预留 · 接入数据源后自动开启每日同步"} />
+
         <Space wrap size="middle">
-          <Card size="small"><Statistic title="当前筛选" value={total} suffix="只" /></Card>
-          <Card size="small"><Statistic title="本页已启用" value={activeOnPage} suffix="只" /></Card>
-          <Card size="small"><Statistic title="本页已有行情" value={quotedOnPage} suffix="只" /></Card>
+          <Card size="small"><Statistic title={`${exchange} 股票总数`} value={statistics?.total ?? "—"} suffix="只" /></Card>
+          <Card size="small"><Statistic title="已启用总数" value={statistics?.enabled ?? "—"} suffix="只" /></Card>
+          <Card size="small"><Statistic title="已有行情总数" value={statistics?.quoted ?? "—"} suffix="只" /></Card>
         </Space>
 
         <Card>
@@ -326,17 +343,22 @@ export default function InstrumentLibraryPage() {
               </Button>
             </Space>
 
+            <Space>
+            <Popconfirm title={`启用 ${exchange} 股票库中的全部股票？`} description={`仅启用 ${exchange} 全库股票，不受分页或搜索限制，不影响另一交易所。`} onConfirm={enableAll} okText="全部启用" cancelText="取消" disabled={enablingAll || syncing}>
+              <Button icon={<CheckOutlined />} loading={enablingAll} disabled={syncing}>全部启用股票</Button>
+            </Popconfirm>
             <Popconfirm
-              title="同步 NSE 官方股票库？"
+              title={`同步 ${exchange} 股票库？`}
               description="已有股票只更新基础资料，不会改变当前启用/停用状态。新发现股票默认停用。"
               okText="开始同步"
               cancelText="取消"
-              onConfirm={() => void syncNse()}
+              onConfirm={() => void syncExchange(exchange)}
             >
-              <Button type="primary" icon={<CloudSyncOutlined />} loading={syncing}>
-                同步 NSE 股票库
+              <Button type="primary" icon={<CloudSyncOutlined />} loading={syncing} disabled={exchange === "BSE" && !autoSync?.bse}>
+                立即同步 {exchange}
               </Button>
             </Popconfirm>
+            </Space>
           </Space>
 
           {selectedRowKeys.length > 0 && (

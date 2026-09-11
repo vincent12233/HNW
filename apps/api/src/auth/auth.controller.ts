@@ -7,6 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const backendRoles = new Set(['ADMIN', 'MANAGER', 'FINANCE', 'BUSINESS', 'SUPPORT']);
+const staffSessionSeconds = 7 * 24 * 60 * 60;
 
 function staffCookieName(role?: string) {
   const normalized = role?.trim().toUpperCase();
@@ -18,7 +19,7 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
-  register(@Body() dto: RegisterDto) {
+  async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
 
@@ -50,10 +51,10 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 60 * 60 * 1000,
+        maxAge: staffSessionSeconds * 1000,
         path: '/',
       });
-      return { ...result, accessToken: undefined };
+      return { ...result, accessToken: undefined, expiresIn: staffSessionSeconds };
     }
     return result;
   }

@@ -17,6 +17,11 @@ class MarketHistoryPoint {
 
   bool get isValid =>
       date.millisecondsSinceEpoch > 0 &&
+      open.isFinite &&
+      high.isFinite &&
+      low.isFinite &&
+      close.isFinite &&
+      volume >= 0 &&
       open > 0 &&
       high > 0 &&
       low > 0 &&

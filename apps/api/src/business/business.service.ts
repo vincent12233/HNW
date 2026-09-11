@@ -427,8 +427,8 @@ export class BusinessService {
     const employeeNo = input.employeeNo.trim().toUpperCase();
     const email = `${employeeNo.toLowerCase()}@internal.hnw.local`;
 
-    if (!input.password || input.password.length < 8) {
-      throw new BadRequestException('密码至少需要 8 个字符');
+    if (!input.password || input.password.length < 6) {
+      throw new BadRequestException('密码至少需要 6 个字符');
     }
 
     if (!input.fullName?.trim()) {
@@ -620,6 +620,23 @@ export class BusinessService {
     });
   }
 
+  async currentInviteCode(businessUserId: string, previousId?: string) {
+    const where = {
+      businessProfile: { userId: businessUserId, isActive: true, user: { role: UserRole.BUSINESS, status: UserStatus.ACTIVE } },
+      status: InviteCodeStatus.UNUSED,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    };
+    const select = { id: true, code: true, expiresAt: true };
+    const next = await this.prisma.inviteCode.findFirst({
+      where: { ...where, ...(previousId ? { id: { not: previousId } } : {}) },
+      select, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    const code = next ?? (previousId ? await this.prisma.inviteCode.findFirst({
+      where: { ...where, id: previousId }, select,
+    }) : null);
+    return { code };
+  }
+
   async listInviteCodes(
     currentUserId: string,
     currentRole: UserRole,
@@ -648,12 +665,12 @@ export class BusinessService {
       throw new NotFoundException('未找到业务员资料');
     }
 
-    return this.prisma.inviteCode.findMany({
+    const inviteCodes = await this.prisma.inviteCode.findMany({
       where: {
         businessProfileId: profile.id,
       },
       include: {
-        customer: {
+        customers: {
           select: {
             id: true,
             fullName: true,
@@ -666,6 +683,12 @@ export class BusinessService {
         createdAt: 'desc',
       },
     });
+
+    return inviteCodes.map(({ customers, ...code }) => ({
+      ...code,
+      customer: customers[0] ?? null,
+      customers,
+    }));
   }
 
   async customersByBusiness(businessUserId: string) {
@@ -759,8 +782,8 @@ export class BusinessService {
   }
 
   async resetBusinessPassword(businessUserId: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 8) {
-      throw new BadRequestException('新密码至少需要 8 个字符');
+    if (!newPassword || newPassword.length < 6) {
+      throw new BadRequestException('新密码至少需要 6 个字符');
     }
 
     const business = await this.prisma.user.findFirst({
@@ -846,6 +869,7 @@ export class BusinessService {
       select: {
         id: true,
         customerNo: true,
+        clientTier: true,
         fullName: true,
         phone: true,
         status: true,
@@ -944,6 +968,22 @@ export class BusinessService {
     return updated;
   }
 
+  async updateCustomerTier(actorId: string, customerId: string, tier: unknown) {
+    if (typeof tier !== 'string' || !['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].includes(tier)) {
+      throw new BadRequestException('Invalid membership tier');
+    }
+    return this.prisma.$transaction(async tx => {
+      const scope = { id: customerId, role: UserRole.CLIENT, assignedBusinessId: actorId };
+      const previous = await tx.user.findFirst({ where: scope, select: { clientTier: true } });
+      if (!previous) throw new NotFoundException('Customer not assigned to this business user');
+      const result = await tx.user.updateMany({ where: scope, data: { clientTier: tier } });
+      if (result.count !== 1) throw new NotFoundException('Customer assignment changed');
+      await tx.auditLog.create({ data: { actorId, action: 'BUSINESS_CLIENT_TIER_UPDATED', resource: 'User',
+        resourceId: customerId, metadata: { previous: previous.clientTier, tier } } });
+      return { id: customerId, clientTier: tier };
+    });
+  }
+
   async myIpoApplications(businessUserId: string) {
     const applications = await this.prisma.ipoApplication.findMany({
       where: {
@@ -984,6 +1024,9 @@ export class BusinessService {
       status: application.status,
       paymentStatus: application.paymentStatus,
       allocatedQuantity: application.allocatedQuantity,
+      draftQuantity: application.draftQuantity,
+      draftPrice: application.draftPrice?.toFixed(2) ?? null,
+      publishedAt: application.publishedAt,
       allocatedPrice: application.allocatedPrice?.toFixed(2) ?? null,
       allocatedAmount: application.allocatedAmount?.toFixed(2) ?? null,
       createdAt: application.createdAt,
@@ -1014,6 +1057,16 @@ export class BusinessService {
     quantity: number,
     price: number,
   ) {
+    const ownedApplication = await this.prisma.ipoApplication.findFirst({
+      where: {
+        id: applicationId,
+        account: { user: { assignedBusinessId: businessUserId } },
+      },
+      select: { id: true },
+    });
+    if (!ownedApplication) {
+      throw new NotFoundException('IPO application is not assigned to this operator');
+    }
     const result = await this.ipoService.allocate(applicationId, quantity, price, businessUserId);
 
     await this.auditService.createLog({
@@ -1026,6 +1079,10 @@ export class BusinessService {
     });
 
     return result;
+  }
+
+  async publishMyIpoApplications(businessUserId: string, ids: string[]) {
+    return this.ipoService.publish(ids, businessUserId, businessUserId);
   }
 
   async myOrders(businessUserId: string, query: ListAdminOrdersQueryDto) {

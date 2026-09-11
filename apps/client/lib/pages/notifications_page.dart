@@ -1,16 +1,21 @@
+import '../widgets/app_page_scaffold.dart';
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
+import '../app_config.dart';
 import '../services/client_account_service.dart';
 
 class NotificationsPage extends StatefulWidget {
-  const NotificationsPage({super.key});
+  const NotificationsPage({super.key, this.accountService});
+  final ClientAccountService? accountService;
 
   @override
   State<NotificationsPage> createState() => _NotificationsPageState();
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  final service = ClientAccountService();
+  late final service = widget.accountService ?? ClientAccountService();
+  bool _fetching = false;
   final Set<String> markingRead = <String>{};
   List<Map<String, dynamic>> items = const [];
   bool loading = true;
@@ -18,6 +23,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   String? errorMessage;
 
   bool get hasUnread => items.any((item) => item['readAt'] == null);
+  int get unreadCount => items.where((item) => item['readAt'] == null).length;
 
   @override
   void initState() {
@@ -26,6 +32,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Future<void> load() async {
+    if (!mounted || _fetching || markingAll || markingRead.isNotEmpty) return;
+    _fetching = true;
     if (mounted) {
       setState(() {
         loading = true;
@@ -40,24 +48,37 @@ class _NotificationsPageState extends State<NotificationsPage> {
       if (!mounted) return;
       setState(() => errorMessage = 'Unable to load notifications');
     } finally {
+      _fetching = false;
       if (mounted) setState(() => loading = false);
     }
   }
 
   Future<void> markRead(Map<String, dynamic> item) async {
     final id = item['id']?.toString() ?? '';
-    if (id.isEmpty || item['readAt'] != null || markingRead.contains(id)) {
+    if (_fetching ||
+        markingAll ||
+        id.isEmpty ||
+        item['readAt'] != null ||
+        markingRead.contains(id)) {
       return;
     }
     setState(() => markingRead.add(id));
     try {
       await service.readNotification(id);
       if (!mounted) return;
-      setState(() => item['readAt'] = DateTime.now().toIso8601String());
+      setState(
+        () => items = items
+            .map(
+              (current) => current['id']?.toString() == id
+                  ? {...current, 'readAt': DateTime.now().toIso8601String()}
+                  : current,
+            )
+            .toList(),
+      );
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to mark notification as read')),
+        const SnackBar(content: AppText('Unable to mark notification as read')),
       );
     } finally {
       if (mounted) setState(() => markingRead.remove(id));
@@ -65,7 +86,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Future<void> markAllRead() async {
-    if (!hasUnread || markingAll) return;
+    if (!hasUnread || markingAll || _fetching || markingRead.isNotEmpty) return;
     setState(() => markingAll = true);
     try {
       await service.readAllNotifications();
@@ -79,7 +100,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Unable to mark all notifications')),
+        const SnackBar(content: AppText('Unable to mark all notifications')),
       );
     } finally {
       if (mounted) setState(() => markingAll = false);
@@ -87,14 +108,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => AppPageScaffold(
+    backgroundColor: const Color(0xFFF7F9FC),
     appBar: AppBar(
-      title: const Text('Notifications'),
+      title: const AppText('Notifications'),
       actions: [
         if (hasUnread)
           IconButton(
             tooltip: 'Mark all as read',
-            onPressed: markingAll ? null : markAllRead,
+            onPressed: markingAll || loading || markingRead.isNotEmpty
+                ? null
+                : markAllRead,
             icon: markingAll
                 ? const SizedBox.square(
                     dimension: 20,
@@ -104,7 +128,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
         IconButton(
           tooltip: 'Refresh',
-          onPressed: loading ? null : load,
+          onPressed: loading || markingAll || markingRead.isNotEmpty
+              ? null
+              : load,
           icon: const Icon(Icons.refresh),
         ),
       ],
@@ -114,48 +140,117 @@ class _NotificationsPageState extends State<NotificationsPage> {
         : errorMessage != null && items.isEmpty
         ? _ErrorState(message: errorMessage!, onRetry: load)
         : items.isEmpty
-        ? const Center(child: Text('No notifications yet'))
+        ? const Center(child: AppText('No notifications yet'))
         : RefreshIndicator(
             onRefresh: load,
-            child: ListView.separated(
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
               physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: items.length,
-              separatorBuilder: (_, _) => const Divider(height: 1),
+              itemCount: items.length + 1,
               itemBuilder: (_, index) {
-                final item = items[index];
-                final unread = item['readAt'] == null;
-                final id = item['id']?.toString() ?? '';
-                return ListTile(
-                  tileColor: unread ? const Color(0xFFF4F8FF) : null,
-                  onTap: unread ? () => markRead(item) : null,
-                  leading: CircleAvatar(
-                    backgroundColor: unread
-                        ? const Color(0xFFE3EEFF)
-                        : const Color(0xFFF1F5F9),
-                    child: Icon(_icon(item['type']?.toString())),
-                  ),
-                  title: Text(
-                    item['title']?.toString() ?? '',
-                    style: TextStyle(
-                      fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                  subtitle: Text(item['body']?.toString() ?? ''),
-                  trailing: markingRead.contains(id)
-                      ? const SizedBox.square(
-                          dimension: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : unread
-                      ? Container(
-                          width: 9,
-                          height: 9,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF0878F9),
-                            shape: BoxShape.circle,
+                if (index == 0) {
+                  return Padding(
+                    padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
+                    child: Row(
+                      children: [
+                        const Expanded(
+                          child: AppText(
+                            'Recent updates',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
-                        )
-                      : null,
+                        ),
+                        AppText(
+                          unreadCount == 0
+                              ? 'All caught up'
+                              : '$unreadCount unread',
+                          style: TextStyle(
+                            color: unreadCount == 0
+                                ? AppConfig.textSecondaryColor
+                                : AppConfig.primaryColor,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                final item = items[index - 1];
+                final unread = item['readAt'] == null;
+                final type = item['type']?.toString();
+                final paymentRequired = type == 'IPO_PAYMENT_REQUIRED';
+                final settled = type == 'IPO_ALLOTMENT_SETTLED';
+                final outcomeColor = paymentRequired
+                    ? const Color(0xFFB45309)
+                    : settled
+                    ? const Color(0xFF047857)
+                    : null;
+                final id = item['id']?.toString() ?? '';
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  elevation: 0,
+                  color: paymentRequired
+                      ? const Color(0xFFFFFBEB)
+                      : settled
+                      ? const Color(0xFFECFDF5)
+                      : unread
+                      ? const Color(0xFFF1F6FF)
+                      : Colors.white,
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    onTap: unread ? () => markRead(item) : null,
+                    leading: CircleAvatar(
+                      radius: 20,
+                      backgroundColor:
+                          outcomeColor?.withValues(alpha: 0.12) ??
+                          (unread
+                              ? const Color(0xFFDDEAFF)
+                              : const Color(0xFFF1F5F9)),
+                      child: Icon(
+                        _icon(item['type']?.toString()),
+                        size: 20,
+                        color:
+                            outcomeColor ??
+                            (unread
+                                ? AppConfig.primaryColor
+                                : AppConfig.textSecondaryColor),
+                      ),
+                    ),
+                    title: AppText(
+                      item['title']?.toString() ?? '',
+                      style: TextStyle(
+                        fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
+                      ),
+                    ),
+                    subtitle: AppText(
+                      _subtitle(item),
+                      maxLines: paymentRequired || settled ? null : 3,
+                      overflow: paymentRequired || settled
+                          ? TextOverflow.visible
+                          : TextOverflow.ellipsis,
+                    ),
+                    trailing: markingRead.contains(id)
+                        ? const SizedBox.square(
+                            dimension: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : unread
+                        ? Container(
+                            width: 9,
+                            height: 9,
+                            decoration: const BoxDecoration(
+                              color: AppConfig.primaryColor,
+                              shape: BoxShape.circle,
+                            ),
+                          )
+                        : null,
+                  ),
                 );
               },
             ),
@@ -163,6 +258,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
   );
 
   IconData _icon(String? type) {
+    if (type == 'IPO_PAYMENT_REQUIRED') return Icons.warning_amber_rounded;
+    if (type == 'IPO_ALLOTMENT_SETTLED') {
+      return Icons.check_circle_outline_rounded;
+    }
     if (type == 'SUPPORT') return Icons.support_agent;
     if (type == 'OTC') return Icons.handshake_outlined;
     if (type == 'IPO') return Icons.newspaper_outlined;
@@ -171,6 +270,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (type == 'TRADE') return Icons.swap_horiz_rounded;
     if (type == 'SECURITY') return Icons.security_rounded;
     return Icons.notifications_outlined;
+  }
+
+  String _subtitle(Map<String, dynamic> item) {
+    final body = item['body']?.toString() ?? '';
+    final rawDate = item['createdAt']?.toString();
+    if (rawDate == null || rawDate.isEmpty) return body;
+    final date = DateTime.tryParse(rawDate)?.toLocal();
+    if (date == null) return body;
+    final stamp =
+        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} '
+        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    return body.isEmpty ? stamp : '$body\n$stamp';
   }
 }
 
@@ -187,9 +298,9 @@ class _ErrorState extends StatelessWidget {
       children: [
         const Icon(Icons.cloud_off_outlined, size: 44),
         const SizedBox(height: 12),
-        Text(message),
+        AppText(message),
         const SizedBox(height: 12),
-        OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+        OutlinedButton(onPressed: onRetry, child: const AppText('Retry')),
       ],
     ),
   );

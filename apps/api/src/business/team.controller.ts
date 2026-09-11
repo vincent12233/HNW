@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, Req, UseGuards, NotFoundException } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -15,6 +15,7 @@ export class TeamController {
   constructor(private readonly team:TeamService,private readonly business:BusinessService,private readonly kyc:KycService) {}
   @Get() list(@Req() req:ActorRequest) { return this.team.list(req.user.userId); }
   @Post() create(@Req() req:ActorRequest,@Body() dto:CreateTeamStaffDto) { return this.team.create(req.user.userId,dto); }
+  @Delete(':id') remove(@Req() req:ActorRequest,@Param('id') id:string) { return this.team.remove(req.user.userId,id); }
   @Get(':id/orders') @Roles('MANAGER')
   async orders(@Req() req:ActorRequest,@Param('id') id:string,@Query() query:ListAdminOrdersQueryDto) {
     await this.team.business(req.user.userId,id); return this.business.myOrders(id,query);

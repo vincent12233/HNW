@@ -6,9 +6,14 @@ import {
   Max,
   MaxLength,
   Min,
+  Matches,
 } from 'class-validator';
 
 export class CreateWithdrawalRequestDto {
+  @IsString()
+  @Matches(/^\d{6}$/)
+  withdrawalPin!: string;
+
   @Type(() => Number)
   @IsNumber({ allowInfinity: false, allowNaN: false, maxDecimalPlaces: 2 })
   @Min(100)

@@ -17,13 +17,16 @@ class OtcService {
   }
 
   Future<List<InstitutionalStock>> offers() async {
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/otc/offers'),
-      headers: await _headers(),
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/otc/offers'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 6));
     final decoded = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw OtcException(_message(decoded));
+    }
     return (decoded as List)
         .whereType<Map>()
         .map(
@@ -34,13 +37,16 @@ class OtcService {
   }
 
   Future<List<OtcOrderRecord>> orders() async {
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/otc/orders/me'),
-      headers: await _headers(),
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/otc/orders/me'),
+          headers: await _headers(),
+        )
+        .timeout(const Duration(seconds: 6));
     final decoded = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw OtcException(_message(decoded));
+    }
     return (decoded as List)
         .whereType<Map>()
         .map((row) => OtcOrderRecord.fromJson(Map<String, dynamic>.from(row)))
@@ -52,18 +58,21 @@ class OtcService {
     int quantity,
     String key,
   ) async {
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/otc/orders'),
-      headers: await _headers(),
-      body: jsonEncode({
-        'offerId': offerId,
-        'quantity': quantity,
-        'transactionKey': key,
-      }),
-    );
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/otc/orders'),
+          headers: await _headers(),
+          body: jsonEncode({
+            'offerId': offerId,
+            'quantity': quantity,
+            'transactionKey': key,
+          }),
+        )
+        .timeout(const Duration(seconds: 10));
     final decoded = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw OtcException(_message(decoded));
+    }
     return OtcOrderRecord.fromJson(Map<String, dynamic>.from(decoded as Map));
   }
 

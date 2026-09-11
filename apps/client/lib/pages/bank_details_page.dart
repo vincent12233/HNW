@@ -1,4 +1,7 @@
+import '../widgets/app_page_scaffold.dart';
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../app_config.dart';
 import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
@@ -43,7 +46,12 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
   Future<void> _save() async {
     if (_saving || !_form.currentState!.validate()) return;
     if (widget.onContinue != null) {
-      widget.onContinue!({'bankName': _bank.text.trim(), 'accountHolder': _holder.text.trim(), 'accountNumber': _number.text.trim(), 'ifscCode': _ifsc.text.trim().toUpperCase()});
+      widget.onContinue!({
+        'bankName': _bank.text.trim(),
+        'accountHolder': _holder.text.trim(),
+        'accountNumber': _number.text.trim(),
+        'ifscCode': _ifsc.text.trim().toUpperCase(),
+      });
       return;
     }
     setState(() {
@@ -68,8 +76,8 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !_saving,
-    child: Scaffold(
-      appBar: AppBar(title: const Text('Bank Details')),
+    child: AppPageScaffold(
+      appBar: AppBar(title: const AppText('Bank Details')),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 480),
@@ -95,12 +103,12 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            AppText(
                               'Add Bank Account',
                               style: TextStyle(fontWeight: FontWeight.w700),
                             ),
                             SizedBox(height: 4),
-                            Text(
+                            AppText(
                               'Enter your bank details for withdrawals.',
                               style: TextStyle(fontSize: 12),
                             ),
@@ -139,13 +147,18 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                       : null,
                 ),
                 _field(
-                  widget.onContinue != null ? 'IFSC Code (Optional)' : 'IFSC Code',
+                  widget.onContinue != null
+                      ? 'IFSC Code (Optional)'
+                      : 'IFSC Code',
                   'Enter the 11-character IFSC code',
                   _ifsc,
-                  validator: (value) => widget.onContinue != null && (value?.trim().isEmpty ?? true) ? null :
-                      !RegExp(
-                        r'^[A-Z]{4}0[A-Z0-9]{6}$',
-                      ).hasMatch(value?.trim().toUpperCase() ?? '')
+                  validator: (value) =>
+                      widget.onContinue != null &&
+                          (value?.trim().isEmpty ?? true)
+                      ? null
+                      : !RegExp(
+                          r'^[A-Z]{4}0[A-Z0-9]{6}$',
+                        ).hasMatch(value?.trim().toUpperCase() ?? '')
                       ? 'Enter a valid IFSC code'
                       : null,
                 ),
@@ -165,13 +178,13 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                     color: AppConfig.primaryColor,
                     size: 20,
                   ),
-                  title: Text(
+                  title: AppText(
                     'Your bank details are used for account verification and withdrawals.',
                     style: TextStyle(fontSize: 12),
                   ),
                 ),
                 if (_error != null)
-                  Text(
+                  AppText(
                     _error!,
                     style: const TextStyle(color: AppConfig.lossColor),
                   ),
@@ -186,7 +199,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                             color: Colors.white,
                           ),
                         )
-                      : const Text('Continue'),
+                      : const AppText('Continue'),
                 ),
               ],
             ),
@@ -207,7 +220,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
         ),
@@ -216,8 +229,19 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
           controller: controller,
           enabled: !_saving,
           keyboardType: numeric ? TextInputType.number : TextInputType.text,
+          inputFormatters: numeric
+              ? <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly]
+              : label.startsWith('IFSC')
+              ? <TextInputFormatter>[
+                  TextInputFormatter.withFunction(
+                    (oldValue, newValue) =>
+                        newValue.copyWith(text: newValue.text.toUpperCase()),
+                  ),
+                  LengthLimitingTextInputFormatter(11),
+                ]
+              : null,
           textInputAction: TextInputAction.next,
-          decoration: InputDecoration(hintText: hint),
+          decoration: InputDecoration(hintText: tr(hint)),
           validator: validator,
         ),
       ],

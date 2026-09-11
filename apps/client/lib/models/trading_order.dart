@@ -1,3 +1,16 @@
+List<TradingOrder> mergeConfirmedOrder(
+  TradingOrder confirmed,
+  List<TradingOrder> rows,
+) {
+  final containsConfirmed = rows.any(
+    (row) =>
+        (confirmed.orderId != null && row.orderId == confirmed.orderId) ||
+        (confirmed.clientOrderId != null &&
+            row.clientOrderId == confirmed.clientOrderId),
+  );
+  return containsConfirmed ? List.of(rows) : [confirmed, ...rows];
+}
+
 class TradingOrder {
   const TradingOrder({
     this.orderId,
@@ -48,6 +61,31 @@ class TradingOrder {
 
   bool get isActive => status == 'OPEN' || status == 'PARTIALLY_FILLED';
   bool get isLimit => type == 'LIMIT';
+
+  factory TradingOrder.fromConfirmation(
+    dynamic response,
+    String clientOrderId,
+  ) {
+    final row = response is Map ? response['order'] : null;
+    if (row is! Map ||
+        row['id'] is! String ||
+        (row['id'] as String).isEmpty ||
+        row['clientOrderId'] != clientOrderId ||
+        !const [
+          'PENDING',
+          'OPEN',
+          'PARTIALLY_FILLED',
+          'FILLED',
+          'CANCELLED',
+          'REJECTED',
+        ].contains(row['status']) ||
+        !const ['BUY', 'SELL'].contains(row['side']) ||
+        row['quantity'] is! num ||
+        (row['quantity'] as num) <= 0) {
+      throw const FormatException('Missing order confirmation');
+    }
+    return TradingOrder.fromApiJson(Map<String, dynamic>.from(row));
+  }
 
   factory TradingOrder.fromJson(Map<String, dynamic> json) {
     return TradingOrder(

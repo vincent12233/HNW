@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../widgets/app_brand_logo.dart';
@@ -49,7 +50,7 @@ class _SplashPageState extends State<SplashPage>
             children: [
               AppBrandLogo(size: 86),
               SizedBox(height: 22),
-              Text(
+              AppText(
                 'India Trading',
                 style: TextStyle(
                   color: Color(0xFF0C1832),
@@ -58,7 +59,7 @@ class _SplashPageState extends State<SplashPage>
                 ),
               ),
               SizedBox(height: 7),
-              Text(
+              AppText(
                 'Smart Investing, Better Future',
                 style: TextStyle(
                   color: AppConfig.textSecondaryColor,

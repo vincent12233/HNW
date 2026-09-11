@@ -99,8 +99,8 @@ export class KycService {
       throw new BadRequestException('KYC file is empty');
     }
 
-    if (fileBuffer.length > 8 * 1024 * 1024) {
-      throw new BadRequestException('KYC file must be 8 MB or smaller');
+    if (fileBuffer.length > 15 * 1024 * 1024) {
+      throw new BadRequestException('KYC file must be 15 MB or smaller');
     }
 
     const backBuffer = input.backContentBase64
@@ -116,9 +116,9 @@ export class KycService {
     }
     if (
       backBuffer &&
-      (backBuffer.length === 0 || backBuffer.length > 8 * 1024 * 1024)
+      (backBuffer.length === 0 || backBuffer.length > 15 * 1024 * 1024)
     ) {
-      throw new BadRequestException('Each KYC file must be 8 MB or smaller');
+      throw new BadRequestException('Each KYC file must be 15 MB or smaller');
     }
 
     if (typeof input.fileName !== 'string' || !input.fileName.trim()) {
@@ -136,9 +136,9 @@ export class KycService {
       throw new BadRequestException('Signature must be 1 MB or smaller');
     }
     if (
-      !['image/jpeg', 'image/png', 'image/webp'].includes(input.selfieMimeType)
+      !['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(input.selfieMimeType)
     ) {
-      throw new BadRequestException('Selfie must be a JPG, PNG or WebP image');
+      throw new BadRequestException('Selfie must be a JPG, PNG, WebP, HEIC or HEIF image');
     }
 
     const storedKeys: string[] = [];
@@ -156,8 +156,11 @@ export class KycService {
       const filePath = frontObject.key;
 
       let backFilePath: string | null = null;
+      let backMimeType: string | null = null;
       if (backBuffer && input.backFileName) {
-        backFilePath = (await store(backBuffer, input.backMimeType)).key;
+        const backObject = await store(backBuffer, input.backMimeType);
+        backFilePath = backObject.key;
+        backMimeType = backObject.mime;
       }
 
       const recognizedType = this.recognizeDocumentType(
@@ -173,7 +176,7 @@ export class KycService {
       INSERT INTO "kyc_submissions"
         ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "selfieFilePath", "selfieMimeType", "signatureFilePath", "fullName", "bankDetails", "updatedAt")
       VALUES
-        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${frontObject.mime}, ${input.backFileName ?? null}, ${backFilePath}, ${input.backMimeType ?? null}, ${recognizedType}, ${`Selected document: ${recognizedType}`}, ${selfieObject.key}, ${selfieObject.mime}, ${signatureObject.key}, ${fullName}, ${JSON.stringify(bank)}::jsonb, CURRENT_TIMESTAMP)
+        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${frontObject.mime}, ${input.backFileName ?? null}, ${backFilePath}, ${backMimeType}, ${recognizedType}, ${`Selected document: ${recognizedType}`}, ${selfieObject.key}, ${selfieObject.mime}, ${signatureObject.key}, ${fullName}, ${JSON.stringify(bank)}::jsonb, CURRENT_TIMESTAMP)
     `;
       });
 
@@ -195,7 +198,9 @@ export class KycService {
     const normalized = typeof value === 'string' ? value.trim() : '';
     if (
       !normalized ||
-      normalized.length > 11_200_000 ||
+      // 15 MiB decoded is approximately 20 MiB of base64. Keep a small
+      // margin for padding while the per-file byte checks enforce the limit.
+      normalized.length > 21_000_000 ||
       normalized.length % 4 !== 0 ||
       !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)
     ) {
@@ -234,7 +239,7 @@ export class KycService {
       FROM "kyc_submissions" k
       JOIN "users" u ON u."id" = k."userId"
       WHERE k."businessUserId" = ${businessUserId}
-      ORDER BY k."createdAt" DESC
+      ORDER BY CASE WHEN k."status" = 'PENDING' THEN 0 ELSE 1 END, k."createdAt" DESC
     `;
 
     return rows.map(
@@ -285,7 +290,7 @@ export class KycService {
             : file.filePath;
     const selectedName =
       side === 'selfie'
-        ? `selfie.${file.selfieMimeType === 'image/png' ? 'png' : file.selfieMimeType === 'image/webp' ? 'webp' : 'jpg'}`
+        ? `selfie.${file.selfieMimeType === 'image/png' ? 'png' : file.selfieMimeType === 'image/webp' ? 'webp' : file.selfieMimeType === 'image/heic' ? 'heic' : file.selfieMimeType === 'image/heif' ? 'heif' : 'jpg'}`
         : side === 'signature'
           ? 'signature.png'
           : isBack
@@ -428,7 +433,7 @@ export class KycService {
 
   private safeExtension(fileName: string) {
     const extension = extname(fileName).toLowerCase();
-    const allowed = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp']);
+    const allowed = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']);
 
     return allowed.has(extension) ? extension : '.bin';
   }
@@ -440,6 +445,8 @@ export class KycService {
     if (extension === '.jpg' || extension === '.jpeg') return 'image/jpeg';
     if (extension === '.png') return 'image/png';
     if (extension === '.webp') return 'image/webp';
+    if (extension === '.heic') return 'image/heic';
+    if (extension === '.heif') return 'image/heif';
 
     return 'application/octet-stream';
   }

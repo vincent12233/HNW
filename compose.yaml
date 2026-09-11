@@ -9,7 +9,9 @@ services:
       POSTGRES_PASSWORD: hnw_dev_password
       POSTGRES_DB: hnw_trading
     ports:
-      - "127.0.0.1:5433:5432"
+      # The local development PostgreSQL uses 5433 on this machine.
+      # Keep Docker's database reachable for diagnostics without competing for that port.
+      - "127.0.0.1:15433:5432"
     volumes:
       - hnw_postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -30,9 +32,10 @@ services:
       DATABASE_URL: postgresql://hnw_user:hnw_dev_password@postgres:5432/hnw_trading?schema=public
       SHADOW_DATABASE_URL: postgresql://hnw_user:hnw_dev_password@postgres:5432/hnw_trading_shadow?schema=public
       PORT: "3000"
+      CORS_ORIGINS: "${CORS_ORIGINS:-http://localhost:3001,http://localhost:3002,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007,http://192.168.1.150:3001,http://192.168.1.150:3002,http://192.168.1.150:3004,http://192.168.1.150:3005,http://192.168.1.150:3006,http://192.168.1.150:3007}"
       PRIVATE_OBJECT_ROOT: /app/private-objects
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     volumes:
       - private_objects:/app/private-objects
     depends_on:
@@ -44,6 +47,55 @@ services:
       timeout: 5s
       retries: 12
       start_period: 30s
+
+  client:
+    build:
+      context: ./apps/client
+      dockerfile: Dockerfile
+      args:
+        API_BASE_URL: "${CLIENT_API_BASE_URL:-/api}"
+        ALLOW_INSECURE_API: "${CLIENT_ALLOW_INSECURE_API:-true}"
+    restart: unless-stopped
+    ports: ["3001:80"]
+    depends_on: { api: { condition: service_healthy } }
+
+  admin:
+    build: ./apps/admin
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      PORT: "3002"
+      NEXT_PUBLIC_BACKEND_ROLE: ADMIN
+    ports: ["3002:3002"]
+    depends_on: { api: { condition: service_healthy } }
+
+  manager:
+    build: ./apps/admin
+    restart: unless-stopped
+    environment: { NODE_ENV: production, PORT: "3004", NEXT_PUBLIC_BACKEND_ROLE: MANAGER }
+    ports: ["3004:3004"]
+    depends_on: { api: { condition: service_healthy } }
+
+  finance:
+    build: ./apps/admin
+    restart: unless-stopped
+    environment: { NODE_ENV: production, PORT: "3005", NEXT_PUBLIC_BACKEND_ROLE: FINANCE }
+    ports: ["3005:3005"]
+    depends_on: { api: { condition: service_healthy } }
+
+  business:
+    build: ./apps/admin
+    restart: unless-stopped
+    environment: { NODE_ENV: production, PORT: "3006", NEXT_PUBLIC_BACKEND_ROLE: BUSINESS }
+    ports: ["3006:3006"]
+    depends_on: { api: { condition: service_healthy } }
+
+  support:
+    build: ./apps/admin
+    restart: unless-stopped
+    environment: { NODE_ENV: production, PORT: "3007", NEXT_PUBLIC_BACKEND_ROLE: SUPPORT }
+    ports: ["3007:3007"]
+    depends_on: { api: { condition: service_healthy } }
 
 volumes:
   hnw_postgres_data:

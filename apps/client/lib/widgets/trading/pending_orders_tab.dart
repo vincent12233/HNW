@@ -1,3 +1,4 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -25,12 +26,12 @@ class PendingOrdersTab extends StatelessWidget {
                 color: Colors.black38,
               ),
               SizedBox(height: 16),
-              Text(
+              AppText(
                 'No pending orders',
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 8),
-              Text(
+              AppText(
                 'Open orders waiting for execution will appear here.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.black54),
@@ -53,8 +54,8 @@ class PendingOrdersTab extends StatelessWidget {
             : AppConfig.lossColor;
 
         final orderType = order.orderType == PendingOrderType.market
-            ? 'MARKET'
-            : 'LIMIT';
+            ? 'Market Order'
+            : 'Limit Order';
 
         return Container(
           padding: const EdgeInsets.all(16),
@@ -76,7 +77,7 @@ class PendingOrdersTab extends StatelessWidget {
                       color: sideColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: Text(
+                    child: AppText(
                       order.isBuy ? 'BUY' : 'SELL',
                       style: TextStyle(
                         color: sideColor,
@@ -90,14 +91,14 @@ class PendingOrdersTab extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AppText(
                           order.symbol,
                           style: const TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        Text(
+                        AppText(
                           order.exchange,
                           style: const TextStyle(
                             color: Colors.black45,
@@ -116,7 +117,7 @@ class PendingOrdersTab extends StatelessWidget {
                       color: const Color(0xFFFFF7E6),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Text(
+                    child: const AppText(
                       'PENDING',
                       style: TextStyle(
                         color: Color(0xFFB45309),
@@ -130,9 +131,13 @@ class PendingOrdersTab extends StatelessWidget {
               const Divider(height: 24),
               Row(
                 children: [
-                  Expanded(child: _value('Qty', '${order.quantity}')),
-                  Expanded(child: _value('Price', formatPrice(order.price))),
-                  Expanded(child: _value('Type', orderType)),
+                  Expanded(
+                    child: _value('Order Quantity', '${order.quantity}'),
+                  ),
+                  Expanded(
+                    child: _value('Order Price', formatPrice(order.price)),
+                  ),
+                  Expanded(child: _value('Order Type', orderType)),
                 ],
               ),
               if (onCancel != null) ...[
@@ -143,7 +148,7 @@ class PendingOrdersTab extends StatelessWidget {
                     onPressed: () {
                       onCancel!(order);
                     },
-                    child: const Text('Cancel Order'),
+                    child: const AppText('Cancel Order'),
                   ),
                 ),
               ],
@@ -158,12 +163,12 @@ class PendingOrdersTab extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
       ],
     );
   }

@@ -252,7 +252,8 @@ export class MarketDataService {
           symbol: item.symbol,
           exchange: item.exchange,
           name: item.name,
-          logoUrl: item.logoUrl,
+          logoUrl: item.logoUrl || (this.config.get<string>('STOCK_LOGO_PROVIDER') !== 'none' && /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(item.isin || '')
+            ? `${this.config.get<string>('STOCK_LOGO_BASE_URL') || 'https://api.elbstream.com/logos/isin'}/${encodeURIComponent(item.isin)}?format=png` : null),
           category: item.category,
           displayOrder: item.displayOrder,
           price: item.quote.lastPrice,

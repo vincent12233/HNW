@@ -1,5 +1,9 @@
+import '../widgets/app_page_scaffold.dart';
+import '../l10n/app_language.dart';
 import 'dart:typed_data';
+import 'dart:async';
 import 'package:file_picker/file_picker.dart';
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -24,9 +28,11 @@ class KycUploadPage extends StatefulWidget {
 class _KycUploadPageState extends State<KycUploadPage> {
   final authService = AuthService();
   final _scrollController = ScrollController();
+  Timer? _statusTimer;
 
   @override
   void dispose() {
+    _statusTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
@@ -62,17 +68,35 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Future<void> _loadStatus() async {
+    final completer = Completer<Map<String, dynamic>>();
+    _statusTimer = Timer(const Duration(seconds: 8), () {
+      if (!completer.isCompleted) {
+        completer.completeError(
+          TimeoutException('KYC status request timed out'),
+        );
+      }
+    });
+    authService
+        .kycDetails(accessToken: widget.accessToken)
+        .then((status) {
+          if (!completer.isCompleted) completer.complete(status);
+        })
+        .catchError((error, stack) {
+          if (!completer.isCompleted) completer.completeError(error, stack);
+        });
     try {
-      final status = await authService.kycDetails(
-        accessToken: widget.accessToken,
-      );
-      if (mounted)
+      final status = await completer.future;
+      if (mounted) {
         setState(() {
           existingStatus = status['status']?.toString();
           reviewNote = status['reviewNote']?.toString();
         });
+      }
     } catch (e) {
       if (mounted) setState(() => errorText = clientErrorMessage(e));
+    } finally {
+      _statusTimer?.cancel();
+      _statusTimer = null;
     }
   }
 
@@ -80,13 +104,22 @@ class _KycUploadPageState extends State<KycUploadPage> {
       selectedFile != null &&
       (documentType != 'AADHAAR' || selectedBackFile != null);
 
+  int get completedSteps => [
+    fullName.isNotEmpty,
+    documentsReady,
+    selfieFile != null,
+    signatureFile != null,
+    bankDetails != null,
+    step == 5,
+  ].where((value) => value).length;
+
   @override
   Widget build(BuildContext context) => PopScope(
     canPop: !isSubmitting && step == 0,
     onPopInvokedWithResult: (didPop, result) {
       if (!didPop && !isSubmitting && step > 0) _goTo(step - 1);
     },
-    child: Scaffold(
+    child: AppPageScaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
         leading: BackButton(
@@ -100,7 +133,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                   }
                 },
         ),
-        title: Text(
+        title: AppText(
           [
             'KYC Verification',
             documentType == 'PAN' ? 'Upload PAN Card' : 'Aadhaar Verification',
@@ -130,17 +163,17 @@ class _KycUploadPageState extends State<KycUploadPage> {
                       : 'Your account has been verified.',
                 ),
                 const SizedBox(height: 20),
-                if (reviewNote != null) Text(reviewNote!),
+                if (reviewNote != null) AppText(reviewNote!),
                 TextButton.icon(
                   onPressed: _loadStatus,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Refresh Status'),
+                  label: const AppText('Refresh Status'),
                 ),
               ] else ...[
                 if (existingStatus == 'REJECTED')
                   Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: Text(
+                    child: AppText(
                       reviewNote ??
                           'Please update your documents and submit again.',
                       style: const TextStyle(color: AppConfig.lossColor),
@@ -164,7 +197,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
+                            AppText(
                               step == 0
                                   ? 'Verification in Progress'
                                   : step == 1
@@ -179,7 +212,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            Text(
+                            AppText(
                               step == 0
                                   ? 'Securely verify your identity to access your account.'
                                   : step == 2
@@ -204,35 +237,25 @@ class _KycUploadPageState extends State<KycUploadPage> {
                     alignment: WrapAlignment.spaceBetween,
                     runSpacing: 8,
                     children: [
-                      const Text(
+                      const AppText(
                         'Verification Progress',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 12,
                         ),
                       ),
-                      Flexible(
-                        child: Text(
-                          '${[fullName.isNotEmpty, documentsReady, selfieFile != null, signatureFile != null, bankDetails != null].where((value) => value).length} of 6 completed',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: AppConfig.primaryColor,
-                          ),
+                      AppText(
+                        '$completedSteps of 6 completed',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppConfig.primaryColor,
                         ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 8),
                   LinearProgressIndicator(
-                    value:
-                        [
-                          fullName.isNotEmpty,
-                          documentsReady,
-                          selfieFile != null,
-                          signatureFile != null,
-                          bankDetails != null,
-                        ].where((value) => value).length /
-                        6,
+                    value: completedSteps / 6,
                     minHeight: 4,
                     borderRadius: BorderRadius.circular(4),
                     backgroundColor: const Color(0xFFEBF0FA),
@@ -240,7 +263,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                   const SizedBox(height: 24),
                 ],
                 if (step == 0) ...[
-                  const Text(
+                  const AppText(
                     'Choose Identity Document',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
@@ -267,7 +290,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                     ],
                   ),
                   const SizedBox(height: 28),
-                  const Text(
+                  const AppText(
                     'Verification Steps',
                     style: TextStyle(fontWeight: FontWeight.w700),
                   ),
@@ -315,12 +338,12 @@ class _KycUploadPageState extends State<KycUploadPage> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
+                          AppText(
                             '1  Front',
                             style: TextStyle(color: AppConfig.primaryColor),
                           ),
-                          Text('2  Back'),
-                          Text('3  Review'),
+                          AppText('2  Back'),
+                          AppText('3  Review'),
                         ],
                       ),
                     ),
@@ -355,36 +378,36 @@ class _KycUploadPageState extends State<KycUploadPage> {
                       fit: BoxFit.contain,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
+                    const AppText(
                       'Signature saved',
                       style: TextStyle(color: AppConfig.gainColor),
                     ),
                     TextButton.icon(
                       onPressed: () => setState(() => signatureFile = null),
                       icon: const Icon(Icons.refresh),
-                      label: const Text('Retake Signature'),
+                      label: const AppText('Retake Signature'),
                     ),
                   ],
                 ] else ...[
                   ListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Personal Details'),
-                    subtitle: Text(fullName),
+                    title: const AppText('Personal Details'),
+                    subtitle: AppText(fullName),
                     trailing: TextButton(
                       onPressed: _personalDetails,
-                      child: const Text('Edit'),
+                      child: const AppText('Edit'),
                     ),
                   ),
                   if (bankDetails != null)
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Bank Details'),
-                      subtitle: Text(
+                      title: const AppText('Bank Details'),
+                      subtitle: AppText(
                         '${bankDetails!['bankName']}\n${bankDetails!['accountHolder']}\n${bankDetails!['accountNumber']}',
                       ),
                       trailing: TextButton(
                         onPressed: _bankDetails,
-                        child: const Text('Edit'),
+                        child: const AppText('Edit'),
                       ),
                     ),
                   _reviewFile(selfieFile!, 'Selfie', editStep: 2),
@@ -396,7 +419,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                   if (selectedBackFile != null && documentType == 'AADHAAR')
                     _reviewFile(selectedBackFile!, 'Aadhaar back'),
                   const SizedBox(height: 16),
-                  const Text(
+                  const AppText(
                     'Check that all details are readable before submitting. Uploading documents does not mean your KYC has been approved.',
                     style: TextStyle(
                       color: AppConfig.textSecondaryColor,
@@ -429,7 +452,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
               if (errorText != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
-                  child: Text(
+                  child: AppText(
                     errorText!,
                     style: const TextStyle(color: AppConfig.lossColor),
                   ),
@@ -478,7 +501,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                           color: Colors.white,
                         ),
                       )
-                    : Text(
+                    : AppText(
                         existingStatus == 'PENDING' ||
                                 existingStatus == 'APPROVED'
                             ? 'Back to Login'
@@ -500,7 +523,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                   ),
                   SizedBox(width: 6),
                   Flexible(
-                    child: Text(
+                    child: AppText(
                       'Used for identity verification',
                       style: TextStyle(
                         fontSize: 11,
@@ -565,9 +588,9 @@ class _KycUploadPageState extends State<KycUploadPage> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            AppText(title, style: const TextStyle(fontWeight: FontWeight.w700)),
             const SizedBox(height: 5),
-            Text(subtitle, style: const TextStyle(fontSize: 11)),
+            AppText(subtitle, style: const TextStyle(fontSize: 11)),
           ],
         ),
       ),
@@ -585,11 +608,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
     visualDensity: VisualDensity.compact,
     contentPadding: EdgeInsets.zero,
     leading: Icon(icon, color: AppConfig.primaryColor, size: 22),
-    title: Text(
+    title: AppText(
       title,
       style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
     ),
-    subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
+    subtitle: AppText(subtitle, style: const TextStyle(fontSize: 11)),
     trailing: Icon(
       complete ? Icons.check_circle : Icons.chevron_right,
       color: complete ? AppConfig.gainColor : AppConfig.neutralColor,
@@ -607,12 +630,12 @@ class _KycUploadPageState extends State<KycUploadPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        AppText(
           '$label (Required)',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
         ),
         const SizedBox(height: 6),
-        const Text(
+        const AppText(
           'Keep all corners visible and avoid glare.',
           style: TextStyle(fontSize: 11),
         ),
@@ -629,12 +652,18 @@ class _KycUploadPageState extends State<KycUploadPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child:
-                file?.bytes != null && file!.extension?.toLowerCase() != 'pdf'
+                file?.bytes != null &&
+                    const {
+                      'jpg',
+                      'jpeg',
+                      'png',
+                      'webp',
+                    }.contains(file!.extension?.toLowerCase())
                 ? Image.memory(
                     file.bytes!,
                     fit: BoxFit.contain,
                     errorBuilder: (_, _, _) =>
-                        const Center(child: Text('Preview unavailable')),
+                        const Center(child: AppText('Preview unavailable')),
                   )
                 : Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -647,7 +676,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                         color: AppConfig.primaryColor,
                       ),
                       const SizedBox(height: 10),
-                      Text(
+                      AppText(
                         file?.name ?? 'Add $label',
                         textAlign: TextAlign.center,
                       ),
@@ -659,12 +688,12 @@ class _KycUploadPageState extends State<KycUploadPage> {
         FilledButton.icon(
           onPressed: isSubmitting ? null : () => _takePhoto(back: back),
           icon: const Icon(Icons.photo_camera_outlined, size: 18),
-          label: Text('Capture ${back ? 'Back' : 'Front'}'),
+          label: AppText('Capture ${back ? 'Back' : 'Front'}'),
         ),
         const SizedBox(height: 6),
-        Text(
+        AppText(
           file == null
-              ? 'PDF, JPG, PNG or WEBP · Maximum 8 MB'
+              ? 'PDF, JPG, PNG, WEBP, HEIC or HEIF · Maximum 15 MB'
               : '${file.name} · ${(file.size / 1024).toStringAsFixed(1)} KB',
           style: const TextStyle(
             fontSize: 10,
@@ -679,11 +708,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
       ListTile(
         contentPadding: EdgeInsets.zero,
         leading: const Icon(Icons.check_circle, color: AppConfig.gainColor),
-        title: Text(title),
-        subtitle: Text(file.name),
+        title: AppText(title),
+        subtitle: AppText(file.name),
         trailing: TextButton(
           onPressed: isSubmitting ? null : () => _goTo(editStep),
-          child: const Text('Edit'),
+          child: const AppText('Edit'),
         ),
       );
   Widget _selfiePanel() => Column(
@@ -713,7 +742,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
         ),
       ),
       const SizedBox(height: 20),
-      const Text(
+      const AppText(
         'Take a clear selfie in good lighting. Keep your face fully visible and remove glasses, hats and masks.',
         style: TextStyle(fontSize: 12, height: 1.6),
       ),
@@ -721,10 +750,10 @@ class _KycUploadPageState extends State<KycUploadPage> {
       FilledButton.icon(
         onPressed: () => _pickSelfie(ImageSource.camera),
         icon: const Icon(Icons.photo_camera_outlined),
-        label: const Text('Capture Selfie'),
+        label: const AppText('Capture Selfie'),
       ),
       const SizedBox(height: 8),
-      const Text(
+      const AppText(
         'Maximum 2 MB · Submitted for manual review',
         style: TextStyle(fontSize: 11),
       ),
@@ -738,7 +767,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
           context,
           MaterialPageRoute(builder: (_) => const SelfieCameraPage()),
         );
-        if (bytes != null && mounted)
+        if (bytes != null && mounted) {
           setState(() {
             selfieFile = PlatformFile(
               name: 'selfie.png',
@@ -747,6 +776,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
             );
             errorText = null;
           });
+        }
         return;
       }
       final photo = await ImagePicker().pickImage(
@@ -821,7 +851,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     final result = await FilePicker.platform.pickFiles(
       withData: true,
       type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp'],
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
     );
 
     if (!mounted || result == null || result.files.isEmpty) {
@@ -853,26 +883,27 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Future<void> _captureDocument({bool back = false}) async {
-    final photo = await ImagePicker().pickImage(
-      source: ImageSource.camera,
-      imageQuality: 88,
-      maxWidth: 2400,
+    final bytes = await Navigator.of(context).push<Uint8List>(
+      MaterialPageRoute(
+        builder: (_) => SelfieCameraPage(
+          lensDirection: CameraLensDirection.back,
+          title: 'Capture ${back ? 'Back' : 'Front'}',
+          captureLabel: 'Capture ${back ? 'Back' : 'Front'}',
+          maxBytes: 15 * 1024 * 1024,
+          preserveOriginal: true,
+        ),
+      ),
     );
 
-    if (photo == null) return;
-    final bytes = await photo.readAsBytes();
+    if (bytes == null) return;
     if (!mounted) return;
-    if (bytes.length > 8 * 1024 * 1024) {
-      setState(() => errorText = 'Each KYC file must be 8 MB or smaller');
+    if (bytes.length > 15 * 1024 * 1024) {
+      setState(() => errorText = 'Each KYC file must be 15 MB or smaller');
       return;
     }
     setState(() {
       final file = PlatformFile(
-        name:
-            photo.name.toLowerCase().endsWith('.jpg') ||
-                photo.name.toLowerCase().endsWith('.jpeg')
-            ? photo.name
-            : '${DateTime.now().millisecondsSinceEpoch}.jpg',
+        name: '${DateTime.now().millisecondsSinceEpoch}.jpg',
         size: bytes.length,
         bytes: bytes,
       );
@@ -887,16 +918,26 @@ class _KycUploadPageState extends State<KycUploadPage> {
 
   bool _validateFile(PlatformFile file) {
     final extension = file.extension?.toLowerCase() ?? '';
-    if (!const {'pdf', 'jpg', 'jpeg', 'png', 'webp'}.contains(extension)) {
-      setState(() => errorText = 'Choose a PDF, JPG, PNG or WebP file');
+    if (!const {
+      'pdf',
+      'jpg',
+      'jpeg',
+      'png',
+      'webp',
+      'heic',
+      'heif',
+    }.contains(extension)) {
+      setState(
+        () => errorText = 'Choose a PDF, JPG, PNG, WebP, HEIC or HEIF file',
+      );
       return false;
     }
     if (file.bytes == null || file.bytes!.isEmpty) {
       setState(() => errorText = 'Unable to read the selected file');
       return false;
     }
-    if (file.size > 8 * 1024 * 1024) {
-      setState(() => errorText = 'Each KYC file must be 8 MB or smaller');
+    if (file.size > 15 * 1024 * 1024) {
+      setState(() => errorText = 'Each KYC file must be 15 MB or smaller');
       return false;
     }
     return true;
@@ -931,7 +972,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     });
 
     try {
-      final recognizedType = await authService.submitKyc(
+      await authService.submitKyc(
         accessToken: widget.accessToken,
         documentType: documentType,
         fullName: fullName,
@@ -961,16 +1002,26 @@ class _KycUploadPageState extends State<KycUploadPage> {
       await showDialog<void>(
         context: context,
         builder: (dialogContext) => AlertDialog(
-          title: const Text('KYC Submitted'),
-          content: Text(
-            'Your $recognizedType, selfie, signature and bank details have been submitted to your assigned business representative for review.',
+          icon: const Icon(
+            Icons.hourglass_top_rounded,
+            size: 56,
+            color: Color(0xFF2563EB),
           ),
+          content: const SizedBox(
+            width: 320,
+            child: Text(
+              'Your application has been submitted.\nPlease wait for review.',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 16, height: 1.5),
+            ),
+          ),
+          actionsAlignment: MainAxisAlignment.center,
           actions: [
             FilledButton(
               onPressed: () {
                 Navigator.pop(dialogContext);
               },
-              child: const Text('OK'),
+              child: const AppText('OK'),
             ),
           ],
         ),
@@ -1006,26 +1057,27 @@ class _KycUploadPageState extends State<KycUploadPage> {
     final value = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Personal Details'),
+        title: const AppText('Personal Details'),
         content: TextField(
           controller: controller,
           autofocus: true,
           textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(
-            labelText: 'Full name as on your identity document',
+          decoration: InputDecoration(
+            labelText: tr('Full name as on your identity document'),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            child: const AppText('Cancel'),
           ),
           FilledButton(
             onPressed: () {
-              if (controller.text.trim().length >= 2)
+              if (controller.text.trim().length >= 2) {
                 Navigator.pop(context, controller.text.trim());
+              }
             },
-            child: const Text('Save'),
+            child: const AppText('Save'),
           ),
         ],
       ),

@@ -1,7 +1,7 @@
 "use client";
 
-import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, InputNumber, Modal, Space, Table, Tag, Typography, message } from "antd";
+import { ReloadOutlined, SearchOutlined, SendOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Input, InputNumber, Modal, Popconfirm, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -11,6 +11,9 @@ import { api } from "@/lib/api";
 const { Title, Paragraph, Text } = Typography;
 
 type IpoApplication = {
+  draftQuantity?: number | null;
+  draftPrice?: string | null;
+  publishedAt?: string | null;
   id: string;
   status: string;
   paymentStatus: string;
@@ -40,6 +43,23 @@ export default function BusinessIpoPage() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<React.Key[]>([]);
+  const [publishing, setPublishing] = useState(false);
+  const canPublish = (row: IpoApplication) => row.status === "PENDING" && !row.publishedAt && Number(row.draftQuantity) > 0 && Number(row.draftPrice) > 0;
+
+  async function publish(ids: string[]) {
+    if (publishing || !ids.length) return;
+    setPublishing(true);
+    try {
+      const { data } = await api.post<{published:number;results:{id:string;published:boolean;message?:string}[]}>("/business/my-ipo-applications/publish", {ids});
+      const failed = data.results.filter(row => !row.published);
+      message.success(`已公布 ${data.published} 条申请`);
+      await loadItems();
+      setSelected(failed.map(row=>row.id));
+      if (failed.length) setError(`${failed.length} 条未公布，请检查是否已分配、是否已处理及客户归属后重试。成功的申请不会重复扣款。`);
+    } catch { message.error("公布未完成，请刷新状态确认后重试。"); }
+    finally { setPublishing(false); }
+  }
 
   async function loadItems() {
     setLoading(true);
@@ -47,6 +67,7 @@ export default function BusinessIpoPage() {
     try {
       const response = await api.get<IpoApplication[]>("/business/my-ipo-applications");
       setItems(Array.isArray(response.data) ? response.data : []);
+      setSelected([]);
     } catch (requestError: any) {
       const responseMessage = requestError.response?.data?.message;
       setError(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "IPO 申请加载失败");
@@ -56,20 +77,20 @@ export default function BusinessIpoPage() {
   }
 
   async function allocate(record: IpoApplication) {
-    let quantity = "";
-    let price = record.ipo.issuePrice;
+    let quantity = String(record.draftQuantity ?? "");
+    let price = record.draftPrice || record.ipo.issuePrice;
 
     Modal.confirm({
       title: "分配 IPO",
       content: (
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Text>{record.ipo.symbol} / {record.ipo.companyName}</Text>
-          <Text type="secondary">客户现金：{formatMoney(record.account.cashBalance)}。不足部分会自动生成欠款，未补足不会转入持仓。</Text>
-          <InputNumber min={1} precision={0} style={{ width: "100%" }} placeholder="分配数量" onChange={(value) => { quantity = String(value ?? ""); }} />
+          <Text type="secondary">客户现金：{formatMoney(record.account.cashBalance)}。保存分配不扣款，公布后才执行扣款、欠款及持仓处理。</Text>
+          <InputNumber min={1} precision={0} defaultValue={record.draftQuantity ?? undefined} style={{ width: "100%" }} placeholder="分配数量" onChange={(value) => { quantity = String(value ?? ""); }} />
           <InputNumber min={0.01} precision={2} style={{ width: "100%" }} placeholder="分配价格" defaultValue={Number(price)} onChange={(value) => { price = String(value ?? ""); }} />
         </Space>
       ),
-      okText: "确认分配",
+      okText: "保存分配",
       cancelText: "取消",
       async onOk() {
         if (!Number.isInteger(Number(quantity)) || Number(quantity) <= 0 || !Number.isFinite(Number(price)) || Number(price) <= 0) {
@@ -80,7 +101,7 @@ export default function BusinessIpoPage() {
           quantity: Number(quantity),
           price: Number(price),
         });
-        message.success("IPO 已分配，系统已按规则扣款或生成欠款");
+        message.success("分配已保存，公布后才会扣款");
         await loadItems();
       },
     });
@@ -112,17 +133,18 @@ export default function BusinessIpoPage() {
     { title: "交易账号", key: "account", width: 160, render: (_, record) => record.account.accountNumber },
     { title: "IPO", key: "ipo", width: 230, render: (_, record) => <Space orientation="vertical" size={0}><Text strong>{record.ipo.symbol}</Text><Text type="secondary">{record.ipo.companyName}</Text></Space> },
     { title: "发行价", key: "issuePrice", width: 120, align: "right", render: (_, record) => formatMoney(record.ipo.issuePrice) },
-    { title: "申请状态", dataIndex: "status", width: 120, render: (value) => <Tag color={value === "PENDING" ? "orange" : "blue"}>{value}</Tag> },
-    { title: "付款状态", dataIndex: "paymentStatus", width: 120, render: (value) => <Tag color={value === "PAID" ? "green" : "orange"}>{value}</Tag> },
-    { title: "已分配", dataIndex: "allocatedQuantity", width: 120, render: (value) => value ? `${value} 股` : "-" },
+    { title: "申请状态", width: 120, render: (_, row) => <Tag color={row.status === "PENDING" ? "orange" : "blue"}>{row.status === "PENDING" ? row.draftQuantity ? "待公布" : "待分配" : ({ALLOTTED:"已公布",APPROVED:"已通过",REJECTED:"已拒绝"} as Record<string,string>)[row.status] || "未知状态"}</Tag> },
+    { title: "付款状态", dataIndex: "paymentStatus", width: 120, render: (value, row) => <Tag color={value === "PAID" ? "green" : "orange"}>{row.status === "PENDING" ? "未扣款" : ({PAID:"已付款",PENDING:"待补款",FAILED:"付款失败"} as Record<string,string>)[value] || "未知状态"}</Tag> },
+    { title: "分配数量", width: 120, render: (_, row) => (row.status === "PENDING" ? row.draftQuantity : row.allocatedQuantity) ? `${row.status === "PENDING" ? row.draftQuantity : row.allocatedQuantity} 股` : "-" },
+    { title: "分配单价", width: 120, render: (_, row) => row.draftPrice || row.allocatedPrice ? formatMoney(row.status === "PENDING" ? row.draftPrice : row.allocatedPrice) : "-" },
     { title: "欠款", key: "debt", width: 130, align: "right", render: (_, record) => record.debt ? formatMoney(Number(record.debt.amount) - Number(record.debt.paidAmount)) : "-" },
     { title: "申请时间", dataIndex: "createdAt", width: 180, render: formatDate },
     {
       title: "操作",
       key: "actions",
-      width: 130,
+      width: 190,
       fixed: "right",
-      render: (_, record) => <Button type="primary" size="small" disabled={record.status !== "PENDING"} onClick={() => allocate(record)}>分配</Button>,
+      render: (_, record) => <Space><Button size="small" disabled={publishing || record.status !== "PENDING"} onClick={() => allocate(record)}>{record.draftQuantity ? "修改分配" : "分配"}</Button><Popconfirm title="确认公布并执行扣款？" okText="公布" cancelText="取消" onConfirm={()=>publish([record.id])} disabled={publishing || !canPublish(record)}><Button type="primary" size="small" icon={<SendOutlined/>} disabled={publishing || !canPublish(record)}>公布</Button></Popconfirm></Space>,
     },
   ];
 
@@ -131,15 +153,16 @@ export default function BusinessIpoPage() {
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>IPO 分配</Title>
-          <Paragraph type="secondary">客户提交 IPO 申请后无需填写数量，由业务员在这里分配。系统自动扣款，不足部分生成欠款，补足后自动进入持仓。</Paragraph>
+          <Paragraph type="secondary">先保存分配，再单个或批量公布。公布后自动扣款，不足部分生成欠款，补足后转入持仓。</Paragraph>
         </div>
         {error && <Alert type="error" title={error} showIcon />}
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
             <Input allowClear prefix={<SearchOutlined />} placeholder="搜索客户、手机号、交易账号或 IPO" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 420 }} />
             <Button icon={<ReloadOutlined />} onClick={loadItems} loading={loading}>刷新</Button>
+            <Popconfirm title={`公布所选 ${selected.length} 条申请并执行扣款？`} okText="批量公布" cancelText="取消" onConfirm={()=>publish(selected.map(String))} disabled={!selected.length || publishing}><Button type="primary" icon={<SendOutlined/>} loading={publishing} disabled={!selected.length}>批量公布（{selected.length}）</Button></Popconfirm>
           </Space>
-          <Table<IpoApplication> rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1560 }} pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条 IPO 申请` }} />
+          <Table<IpoApplication> rowKey="id" columns={columns} dataSource={filtered} loading={loading} rowSelection={{selectedRowKeys:selected,onChange:setSelected,getCheckboxProps:row=>({disabled:publishing || !canPublish(row)})}} scroll={{ x: 1760 }} pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条 IPO 申请` }} />
         </Card>
       </Space>
     </AdminShell>

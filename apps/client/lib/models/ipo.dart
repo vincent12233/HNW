@@ -180,15 +180,15 @@ class IpoApplication {
     final rawPaymentStatus =
         json['paymentStatus']?.toString().toUpperCase() ?? 'PENDING';
     final allocatedQuantity = _intValue(json['allocatedQuantity']);
-    final subscriptionPrice =
-        _doubleValue(json['allocatedPrice'] ?? ipo['issuePrice']);
-    final allocatedAmount =
-        _doubleValue(json['allocatedAmount']) > 0
-            ? _doubleValue(json['allocatedAmount'])
-            : allocatedQuantity * subscriptionPrice;
+    final subscriptionPrice = _doubleValue(
+      json['allocatedPrice'] ?? ipo['issuePrice'],
+    );
+    final allocatedAmount = _doubleValue(json['allocatedAmount']) > 0
+        ? _doubleValue(json['allocatedAmount'])
+        : allocatedQuantity * subscriptionPrice;
     final debt = (json['debt'] as Map?)?.cast<String, dynamic>();
-    final outstandingDebt = _doubleValue(debt?['amount']) -
-        _doubleValue(debt?['paidAmount']);
+    final outstandingDebt =
+        _doubleValue(debt?['amount']) - _doubleValue(debt?['paidAmount']);
     final paidAmount = allocatedAmount > 0
         ? (allocatedAmount - (outstandingDebt > 0 ? outstandingDebt : 0))
         : 0.0;
@@ -204,8 +204,8 @@ class IpoApplication {
       paidAmount: rawPaymentStatus == 'PAID' ? allocatedAmount : paidAmount,
       status: rawStatus == 'ALLOTTED'
           ? rawPaymentStatus == 'PAID'
-          ? IpoApplicationStatus.completed
-          : IpoApplicationStatus.allocated
+                ? IpoApplicationStatus.completed
+                : IpoApplicationStatus.allocated
           : rawStatus == 'REJECTED'
           ? IpoApplicationStatus.notAllotted
           : IpoApplicationStatus.applied,

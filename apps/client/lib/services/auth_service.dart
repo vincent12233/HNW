@@ -23,6 +23,7 @@ class AuthService {
   Future<AuthSession> login({
     required String phone,
     required String password,
+    String? verificationCode,
   }) async {
     final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/login');
 
@@ -36,6 +37,8 @@ class AuthService {
             body: jsonEncode({
               'phone': _normalizeIndianPhone(phone),
               'password': password,
+              if (verificationCode != null && verificationCode.isNotEmpty)
+                'verificationCode': verificationCode,
             }),
           )
           .timeout(const Duration(seconds: 10));
@@ -48,6 +51,9 @@ class AuthService {
     final decoded = _decodeJson(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
+      if (decoded is Map && decoded['twoFactorRequired'] == true) {
+        throw const TwoFactorRequiredException();
+      }
       if (decoded is Map && decoded['kycToken'] is String) {
         throw KycRequiredException(decoded['kycToken'] as String);
       }
@@ -157,10 +163,11 @@ class AuthService {
         )
         .timeout(const Duration(seconds: 12));
     final decoded = _decodeJson(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AuthException(
         _englishApiMessage(decoded, 'Unable to link Google account'),
       );
+    }
   }
 
   Future<String> register({
@@ -239,8 +246,8 @@ class AuthService {
             },
             body: jsonEncode({
               'documentType': documentType,
-              if (fullName != null) 'fullName': fullName,
-              if (bankDetails != null) 'bankDetails': bankDetails,
+              'fullName': ?fullName,
+              'bankDetails': ?bankDetails,
               'selfieContentBase64': base64Encode(selfieFile.bytes!),
               'selfieMimeType': _mimeTypeForFile(selfieFile.name),
               'signatureContentBase64': base64Encode(signatureFile.bytes!),
@@ -285,8 +292,9 @@ class AuthService {
             headers: {'Authorization': 'Bearer ${session.accessToken}'},
           )
           .timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300)
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         return 'NOT_SUBMITTED';
+      }
       final decoded = _decodeJson(response.body);
       return decoded is Map
           ? decoded['status']?.toString().toUpperCase() ?? 'NOT_SUBMITTED'
@@ -306,8 +314,9 @@ class AuthService {
         )
         .timeout(const Duration(seconds: 12));
     final decoded = _decodeJson(response.body);
-    if (response.statusCode != 200 || decoded is! Map)
+    if (response.statusCode != 200 || decoded is! Map) {
       throw const AuthException('Unable to load verification status');
+    }
     return Map<String, dynamic>.from(decoded);
   }
 
@@ -352,6 +361,7 @@ class AuthService {
   }
 
   Future<WithdrawalRequest> submitWithdrawal({
+    required String withdrawalPin,
     required double amount,
     required String bankName,
     required String accountNumber,
@@ -376,6 +386,7 @@ class AuthService {
           },
           body: jsonEncode({
             'amount': amount,
+            'withdrawalPin': withdrawalPin,
             'bankName': bankName,
             'accountNumber': accountNumber,
             'ifscCode': ifscCode,
@@ -510,9 +521,9 @@ class AuthService {
           body: jsonEncode({
             'conversationId': conversationId,
             'content': content.trim(),
-            if (attachmentName != null) 'attachmentName': attachmentName,
-            if (attachmentType != null) 'attachmentType': attachmentType,
-            if (attachmentBase64 != null) 'attachmentBase64': attachmentBase64,
+            'attachmentName': ?attachmentName,
+            'attachmentType': ?attachmentType,
+            'attachmentBase64': ?attachmentBase64,
           }),
         )
         .timeout(const Duration(seconds: 10));
@@ -545,10 +556,12 @@ class AuthService {
   Future<bool> supportOnline() async {
     final session = await restoreSession();
     if (session == null) return false;
-    final response = await http.get(
-      Uri.parse('${AppConfig.apiBaseUrl}/support/status'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .get(
+          Uri.parse('${AppConfig.apiBaseUrl}/support/status'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 6));
     if (response.statusCode < 200 || response.statusCode >= 300) return false;
     final decoded = _decodeJson(response.body);
     return decoded is Map && decoded['online'] == true;
@@ -558,10 +571,12 @@ class AuthService {
     final preferences = await SharedPreferences.getInstance();
     var saved = await _secureStorage.read(key: _sessionKey);
     // One-time migration from legacy plaintext preferences.
-    saved ??= preferences.getString(_sessionKey);
-    if (saved != null && preferences.containsKey(_sessionKey)) {
+    final legacySaved = preferences.getString(_sessionKey);
+    saved ??= legacySaved;
+    if (saved != null &&
+        legacySaved != null &&
+        await _secureStorage.read(key: _sessionKey) == null) {
       await _secureStorage.write(key: _sessionKey, value: saved);
-      await preferences.remove(_sessionKey);
     }
 
     if (saved == null) {
@@ -581,10 +596,11 @@ class AuthService {
 
   Future<void> saveSession(AuthSession session) async {
     final preferences = await SharedPreferences.getInstance();
-    await _secureStorage.write(
-      key: _sessionKey,
-      value: jsonEncode(session.toJson()),
-    );
+    final encoded = jsonEncode(session.toJson());
+    await _secureStorage.write(key: _sessionKey, value: encoded);
+    // Keep a web-compatible fallback for local HTTP deployments where the
+    // secure-storage backend may not persist across a browser refresh.
+    await preferences.setString(_sessionKey, encoded);
     await preferences.setString('account_name', session.fullName);
     await preferences.setString('account_phone', session.phone);
   }
@@ -608,10 +624,12 @@ class AuthService {
   Future<void> enableBiometricQuickLogin() async {
     final session = await restoreSession();
     if (session == null) throw AuthException('Please sign in again');
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/auth/biometric/token'),
-      headers: {'Authorization': 'Bearer ${session.accessToken}'},
-    );
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/auth/biometric/token'),
+          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+        )
+        .timeout(const Duration(seconds: 10));
     final decoded = _decodeJson(response.body);
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
@@ -641,11 +659,13 @@ class AuthService {
   }
 
   Future<AuthSession> biometricLogin(String biometricToken) async {
-    final response = await http.post(
-      Uri.parse('${AppConfig.apiBaseUrl}/auth/biometric/login'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'biometricToken': biometricToken}),
-    );
+    final response = await http
+        .post(
+          Uri.parse('${AppConfig.apiBaseUrl}/auth/biometric/login'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'biometricToken': biometricToken}),
+        )
+        .timeout(const Duration(seconds: 12));
     final decoded = _decodeJson(response.body);
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
@@ -661,6 +681,8 @@ class AuthService {
 
   Future<void> clearSession() async {
     await _secureStorage.delete(key: _sessionKey);
+    final preferences = await SharedPreferences.getInstance();
+    await preferences.remove(_sessionKey);
     await SaleSmartlyService().clearUser();
   }
 }
@@ -685,8 +707,9 @@ List<WithdrawalRequest> _withdrawalsFromRows(List<dynamic> rows) {
 }
 
 String _normalizeIndianPhone(String value) {
-  if (value.trim().startsWith('+'))
+  if (value.trim().startsWith('+')) {
     return '+${value.replaceAll(RegExp(r'\D'), '')}';
+  }
   final digits = value.replaceAll(RegExp(r'\D'), '');
 
   if (digits.length == 12 && digits.startsWith('91')) {
@@ -705,6 +728,8 @@ String _mimeTypeForFile(String fileName) {
   }
   if (lowerName.endsWith('.png')) return 'image/png';
   if (lowerName.endsWith('.webp')) return 'image/webp';
+  if (lowerName.endsWith('.heic')) return 'image/heic';
+  if (lowerName.endsWith('.heif')) return 'image/heif';
 
   return 'application/octet-stream';
 }
@@ -719,10 +744,17 @@ dynamic _decodeJson(String body) {
   }
 }
 
-class AuthException implements Exception {
-  const AuthException(this.message);
+class TwoFactorRequiredException implements Exception {
+  const TwoFactorRequiredException();
+}
 
-  final String message;
+class AuthException implements Exception {
+  const AuthException(this._message);
+
+  final String _message;
+  String get message => RegExp(r'[\u3400-\u9fff]').hasMatch(_message)
+      ? 'Unable to complete this request. Please try again.'
+      : _message;
 
   @override
   String toString() => message;

@@ -8,6 +8,10 @@ import { AllExceptionsFilter } from './observability/all-exceptions.filter';
 type RateEntry = { count: number; resetAt: number };
 const rateEntries = new Map<string, RateEntry>();
 
+function isLocalDevelopmentOrigin(origin: string) {
+  return /^https?:\/\/(?:localhost|127\.0\.0\.1|10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)?\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3})(?::\d+)?$/i.test(origin);
+}
+
 function validateProductionEnvironment() {
   if (process.env.NODE_ENV !== 'production') return;
   const requiredSecrets = [
@@ -53,12 +57,22 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
   res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()');
   res.setHeader('cross-origin-resource-policy', 'same-site');
   res.setHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
+  // Early middleware errors must remain readable by allowed browser clients.
+  const requestOrigin = req.header('origin');
+  const configuredOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map(value => value.trim());
+  if (requestOrigin && (configuredOrigins.includes(requestOrigin) ||
+      (process.env.NODE_ENV !== 'production' && isLocalDevelopmentOrigin(requestOrigin)))) {
+    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+    res.setHeader('Access-Control-Allow-Credentials', 'true');
+    res.vary('Origin');
+  }
+  if (req.method === 'OPTIONS') { next(); return; }
   // Staff sessions use an HttpOnly cookie. Require an explicitly allowed
   // browser origin for state-changing cookie requests to prevent CSRF.
   if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.headers.cookie?.match(/(?:^|;\s*)staff_access(?:_[a-z]+)?=/)) {
     const origin = req.header('origin');
     const allowedOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
-    const localOrigin = process.env.NODE_ENV !== 'production' && !!origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+    const localOrigin = process.env.NODE_ENV !== 'production' && !!origin && isLocalDevelopmentOrigin(origin);
     if (!origin || (!allowedOrigins.includes(origin) && !localOrigin)) {
       res.status(403).json({ statusCode: 403, message: 'Origin verification failed', requestId });
       return;
@@ -70,7 +84,7 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
 
   const now = Date.now();
   const windowMs = 60_000;
-  const key = `${req.ip}:${req.path === '/auth/recovery/messages' ? 'recovery-chat' : req.path.startsWith('/auth/') ? 'auth' : 'api'}`;
+  const key = `${req.ip}:${req.method}:${req.path}`;
   const current = rateEntries.get(key);
   const entry = !current || current.resetAt <= now
     ? { count: 0, resetAt: now + windowMs }
@@ -100,10 +114,10 @@ async function bootstrap() {
   app.getHttpAdapter().getInstance().set('trust proxy', 1);
   app.use(securityMiddleware);
 
-  // KYC includes two ID files (8 MB each), a selfie (2 MB) and a signature (1 MB). Base64 increases payload size by
+  // KYC includes two ID files (15 MB each), a selfie (2 MB) and a signature (1 MB). Base64 increases payload size by
   // roughly one third; KycService enforces each individual file limit.
-  app.use(json({ limit: '28mb' }));
-  app.use(urlencoded({ extended: true, limit: '28mb' }));
+  app.use(json({ limit: '48mb' }));
+  app.use(urlencoded({ extended: true, limit: '48mb' }));
 
   const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
     .split(',')
@@ -117,8 +131,7 @@ async function bootstrap() {
         return;
       }
 
-      const isLocalDevOrigin = process.env.NODE_ENV !== 'production' &&
-        /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin);
+      const isLocalDevOrigin = process.env.NODE_ENV !== 'production' && isLocalDevelopmentOrigin(origin);
 
       if (isLocalDevOrigin || allowedOrigins.includes(origin)) {
         callback(null, true);
@@ -139,7 +152,7 @@ async function bootstrap() {
   );
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(process.env.PORT ?? 3000, process.env.HOST ?? '0.0.0.0');
 }
 
 void bootstrap();

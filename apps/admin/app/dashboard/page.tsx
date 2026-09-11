@@ -13,10 +13,12 @@ import {
   WarningOutlined,
 } from "@ant-design/icons";
 import { Alert, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
+import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import CurrentInviteCode from "@/components/CurrentInviteCode";
 import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
@@ -170,15 +172,16 @@ export default function DashboardPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("adminUser");
-
-    if (storedUser) {
+    async function loadStoredUser() {
+      const storedUser = localStorage.getItem("adminUser");
+      if (!storedUser) return;
       try {
         setUser(JSON.parse(storedUser));
       } catch {
         setUser(null);
       }
     }
+    void loadStoredUser();
   }, []);
 
   useEffect(() => {
@@ -190,7 +193,7 @@ export default function DashboardPage() {
       setError("");
 
       try {
-        if (currentUser.role === "BUSINESS") {
+        if (currentUser.role === "BUSINESS" || currentUser.role === "SUPPORT") {
           const [dashboardResponse, riskResponse] = await Promise.all([
             api.get<BusinessDashboard>("/business/my-dashboard"),
             api.get<BusinessRiskDashboard>("/business/my-risk-dashboard"),
@@ -202,9 +205,9 @@ export default function DashboardPage() {
           const response = await api.get<LoginRiskSummary>("/admin/login-risk-summary");
           setAdminRisk(response.data);
         }
-      } catch (err: any) {
-        const message = err.response?.data?.message;
-        setError(Array.isArray(message) ? message.join("，") : message || "首页数据加载失败");
+      } catch (err: unknown) {
+        const message = isAxiosError(err) ? err.response?.data?.message : undefined;
+        setError(Array.isArray(message) ? message.join("，") : typeof message === "string" ? message : "首页数据加载失败");
       } finally {
         setLoading(false);
       }
@@ -227,7 +230,8 @@ export default function DashboardPage() {
     );
   }
 
-  const isBusiness = user?.role === "BUSINESS";
+  const isBusiness = user?.role === "BUSINESS" || user?.role === "SUPPORT";
+  const isSupport = user?.role === "SUPPORT";
 
   return (
     <AdminShell>
@@ -241,9 +245,9 @@ export default function DashboardPage() {
           }}
         >
           <Space orientation="vertical" size={4}>
-            <Tag color="blue">{isBusiness ? "业务工作台" : "运营控制台"}</Tag>
+            <Tag color="blue">{isSupport ? "专用运营工作台" : isBusiness ? "业务工作台" : "运营控制台"}</Tag>
             <Title level={2} style={{ color: "#fff", margin: 0 }}>
-              {isBusiness ? "我的客户运营" : "平台实时概览"}
+              {isSupport ? "固定邀请码客户运营" : isBusiness ? "我的客户运营" : "平台实时概览"}
             </Title>
             <Paragraph style={{ color: "rgba(255,255,255,0.72)", margin: 0 }}>
               聚合客户、资金、风控和待办数据，优先处理会影响入金、提现和账号安全的事项。
@@ -277,12 +281,12 @@ export default function DashboardPage() {
               <Col xs={24} md={8}>
                 <MetricCard title="IPO 欠款" value={formatMoney(Number(businessData?.ipoDebtAmount ?? 0))} icon={<WarningOutlined />} tone="#ef4444" />
               </Col>
-              <Col xs={24} md={8}>
+              {!isSupport && <Col xs={24} md={8}>
                 <MetricCard title="贷款未还" value={formatMoney(Number(businessData?.loanOutstandingAmount ?? 0))} icon={<DollarOutlined />} tone="#ea580c" />
-              </Col>
-              <Col xs={24} md={8}>
+              </Col>}
+              {!isSupport && <Col xs={24} md={8}>
                 <MetricCard title="未使用邀请码" value={businessData?.unusedInviteCodes ?? 0} icon={<GiftOutlined />} tone="#f59e0b" />
-              </Col>
+              </Col>}
               <Col xs={24} md={8}>
                 <MetricCard title="高风险客户" value={businessRisk?.highRiskCustomers ?? 0} icon={<WarningOutlined />} tone="#ef4444" />
               </Col>
@@ -315,15 +319,9 @@ export default function DashboardPage() {
                   onClick={() => router.push("/business-kyc")}
                 />
               </Col>
-              <Col xs={24} md={8}>
-                <QuickAction
-                  title="生成邀请码"
-                  description="为新客户开户准备专属邀请码"
-                  icon={<GiftOutlined />}
-                  tone="#f59e0b"
-                  onClick={() => router.push("/invite-codes")}
-                />
-              </Col>
+              {!isSupport && <Col xs={24} md={8}>
+                <CurrentInviteCode />
+              </Col>}
               <Col xs={24} md={8}>
                 <QuickAction
                   title="客户提现记录"

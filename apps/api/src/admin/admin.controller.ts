@@ -1,4 +1,4 @@
-import { Controller, Get, Param, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -14,26 +14,26 @@ export class AdminController {
 
   @Get('customers')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customers() {
-    return this.adminService.customers();
+  customers(@Req() req: any) {
+    return this.adminService.customers(req.user.role);
   }
 
   @Get('customers/:customerId/login')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerLastLogin(@Param('customerId') customerId: string) {
-    return this.adminService.customerLastLogin(customerId);
+  customerLastLogin(@Param('customerId') customerId: string, @Req() req: any) {
+    return this.adminService.customerLastLogin(customerId, req.user.role);
   }
 
   @Get('customers/:customerId/login-audits')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerLoginAudits(@Param('customerId') customerId: string) {
-    return this.adminService.customerLoginAudits(customerId);
+  customerLoginAudits(@Param('customerId') customerId: string, @Req() req: any) {
+    return this.adminService.customerLoginAudits(customerId, req.user.role);
   }
 
   @Get('customers/:customerId/login-risk')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerLoginRisk(@Param('customerId') customerId: string) {
-    return this.adminService.customerLoginRisk(customerId);
+  customerLoginRisk(@Param('customerId') customerId: string, @Req() req: any) {
+    return this.adminService.customerLoginRisk(customerId, req.user.role);
   }
 
   @Get('login-risk-summary')
@@ -46,5 +46,11 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
   sharedIpRisks() {
     return this.adminService.sharedIpRisks();
+  }
+
+  @Get('pending-counts')
+  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.BUSINESS, UserRole.FINANCE, UserRole.SUPPORT)
+  pendingCounts(@Req() req: any) {
+    return this.adminService.pendingCounts(req.user.role, req.user.userId);
   }
 }

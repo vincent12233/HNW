@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -43,12 +44,12 @@ class MostActive extends StatelessWidget {
         const Row(
           children: [
             Expanded(
-              child: Text(
+              child: AppText(
                 'Most Active',
                 style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ),
-            Text(
+            AppText(
               'By volume',
               style: TextStyle(color: Colors.black45, fontSize: 12),
             ),
@@ -64,7 +65,7 @@ class MostActive extends StatelessWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(16),
             ),
-            child: const Text(
+            child: const AppText(
               'Market volume data unavailable',
               style: TextStyle(color: Colors.black54),
             ),
@@ -108,14 +109,14 @@ class MostActive extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
+                                  AppText(
                                     stock.symbol,
                                     style: const TextStyle(
                                       fontWeight: FontWeight.w700,
                                     ),
                                   ),
                                   const SizedBox(height: 3),
-                                  Text(
+                                  AppText(
                                     'Vol ${_formatVolume(stock.volume)}',
                                     style: const TextStyle(
                                       color: Colors.black45,
@@ -128,14 +129,14 @@ class MostActive extends StatelessWidget {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
+                                AppText(
                                   formatPrice(stock.price),
                                   style: const TextStyle(
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                                 const SizedBox(height: 3),
-                                Text(
+                                AppText(
                                   '${stock.change > 0 ? '+' : ''}'
                                   '${stock.change.toStringAsFixed(2)}%',
                                   style: TextStyle(

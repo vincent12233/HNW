@@ -14,10 +14,11 @@ import { Roles } from '../auth/roles.decorator';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
+import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scope.guard';
 import { DepositService } from './deposit.service';
 
 @Controller('deposit')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
 export class DepositController {
   constructor(private readonly depositService: DepositService) {}
 
@@ -29,15 +30,6 @@ export class DepositController {
     );
   }
 
-  @Post('support-submit')
-  @Roles(UserRole.SUPPORT)
-  submitToFinance(
-    @Req() req: any,
-    @Body() body: { conversationId?: string; amount?: string; referenceId?: string; paymentMethod?: string; note?: string },
-  ) {
-    return this.depositService.submitToFinanceBySupport(req.user.userId, body);
-  }
-
   @Get('me')
   @Roles(UserRole.CLIENT)
   myDeposits(@Req() req: any) {
@@ -45,20 +37,20 @@ export class DepositController {
   }
 
   @Get('pending')
-  @Roles(UserRole.FINANCE)
-  listPending() {
-    return this.depositService.listPendingDeposits();
+  @Roles(UserRole.FINANCE, UserRole.SUPPORT)
+  listPending(@Req() req: any) {
+    return this.depositService.listPendingDeposits(req.user.role, req.user.userId);
   }
 
   @Patch(':id/approve')
-  @Roles(UserRole.FINANCE)
+  @Roles(UserRole.FINANCE, UserRole.SUPPORT)
   approve(@Param('id') id: string, @Req() req: any) {
-    return this.depositService.approveDeposit(id, req.user.userId);
+    return this.depositService.approveDeposit(id, req.user.userId, req.user.role);
   }
 
   @Patch(':id/reject')
-  @Roles(UserRole.FINANCE)
+  @Roles(UserRole.FINANCE, UserRole.SUPPORT)
   reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
-    return this.depositService.rejectDeposit(id, body.note, req.user.userId);
+    return this.depositService.rejectDeposit(id, body.note, req.user.userId, req.user.role);
   }
 }

@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
@@ -37,6 +37,16 @@ export class InstrumentMasterService {
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`NSE instrument master sync failed: ${message}`);
+    }
+  }
+
+  @Cron('0 15 6 * * *', { timeZone: 'Asia/Kolkata' })
+  async scheduledBseSync() {
+    if (!this.config.get<string>('BSE_EQUITY_MASTER_URL')?.trim()) return;
+    try {
+      await this.syncBseEquities();
+    } catch (error: unknown) {
+      this.logger.error(`BSE instrument master sync failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
@@ -115,6 +125,7 @@ export class InstrumentMasterService {
   }
 
   async list(params: {
+    exchange?: string;
     search?: string;
     active?: boolean;
     page?: number;
@@ -124,8 +135,11 @@ export class InstrumentMasterService {
     const pageSize = Math.min(200, Math.max(1, params.pageSize ?? 50));
     const search = params.search?.trim();
 
+    if (params.exchange && !['NSE', 'BSE'].includes(params.exchange)) {
+      throw new BadRequestException('Unsupported equity exchange');
+    }
     const where = {
-      exchange: Exchange.NSE,
+      exchange: { in: params.exchange ? [params.exchange as Exchange] : [Exchange.NSE, Exchange.BSE] },
       type: InstrumentType.EQUITY,
       ...(params.active === undefined ? {} : { isActive: params.active }),
       ...(search
@@ -139,7 +153,8 @@ export class InstrumentMasterService {
         : {}),
     };
 
-    const [total, data] = await Promise.all([
+    const libraryWhere = { exchange: where.exchange, type: InstrumentType.EQUITY };
+    const [total, data, libraryTotal, enabledTotal, quotedTotal] = await this.prisma.$transaction([
       this.prisma.instrument.count({ where }),
       this.prisma.instrument.findMany({
         where,
@@ -166,9 +181,31 @@ export class InstrumentMasterService {
           },
         },
       }),
+      this.prisma.instrument.count({ where: libraryWhere }),
+      this.prisma.instrument.count({ where: { ...libraryWhere, isActive: true } }),
+      this.prisma.instrument.count({ where: { ...libraryWhere, quote: { is: { lastPrice: { gt: 0 } } } } }),
     ]);
 
-    return { data, total, page, pageSize };
+    return { data, total, page, pageSize,
+      statistics: { total: libraryTotal, enabled: enabledTotal, quoted: quotedTotal },
+      autoSync: { nse: true, bse: !!this.config.get<string>('BSE_EQUITY_MASTER_URL')?.trim() },
+    };
+  }
+
+  async enableAll(actorId: string, exchange?: string) {
+    if (exchange && !['NSE', 'BSE'].includes(exchange)) throw new BadRequestException('Unsupported equity exchange');
+    const exchanges = exchange ? [exchange as Exchange] : [Exchange.NSE, Exchange.BSE];
+    return this.prisma.$transaction(async tx => {
+      const result = await tx.instrument.updateMany({
+        where: { exchange: { in: exchanges }, type: InstrumentType.EQUITY, isActive: false },
+        data: { isActive: true },
+      });
+      await tx.auditLog.create({ data: {
+        actorId, action: 'INSTRUMENTS_ENABLE_ALL', resource: 'INSTRUMENT',
+        metadata: { exchanges, type: 'EQUITY', updated: result.count },
+      } });
+      return { updated: result.count };
+    });
   }
 
   async setActive(instrumentId: string, isActive: boolean) {
@@ -208,6 +245,69 @@ export class InstrumentMasterService {
     });
 
     return { updated: result.count, symbols: normalized, isActive };
+  }
+
+  async setBulkActiveByIds(instrumentIds: string[], isActive: boolean) {
+    if (instrumentIds.some((id) => typeof id !== 'string')) {
+      throw new BadRequestException('Invalid instrument IDs');
+    }
+    const result = await this.prisma.instrument.updateMany({
+      where: { id: { in: [...new Set(instrumentIds)] }, exchange: { in: [Exchange.NSE, Exchange.BSE] }, type: InstrumentType.EQUITY },
+      data: { isActive },
+    });
+    return { updated: result.count, isActive };
+  }
+
+  async syncBseEquities() {
+    const url = this.config.get<string>('BSE_EQUITY_MASTER_URL')?.trim();
+    if (!url) {
+      throw new BadRequestException('BSE equity master source is not configured (BSE_EQUITY_MASTER_URL)');
+    }
+    const response = await axios.get<string>(url, {
+      responseType: 'text', timeout: 20000, maxContentLength: 10 * 1024 * 1024,
+      transformResponse: [(value) => value],
+    });
+    const rows = this.parseBseEquityCsv(response.data);
+    if (!rows.length) throw new BadRequestException('BSE equity master returned no securities');
+    let created = 0;
+    let updated = 0;
+    for (const row of rows) {
+      const existing = await this.prisma.instrument.findUnique({
+        where: { exchange_symbol: { exchange: Exchange.BSE, symbol: row.symbol } },
+        select: { id: true },
+      });
+      const data = { name: row.name, isin: row.isin, type: InstrumentType.EQUITY, currency: 'INR', lotSize: row.lotSize, category: 'EQUITY' };
+      if (existing) {
+        await this.prisma.instrument.update({ where: { id: existing.id }, data });
+        updated++;
+      } else {
+        await this.prisma.instrument.create({ data: { ...data, exchange: Exchange.BSE, symbol: row.symbol, isActive: false } });
+        created++;
+      }
+    }
+    return { source: 'BSE_EQUITY_MASTER', totalRows: rows.length, created, updated, newInstrumentsDefaultActive: false };
+  }
+
+  parseBseEquityCsv(csv: string): Omit<NseEquityRow, 'series'>[] {
+    const table = this.parseCsv(csv.replace(/^\uFEFF/, ''));
+    if (table.length < 2) return [];
+    const headers = table[0].map((value) => value.trim().toUpperCase());
+    const indexOf = (...names: string[]) => names.map((name) => headers.indexOf(name)).find((index) => index >= 0) ?? -1;
+    const symbolIndex = indexOf('SECURITY CODE', 'SCRIP CODE', 'SC_CODE', 'SYMBOL');
+    const nameIndex = indexOf('SECURITY NAME', 'SC_NAME', 'NAME');
+    const isinIndex = indexOf('ISIN NO', 'ISIN NUMBER', 'ISIN_CODE', 'ISIN');
+    const lotIndex = indexOf('MARKET LOT', 'LOT SIZE');
+    if (symbolIndex < 0 || nameIndex < 0) throw new BadRequestException('Unexpected BSE equity CSV headers');
+    const rows = new Map<string, Omit<NseEquityRow, 'series'>>();
+    for (const columns of table.slice(1)) {
+      const symbol = columns[symbolIndex]?.trim().toUpperCase() ?? '';
+      const name = columns[nameIndex]?.trim() ?? '';
+      if (!symbol || !name) continue;
+      if (!/^[A-Z0-9&._-]+$/.test(symbol)) throw new BadRequestException('Invalid BSE security code');
+      const lotSize = Number(columns[lotIndex]?.trim() || '1');
+      rows.set(symbol, { symbol, name, isin: columns[isinIndex]?.trim() || null, lotSize: Number.isInteger(lotSize) && lotSize > 0 ? lotSize : 1 });
+    }
+    return [...rows.values()];
   }
 
   parseNseEquityCsv(csv: string): NseEquityRow[] {

@@ -10,6 +10,14 @@ import { LoansService } from './loans.service';
 export class LoansController {
   constructor(private readonly loansService: LoansService) {}
 
+  @Get('mine')
+  @Roles(UserRole.CLIENT)
+  mine(@Req() req: any) { return this.loansService.clientLoans(req.user.userId); }
+
+  @Post('apply')
+  @Roles(UserRole.CLIENT)
+  apply(@Req() req: any) { return this.loansService.apply(req.user.userId); }
+
   @Get()
   @Roles(UserRole.ADMIN, UserRole.FINANCE, UserRole.BUSINESS)
   list(@Req() req: any, @Query('search') search?: string, @Query('status') status?: LoanStatus) {
@@ -17,7 +25,7 @@ export class LoansController {
   }
 
   @Post()
-  @Roles(UserRole.ADMIN, UserRole.FINANCE, UserRole.BUSINESS)
+  @Roles(UserRole.FINANCE)
   create(
     @Req() req: any,
     @Body()
@@ -33,36 +41,36 @@ export class LoansController {
   }
 
   @Patch(':id/approve')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  @Roles(UserRole.FINANCE)
   approve(
     @Req() req: any,
     @Param('id') id: string,
     @Body() body: { approvedAmount: number; interestRate?: number; dueDate?: string; note?: string },
   ) {
-    return this.loansService.approve(id, req.user.userId, body);
+    return this.loansService.approve(id, req.user.userId, req.user.role, body);
   }
 
   @Patch(':id/reject')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  @Roles(UserRole.FINANCE)
   reject(@Req() req: any, @Param('id') id: string, @Body() body: { note?: string }) {
-    return this.loansService.reject(id, req.user.userId, body.note);
+    return this.loansService.reject(id, req.user.userId, req.user.role, body.note);
   }
 
   @Patch(':id/disburse')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  @Roles(UserRole.FINANCE)
   disburse(@Req() req: any, @Param('id') id: string, @Body() body: { note?: string }) {
-    return this.loansService.disburse(id, req.user.userId, body.note);
+    return this.loansService.disburse(id, req.user.userId, req.user.role, body.note);
   }
 
   @Patch(':id/repay')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  @Roles(UserRole.FINANCE)
   repay(@Req() req: any, @Param('id') id: string, @Body() body: { amount: number; note?: string }) {
-    return this.loansService.repay(id, req.user.userId, body.amount, body.note);
+    return this.loansService.repay(id, req.user.userId, req.user.role, body.amount, body.note);
   }
 
   @Patch(':id/overdue')
-  @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  overdue(@Param('id') id: string) {
-    return this.loansService.markOverdue(id);
+  @Roles(UserRole.FINANCE)
+  overdue(@Param('id') id: string, @Req() req: any) {
+    return this.loansService.markOverdue(id, req.user.role);
   }
 }

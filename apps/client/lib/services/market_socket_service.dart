@@ -273,8 +273,9 @@ class MarketSocketService with WidgetsBindingObserver {
       final lastActivity = _lastServerActivityAt;
       if (socket == null || !socket.connected || lastActivity == null) return;
       if (DateTime.now().difference(lastActivity) <=
-          const Duration(seconds: 50))
+          const Duration(seconds: 50)) {
         return;
+      }
       _debugLog('Market websocket heartbeat timed out; reconnecting');
       socket.disconnect();
       socket.connect();

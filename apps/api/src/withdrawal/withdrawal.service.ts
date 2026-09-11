@@ -6,6 +6,7 @@ import {
 import { randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
 
 @Injectable()
 export class WithdrawalService {
@@ -14,6 +15,7 @@ export class WithdrawalService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
+    private readonly pins: WithdrawalPinService,
   ) {}
 
   async createRequest(
@@ -24,6 +26,7 @@ export class WithdrawalService {
     ifscCode?: string,
     upiId?: string,
     note?: string,
+    withdrawalPin?: string,
   ) {
     if (!Number.isFinite(amount) || amount <= 0) {
       throw new BadRequestException('Amount must be greater than zero');
@@ -51,6 +54,7 @@ export class WithdrawalService {
       );
     }
 
+    await this.pins.verify(userId, withdrawalPin);
     return this.prisma.$transaction(
       async (tx) => {
         const account = await tx.account.findUnique({ where: { userId } });
@@ -119,9 +123,13 @@ export class WithdrawalService {
     });
   }
 
-  async listPendingWithdrawals() {
+  async listPendingWithdrawals(role?: string) {
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
     return this.prisma.withdrawalRequest.findMany({
-      where: { status: 'PENDING' },
+      where: {
+        status: 'PENDING',
+        ...(role === 'FINANCE' ? { account: { user: { usedInviteCode: { code: { not: fixedCode } } } } } : {}),
+      },
       include: {
         account: {
           include: {
@@ -140,7 +148,7 @@ export class WithdrawalService {
     });
   }
 
-  async approveWithdrawal(withdrawalId: string, actorId?: string) {
+  async approveWithdrawal(withdrawalId: string, actorId?: string, role?: string) {
     const result = await this.prisma.$transaction(async (tx) => {
       const withdrawal = await tx.withdrawalRequest.findUnique({
         where: { id: withdrawalId },
@@ -161,6 +169,7 @@ export class WithdrawalService {
       if (!account) {
         throw new NotFoundException('Account not found');
       }
+      if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
 
       const amount = Number(withdrawal.amount);
       const withdrawalFrozenAmount = Number(withdrawal.frozenAmount);
@@ -236,7 +245,7 @@ export class WithdrawalService {
     return result;
   }
 
-  async rejectWithdrawal(withdrawalId: string, note?: string, actorId?: string) {
+  async rejectWithdrawal(withdrawalId: string, note?: string, actorId?: string, role?: string) {
     const rejected = await this.prisma.$transaction(async (tx) => {
       const withdrawal = await tx.withdrawalRequest.findUnique({
         where: { id: withdrawalId },
@@ -254,6 +263,7 @@ export class WithdrawalService {
       if (!account) {
         throw new NotFoundException('Account not found');
       }
+      if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
       const amount = Number(withdrawal.amount);
       const hasDedicatedFreeze = Number(withdrawal.frozenAmount) >= amount;
       if (hasDedicatedFreeze && Number(account.frozenBalance) < amount) {
@@ -297,6 +307,12 @@ export class WithdrawalService {
     });
     if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_REJECTED', resource: 'withdrawal', resourceId: withdrawalId, description: note?.trim() || 'Withdrawal rejected by finance operator' });
     return rejected;
+  }
+
+  private async assertFinanceAccount(userId: string, tx: any) {
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const user = await tx.user.findUnique({ where: { id: userId }, select: { usedInviteCode: { select: { code: true } } } });
+    if (user?.usedInviteCode?.code?.toUpperCase() === fixedCode) throw new NotFoundException('Withdrawal request not found');
   }
 
   private generateOrderNo() {

@@ -11,7 +11,7 @@ import { ListAdminOrdersQueryDto } from './dto/list-admin-orders-query.dto';
 export class AdminOrdersService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async listOrders(query: ListAdminOrdersQueryDto) {
+  async listOrders(query: ListAdminOrdersQueryDto, role: string) {
     if (
       query.dateFrom &&
       query.dateTo &&
@@ -26,6 +26,7 @@ export class AdminOrdersService {
     const normalizedSymbol = query.symbol?.trim().toUpperCase();
 
     const where: Prisma.OrderWhereInput = {
+      ...this.financeOrderScope(role),
       ...(query.status ? { status: query.status } : {}),
       ...(query.side ? { side: query.side } : {}),
       ...(query.type ? { type: query.type } : {}),
@@ -137,11 +138,9 @@ export class AdminOrdersService {
     };
   }
 
-  async getOrder(orderId: string) {
-    const order = await this.prisma.order.findUnique({
-      where: {
-        id: orderId,
-      },
+  async getOrder(orderId: string, role: string) {
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, ...this.financeOrderScope(role) },
       include: {
         account: {
           select: {
@@ -189,5 +188,11 @@ export class AdminOrdersService {
           : null,
       },
     };
+  }
+
+  private financeOrderScope(role: string): Prisma.OrderWhereInput {
+    if (role !== 'FINANCE') return {};
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    return { account: { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } } };
   }
 }

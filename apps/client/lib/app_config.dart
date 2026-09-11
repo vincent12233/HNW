@@ -9,6 +9,12 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: '',
   );
+  // This is enabled only by the local Docker Web build. Production mobile and
+  // hosted Web builds keep the HTTPS requirement enforced.
+  static const bool _allowInsecureApi = bool.fromEnvironment(
+    'ALLOW_INSECURE_API',
+    defaultValue: false,
+  );
   static const String googleClientId = String.fromEnvironment(
     'GOOGLE_CLIENT_ID',
     defaultValue: '',
@@ -21,7 +27,29 @@ class AppConfig {
   static String get apiBaseUrl {
     if (_configuredApiBaseUrl.isNotEmpty) {
       final uri = Uri.tryParse(_configuredApiBaseUrl);
-      if (kReleaseMode && uri?.scheme != 'https') {
+      final host = uri?.host ?? '';
+      final isRelativeApi =
+          uri != null &&
+          uri.scheme.isEmpty &&
+          uri.host.isEmpty &&
+          uri.path.startsWith('/');
+      final isLocalHttp =
+          uri?.scheme == 'http' &&
+          (host == 'localhost' ||
+              host == '127.0.0.1' ||
+              host.startsWith('10.') ||
+              host.startsWith('192.168.') ||
+              host.startsWith('172.16.') ||
+              host.startsWith('172.17.') ||
+              host.startsWith('172.18.') ||
+              host.startsWith('172.19.') ||
+              host.startsWith('172.2') ||
+              host.startsWith('172.3'));
+      if (kReleaseMode &&
+          !_allowInsecureApi &&
+          !isRelativeApi &&
+          !isLocalHttp &&
+          uri?.scheme != 'https') {
         throw StateError('Release builds require an HTTPS API_BASE_URL');
       }
       return _configuredApiBaseUrl;
@@ -47,7 +75,7 @@ class AppConfig {
   static const Color primaryGradientEnd = Color(0xFF0346C9);
   static const Color surfaceColor = Colors.white;
   static const Color borderColor = Color(0xFFE8ECF2);
-  static const Color gainColor = Color(0xFF12A95B);
+  static const Color gainColor = Color(0xFF00875A);
   static const Color lossColor = Color(0xFFE83945);
   static const Color neutralColor = Color(0xFF667085);
   static const Color backgroundColor = Colors.white;

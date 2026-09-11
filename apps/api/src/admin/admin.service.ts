@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 
+import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -7,14 +8,56 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async customers() {
+  async pendingCounts(role: UserRole, userId: string) {
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const customerFilter = role === UserRole.SUPPORT
+      ? { user: { assignedBusinessId: userId, usedInviteCode: { is: { code: fixedCode } } } }
+      : role === UserRole.FINANCE
+        ? { user: { usedInviteCode: { isNot: { code: fixedCode } } } }
+        : role === UserRole.BUSINESS
+          ? { user: { assignedBusinessId: userId } }
+          : role === UserRole.MANAGER
+            ? { user: { assignedBusiness: { role: UserRole.BUSINESS, businessCreatorId: userId, deletedAt: null } } }
+            : { user: { role: UserRole.CLIENT } };
+    const kycScope = role === UserRole.SUPPORT || role === UserRole.BUSINESS
+      ? Prisma.sql`AND "businessUserId" = ${userId}`
+      : role === UserRole.MANAGER
+        ? Prisma.sql`AND "businessUserId" IN (SELECT id FROM users WHERE "businessCreatorId" = ${userId} AND role = 'BUSINESS' AND "deletedAt" IS NULL)`
+        : role === UserRole.FINANCE
+          ? Prisma.sql`AND FALSE`
+          : Prisma.empty;
+    const [kyc, deposits, withdrawals, loans, otc, ipo, approvals] = await Promise.all([
+      this.prisma.$queryRaw<{ count: bigint }[]>`SELECT COUNT(*)::bigint AS count FROM "kyc_submissions" WHERE status = 'PENDING' ${kycScope}`.then(rows => Number(rows[0]?.count ?? 0)),
+      this.prisma.depositRequest.count({ where: { status: 'PENDING', account: customerFilter } }),
+      this.prisma.withdrawalRequest.count({ where: { status: 'PENDING', account: customerFilter } }),
+      role === UserRole.FINANCE ? this.prisma.loanApplication.count({ where: { status: 'PENDING', account: customerFilter } }) : Promise.resolve(0),
+      this.prisma.otcOrder.count({ where: { status: 'PENDING', account: customerFilter } }),
+      this.prisma.ipoApplication.count({ where: { status: 'PENDING', account: customerFilter } }),
+      role === UserRole.ADMIN || role === UserRole.FINANCE
+        ? this.prisma.approvalRequest.count({ where: { status: 'PENDING' } })
+        : Promise.resolve(0),
+    ]);
+    return { kyc, deposits, withdrawals, loans, otc, ipo, approvals, total: kyc + deposits + withdrawals + loans + otc + ipo + approvals };
+  }
+
+  private customerScope(role: UserRole): Prisma.UserWhereInput {
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    if (role === UserRole.FINANCE) {
+      return { role: UserRole.CLIENT, NOT: { usedInviteCode: { is: { code: fixedCode } } } };
+    }
+    if (role === UserRole.SUPPORT) {
+      return { role: UserRole.CLIENT, usedInviteCode: { is: { code: fixedCode } } };
+    }
+    return { role: UserRole.CLIENT };
+  }
+
+  async customers(role: UserRole) {
     return this.prisma.user.findMany({
-      where: {
-        role: UserRole.CLIENT,
-      },
+      where: this.customerScope(role),
       select: {
         id: true,
         customerNo: true,
+        clientTier: true,
         fullName: true,
         phone: true,
         role: true,
@@ -72,11 +115,11 @@ export class AdminService {
     });
   }
 
-  async customerLastLogin(customerId: string) {
+  async customerLastLogin(customerId: string, role: UserRole) {
     const customer = await this.prisma.user.findFirst({
       where: {
+        ...this.customerScope(role),
         id: customerId,
-        role: UserRole.CLIENT,
       },
       select: {
         id: true,
@@ -105,11 +148,11 @@ export class AdminService {
     };
   }
 
-  async customerLoginAudits(customerId: string) {
+  async customerLoginAudits(customerId: string, role: UserRole) {
     const customer = await this.prisma.user.findFirst({
       where: {
+        ...this.customerScope(role),
         id: customerId,
-        role: UserRole.CLIENT,
       },
       select: {
         id: true,
@@ -138,11 +181,11 @@ export class AdminService {
     });
   }
 
-  async customerLoginRisk(customerId: string) {
+  async customerLoginRisk(customerId: string, role: UserRole) {
     const customer = await this.prisma.user.findFirst({
       where: {
+        ...this.customerScope(role),
         id: customerId,
-        role: UserRole.CLIENT,
       },
       select: {
         id: true,

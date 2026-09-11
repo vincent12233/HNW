@@ -33,7 +33,9 @@ class WatchlistService {
     }
 
     final decoded = jsonDecode(response.body);
-    if (decoded is! List) return <String>{};
+    if (decoded is! List) {
+      throw const WatchlistException('Unable to load watchlist');
+    }
     return decoded
         .whereType<Map>()
         .map((item) {
@@ -46,19 +48,11 @@ class WatchlistService {
   }
 
   Future<void> add(String symbol, {String exchange = 'NSE'}) async {
-    await _change(
-      method: 'POST',
-      symbol: symbol,
-      exchange: exchange,
-    );
+    await _change(method: 'POST', symbol: symbol, exchange: exchange);
   }
 
   Future<void> remove(String symbol, {String exchange = 'NSE'}) async {
-    await _change(
-      method: 'DELETE',
-      symbol: symbol,
-      exchange: exchange,
-    );
+    await _change(method: 'DELETE', symbol: symbol, exchange: exchange);
   }
 
   Future<void> _change({
@@ -85,8 +79,9 @@ class WatchlistService {
           )
           .timeout(const Duration(seconds: 6));
     } else {
-      final uri = Uri.parse('${AppConfig.apiBaseUrl}/watchlist/$normalized')
-          .replace(queryParameters: {'exchange': exchange});
+      final uri = Uri.parse(
+        '${AppConfig.apiBaseUrl}/watchlist/$normalized',
+      ).replace(queryParameters: {'exchange': exchange});
       response = await http
           .delete(
             uri,

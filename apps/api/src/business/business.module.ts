@@ -5,10 +5,11 @@ import { IpoModule } from '../ipo/ipo.module';
 import { KycModule } from '../kyc/kyc.module';
 import { TeamController } from './team.controller';
 import { TeamService } from './team.service';
+import { DedicatedOperatorScopeGuard } from './dedicated-operator-scope.guard';
 
 @Module({
   imports: [IpoModule, KycModule],
-  providers: [BusinessService, TeamService],
+  providers: [BusinessService, TeamService, DedicatedOperatorScopeGuard],
   controllers: [BusinessController, TeamController],
 })
 export class BusinessModule {}

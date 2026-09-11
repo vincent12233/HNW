@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WithdrawalService } from './withdrawal.service';
+import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
 
 describe('WithdrawalService', () => {
   let service: WithdrawalService;
@@ -8,7 +9,7 @@ describe('WithdrawalService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [WithdrawalService],
     })
-      .useMocker(() => ({}))
+      .useMocker((token) => token === WithdrawalPinService ? { verify: jest.fn().mockResolvedValue(undefined) } : {})
       .compile();
 
     service = module.get<WithdrawalService>(WithdrawalService);
@@ -16,6 +17,14 @@ describe('WithdrawalService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('does not create or freeze funds when PIN verification fails', async () => {
+    (service as any).pins.verify.mockRejectedValue(new Error('Incorrect withdrawal PIN'));
+    const transaction = jest.fn();
+    (service as any).prisma = { $transaction: transaction };
+    await expect(service.createRequest('user-1', 100, 'Bank', '123456789', 'TEST0001234', undefined, undefined, '000000')).rejects.toThrow('Incorrect withdrawal PIN');
+    expect(transaction).not.toHaveBeenCalled();
   });
 
   it('rejects withdrawals below ₹100', async () => {

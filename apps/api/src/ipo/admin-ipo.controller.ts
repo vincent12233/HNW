@@ -31,6 +31,12 @@ export class AdminIpoController {
     return this.ipoService.create(dto);
   }
 
+  @Post('applications/publish')
+  @Roles('ADMIN')
+  publish(@Req() req: any, @Body() body: {ids: string[]}) {
+    return this.ipoService.publish(body.ids, req.user.userId);
+  }
+
   @Get()
   @Roles('ADMIN')
   list() {

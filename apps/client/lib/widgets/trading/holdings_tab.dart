@@ -1,9 +1,11 @@
+import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/portfolio_position.dart';
 import '../../models/stock_quote.dart';
 import '../../utils/number_formatters.dart';
+import '../../utils/product_category.dart';
 import '../stock_logo.dart';
 
 class HoldingsTab extends StatefulWidget {
@@ -36,23 +38,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
   }
 
   String _positionCategory(PortfolioPosition position, StockQuote? stock) {
-    final text = [
-      position.symbol,
-      position.name,
-      position.category,
-      stock?.category ?? '',
-      stock?.name ?? '',
-    ].join(' ').toUpperCase();
-
-    if (text.contains('IPO')) {
-      return 'IPO';
-    }
-
-    if (text.contains('OTC') || text.contains('BLOCK')) {
-      return 'OTC';
-    }
-
-    return 'INSTITUTIONAL';
+    return portfolioCategory(position.category)?.toUpperCase() ?? 'EQUITY';
   }
 
   @override
@@ -86,7 +72,8 @@ class _HoldingsTabState extends State<HoldingsTab> {
           child: Row(
             children: [
               _categoryChip('ALL', 'All'),
-              _categoryChip('INSTITUTIONAL', 'Inst.'),
+              _categoryChip('EQUITY', 'Equities'),
+              _categoryChip('INSTITUTIONAL', 'Institutional'),
               _categoryChip('IPO', 'IPO'),
               _categoryChip('OTC', 'OTC'),
             ],
@@ -148,50 +135,67 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
+                                        AppText(
                                           position.symbol,
                                           style: const TextStyle(
                                             fontSize: 16,
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        const SizedBox(height: 3),
-                                        Text(
+                                        const SizedBox(height: 5),
+                                        AppText(
                                           position.name.isEmpty
                                               ? '${position.quantity} shares'
                                               : position.name,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            color: Colors.black54,
+                                            color: Color(0xFF64748B),
+                                            fontSize: 12,
                                           ),
+                                        ),
+                                        const SizedBox(height: 7),
+                                        Wrap(
+                                          spacing: 6,
+                                          runSpacing: 4,
+                                          children: [
+                                            _holdingTag(position.exchange),
+                                            _holdingTag(
+                                              _categoryLabel(category),
+                                              accent: true,
+                                            ),
+                                          ],
                                         ),
                                       ],
                                     ),
                                   ),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Text(
-                                        formatPrice(marketValue),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
+                                        AppText(
+                                          formatPrice(marketValue),
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      Text(
-                                        '${profitLoss > 0
-                                            ? '+'
-                                            : profitLoss < 0
-                                            ? '-'
-                                            : ''}'
-                                        '${formatPrice(profitLoss.abs())}',
-                                        style: TextStyle(
-                                          color: profitColor,
-                                          fontWeight: FontWeight.w600,
+                                        const SizedBox(height: 3),
+                                        AppText(
+                                          '${profitLoss > 0
+                                              ? '+'
+                                              : profitLoss < 0
+                                              ? '-'
+                                              : ''}'
+                                          '${formatPrice(profitLoss.abs())}',
+                                          style: TextStyle(
+                                            color: profitColor,
+                                            fontWeight: FontWeight.w600,
+                                          ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -200,8 +204,8 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                 children: [
                                   Expanded(
                                     child: _valueItem(
-                                      'Qty',
-                                      '${position.quantity}',
+                                      'Quantity / Available',
+                                      '${position.quantity} / ${position.availableQuantity}',
                                     ),
                                   ),
                                   Expanded(
@@ -212,9 +216,9 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                   ),
                                   Expanded(
                                     child: _valueItem(
-                                      _categoryLabel(category),
+                                      'Returns',
                                       '${returnPercent > 0 ? '+' : ''}'
-                                      '${returnPercent.toStringAsFixed(2)}%',
+                                          '${returnPercent.toStringAsFixed(2)}%',
                                       valueColor: profitColor,
                                     ),
                                   ),
@@ -238,8 +242,12 @@ class _HoldingsTabState extends State<HoldingsTab> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
-        label: Text(label),
+        label: AppText(label),
         selected: selected,
+        labelStyle: TextStyle(
+          color: selected ? Colors.white : AppConfig.textPrimaryColor,
+          fontWeight: FontWeight.w700,
+        ),
         onSelected: (_) {
           setState(() {
             selectedCategory = value;
@@ -262,12 +270,12 @@ class _HoldingsTabState extends State<HoldingsTab> {
               color: Colors.black38,
             ),
             const SizedBox(height: 16),
-            Text(
+            AppText(
               title,
               style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(
+            AppText(
               subtitle,
               textAlign: TextAlign.center,
               style: const TextStyle(color: Colors.black54),
@@ -285,22 +293,41 @@ class _HoldingsTabState extends State<HoldingsTab> {
       case 'OTC':
         return 'OTC';
       case 'INSTITUTIONAL':
-        return 'Inst.';
+        return 'Institutional';
       default:
-        return 'selected';
+        return 'Equity';
     }
+  }
+
+  Widget _holdingTag(String label, {bool accent = false}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: accent ? const Color(0xFFEAF1FF) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(5),
+      ),
+      child: AppText(
+        label,
+        style: TextStyle(
+          color: accent ? AppConfig.primaryColor : const Color(0xFF64748B),
+          fontSize: 9,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.3,
+        ),
+      ),
+    );
   }
 
   Widget _valueItem(String label, String value, {Color? valueColor}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        AppText(
           label,
           style: const TextStyle(color: Colors.black45, fontSize: 12),
         ),
         const SizedBox(height: 4),
-        Text(
+        AppText(
           value,
           style: TextStyle(color: valueColor, fontWeight: FontWeight.w600),
         ),

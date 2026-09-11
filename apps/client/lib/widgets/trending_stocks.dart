@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
@@ -32,7 +33,7 @@ class TrendingStocks extends StatelessWidget {
           children: [
             Icon(Icons.local_fire_department_outlined, size: 22),
             SizedBox(width: 8),
-            Text(
+            AppText(
               'Trending Stocks',
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
@@ -48,7 +49,7 @@ class TrendingStocks extends StatelessWidget {
           child: displayStocks.isEmpty
               ? const Padding(
                   padding: EdgeInsets.all(20),
-                  child: Text(
+                  child: AppText(
                     'Market activity data unavailable',
                     style: TextStyle(color: Colors.black54),
                   ),
@@ -83,7 +84,7 @@ class TrendingStocks extends StatelessWidget {
                                     color: const Color(0xFFF1F5F9),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
-                                  child: Text(
+                                  child: AppText(
                                     '$rank',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
@@ -103,7 +104,7 @@ class TrendingStocks extends StatelessWidget {
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      Text(
+                                      AppText(
                                         stock.symbol,
                                         style: const TextStyle(
                                           fontSize: 15,
@@ -111,7 +112,7 @@ class TrendingStocks extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 2),
-                                      Text(
+                                      AppText(
                                         stock.name,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
@@ -121,7 +122,7 @@ class TrendingStocks extends StatelessWidget {
                                         ),
                                       ),
                                       const SizedBox(height: 4),
-                                      Text(
+                                      AppText(
                                         'Volume ${formatVolume(stock.volume)}',
                                         style: const TextStyle(
                                           color: Colors.black45,
@@ -135,7 +136,7 @@ class TrendingStocks extends StatelessWidget {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text(
+                                    AppText(
                                       formatPrice(stock.price),
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w700,
@@ -155,7 +156,7 @@ class TrendingStocks extends StatelessWidget {
                                           color: color,
                                         ),
                                         const SizedBox(width: 2),
-                                        Text(
+                                        AppText(
                                           '${stock.change > 0 ? '+' : ''}'
                                           '${stock.change.toStringAsFixed(2)}%',
                                           style: TextStyle(

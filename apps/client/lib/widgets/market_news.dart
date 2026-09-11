@@ -1,3 +1,4 @@
+import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 class MarketNews extends StatelessWidget {
@@ -29,7 +30,7 @@ class MarketNews extends StatelessWidget {
         Row(
           children: [
             const Expanded(
-              child: Text(
+              child: AppText(
                 'Market News',
                 style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
               ),
@@ -70,7 +71,7 @@ class MarketNews extends StatelessWidget {
                         color: Colors.white,
                       ),
                     ),
-                    title: Text(
+                    title: AppText(
                       item.title,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -79,7 +80,7 @@ class MarketNews extends StatelessWidget {
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    subtitle: Text(
+                    subtitle: AppText(
                       '${item.source} • ${item.time}',
                       style: const TextStyle(fontSize: 12),
                     ),

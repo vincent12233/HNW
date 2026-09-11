@@ -25,7 +25,7 @@ export class OtcController {
   mine(@Req() req: any) { return this.otc.myOrders(req.user.userId); }
 
   @Get('orders/pending')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   pending(@Req() req: any) { return this.otc.pendingOrders(req.user.userId); }
 
   @Get('admin/offers')
@@ -45,13 +45,13 @@ export class OtcController {
   }
 
   @Patch('orders/:id/approve')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   approve(@Req() req: any, @Param('id') id: string) {
     return this.otc.approve(req.user.userId, id);
   }
 
   @Patch('orders/:id/reject')
-  @Roles(UserRole.ADMIN, UserRole.BUSINESS)
+  @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   reject(@Req() req: any, @Param('id') id: string, @Body() body: { note?: string }) {
     return this.otc.reject(req.user.userId, id, body.note);
   }

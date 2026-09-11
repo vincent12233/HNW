@@ -115,10 +115,15 @@ export class OtcService {
 
   async pendingOrders(reviewerId: string) {
     const reviewer = await this.prisma.user.findUnique({ where: { id: reviewerId } });
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
     return this.prisma.otcOrder.findMany({
       where: {
         status: 'PENDING',
-        ...(reviewer?.role === 'BUSINESS' ? { account: { user: { assignedBusinessId: reviewerId } } } : {}),
+        ...(reviewer?.role === 'BUSINESS'
+          ? { account: { user: { assignedBusinessId: reviewerId } } }
+          : reviewer?.role === 'SUPPORT'
+            ? { account: { user: { assignedBusinessId: reviewerId, usedInviteCode: { is: { code: fixedCode } } } } }
+            : {}),
       },
       include: { instrument: true, account: { include: { user: true } } },
       orderBy: { createdAt: 'asc' },
@@ -127,12 +132,16 @@ export class OtcService {
 
   approve(reviewerId: string, orderId: string) {
     return this.prisma.$transaction(async (tx) => {
-      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: true } } } });
+      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
       if (!order) throw new NotFoundException('OTC order not found');
       if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
       const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
-      if (reviewer?.role === 'BUSINESS' && order.account.user.assignedBusinessId !== reviewerId) {
+      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      if ((reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') && order.account.user.assignedBusinessId !== reviewerId) {
         throw new UnauthorizedException('OTC order is not assigned to this business account');
+      }
+      if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
+        throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
       }
       if (order.account.cashBalance.lessThan(order.amount)) throw new BadRequestException('Insufficient cash balance');
       const balanceAfter = order.account.cashBalance.sub(order.amount);
@@ -188,12 +197,16 @@ export class OtcService {
 
   async reject(reviewerId: string, orderId: string, note?: string) {
     return this.prisma.$transaction(async (tx) => {
-      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: true } }, instrument: true } });
+      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: { include: { usedInviteCode: true } } } }, instrument: true } });
       if (!order) throw new NotFoundException('OTC order not found');
       if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
       const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
-      if (reviewer?.role === 'BUSINESS' && order.account.user.assignedBusinessId !== reviewerId) {
+      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      if ((reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') && order.account.user.assignedBusinessId !== reviewerId) {
         throw new UnauthorizedException('OTC order is not assigned to this business account');
+      }
+      if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
+        throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
       }
       const claimed = await tx.otcOrder.updateMany({ where: { id: orderId, status: 'PENDING' }, data: { status: 'REJECTED', reviewedById: reviewerId, reviewedAt: new Date(), reviewNote: note?.trim() || null } });
       if (claimed.count !== 1) throw new BadRequestException('OTC order already reviewed');

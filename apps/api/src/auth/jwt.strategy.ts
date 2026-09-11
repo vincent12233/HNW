@@ -54,6 +54,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         role: true,
         status: true,
         authVersion: true,
+        deletedAt: true,
 
         businessProfile: {
           select: {
@@ -67,7 +68,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('User account not found');
     }
 
-    if (user.status !== UserStatus.ACTIVE) {
+    if (user.deletedAt || user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('User account is not active');
     }
 

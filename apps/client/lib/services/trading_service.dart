@@ -26,10 +26,13 @@ class TradingService {
     return order;
   }
 
-  Future<TradingAccountSnapshot?> fetchAccountSnapshot() async {
+  Future<TradingAccountSnapshot?> fetchAccountSnapshot({
+    bool allowCached = true,
+  }) async {
     final session = await _authService.restoreSession();
 
     if (session == null || session.accessToken.isEmpty) {
+      if (!allowCached) throw const TradingException('Please sign in again');
       return null;
     }
 
@@ -54,22 +57,26 @@ class TradingService {
         );
       }
 
-      if (decoded is! Map<String, dynamic>) {
-        return _cachedAccountSnapshot();
+      if (decoded is! Map<String, dynamic> ||
+          decoded['balances'] is! Map ||
+          decoded['positions'] is! List) {
+        throw const TradingException('Unable to load portfolio');
       }
 
       await LocalDataCache.saveJson(LocalDataCache.accountSnapshot, decoded);
 
       return TradingAccountSnapshot.fromJson(decoded);
     } catch (_) {
+      if (!allowCached) rethrow;
       return _cachedAccountSnapshot();
     }
   }
 
-  Future<List<TradingOrder>> fetchOrders() async {
+  Future<List<TradingOrder>> fetchOrders({bool allowCached = true}) async {
     final session = await _authService.restoreSession();
 
     if (session == null || session.accessToken.isEmpty) {
+      if (!allowCached) throw const TradingException('Please sign in again');
       return <TradingOrder>[];
     }
 
@@ -83,6 +90,7 @@ class TradingService {
 
       if (_sessionExpiry.isUnauthorized(response.statusCode)) {
         await _sessionExpiry.expire();
+        if (!allowCached) throw const TradingException('Please sign in again');
         return <TradingOrder>[];
       }
 
@@ -95,13 +103,14 @@ class TradingService {
       final data = decoded is Map ? decoded['data'] : null;
 
       if (data is! List) {
-        return _cachedOrders();
+        throw const TradingException('Unable to load orders');
       }
 
       await LocalDataCache.saveJson(LocalDataCache.orders, data);
 
       return _ordersFromRows(data);
     } catch (_) {
+      if (!allowCached) rethrow;
       return _cachedOrders();
     }
   }
@@ -128,7 +137,9 @@ class TradingService {
       );
     }
     final rows = decoded is Map ? decoded['data'] : null;
-    if (rows is! List) return const [];
+    if (rows is! List) {
+      throw TradingException('Unable to load transactions');
+    }
     return rows
         .whereType<Map>()
         .map(
@@ -138,6 +149,7 @@ class TradingService {
   }
 
   Future<TradingOrder> placeOrder(TradingOrder order) async {
+    _lastPlacedOrder = null;
     final session = await _authService.restoreSession();
 
     if (session == null || session.accessToken.isEmpty) {
@@ -158,32 +170,53 @@ class TradingService {
       body['limitPrice'] = order.limitPrice!.toStringAsFixed(4);
     }
 
-    final response = await http
-        .post(
-          Uri.parse('${AppConfig.apiBaseUrl}/orders'),
-          headers: {
-            'Authorization': 'Bearer ${session.accessToken}',
-            'Content-Type': 'application/json',
-          },
-          body: jsonEncode(body),
-        )
-        .timeout(const Duration(seconds: 10));
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('${AppConfig.apiBaseUrl}/orders'),
+            headers: {
+              'Authorization': 'Bearer ${session.accessToken}',
+              'Content-Type': 'application/json',
+            },
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw const TradingException(
+        'Order confirmation is unavailable. Check your orders before submitting again.',
+      );
+    }
 
     if (_sessionExpiry.isUnauthorized(response.statusCode)) {
       await _sessionExpiry.expire();
       throw const TradingException('Please sign in again');
     }
 
-    final decoded = jsonDecode(response.body);
+    dynamic decoded;
+    try {
+      decoded = jsonDecode(response.body);
+    } catch (_) {
+      throw const TradingException(
+        'Order confirmation is unavailable. Check your orders before submitting again.',
+      );
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw TradingException(_apiMessage(decoded, 'Order placement failed'));
     }
 
-    final apiOrder = decoded is Map ? decoded['order'] : null;
-    final confirmedOrder = apiOrder is Map
-        ? TradingOrder.fromApiJson(Map<String, dynamic>.from(apiOrder))
-        : order;
+    final TradingOrder confirmedOrder;
+    try {
+      confirmedOrder = TradingOrder.fromConfirmation(
+        decoded,
+        body['clientOrderId'] as String,
+      );
+    } catch (_) {
+      throw const TradingException(
+        'Order confirmation is unavailable. Check your orders before submitting again.',
+      );
+    }
 
     _lastPlacedOrder = confirmedOrder;
     return confirmedOrder;
@@ -199,12 +232,19 @@ class TradingService {
       throw const TradingException('Please sign in again');
     }
 
-    final response = await http
-        .post(
-          Uri.parse('${AppConfig.apiBaseUrl}/orders/$orderId/cancel'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
-        )
-        .timeout(const Duration(seconds: 10));
+    final http.Response response;
+    try {
+      response = await http
+          .post(
+            Uri.parse('${AppConfig.apiBaseUrl}/orders/$orderId/cancel'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      throw const TradingException(
+        'Unable to confirm cancellation. Refresh your orders to check the latest status.',
+      );
+    }
 
     if (_sessionExpiry.isUnauthorized(response.statusCode)) {
       await _sessionExpiry.expire();
@@ -220,6 +260,16 @@ class TradingService {
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw TradingException(_apiMessage(decoded, 'Order cancellation failed'));
+    }
+    final cancelledOrder = decoded is Map ? decoded['order'] : null;
+    if (decoded is! Map ||
+        decoded['cancelled'] != true ||
+        cancelledOrder is! Map ||
+        cancelledOrder['id'] != orderId ||
+        cancelledOrder['status'] != 'CANCELLED') {
+      throw const TradingException(
+        'Unable to confirm cancellation. Refresh your orders to check the latest status.',
+      );
     }
   }
 }
@@ -265,6 +315,9 @@ class TradingAccountSnapshot {
   final double cashBalance;
   final double buyingPower;
   final double frozenBalance;
+  double get availableBalance => (cashBalance - frozenBalance)
+      .clamp(0, buyingPower < 0 ? 0 : buyingPower)
+      .toDouble();
   final double realizedProfitLoss;
   final List<PortfolioPosition> positions;
 

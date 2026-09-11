@@ -16,7 +16,9 @@ export class PrivateObjectStorageService implements OnModuleInit {
 
   async putKyc(userId: string, bytes: Buffer, declaredMime?: string) {
     const mime = this.detectMime(bytes);
-    if (!mime || (declaredMime && declaredMime !== mime)) throw new BadRequestException('File content does not match an allowed PDF or image type');
+    const heifFamily = (value?: string | null) => value === 'image/heic' || value === 'image/heif';
+    const declaredMatches = !declaredMime || declaredMime === mime || (heifFamily(declaredMime) && heifFamily(mime));
+    if (!mime || !declaredMatches) throw new BadRequestException('File content does not match an allowed PDF or image type');
     await this.scan(bytes);
     const key = `kyc/${userId}/${Date.now()}-${randomUUID()}`;
     const path = this.resolve(key);
@@ -48,6 +50,13 @@ export class PrivateObjectStorageService implements OnModuleInit {
     if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
     if (bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10]))) return 'image/png';
     if (bytes.subarray(0, 4).toString() === 'RIFF' && bytes.subarray(8, 12).toString() === 'WEBP') return 'image/webp';
+    // HEIC/HEIF files use the ISO Base Media File Format and identify their
+    // image family in the `ftyp` major brand at byte offset 8.
+    if (bytes.length >= 12 && bytes.subarray(4, 8).toString() === 'ftyp') {
+      const brand = bytes.subarray(8, 12).toString();
+      if (['heic', 'heix', 'hevc', 'hevx'].includes(brand)) return 'image/heic';
+      if (['mif1', 'msf1'].includes(brand)) return 'image/heif';
+    }
     return null;
   }
   private async scan(bytes: Buffer) {

@@ -15,6 +15,16 @@ describe('Private object storage', () => {
     expect(await storage.get(file.key)).toEqual(bytes);
     await storage.remove(file.key);
   });
+  it('accepts HEIC image signatures', async () => {
+    const storage = new PrivateObjectStorageService();
+    const bytes = Buffer.alloc(24);
+    bytes.writeUInt32BE(bytes.length, 0);
+    bytes.write('ftyp', 4, 'ascii');
+    bytes.write('heic', 8, 'ascii');
+    const file = await storage.putKyc('test-user', bytes, 'image/heic');
+    expect(file.mime).toBe('image/heic');
+    await storage.remove(file.key);
+  });
   it('rejects traversal including siblings with the same root prefix', async () => {
     const storage = new PrivateObjectStorageService();
     await expect(storage.get('../outside')).rejects.toThrow('Invalid object key');

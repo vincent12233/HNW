@@ -35,6 +35,7 @@ export class WithdrawalController {
       body.ifscCode,
       body.upiId,
       body.note,
+      body.withdrawalPin,
     );
   }
 
@@ -46,19 +47,19 @@ export class WithdrawalController {
 
   @Get('pending')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  listPending() {
-    return this.withdrawalService.listPendingWithdrawals();
+  listPending(@Req() req: any) {
+    return this.withdrawalService.listPendingWithdrawals(req.user.role);
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
   approve(@Param('id') id: string, @Req() req: any) {
-    return this.withdrawalService.approveWithdrawal(id, req.user.userId);
+    return this.withdrawalService.approveWithdrawal(id, req.user.userId, req.user.role);
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
   reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
-    return this.withdrawalService.rejectWithdrawal(id, body.note, req.user.userId);
+    return this.withdrawalService.rejectWithdrawal(id, body.note, req.user.userId, req.user.role);
   }
 }

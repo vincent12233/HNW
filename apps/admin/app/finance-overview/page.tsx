@@ -1,7 +1,7 @@
 "use client";
 
-import { BankOutlined, CreditCardOutlined, DollarOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Row, Space, Statistic, Table, Tag, Typography } from "antd";
+import { BankOutlined, CreditCardOutlined, DollarOutlined, MinusCircleOutlined, PlusCircleOutlined, ReloadOutlined, WarningOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Col, Form, Input, InputNumber, Modal, Row, Space, Statistic, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -64,6 +64,7 @@ function formatDate(value?: string | null) {
 }
 
 export default function FinanceOverviewPage() {
+  const [form] = Form.useForm();
   const [accounts, setAccounts] = useState<AccountRecord[]>([]);
   const [transactions, setTransactions] = useState<TransactionRecord[]>([]);
   const [withdrawals, setWithdrawals] = useState<WithdrawalRecord[]>([]);
@@ -71,6 +72,8 @@ export default function FinanceOverviewPage() {
   const [ipoDebts, setIpoDebts] = useState<IpoDebt[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [adjustment, setAdjustment] = useState<{ accountNumber: string; direction: "credit" | "debit" } | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -101,6 +104,23 @@ export default function FinanceOverviewPage() {
     loadData();
   }, []);
 
+  async function submitAdjustment(values: { amount: number; referenceId: string; note?: string }) {
+    if (!adjustment) return;
+    setSubmitting(true);
+    try {
+      await api.post(`/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`, values);
+        message.success("资金调整已执行并写入流水");
+      setAdjustment(null);
+      form.resetFields();
+      await loadData();
+    } catch (requestError: any) {
+      const responseMessage = requestError.response?.data?.message;
+      message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "资金调整提交失败");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   const metrics = useMemo(() => {
     const totalAssets = accounts.reduce((sum, item) => sum + Number(item.balances.totalAsset ?? 0), 0);
     const totalCash = accounts.reduce((sum, item) => sum + Number(item.balances.cashBalance ?? 0), 0);
@@ -118,6 +138,15 @@ export default function FinanceOverviewPage() {
     { title: "状态", dataIndex: "status", width: 120 },
     { title: "流水号", dataIndex: "referenceId", width: 180, render: (value) => value || "-" },
     { title: "时间", dataIndex: "createdAt", width: 180, render: formatDate },
+  ];
+
+  const accountColumns: ColumnsType<AccountRecord> = [
+    { title: "客户", width: 220, render: (_, row) => <Space orientation="vertical" size={0}><Text strong>{row.user.fullName}</Text><Text type="secondary">{row.user.customerNo || "-"} / {row.user.phone || "-"}</Text></Space> },
+    { title: "账户号", dataIndex: "accountNumber", width: 170 },
+    { title: "现金余额", width: 150, align: "right", render: (_, row) => formatMoney(row.balances.cashBalance) },
+    { title: "冻结金额", width: 150, align: "right", render: (_, row) => formatMoney(row.balances.frozenBalance) },
+    { title: "总资产", width: 150, align: "right", render: (_, row) => formatMoney(row.balances.totalAsset) },
+    { title: "操作", width: 210, fixed: "right", render: (_, row) => <Space><Button icon={<PlusCircleOutlined />} onClick={() => setAdjustment({ accountNumber: row.accountNumber, direction: "credit" })}>上分</Button><Button danger icon={<MinusCircleOutlined />} onClick={() => setAdjustment({ accountNumber: row.accountNumber, direction: "debit" })}>扣款</Button></Space> },
   ];
 
   const debtColumns: ColumnsType<IpoDebt | LoanRecord> = [
@@ -142,6 +171,9 @@ export default function FinanceOverviewPage() {
           <Col xs={24} md={8} xl={5}><Card><Statistic title="贷款未还" value={metrics.loanOutstanding} prefix={<WarningOutlined />} formatter={(value) => formatMoney(value as number)} /></Card></Col>
           <Col xs={24} md={8} xl={4}><Card><Statistic title="IPO 欠款" value={metrics.ipoOutstanding} formatter={(value) => formatMoney(value as number)} /></Card></Col>
         </Row>
+        <Card title="客户账户" extra={<Text type="secondary">资金调整由当前财务员工确认后立即执行并留痕</Text>}>
+          <Table<AccountRecord> rowKey="id" columns={accountColumns} dataSource={accounts} loading={loading} scroll={{ x: 1100 }} pagination={{ pageSize: 10 }} />
+        </Card>
         <Card title="最近资金流水" extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>刷新</Button>}>
           <Table<TransactionRecord> rowKey="id" columns={transactionColumns} dataSource={transactions} loading={loading} scroll={{ x: 1100 }} pagination={false} />
         </Card>
@@ -149,6 +181,13 @@ export default function FinanceOverviewPage() {
           <Table<IpoDebt | LoanRecord> rowKey="id" columns={debtColumns} dataSource={[...ipoDebts.filter((item) => item.status !== "PAID"), ...loans.filter((item) => !["REPAID", "REJECTED"].includes(item.status))]} loading={loading} scroll={{ x: 900 }} pagination={{ pageSize: 10 }} />
         </Card>
       </Space>
+      <Modal title={`${adjustment?.direction === "credit" ? "账户上分" : "账户扣款"} · ${adjustment?.accountNumber || ""}`} open={Boolean(adjustment)} onCancel={() => { setAdjustment(null); form.resetFields(); }} onOk={() => form.submit()} confirmLoading={submitting} okText="确认执行" destroyOnHidden>
+        <Form form={form} layout="vertical" onFinish={submitAdjustment}>
+          <Form.Item name="amount" label="调整金额" rules={[{ required: true, message: "请输入金额" }]}><InputNumber min={0.01} precision={2} style={{ width: "100%" }} prefix="₹" /></Form.Item>
+          <Form.Item name="referenceId" label="外部流水号" rules={[{ required: true, message: "请输入唯一流水号" }, { min: 6, message: "流水号至少 6 个字符" }]}><Input placeholder="银行流水或内部工单号" /></Form.Item>
+          <Form.Item name="note" label="调整说明" rules={[{ required: true, message: "请输入调整原因" }]}><Input.TextArea rows={3} placeholder="说明资金来源或扣款原因" /></Form.Item>
+        </Form>
+      </Modal>
     </AdminShell>
   );
 }

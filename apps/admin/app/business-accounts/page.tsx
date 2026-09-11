@@ -3,7 +3,8 @@
 import { LockOutlined, ReloadOutlined, SearchOutlined, StopOutlined, UnlockOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Input, Popconfirm, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isAxiosError } from "axios";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -49,30 +50,51 @@ export default function BusinessAccountsPage() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const mutationLock = useRef(false);
+  const listRequest = useRef(0);
+  const [saving, setSaving] = useState(false);
 
-  async function loadCustomers() {
+  const loadCustomers = useCallback(async () => {
+    const request = ++listRequest.current;
     setLoading(true);
     setError("");
     try {
       const response = await api.get<Customer[]>("/business/my-customers");
-      setCustomers(Array.isArray(response.data) ? response.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
+      if (request !== listRequest.current) return;
+      if (!Array.isArray(response.data)) throw new Error("Invalid accounts response");
+      setCustomers(response.data);
+    } catch (requestError: unknown) {
+      if (request !== listRequest.current) return;
+      const responseMessage = isAxiosError<{ message?: string | string[] }>(requestError) ? requestError.response?.data?.message : undefined;
       setError(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "账户列表加载失败");
     } finally {
-      setLoading(false);
+      if (request === listRequest.current) setLoading(false);
+    }
+  }, []);
+
+  async function updateStatus(customerId: string, status: "ACTIVE" | "SUSPENDED" | "DISABLED") {
+    if (mutationLock.current) return;
+    mutationLock.current = true;
+    setSaving(true);
+    listRequest.current++;
+    try {
+      await api.patch(`/business/customers/${customerId}/status`, { status });
+      setCustomers((rows) => rows.map((row) => row.id === customerId ? { ...row, status } : row));
+      message.success(status === "ACTIVE" ? "账户已解冻" : status === "SUSPENDED" ? "账户已冻结" : "账户已禁用");
+    } catch {
+      message.error("账户状态更新未确认，请刷新核对最新状态后再操作");
+    } finally {
+      await loadCustomers();
+      mutationLock.current = false;
+      setSaving(false);
     }
   }
 
-  async function updateStatus(customerId: string, status: "ACTIVE" | "SUSPENDED" | "DISABLED") {
-    await api.patch(`/business/customers/${customerId}/status`, { status });
-    message.success(status === "ACTIVE" ? "账户已解冻" : status === "SUSPENDED" ? "账户已冻结" : "账户已禁用");
-    await loadCustomers();
-  }
-
   useEffect(() => {
-    loadCustomers();
-  }, []);
+    const requests = listRequest;
+    const initialLoad = window.setTimeout(() => { void loadCustomers(); }, 0);
+    return () => { window.clearTimeout(initialLoad); requests.current++; };
+  }, [loadCustomers]);
 
   const filtered = useMemo(() => {
     const value = keyword.trim().toLowerCase();
@@ -113,14 +135,14 @@ export default function BusinessAccountsPage() {
       fixed: "right",
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<UnlockOutlined />} disabled={record.status === "ACTIVE"} onClick={() => updateStatus(record.id, "ACTIVE")}>
+          <Button size="small" icon={<UnlockOutlined />} disabled={saving || loading || record.status === "ACTIVE"} onClick={() => updateStatus(record.id, "ACTIVE")}>
             解冻
           </Button>
-          <Button size="small" icon={<LockOutlined />} disabled={record.status === "SUSPENDED"} onClick={() => updateStatus(record.id, "SUSPENDED")}>
+          <Button size="small" icon={<LockOutlined />} disabled={saving || loading || record.status === "SUSPENDED"} onClick={() => updateStatus(record.id, "SUSPENDED")}>
             冻结
           </Button>
           <Popconfirm title="确认禁用该客户账户？" okText="确认" cancelText="取消" onConfirm={() => updateStatus(record.id, "DISABLED")}>
-            <Button size="small" danger icon={<StopOutlined />} disabled={record.status === "DISABLED"}>
+            <Button size="small" danger icon={<StopOutlined />} disabled={saving || loading || record.status === "DISABLED"}>
               禁用
             </Button>
           </Popconfirm>
@@ -140,7 +162,7 @@ export default function BusinessAccountsPage() {
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
             <Input allowClear prefix={<SearchOutlined />} placeholder="搜索客户编号、姓名、手机号、交易账号或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 430 }} />
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={loadCustomers}>刷新</Button>
+            <Button icon={<ReloadOutlined />} disabled={saving} loading={loading} onClick={loadCustomers}>刷新</Button>
           </Space>
           <Table<Customer> rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1280 }} pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 个账户` }} />
         </Card>

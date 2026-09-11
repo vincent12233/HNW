@@ -29,16 +29,14 @@ class MarketSearchPage {
 class MarketDataService {
   Future<List<MarketNewsItem>> fetchMarketNews({int limit = 8}) async {
     try {
-      final session = await _authService.restoreSession();
-      if (session == null) return const [];
       final response = await http
           .get(
             Uri.parse('${AppConfig.apiBaseUrl}/market-data/news?limit=$limit'),
-            headers: {'Authorization': 'Bearer ${session.accessToken}'},
           )
-          .timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300)
+          .timeout(const Duration(seconds: 15));
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         return const [];
+      }
       final decoded = jsonDecode(response.body);
       if (decoded is! List) return const [];
       return decoded
@@ -60,8 +58,9 @@ class MarketDataService {
           headers: {'Authorization': 'Bearer ${session.accessToken}'},
         )
         .timeout(const Duration(seconds: 6));
-    if (response.statusCode < 200 || response.statusCode >= 300)
+    if (response.statusCode < 200 || response.statusCode >= 300) {
       return const [];
+    }
     final decoded = jsonDecode(response.body);
     if (decoded is! List) return const [];
     return decoded
@@ -76,9 +75,6 @@ class MarketDataService {
 
   final AuthService _authService = AuthService();
 
-  static final Map<String, String> _preferredExchangeBySymbol =
-      <String, String>{};
-
   static bool acceptsRealtimeQuote(Map<String, dynamic> data) {
     final symbol = data['symbol']?.toString().trim().toUpperCase();
     final exchange = data['exchange']?.toString().trim().toUpperCase();
@@ -87,11 +83,10 @@ class MarketDataService {
         symbol.isEmpty ||
         exchange == null ||
         exchange.isEmpty) {
-      return true;
+      return false;
     }
 
-    final preferred = _preferredExchangeBySymbol[symbol];
-    return preferred == null || preferred == exchange;
+    return exchange == 'NSE' || exchange == 'BSE';
   }
 
   Future<List<StockQuote>> fetchSnapshot() async {
@@ -101,7 +96,6 @@ class MarketDataService {
   Future<List<StockQuote>> fetchHomeBootstrap({
     Iterable<String> symbols = const <String>[],
     int limit = 40,
-    bool preserveExchanges = false,
   }) async {
     try {
       final session = await _authService.restoreSession();
@@ -130,7 +124,7 @@ class MarketDataService {
       }
 
       await LocalDataCache.saveJson(LocalDataCache.marketSnapshot, decoded);
-      return _fromRows(decoded, preserveExchanges: preserveExchanges);
+      return _fromRows(decoded);
     } catch (_) {
       return _cachedSnapshot();
     }
@@ -159,11 +153,18 @@ class MarketDataService {
     }
     final json = Map<String, dynamic>.from(decoded);
     final rows = json['data'];
+    if (rows is! List ||
+        json['page'] != page ||
+        json['total'] is! num ||
+        (json['total'] as num) < 0 ||
+        json['pageSize'] is! num ||
+        (json['pageSize'] as num) <= 0 ||
+        json['hasMore'] is! bool) {
+      throw const MarketDataException('Unable to search market data');
+    }
 
     return MarketSearchPage(
-      data: rows is List
-          ? _fromRows(rows, preserveExchanges: true)
-          : <StockQuote>[],
+      data: _fromRows(rows),
       total: (json['total'] as num?)?.toInt() ?? 0,
       page: (json['page'] as num?)?.toInt() ?? page,
       pageSize: (json['pageSize'] as num?)?.toInt() ?? pageSize,
@@ -285,10 +286,7 @@ class MarketDataService {
     return <StockQuote>[];
   }
 
-  List<StockQuote> _fromRows(
-    List<dynamic> rows, {
-    bool preserveExchanges = false,
-  }) {
+  List<StockQuote> _fromRows(List<dynamic> rows) {
     final selected = <String, Map<String, dynamic>>{};
 
     for (final item in rows) {
@@ -297,28 +295,8 @@ class MarketDataService {
       final exchange = row['exchange']?.toString().trim().toUpperCase() ?? '';
       if (symbol.isEmpty) continue;
 
-      final identity = preserveExchanges ? '$exchange:$symbol' : symbol;
-      final current = selected[identity];
-      final currentExchange =
-          current?['exchange']?.toString().trim().toUpperCase() ?? '';
-
-      if (current == null || (exchange == 'NSE' && currentExchange != 'NSE')) {
-        selected[identity] = row;
-      }
-    }
-
-    if (!preserveExchanges) {
-      _preferredExchangeBySymbol
-        ..clear()
-        ..addEntries(
-          selected.entries.map((entry) {
-            final symbol =
-                entry.value['symbol']?.toString().trim().toUpperCase() ?? '';
-            final exchange =
-                entry.value['exchange']?.toString().trim().toUpperCase() ?? '';
-            return MapEntry(symbol, exchange);
-          }),
-        );
+      final identity = '$exchange:$symbol';
+      selected.putIfAbsent(identity, () => row);
     }
 
     final stocks = selected.values

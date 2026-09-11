@@ -3212,6 +3212,9 @@ class _MarketHomePageState extends State<MarketHomePage>
                           icon: kycStatus == 'APPROVED'
                               ? Icons.verified
                               : Icons.info_outline,
+                          iconColor: kycStatus == 'APPROVED'
+                              ? const Color(0xFF45D59A)
+                              : Colors.white70,
                           label: kycStatus == 'APPROVED'
                               ? 'KYC Verified'
                               : kycStatus == 'PENDING'
@@ -3669,7 +3672,11 @@ class _MarketHomePageState extends State<MarketHomePage>
     );
   }
 
-  Widget _profileStatusPill({required IconData icon, required String label}) {
+  Widget _profileStatusPill({
+    required IconData icon,
+    required String label,
+    Color iconColor = Colors.white70,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
@@ -3680,7 +3687,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, color: Colors.white70, size: 12),
+          Icon(icon, color: iconColor, size: 12),
           const SizedBox(width: 4),
           AppText(
             label,

@@ -777,7 +777,9 @@ class _MarketsPageState extends State<MarketsPage> {
         ? 'GLOBAL'
         : 'NSE';
     return Container(
-      height: 116,
+      // Keep enough vertical room for the unavailable-quote state on narrow
+      // phones; it contains both a status line and the refresh hint.
+      height: 132,
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -824,7 +826,7 @@ class _MarketsPageState extends State<MarketsPage> {
               letterSpacing: 0,
             ),
           ),
-          const SizedBox(height: 5),
+          const SizedBox(height: 3),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,

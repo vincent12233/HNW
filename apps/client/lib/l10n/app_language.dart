@@ -533,8 +533,9 @@ const hindi = <String, String>{
   'Support': 'सहायता',
   'Help & Support': 'मदद और सहायता',
   'FAQs, contact support and raise a ticket': 'ग्राहक सहायता से संपर्क करें',
-  'Learning Center': 'शिक्षण केंद्र',
-  'Tutorials and trading guides': 'ट्रेडिंग संबंधी जानकारी',
+  'Wealth Insights': 'वेल्थ इनसाइट्स',
+  'Knowledge for informed investment decisions':
+      'सूचित निवेश निर्णयों के लिए ज्ञान',
   'About Us': 'हमारे बारे में',
   'About our app, terms and policies': 'ऐप, शर्तें और नीतियाँ',
   'Logout': 'लॉगआउट',

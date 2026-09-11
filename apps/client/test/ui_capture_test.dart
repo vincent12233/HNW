@@ -25,8 +25,8 @@ void main() {
   const output = String.fromEnvironment('UI_CAPTURE_DIR');
   final pages = <String, Widget>{
     'password': const AccountSecurityPage(),
-    'learning': const LearningCenterPage(),
-    'article': const LearningArticlePage(index: 0),
+    'wealth_insights': const WealthInsightsPage(),
+    'article': const WealthInsightArticlePage(index: 0),
     'language': const LanguagePage(),
     'appearance': const AppearancePage(),
     'privacy': const LegalPage(title: 'Privacy'),

@@ -2,7 +2,7 @@ import '../widgets/app_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 
-const learningArticles = <(String, String, String)>[
+const wealthInsightArticles = <(String, String, String)>[
   (
     'Account and KYC',
     'Register with your phone number and invitation code. Keep your login password private. Your account ID is read-only; your name can be updated in Personal Information.\n\nSubmit clear, complete Aadhaar or PAN documents through KYC Verification. Check the review status before adding a bank account. If documents are rejected, review the reason and upload corrected documents. Do not send identity documents through unsolicited messages.',
@@ -45,34 +45,63 @@ const learningArticles = <(String, String, String)>[
   ),
 ];
 
-class LearningCenterPage extends StatelessWidget {
-  const LearningCenterPage({super.key});
+class WealthInsightsPage extends StatelessWidget {
+  const WealthInsightsPage({super.key});
   @override
   Widget build(BuildContext context) => AppPageScaffold(
-    appBar: AppBar(title: const AppText('Learning Center')),
-    body: ListView.separated(
-      itemCount: learningArticles.length,
-      separatorBuilder: (_, _) => const Divider(height: 1),
-      itemBuilder: (context, index) => ListTile(
-        leading: const Icon(Icons.menu_book_outlined),
-        title: AppText(learningArticles[index].$1),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () => Navigator.of(context).push(
-          MaterialPageRoute<void>(
-            builder: (_) => LearningArticlePage(index: index),
+    appBar: AppBar(title: const AppText('Wealth Insights')),
+    body: ListView(
+      padding: const EdgeInsets.only(bottom: 24),
+      children: [
+        const Padding(
+          padding: EdgeInsets.fromLTRB(20, 20, 20, 14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                'Knowledge for informed investment decisions',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 8),
+              AppText(
+                'Explore essential investment concepts, portfolio strategies, market perspectives and wealth-management principles designed to help investors make more informed financial decisions.',
+                style: TextStyle(color: Color(0xFF667085), height: 1.5),
+              ),
+            ],
           ),
         ),
-      ),
+        ...[
+          'Investment Essentials',
+          'Portfolio Strategy',
+          'Market Perspectives',
+          'Understanding Companies',
+          'Risk Management',
+          'Wealth Planning',
+          'Trading & Orders',
+          'Investor Discipline & Important Information',
+        ].asMap().entries.map(
+          (entry) => ListTile(
+            leading: const Icon(Icons.menu_book_outlined),
+            title: AppText(entry.value),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(
+                builder: (_) => WealthInsightArticlePage(index: entry.key),
+              ),
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
 
-class LearningArticlePage extends StatelessWidget {
-  const LearningArticlePage({super.key, required this.index});
+class WealthInsightArticlePage extends StatelessWidget {
+  const WealthInsightArticlePage({super.key, required this.index});
   final int index;
   @override
   Widget build(BuildContext context) {
-    final article = learningArticles[index];
+    final article = wealthInsightArticles[index];
     final hindi = Localizations.localeOf(context).languageCode == 'hi';
     return AppPageScaffold(
       appBar: AppBar(title: AppText(article.$1)),

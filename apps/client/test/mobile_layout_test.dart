@@ -103,7 +103,7 @@ void main() {
     });
     testWidgets('learning article fits large text at $size', (tester) async {
       viewport(tester, size);
-      await tester.pumpWidget(app(const LearningArticlePage(index: 0)));
+      await tester.pumpWidget(app(const WealthInsightArticlePage(index: 0)));
       await tester.pumpAndSettle();
       await tester.drag(
         find.byType(SingleChildScrollView).first,

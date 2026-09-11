@@ -31,11 +31,11 @@ void main() {
           locale: Locale('hi'),
           supportedLocales: [Locale('en'), Locale('hi')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          home: LearningCenterPage(),
+          home: WealthInsightsPage(),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('शिक्षण केंद्र'), findsOneWidget);
+      expect(find.text('वेल्थ इनसाइट्स'), findsOneWidget);
       await tester.tap(find.byType(ListTile).first);
       await tester.pumpAndSettle();
       expect(find.byType(SelectableText), findsOneWidget);

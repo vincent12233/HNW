@@ -3562,11 +3562,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.menu_book_outlined,
-                title: 'Learning Center',
-                subtitle: 'Tutorials and trading guides',
+                title: 'Wealth Insights',
+                subtitle: 'Knowledge for informed investment decisions',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const LearningCenterPage(),
+                    builder: (_) => const WealthInsightsPage(),
                   ),
                 ),
                 color: const Color(0xFF10B981),

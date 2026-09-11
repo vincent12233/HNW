@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_language.dart';
 import 'package:http/http.dart' as http;
@@ -142,36 +141,7 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
               maxScaleFactor: 1.4,
             ),
           ),
-          child: Column(
-            children: [
-              Expanded(child: child ?? const SizedBox.shrink()),
-              Material(
-                color: Colors.white,
-                child: SafeArea(
-                  top: false,
-                  child: InkWell(
-                    onTap: () => launchUrl(
-                      Uri.parse('https://elbstream.com'),
-                      mode: LaunchMode.externalApplication,
-                    ),
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 4,
-                      ),
-                      child: Text(
-                        'Logos by Elbstream',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: Color(0xFF52637A),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          child: child ?? const SizedBox.shrink(),
         );
       },
       initialRoute: kIsWeb && Uri.base.path == '/register' ? '/register' : '/',

@@ -5,6 +5,7 @@ import '../../models/institutional_opportunity.dart';
 import '../../models/stock_quote.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
+import '../responsive_empty_state.dart';
 
 class InstitutionalTab extends StatelessWidget {
   const InstitutionalTab({
@@ -21,31 +22,10 @@ class InstitutionalTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (stocks.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.business_center_outlined,
-                size: 64,
-                color: Colors.black38,
-              ),
-              SizedBox(height: 16),
-              AppText(
-                'No institutional offers available',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              AppText(
-                'Stocks will appear here when live market data is available.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
+      return const ResponsiveEmptyState(
+        icon: Icons.business_center_outlined,
+        title: 'No institutional offers available',
+        subtitle: 'Stocks will appear here when live market data is available.',
       );
     }
 

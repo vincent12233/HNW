@@ -5,6 +5,7 @@ import '../../app_config.dart';
 import '../../models/institutional_opportunity.dart';
 import '../../services/otc_service.dart';
 import '../../utils/number_formatters.dart';
+import '../responsive_empty_state.dart';
 
 class OtcTab extends StatefulWidget {
   const OtcTab({super.key});
@@ -45,27 +46,11 @@ class _OtcTabState extends State<OtcTab> {
 
     if (loading) return const Center(child: CircularProgressIndicator());
     if (items.isEmpty && orders.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.handshake_outlined, size: 64, color: Colors.black38),
-              SizedBox(height: 16),
-              AppText(
-                'No OTC opportunities available',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 8),
-              AppText(
-                'Backend-approved opportunities will appear here during the trading session.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-            ],
-          ),
-        ),
+      return const ResponsiveEmptyState(
+        icon: Icons.handshake_outlined,
+        title: 'No OTC opportunities available',
+        subtitle:
+            'Backend-approved opportunities will appear here during the trading session.',
       );
     }
 

@@ -5,6 +5,7 @@ import '../../app_config.dart';
 import '../../models/ipo.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
+import '../responsive_empty_state.dart';
 
 class IpoTab extends StatefulWidget {
   const IpoTab({
@@ -78,31 +79,14 @@ class _IpoTabState extends State<IpoTab> {
     }).toList();
 
     if (filtered.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.campaign_outlined,
-                size: 64,
-                color: Colors.black38,
-              ),
-              const SizedBox(height: 16),
-              AppText(
-                selectedSection == 1
-                    ? 'No IPOs open for application'
-                    : 'No IPO records',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-        ),
+      return ResponsiveEmptyState(
+        icon: Icons.campaign_outlined,
+        title: selectedSection == 1
+            ? 'No IPOs open for application'
+            : 'No IPO records',
+        subtitle: selectedSection == 1
+            ? 'New IPO opportunities will appear here when applications open.'
+            : 'Your IPO applications and available offers will appear here.',
       );
     }
 

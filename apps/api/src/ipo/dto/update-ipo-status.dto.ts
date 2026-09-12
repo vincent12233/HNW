@@ -5,6 +5,7 @@ export enum IpoStatus {
   PUBLISHED = 'PUBLISHED',
   OPEN = 'OPEN',
   CLOSED = 'CLOSED',
+  LISTED = 'LISTED',
   ALLOTMENT_DONE = 'ALLOTMENT_DONE',
 }
 

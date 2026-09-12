@@ -38,7 +38,8 @@ type Ipo = {
   availableShares: number;
   openDate: string;
   closeDate: string;
-  status: "DRAFT" | "PUBLISHED" | "OPEN" | "CLOSED" | "ALLOTMENT_DONE";
+  status:
+    "DRAFT" | "PUBLISHED" | "OPEN" | "CLOSED" | "LISTED" | "ALLOTMENT_DONE";
   applicationCount: number;
 };
 
@@ -159,7 +160,7 @@ export default function IpoManagementPage() {
                 render: (v) => (
                   <Tag
                     color={
-                      v === "PUBLISHED" || v === "OPEN"
+                      v === "PUBLISHED" || v === "OPEN" || v === "LISTED"
                         ? "green"
                         : v === "DRAFT"
                           ? "gold"
@@ -171,6 +172,7 @@ export default function IpoManagementPage() {
                       OPEN: "已上架（旧数据）",
                       DRAFT: "草稿",
                       CLOSED: "已下架",
+                      LISTED: "已上市（行情已接入）",
                       ALLOTMENT_DONE: "分配已完成",
                     }[v as Ipo["status"]] ?? v}
                   </Tag>
@@ -194,6 +196,7 @@ export default function IpoManagementPage() {
                       disabled={
                         r.status === "PUBLISHED" ||
                         r.status === "OPEN" ||
+                        r.status === "LISTED" ||
                         r.status === "ALLOTMENT_DONE"
                       }
                       onClick={() => setStatus(r, "PUBLISHED")}

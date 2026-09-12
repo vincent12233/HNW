@@ -779,6 +779,7 @@ enum IpoStatus {
   PUBLISHED
   OPEN
   CLOSED
+  LISTED
   ALLOTMENT_DONE
 }
 

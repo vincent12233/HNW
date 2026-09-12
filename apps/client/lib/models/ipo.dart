@@ -45,7 +45,9 @@ class Ipo {
       symbol: json['symbol']?.toString() ?? '',
       status: rawStatus == 'PUBLISHED' || rawStatus == 'OPEN'
           ? IpoStatus.open
-          : rawStatus == 'CLOSED' || rawStatus == 'ALLOTMENT_DONE'
+          : rawStatus == 'CLOSED' ||
+                rawStatus == 'LISTED' ||
+                rawStatus == 'ALLOTMENT_DONE'
           ? IpoStatus.closed
           : IpoStatus.upcoming,
       marketPrice: _doubleValue(json['marketPrice'] ?? json['issuePrice']),

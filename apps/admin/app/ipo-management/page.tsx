@@ -38,7 +38,7 @@ type Ipo = {
   availableShares: number;
   openDate: string;
   closeDate: string;
-  status: "DRAFT" | "OPEN" | "CLOSED" | "ALLOTMENT_DONE";
+  status: "DRAFT" | "PUBLISHED" | "OPEN" | "CLOSED" | "ALLOTMENT_DONE";
   applicationCount: number;
 };
 
@@ -84,7 +84,7 @@ export default function IpoManagementPage() {
       openDate: values.period[0].toISOString(),
       closeDate: values.period[1].toISOString(),
     });
-    message.success("IPO 已创建并上架，认购期间客户可申请");
+    message.success("IPO 已上架到 APP，认购期间客户可申请；上架不代表上市");
     setOpen(false);
     form.resetFields();
     await load();
@@ -93,8 +93,8 @@ export default function IpoManagementPage() {
   async function setStatus(record: Ipo, status: Ipo["status"]) {
     await api.patch(`/admin/ipo/${record.id}/status`, { status });
     message.success(
-      status === "OPEN"
-        ? "IPO 已上架"
+      status === "PUBLISHED"
+        ? "IPO 已上架到 APP（不代表上市）"
         : status === "CLOSED"
           ? "IPO 已下架"
           : "状态已更新",
@@ -108,7 +108,9 @@ export default function IpoManagementPage() {
         <div>
           <Title level={2}>IPO 上架管理</Title>
           <Paragraph type="secondary">
-            仅管理员可以创建 IPO，并控制开放申购、关闭申购和完成配售。
+            超级管理员只负责将产品上架到
+            APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO
+            已上市。
           </Paragraph>
         </div>
         <Card>
@@ -157,14 +159,20 @@ export default function IpoManagementPage() {
                 render: (v) => (
                   <Tag
                     color={
-                      v === "OPEN"
+                      v === "PUBLISHED" || v === "OPEN"
                         ? "green"
                         : v === "DRAFT"
                           ? "gold"
                           : "default"
                     }
                   >
-                    {v}
+                    {{
+                      PUBLISHED: "已上架（APP 可认购）",
+                      OPEN: "已上架（旧数据）",
+                      DRAFT: "草稿",
+                      CLOSED: "已下架",
+                      ALLOTMENT_DONE: "分配已完成",
+                    }[v as Ipo["status"]] ?? v}
                   </Tag>
                 ),
               },
@@ -184,16 +192,18 @@ export default function IpoManagementPage() {
                       size="small"
                       type="primary"
                       disabled={
-                        r.status === "OPEN" || r.status === "ALLOTMENT_DONE"
+                        r.status === "PUBLISHED" ||
+                        r.status === "OPEN" ||
+                        r.status === "ALLOTMENT_DONE"
                       }
-                      onClick={() => setStatus(r, "OPEN")}
+                      onClick={() => setStatus(r, "PUBLISHED")}
                     >
-                      上架
+                      上架到 APP
                     </Button>
                     <Button
                       size="small"
                       danger
-                      disabled={r.status !== "OPEN"}
+                      disabled={r.status !== "PUBLISHED" && r.status !== "OPEN"}
                       onClick={() => setStatus(r, "CLOSED")}
                     >
                       下架
@@ -205,11 +215,11 @@ export default function IpoManagementPage() {
           />
         </Card>
         <Modal
-          title="创建并上架 IPO"
+          title="创建并上架到 APP"
           open={open}
           onCancel={() => setOpen(false)}
           onOk={create}
-          okText="创建并上架"
+          okText="创建并上架到 APP"
         >
           <Form form={form} layout="vertical">
             <Form.Item

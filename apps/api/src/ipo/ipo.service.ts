@@ -41,9 +41,9 @@ export class IpoService {
 
         openDate,
         closeDate,
-        // Creating an IPO is the listing action. The subscription window still
-        // controls client visibility and applications through listOpenIpos/apply.
-        status: 'OPEN',
+        // Publishing makes the product visible in the client app. It does not
+        // mean the IPO has been allotted or listed on an exchange.
+        status: 'PUBLISHED',
       },
     });
 
@@ -312,7 +312,7 @@ export class IpoService {
 
     const ipos = await this.prisma.ipo.findMany({
       where: {
-        status: 'OPEN',
+        status: { in: ['PUBLISHED', 'OPEN'] },
 
         openDate: {
           lte: now,
@@ -414,8 +414,8 @@ export class IpoService {
       throw new NotFoundException('IPO not found');
     }
 
-    if (ipo.status !== 'OPEN') {
-      throw new BadRequestException('IPO is not open for applications');
+    if (ipo.status !== 'PUBLISHED' && ipo.status !== 'OPEN') {
+      throw new BadRequestException('IPO is not published for applications');
     }
 
     if (now < ipo.openDate || now > ipo.closeDate) {

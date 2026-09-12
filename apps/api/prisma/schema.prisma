@@ -776,6 +776,7 @@ enum OrderStatus {
 
 enum IpoStatus {
   DRAFT
+  PUBLISHED
   OPEN
   CLOSED
   ALLOTMENT_DONE

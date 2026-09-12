@@ -43,7 +43,7 @@ class Ipo {
       id: json['id']?.toString() ?? '',
       companyName: json['companyName']?.toString() ?? '',
       symbol: json['symbol']?.toString() ?? '',
-      status: rawStatus == 'OPEN'
+      status: rawStatus == 'PUBLISHED' || rawStatus == 'OPEN'
           ? IpoStatus.open
           : rawStatus == 'CLOSED' || rawStatus == 'ALLOTMENT_DONE'
           ? IpoStatus.closed

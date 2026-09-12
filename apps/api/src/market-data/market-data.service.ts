@@ -18,7 +18,11 @@ export class MarketDataService {
 
   async getMarketSnapshot() {
     const instruments = await this.prisma.instrument.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        exchange: { in: [Exchange.NSE, Exchange.BSE] },
+        type: InstrumentType.EQUITY,
+      },
       include: { quote: true },
       orderBy: { displayOrder: 'asc' },
     });

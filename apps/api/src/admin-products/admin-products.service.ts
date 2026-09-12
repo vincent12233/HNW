@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -7,16 +12,23 @@ import { PrismaService } from '../prisma/prisma.service';
 export class AdminProductsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  listWatchlist() {
-    return this.prisma.adminWatchlistItem.findMany({ orderBy: { createdAt: 'desc' } });
+  listWatchlist(role?: string) {
+    return this.prisma.adminWatchlistItem.findMany({
+      where:
+        role === 'ADMIN' ? undefined : { status: { in: ['ACTIVE', '展示中'] } },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async createWatchlist(body: any) {
     this.require(body.symbol, '请输入股票代码');
     this.require(body.name, '请输入股票名称');
     const data = this.watchlistData(body);
-    const duplicate = await this.prisma.adminWatchlistItem.findFirst({ where: { symbol: data.symbol, market: data.market } });
-    if (duplicate) throw new ConflictException('This Inst. stock is already listed');
+    const duplicate = await this.prisma.adminWatchlistItem.findFirst({
+      where: { symbol: data.symbol, market: data.market },
+    });
+    if (duplicate)
+      throw new ConflictException('This Inst. stock is already listed');
     const item = await this.prisma.adminWatchlistItem.create({ data });
     await this.markInstitutionalInstrument(data.symbol, data.market, data.name);
     return item;
@@ -24,25 +36,37 @@ export class AdminProductsService {
 
   async updateWatchlist(id: string, body: any) {
     const item = await this.updateOrThrow(() =>
-      this.prisma.adminWatchlistItem.update({ where: { id }, data: this.watchlistData(body) }),
+      this.prisma.adminWatchlistItem.update({
+        where: { id },
+        data: this.watchlistData(body),
+      }),
     );
     await this.markInstitutionalInstrument(item.symbol, item.market, item.name);
     return item;
   }
 
   updateWatchlistStatus(id: string, status: string) {
-    if (!['ACTIVE', 'PAUSED'].includes(status)) throw new BadRequestException('Status must be ACTIVE or PAUSED');
+    if (!['ACTIVE', 'PAUSED'].includes(status))
+      throw new BadRequestException('Status must be ACTIVE or PAUSED');
     return this.updateOrThrow(() =>
-      this.prisma.adminWatchlistItem.update({ where: { id }, data: { status } }),
+      this.prisma.adminWatchlistItem.update({
+        where: { id },
+        data: { status },
+      }),
     );
   }
 
   deleteWatchlist(id: string) {
-    return this.updateOrThrow(() => this.prisma.adminWatchlistItem.delete({ where: { id } }));
+    return this.updateOrThrow(() =>
+      this.prisma.adminWatchlistItem.delete({ where: { id } }),
+    );
   }
 
-  listBlockTrades() {
-    return this.prisma.adminBlockTrade.findMany({ orderBy: { createdAt: 'desc' } });
+  listBlockTrades(role?: string) {
+    return this.prisma.adminBlockTrade.findMany({
+      where: role === 'ADMIN' ? undefined : { status: { not: '已下架' } },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   createBlockTrade(body: any) {
@@ -58,7 +82,10 @@ export class AdminProductsService {
 
   updateBlockTrade(id: string, body: any) {
     return this.updateOrThrow(() =>
-      this.prisma.adminBlockTrade.update({ where: { id }, data: this.blockTradeData(body) }),
+      this.prisma.adminBlockTrade.update({
+        where: { id },
+        data: this.blockTradeData(body),
+      }),
     );
   }
 
@@ -69,11 +96,15 @@ export class AdminProductsService {
   }
 
   deleteBlockTrade(id: string) {
-    return this.updateOrThrow(() => this.prisma.adminBlockTrade.delete({ where: { id } }));
+    return this.updateOrThrow(() =>
+      this.prisma.adminBlockTrade.delete({ where: { id } }),
+    );
   }
 
   listFunds() {
-    return this.prisma.adminFundProduct.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.adminFundProduct.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   createFund(body: any) {
@@ -89,7 +120,10 @@ export class AdminProductsService {
 
   updateFund(id: string, body: any) {
     return this.updateOrThrow(() =>
-      this.prisma.adminFundProduct.update({ where: { id }, data: this.fundData(body) }),
+      this.prisma.adminFundProduct.update({
+        where: { id },
+        data: this.fundData(body),
+      }),
     );
   }
 
@@ -100,11 +134,15 @@ export class AdminProductsService {
   }
 
   deleteFund(id: string) {
-    return this.updateOrThrow(() => this.prisma.adminFundProduct.delete({ where: { id } }));
+    return this.updateOrThrow(() =>
+      this.prisma.adminFundProduct.delete({ where: { id } }),
+    );
   }
 
   listQuant() {
-    return this.prisma.adminQuantStrategy.findMany({ orderBy: { createdAt: 'desc' } });
+    return this.prisma.adminQuantStrategy.findMany({
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   createQuant(body: any) {
@@ -120,31 +158,54 @@ export class AdminProductsService {
 
   updateQuant(id: string, body: any) {
     return this.updateOrThrow(() =>
-      this.prisma.adminQuantStrategy.update({ where: { id }, data: this.quantData(body) }),
+      this.prisma.adminQuantStrategy.update({
+        where: { id },
+        data: this.quantData(body),
+      }),
     );
   }
 
   updateQuantStatus(id: string, status: string) {
     return this.updateOrThrow(() =>
-      this.prisma.adminQuantStrategy.update({ where: { id }, data: { status } }),
+      this.prisma.adminQuantStrategy.update({
+        where: { id },
+        data: { status },
+      }),
     );
   }
 
   deleteQuant(id: string) {
-    return this.updateOrThrow(() => this.prisma.adminQuantStrategy.delete({ where: { id } }));
+    return this.updateOrThrow(() =>
+      this.prisma.adminQuantStrategy.delete({ where: { id } }),
+    );
   }
 
   private watchlistData(body: any) {
-    const direction = String(body.direction || 'UP').trim().toUpperCase();
-    if (!['UP', 'DOWN'].includes(direction)) throw new BadRequestException('Direction must be UP or DOWN');
-    const referencePrice = body.referencePrice == null || body.referencePrice === '' ? null : new Prisma.Decimal(body.referencePrice);
-    const expectedReturn = body.expectedReturn == null || body.expectedReturn === '' ? null : new Prisma.Decimal(body.expectedReturn);
-    if (referencePrice && referencePrice.lte(0)) throw new BadRequestException('Reference price must be positive');
-    if (expectedReturn && (expectedReturn.lte(0) || expectedReturn.gt(100))) throw new BadRequestException('Expected return must be between 0 and 100');
+    const direction = String(body.direction || 'UP')
+      .trim()
+      .toUpperCase();
+    if (!['UP', 'DOWN'].includes(direction))
+      throw new BadRequestException('Direction must be UP or DOWN');
+    const referencePrice =
+      body.referencePrice == null || body.referencePrice === ''
+        ? null
+        : new Prisma.Decimal(body.referencePrice);
+    const expectedReturn =
+      body.expectedReturn == null || body.expectedReturn === ''
+        ? null
+        : new Prisma.Decimal(body.expectedReturn);
+    if (referencePrice && referencePrice.lte(0))
+      throw new BadRequestException('Reference price must be positive');
+    if (expectedReturn && (expectedReturn.lte(0) || expectedReturn.gt(100)))
+      throw new BadRequestException(
+        'Expected return must be between 0 and 100',
+      );
     return {
       symbol: String(body.symbol).trim().toUpperCase(),
       name: String(body.name).trim(),
-      market: String(body.market || 'NSE').trim().toUpperCase(),
+      market: String(body.market || 'NSE')
+        .trim()
+        .toUpperCase(),
       category: String(body.category || '未分类').trim(),
       risk: String(body.risk || '中').trim(),
       reason: body.reason?.trim() || null,
@@ -194,13 +255,28 @@ export class AdminProductsService {
     }
   }
 
-  private async markInstitutionalInstrument(symbol: string, market: string, name: string) {
+  private async markInstitutionalInstrument(
+    symbol: string,
+    market: string,
+    name: string,
+  ) {
     const normalizedSymbol = symbol.trim().toUpperCase();
-    const exchange = market.trim().toUpperCase() === 'BSE' ? Exchange.BSE : Exchange.NSE;
+    const exchange =
+      market.trim().toUpperCase() === 'BSE' ? Exchange.BSE : Exchange.NSE;
     await this.prisma.instrument.upsert({
       where: { exchange_symbol: { symbol: normalizedSymbol, exchange } },
       update: { name: name.trim(), category: 'INSTITUTIONAL', isActive: true },
-      create: { symbol: normalizedSymbol, exchange, name: name.trim(), category: 'INSTITUTIONAL', type: InstrumentType.EQUITY, currency: 'INR', lotSize: 1, tickSize: '0.05', isActive: true },
+      create: {
+        symbol: normalizedSymbol,
+        exchange,
+        name: name.trim(),
+        category: 'INSTITUTIONAL',
+        type: InstrumentType.EQUITY,
+        currency: 'INR',
+        lotSize: 1,
+        tickSize: '0.05',
+        isActive: true,
+      },
     });
   }
 

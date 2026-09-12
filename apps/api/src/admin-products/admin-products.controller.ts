@@ -1,4 +1,14 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -12,8 +22,8 @@ export class AdminProductsController {
 
   @Get('watchlist')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  watchlist() {
-    return this.service.listWatchlist();
+  watchlist(@Req() request: any) {
+    return this.service.listWatchlist(request.user?.role);
   }
 
   @Post('watchlist')
@@ -24,7 +34,10 @@ export class AdminProductsController {
 
   @Patch('watchlist/:id/status')
   @Roles(UserRole.ADMIN)
-  updateWatchlistStatus(@Param('id') id: string, @Body() body: { status: string }) {
+  updateWatchlistStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string },
+  ) {
     return this.service.updateWatchlistStatus(id, body.status);
   }
 
@@ -42,8 +55,8 @@ export class AdminProductsController {
 
   @Get('block-trades')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  blockTrades() {
-    return this.service.listBlockTrades();
+  blockTrades(@Req() request: any) {
+    return this.service.listBlockTrades(request.user?.role);
   }
 
   @Post('block-trades')
@@ -54,7 +67,10 @@ export class AdminProductsController {
 
   @Patch('block-trades/:id/status')
   @Roles(UserRole.ADMIN)
-  updateBlockTradeStatus(@Param('id') id: string, @Body() body: { status: string }) {
+  updateBlockTradeStatus(
+    @Param('id') id: string,
+    @Body() body: { status: string },
+  ) {
     return this.service.updateBlockTradeStatus(id, body.status);
   }
 

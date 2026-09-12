@@ -179,6 +179,9 @@ class MarketDataService {
   }) async {
     final normalizedSymbol = symbol.trim().toUpperCase();
     final normalizedExchange = exchange.trim().toUpperCase();
+    if (normalizedExchange != 'NSE' && normalizedExchange != 'BSE') {
+      throw const MarketDataException('Unsupported Indian stock exchange');
+    }
     final normalizedRange = range.trim().toUpperCase();
     final cacheKey = LocalDataCache.marketHistory(
       normalizedExchange,
@@ -293,7 +296,7 @@ class MarketDataService {
       final row = Map<String, dynamic>.from(item as Map);
       final symbol = row['symbol']?.toString().trim().toUpperCase() ?? '';
       final exchange = row['exchange']?.toString().trim().toUpperCase() ?? '';
-      if (symbol.isEmpty) continue;
+      if (symbol.isEmpty || (exchange != 'NSE' && exchange != 'BSE')) continue;
 
       final identity = '$exchange:$symbol';
       selected.putIfAbsent(identity, () => row);

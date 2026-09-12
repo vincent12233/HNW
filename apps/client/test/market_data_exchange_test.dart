@@ -20,6 +20,22 @@ void main() {
     );
     expect(stocks.firstWhere((stock) => stock.exchange == 'BSE').price, 101);
   });
+
+  test('cached home snapshot excludes non-Indian exchanges', () async {
+    await LocalDataCache.saveJson(LocalDataCache.marketSnapshot, [
+      {'symbol': 'TCS', 'exchange': 'NSE', 'price': 100},
+      {'symbol': 'RELIANCE', 'exchange': 'BSE', 'price': 101},
+      {'symbol': 'AAPL', 'exchange': 'NASDAQ', 'price': 200},
+      {'symbol': 'IBM', 'exchange': 'NYSE', 'price': 150},
+    ]);
+
+    final stocks = await MarketDataService().fetchHomeBootstrap();
+
+    expect(stocks.map((stock) => '${stock.exchange}:${stock.symbol}'), [
+      'NSE:TCS',
+      'BSE:RELIANCE',
+    ]);
+  });
   test('accepts realtime quote when preferred exchange is unknown', () {
     expect(
       MarketDataService.acceptsRealtimeQuote({

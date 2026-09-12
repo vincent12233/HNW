@@ -10,6 +10,8 @@ class Ipo {
     required this.subscriptionPrice,
     required this.lotSize,
     this.exchange = 'NSE',
+    this.openDate,
+    this.closeDate,
   });
 
   final String id;
@@ -20,6 +22,8 @@ class Ipo {
   final double subscriptionPrice;
   final int lotSize;
   final String exchange;
+  final DateTime? openDate;
+  final DateTime? closeDate;
 
   double get discountAmount {
     final value = marketPrice - subscriptionPrice;
@@ -56,6 +60,8 @@ class Ipo {
       subscriptionPrice: _doubleValue(json['issuePrice']),
       lotSize: _intValue(json['lotSize']),
       exchange: json['exchange']?.toString().toUpperCase() ?? 'NSE',
+      openDate: _dateValue(json['openDate']),
+      closeDate: _dateValue(json['closeDate']),
     );
   }
 
@@ -227,4 +233,9 @@ int _intValue(dynamic value) {
 double _doubleValue(dynamic value) {
   if (value is num) return value.toDouble();
   return double.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+DateTime? _dateValue(dynamic value) {
+  if (value is DateTime) return value;
+  return DateTime.tryParse(value?.toString() ?? '');
 }

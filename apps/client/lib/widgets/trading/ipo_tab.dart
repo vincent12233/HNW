@@ -163,6 +163,14 @@ class _IpoTabState extends State<IpoTab> {
                 ],
               ),
 
+              if (ipo.openDate != null || ipo.closeDate != null) ...[
+                const SizedBox(height: 10),
+                AppText(
+                  'Subscription window: ${_formatDate(ipo.openDate)} - ${_formatDate(ipo.closeDate)}',
+                  style: const TextStyle(color: Colors.black54, fontSize: 11),
+                ),
+              ],
+
               const Divider(height: 26),
 
               Row(
@@ -286,6 +294,12 @@ class _IpoTabState extends State<IpoTab> {
         ),
       ],
     );
+  }
+
+  String _formatDate(DateTime? value) {
+    if (value == null) return '--';
+    final local = value.toLocal();
+    return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
   }
 
   Future<void> _confirmApply(Ipo ipo) async {

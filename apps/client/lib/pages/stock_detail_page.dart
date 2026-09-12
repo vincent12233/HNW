@@ -15,6 +15,7 @@ import '../services/trading_service.dart';
 import '../services/watchlist_service.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/stock_history_chart.dart';
+import '../widgets/stock_logo.dart';
 
 class StockDetailPage extends StatefulWidget {
   const StockDetailPage({
@@ -651,15 +652,34 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 children: [
                   Row(
                     children: [
+                      StockLogo(
+                        symbol: liveStock.symbol,
+                        logoUrl: liveStock.logoUrl,
+                        size: 44,
+                      ),
+                      const SizedBox(width: 12),
                       Expanded(
-                        child: AppText(
-                          liveStock.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              liveStock.name,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            AppText(
+                              '${liveStock.symbol} · ${liveStock.exchange}',
+                              style: const TextStyle(
+                                color: Color(0xFFCAD9FF),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                       _quoteStatus(),
@@ -897,14 +917,17 @@ class _StockDetailPageState extends State<StockDetailPage> {
           const SizedBox(height: 18),
           SizedBox(
             height: 52,
-            child: FilledButton(
+            child: FilledButton.icon(
               onPressed: placeOrder,
+              icon: Icon(
+                isBuy ? Icons.shopping_cart_outlined : Icons.sell_outlined,
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: isBuy
                     ? AppConfig.gainColor
                     : AppConfig.lossColor,
               ),
-              child: AppText(isBuy ? 'Place Buy Order' : 'Place Sell Order'),
+              label: AppText(isBuy ? 'Review Buy Order' : 'Review Sell Order'),
             ),
           ),
         ],

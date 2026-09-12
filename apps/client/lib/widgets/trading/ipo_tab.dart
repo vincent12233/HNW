@@ -134,13 +134,26 @@ class _IpoTabState extends State<IpoTab> {
                       ],
                     ),
                   ),
-                  AppText(
-                    ipo.statusLabel,
-                    style: TextStyle(
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
                       color: ipo.status == IpoStatus.open
-                          ? AppConfig.gainColor
-                          : const Color(0xFFB45309),
-                      fontWeight: FontWeight.w600,
+                          ? const Color(0xFFE8F7F3)
+                          : const Color(0xFFFFF7E8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: AppText(
+                      ipo.statusLabel,
+                      style: TextStyle(
+                        color: ipo.status == IpoStatus.open
+                            ? AppConfig.gainColor
+                            : const Color(0xFFB45309),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
@@ -161,6 +174,28 @@ class _IpoTabState extends State<IpoTab> {
                   ),
                 ],
               ),
+
+              if (ipo.marketPrice > 0 && ipo.subscriptionPrice > 0) ...[
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.trending_up_rounded,
+                      size: 16,
+                      color: AppConfig.gainColor,
+                    ),
+                    const SizedBox(width: 6),
+                    AppText(
+                      '${ipo.discountPercent.toStringAsFixed(2)}% expected return',
+                      style: const TextStyle(
+                        color: AppConfig.gainColor,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
 
               const SizedBox(height: 14),
 

@@ -6,6 +6,7 @@ import '../../models/institutional_opportunity.dart';
 import '../../services/otc_service.dart';
 import '../../utils/number_formatters.dart';
 import '../responsive_empty_state.dart';
+import '../stock_logo.dart';
 
 class OtcTab extends StatefulWidget {
   const OtcTab({super.key});
@@ -74,19 +75,7 @@ class _OtcTabState extends State<OtcTab> {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8EEFA),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: const Icon(
-                          Icons.handshake_outlined,
-                          color: AppConfig.primaryColor,
-                        ),
-                      ),
+                      StockLogo(symbol: item.symbol, size: 44),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
@@ -109,11 +98,22 @@ class _OtcTabState extends State<OtcTab> {
                           ],
                         ),
                       ),
-                      AppText(
-                        item.status,
-                        style: const TextStyle(
-                          color: AppConfig.primaryColor,
-                          fontWeight: FontWeight.w600,
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE8F7F3),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: AppText(
+                          item.status.isEmpty ? 'Available' : item.status,
+                          style: const TextStyle(
+                            color: AppConfig.primaryColor,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                     ],
@@ -194,9 +194,10 @@ class _OtcTabState extends State<OtcTab> {
               controller: key,
               obscureText: true,
               keyboardType: TextInputType.number,
-              maxLength: 4,
+              maxLength: 6,
+              inputFormatters: const [],
               decoration: const InputDecoration(
-                labelText: '4-digit transaction key',
+                labelText: '6-digit transaction PIN',
               ),
             ),
           ],

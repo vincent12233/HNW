@@ -9,6 +9,7 @@ class Ipo {
     required this.marketPrice,
     required this.subscriptionPrice,
     required this.lotSize,
+    this.exchange = 'NSE',
   });
 
   final String id;
@@ -18,6 +19,7 @@ class Ipo {
   final double marketPrice;
   final double subscriptionPrice;
   final int lotSize;
+  final String exchange;
 
   double get discountAmount {
     final value = marketPrice - subscriptionPrice;
@@ -53,6 +55,7 @@ class Ipo {
       marketPrice: _doubleValue(json['marketPrice'] ?? json['issuePrice']),
       subscriptionPrice: _doubleValue(json['issuePrice']),
       lotSize: _intValue(json['lotSize']),
+      exchange: json['exchange']?.toString().toUpperCase() ?? 'NSE',
     );
   }
 

@@ -128,8 +128,12 @@ class _IpoTabState extends State<IpoTab> {
                         ),
                         const SizedBox(height: 3),
                         AppText(
-                          ipo.symbol,
-                          style: const TextStyle(color: Colors.black54),
+                          '${ipo.symbol} · ${ipo.exchange}',
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -171,6 +175,22 @@ class _IpoTabState extends State<IpoTab> {
                       'Subscription Price',
                       formatPrice(ipo.subscriptionPrice),
                     ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.account_balance_outlined,
+                    size: 15,
+                    color: AppConfig.neutralColor,
+                  ),
+                  const SizedBox(width: 6),
+                  AppText(
+                    '${ipo.exchange} market · IPO applications do not require quantity or amount',
+                    style: const TextStyle(color: Colors.black54, fontSize: 11),
                   ),
                 ],
               ),

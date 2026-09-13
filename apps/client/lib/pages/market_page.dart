@@ -47,6 +47,7 @@ import 'legal_page.dart';
 import 'stock_detail_page.dart';
 import 'stock_search_page.dart';
 import 'support_chat_page.dart';
+import 'deposit_page.dart';
 import 'trading_center_page.dart';
 
 final marketSocket = MarketSocketService();
@@ -883,9 +884,9 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
                 Positioned(
-                  right: 0,
-                  bottom: 112,
-                  child: SafeArea(child: _sideCustomerServiceButton()),
+                  right: 16,
+                  bottom: 86,
+                  child: SafeArea(child: _floatingCustomerServiceButton()),
                 ),
               ],
             ),
@@ -1727,56 +1728,43 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
-    _openSupportChat(
-      initialMessage: 'Hello, I would like to add money to my account.',
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const DepositPage()),
     );
   }
 
   void _openSupportChat({String? initialMessage}) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SupportChatPage(initialMessage: initialMessage),
+    showDialog<void>(
+      context: context,
+      barrierColor: const Color(0x66071326),
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.fromLTRB(14, 36, 14, 86),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
+          child: SupportChatPage(initialMessage: initialMessage),
+        ),
       ),
     );
   }
 
-  Widget _sideCustomerServiceButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openSupportChat(),
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-        child: Ink(
-          width: 28,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: const BoxDecoration(
-            color: AppConfig.primaryColor,
-            borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
-          ),
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.support_agent_rounded, color: Colors.white, size: 16),
-              SizedBox(height: 8),
-              RotatedBox(
-                quarterTurns: 3,
-                child: AppText(
-                  'Support',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-            ],
+  Widget _floatingCustomerServiceButton() {
+    return Semantics(
+      button: true,
+      label: 'Customer Support',
+      child: Material(
+        color: AppConfig.primaryColor,
+        shape: const CircleBorder(),
+        elevation: 8,
+        shadowColor: const Color(0x55000000),
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => _openSupportChat(),
+          child: const SizedBox(
+            width: 54,
+            height: 54,
+            child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 27),
           ),
         ),
       ),

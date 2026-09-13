@@ -42,7 +42,6 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/business-customers", icon: <TeamOutlined />, label: "我的客户" },
     { key: "/business-kyc", icon: <IdcardOutlined />, label: "KYC 审核", badge: "kyc" },
     { key: "/business-accounts", icon: <BankOutlined />, label: "客户账户" },
-    { key: "/business-institutional", icon: <StockOutlined />, label: "Inst. 业务" },
     { key: "/business-otc", icon: <TransactionOutlined />, label: "OTC 审核", badge: "otc" },
     { key: "/business-ipo", icon: <GiftOutlined />, label: "IPO 分配" },
     { key: "/business-positions", icon: <BarChartOutlined />, label: "客户持仓" },

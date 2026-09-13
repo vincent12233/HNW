@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app_config.dart';
 import '../../models/ipo.dart';
 import '../../utils/number_formatters.dart';
-import '../stock_logo.dart';
+import 'product_offer_card.dart';
 import '../responsive_empty_state.dart';
 
 class IpoTab extends StatefulWidget {
@@ -24,7 +24,7 @@ class IpoTab extends StatefulWidget {
 }
 
 class _IpoTabState extends State<IpoTab> {
-  int selectedSection = 0;
+  int selectedSection = 3;
 
   final List<String> sections = const ['Upcoming', 'Open', 'Closed', 'All'];
 
@@ -97,209 +97,24 @@ class _IpoTabState extends State<IpoTab> {
       itemBuilder: (context, index) {
         final ipo = filtered[index];
 
-        final hasDiscount = ipo.discountAmount > 0;
+
         final applicationCount = _applicationCount(ipo.id);
         final reachedLimit = applicationCount >= 5;
 
-        return Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  StockLogo(symbol: ipo.symbol, size: 46),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          ipo.companyName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        AppText(
-                          '${ipo.symbol} · ${ipo.exchange}',
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: ipo.status == IpoStatus.open
-                          ? const Color(0xFFE8F7F3)
-                          : const Color(0xFFFFF7E8),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: AppText(
-                      ipo.statusLabel,
-                      style: TextStyle(
-                        color: ipo.status == IpoStatus.open
-                            ? AppConfig.gainColor
-                            : const Color(0xFFB45309),
-                        fontSize: 10,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              if (ipo.openDate != null || ipo.closeDate != null) ...[
-                const SizedBox(height: 10),
-                AppText(
-                  'Subscription window: ${_formatDate(ipo.openDate)} - ${_formatDate(ipo.closeDate)}',
-                  style: const TextStyle(color: Colors.black54, fontSize: 11),
-                ),
-              ],
-
-              const Divider(height: 26),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _value('Market Price', formatPrice(ipo.marketPrice)),
-                  ),
-                  Expanded(
-                    child: _value(
-                      'Subscription Price',
-                      formatPrice(ipo.subscriptionPrice),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Icon(
-                    Icons.account_balance_outlined,
-                    size: 15,
-                    color: AppConfig.neutralColor,
-                  ),
-                  const SizedBox(width: 6),
-                  AppText(
-                    '${ipo.exchange} market · IPO applications do not require quantity or amount',
-                    style: const TextStyle(color: Colors.black54, fontSize: 11),
-                  ),
-                ],
-              ),
-
-              if (ipo.marketPrice > 0 && ipo.subscriptionPrice > 0) ...[
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Icon(
-                      Icons.trending_up_rounded,
-                      size: 16,
-                      color: AppConfig.gainColor,
-                    ),
-                    const SizedBox(width: 6),
-                    AppText(
-                      '${ipo.discountPercent.toStringAsFixed(2)}% expected return',
-                      style: const TextStyle(
-                        color: AppConfig.gainColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-
-              const SizedBox(height: 14),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _value(
-                      'Discount',
-                      hasDiscount
-                          ? '${formatPrice(ipo.discountAmount)} '
-                                '(${ipo.discountPercent.toStringAsFixed(2)}%)'
-                          : '--',
-                      valueColor: hasDiscount
-                          ? AppConfig.gainColor
-                          : AppConfig.neutralColor,
-                    ),
-                  ),
-                  Expanded(child: _value('Lot Size', '${ipo.lotSize} Shares')),
-                ],
-              ),
-
-              if (ipo.status == IpoStatus.open) ...[
-                const SizedBox(height: 18),
-
-                if (applicationCount > 0)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: AppText(
-                      'Applications: $applicationCount / 5',
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton(
-                    onPressed: reachedLimit
-                        ? null
-                        : () {
-                            _confirmApply(ipo);
-                          },
-                    child: AppText(reachedLimit ? 'Applied 5/5' : 'Apply Now'),
-                  ),
-                ),
-              ],
-            ],
-          ),
+        return ProductOfferCard(
+          name: ipo.companyName,
+          symbol: ipo.symbol,
+          type: 'IPO',
+          status: ipo.statusLabel,
+          marketPrice: ipo.marketPrice,
+          offerPrice: ipo.subscriptionPrice,
+          offerLabel: 'Subscription Price',
+          actionLabel: reachedLimit ? 'Applied 5/5' : 'Trade Now',
+          onTrade: ipo.status == IpoStatus.open && !reachedLimit
+              ? () => _confirmApply(ipo) : null,
         );
       },
     );
-  }
-
-  Widget _value(String label, String value, {Color? valueColor}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
-        ),
-        const SizedBox(height: 4),
-        AppText(
-          value,
-          style: TextStyle(color: valueColor, fontWeight: FontWeight.w600),
-        ),
-      ],
-    );
-  }
-
-  String _formatDate(DateTime? value) {
-    if (value == null) return '--';
-    final local = value.toLocal();
-    return '${local.day.toString().padLeft(2, '0')}/${local.month.toString().padLeft(2, '0')}/${local.year}';
   }
 
   Future<void> _confirmApply(Ipo ipo) async {
@@ -331,6 +146,9 @@ class _IpoTabState extends State<IpoTab> {
                 style: const TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 18),
+              AppText('Market Price: ${formatPrice(ipo.marketPrice)}'),
+              AppText('Subscription Price: ${formatPrice(ipo.subscriptionPrice)}'),
+              AppText('Lot Size: ${ipo.lotSize} Shares'),
               AppText(
                 'Submit IPO application ${currentCount + 1} of 5?\n\n'
                 'You will be notified when your allotment is announced. '
@@ -364,3 +182,4 @@ class _IpoTabState extends State<IpoTab> {
     widget.onApply(ipo);
   }
 }
+

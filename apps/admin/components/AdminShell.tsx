@@ -24,7 +24,7 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/watchlist", icon: <BarChartOutlined />, label: "Inst. 上架" },
     { key: "/block-trades", icon: <BankOutlined />, label: "OTC 上架" },
     { key: "/ipo-management", icon: <GiftOutlined />, label: "IPO 上架" },
-    { key: "/company-showcase", icon: <ShopOutlined />, label: "首页公司展示" },
+      { key: "/company-showcase", icon: <ShopOutlined />, label: "平台公司信息" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
   ],
   MANAGER: [

@@ -1264,9 +1264,9 @@ class _MarketHomePageState extends State<MarketHomePage>
         _homeQuickActions(),
         if (companyShowcases.isNotEmpty) ...[
           const SizedBox(height: 18),
-          _sectionTitle('Featured Companies'),
+          _sectionTitle('Our Company'),
           const SizedBox(height: 10),
-          ...companyShowcases.take(3).map(_companyShowcaseCard),
+          _companyShowcaseCard(companyShowcases.first),
         ],
         const SizedBox(height: 8),
         Container(
@@ -1343,16 +1343,36 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _companyShowcaseCard(CompanyShowcase company) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 10),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(children: [
-          Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFFE8F0FF), borderRadius: BorderRadius.circular(14)), child: company.logoUrl?.isNotEmpty == true ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.network(company.logoUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.business_rounded, color: AppConfig.primaryColor))) : const Icon(Icons.business_rounded, color: AppConfig.primaryColor)),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppText(company.name, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), AppText(company.tagline, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor)), if (company.sector?.isNotEmpty == true) ...[const SizedBox(height: 6), AppText(company.sector!, style: const TextStyle(fontSize: 11, color: AppConfig.primaryColor, fontWeight: FontWeight.w700))]])),
-          const Icon(Icons.arrow_forward_ios_rounded, size: 15, color: AppConfig.textSecondaryColor),
-        ]),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B1F44), Color(0xFF123B72), Color(0xFF176B88)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [BoxShadow(color: Color(0x33152F5F), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Stack(
+        children: [
+          Positioned(right: -28, top: -34, child: Container(width: 130, height: 130, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: .08)))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: company.logoUrl?.isNotEmpty == true ? ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(company.logoUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.business_rounded, color: Colors.white))) : const Icon(Icons.business_rounded, color: Colors.white)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppText(company.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), const SizedBox(height: 4), AppText(company.tagline, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD5E6FF), fontSize: 12, height: 1.3))])),
+                const Icon(Icons.verified_rounded, color: Color(0xFF8DE7D3), size: 22),
+              ]),
+              const SizedBox(height: 16),
+              AppText(company.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE7F0FF), fontSize: 13, height: 1.55)),
+              const SizedBox(height: 16),
+              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: const Text('Visit website', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
+            ]),
+          ),
+        ],
       ),
     );
   }

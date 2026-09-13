@@ -27,28 +27,24 @@ class _DepositPageState extends State<DepositPage> {
   void _contact() => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SupportChatPage(initialMessage: 'Hello, I would like to make a deposit.')));
 
   @override Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const AppText('Deposit')),
-    body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.all(16), children: [
-      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const AppText('Institutional Deposit Compliance Notice', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-        const SizedBox(height: 10),
-        const AppText('All institutional trading deposits must complete fund verification through the designated verification account before being credited to your account.', style: TextStyle(height: 1.4)),
-        const SizedBox(height: 14),
-        const AppText('Deposit Instructions', style: TextStyle(fontWeight: FontWeight.w700)),
-        const SizedBox(height: 6),
-        const AppText('Contact Online Customer Support through the application to obtain the designated fund verification account details. Transfer funds only to official account details.', style: TextStyle(height: 1.4)),
+    appBar: AppBar(title: const AppText('Deposit'), leading: const BackButton()),
+    body: RefreshIndicator(onRefresh: _load, child: ListView(padding: const EdgeInsets.fromLTRB(12, 14, 12, 24), children: [
+      Card(child: Padding(padding: const EdgeInsets.fromLTRB(18, 18, 18, 20), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const AppText('Contact customer support to complete your deposit operation.', style: TextStyle(height: 1.4, color: Color(0xFF52627A))),
         const SizedBox(height: 16),
-        SizedBox(width: double.infinity, child: FilledButton.icon(onPressed: _contact, icon: const Icon(Icons.support_agent_rounded), label: const AppText('Contact customer support'))),
+        SizedBox(width: double.infinity, child: FilledButton(onPressed: _contact, child: const AppText('Contact customer support'))),
       ]))),
-      const SizedBox(height: 16),
-      Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const AppText('DEPOSIT HISTORY', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: .5)), IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh_rounded))]),
+      const SizedBox(height: 18),
+      Card(child: Padding(padding: const EdgeInsets.fromLTRB(18, 16, 18, 18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [const AppText('DEPOSIT HISTORY', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: .5)), IconButton(onPressed: _loading ? null : _load, icon: const Icon(Icons.refresh_rounded))]),
       if (_loading) const Padding(padding: EdgeInsets.all(24), child: Center(child: CircularProgressIndicator()))
       else if (_history.isEmpty) const Padding(padding: EdgeInsets.symmetric(vertical: 24), child: AppText('No deposit records yet.'))
       else ..._history.map((entry) => Card(margin: const EdgeInsets.only(bottom: 8), child: ListTile(leading: Icon(entry.amount >= 0 ? Icons.arrow_downward_rounded : Icons.arrow_upward_rounded, color: entry.amount >= 0 ? AppConfig.gainColor : AppConfig.lossColor), title: AppText(formatPrice(entry.amount)), subtitle: AppText('${entry.createdAt.toLocal()} · ${entry.status}'), trailing: entry.note == null ? null : AppText(entry.note!)))),
+      ]))),
       const SizedBox(height: 16),
-      const Card(child: Padding(padding: EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        AppText('Deposit Terms and Conditions', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-        SizedBox(height: 12), AppText('Deposits are subject to minimum amount requirements, processing confirmation and compliance review. High-value deposits may require proof of payment. Please verify all account details through official customer support before transferring funds.', style: TextStyle(height: 1.45)),
+      const Card(child: Padding(padding: EdgeInsets.all(18), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        AppText('TERMS', style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: .5)),
+        SizedBox(height: 12), AppText('Contact customer support to verify the deposit instructions before transferring funds. Deposits appear after finance confirmation.', style: TextStyle(height: 1.45, color: Color(0xFF52627A))),
       ]))),
     ])),
   );

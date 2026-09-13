@@ -8,6 +8,7 @@ import {
   SafetyCertificateOutlined,
   StockOutlined,
   TeamOutlined,
+  TransactionOutlined,
   UserAddOutlined,
   WalletOutlined,
   WarningOutlined,

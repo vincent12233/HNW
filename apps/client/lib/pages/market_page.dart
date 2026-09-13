@@ -884,7 +884,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
                 Positioned(
-                  right: 16,
+                   right: 0,
                   bottom: 86,
                   child: SafeArea(child: _floatingCustomerServiceButton()),
                 ),
@@ -1755,16 +1755,25 @@ class _MarketHomePageState extends State<MarketHomePage>
       label: 'Customer Support',
       child: Material(
         color: AppConfig.primaryColor,
-        shape: const CircleBorder(),
-        elevation: 8,
-        shadowColor: const Color(0x55000000),
+        elevation: 10,
+        shadowColor: const Color(0x66000000),
+        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
         child: InkWell(
-          customBorder: const CircleBorder(),
+          borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
           onTap: () => _openSupportChat(),
           child: const SizedBox(
-            width: 54,
-            height: 54,
-            child: Icon(Icons.support_agent_rounded, color: Colors.white, size: 27),
+            width: 42,
+            height: 174,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                RotatedBox(
+                  quarterTurns: 3,
+                  child: Text('Customer Service', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                ),
+                Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 19),
+              ],
+            ),
           ),
         ),
       ),

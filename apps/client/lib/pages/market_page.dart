@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
 import '../models/institutional_opportunity.dart';
+import '../models/company_showcase.dart';
 import '../models/ipo.dart';
 import '../models/market_news_item.dart';
 import '../models/pending_order.dart';
@@ -131,6 +132,7 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   final List<StockQuote> stocks = <StockQuote>[];
   final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
+  final List<CompanyShowcase> companyShowcases = <CompanyShowcase>[];
   final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
 
@@ -577,6 +579,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       marketDataService.fetchMarketSession(),
       marketDataService.fetchInstitutionalOffers(),
       marketDataService.fetchMarketNews(),
+      marketDataService.fetchCompanyShowcase(),
     ]);
     if (!mounted) return;
     final refreshedStocks = results[0] as List<StockQuote>;
@@ -584,12 +587,16 @@ class _MarketHomePageState extends State<MarketHomePage>
     final session = results[2] as Map<String, dynamic>?;
     final refreshedInstitutional = results[3] as List<InstitutionalStock>;
     final refreshedNews = results[4] as List<MarketNewsItem>;
+    final refreshedCompanies = results[5] as List<CompanyShowcase>;
     setState(() {
       if (refreshedStocks.isNotEmpty) {
         stocks
           ..clear()
           ..addAll(refreshedStocks);
       }
+      companyShowcases
+        ..clear()
+        ..addAll(refreshedCompanies);
       for (final item in indices) {
         final symbol = item['symbol']?.toString().trim().toUpperCase();
         final price = double.tryParse(item['price']?.toString() ?? '');
@@ -1255,6 +1262,12 @@ class _MarketHomePageState extends State<MarketHomePage>
         ),
         const SizedBox(height: 8),
         _homeQuickActions(),
+        if (companyShowcases.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _sectionTitle('Featured Companies'),
+          const SizedBox(height: 10),
+          ...companyShowcases.take(3).map(_companyShowcaseCard),
+        ],
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1325,6 +1338,21 @@ class _MarketHomePageState extends State<MarketHomePage>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _companyShowcaseCard(CompanyShowcase company) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(children: [
+          Container(width: 48, height: 48, decoration: BoxDecoration(color: const Color(0xFFE8F0FF), borderRadius: BorderRadius.circular(14)), child: company.logoUrl?.isNotEmpty == true ? ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.network(company.logoUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.business_rounded, color: AppConfig.primaryColor))) : const Icon(Icons.business_rounded, color: AppConfig.primaryColor)),
+          const SizedBox(width: 12),
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppText(company.name, style: const TextStyle(fontWeight: FontWeight.w800)), const SizedBox(height: 3), AppText(company.tagline, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor)), if (company.sector?.isNotEmpty == true) ...[const SizedBox(height: 6), AppText(company.sector!, style: const TextStyle(fontSize: 11, color: AppConfig.primaryColor, fontWeight: FontWeight.w700))]])),
+          const Icon(Icons.arrow_forward_ios_rounded, size: 15, color: AppConfig.textSecondaryColor),
+        ]),
       ),
     );
   }

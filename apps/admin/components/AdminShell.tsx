@@ -1,6 +1,6 @@
 "use client";
 
-import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
+import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined, ShopOutlined } from "@ant-design/icons";
 import { Alert, Avatar, Badge, Button, Drawer, Layout, Menu, Space, Spin, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
@@ -24,6 +24,7 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/watchlist", icon: <BarChartOutlined />, label: "Inst. 上架" },
     { key: "/block-trades", icon: <BankOutlined />, label: "OTC 上架" },
     { key: "/ipo-management", icon: <GiftOutlined />, label: "IPO 上架" },
+    { key: "/company-showcase", icon: <ShopOutlined />, label: "首页公司展示" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
   ],
   MANAGER: [

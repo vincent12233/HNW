@@ -31,6 +31,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { OtcModule } from './otc/otc.module';
 import { ClientExperienceModule } from './client-experience/client-experience.module';
 import { StorageModule } from './storage/storage.module';
+import { CompanyShowcaseModule } from './company-showcase/company-showcase.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { StorageModule } from './storage/storage.module';
     OtcModule,
     ClientExperienceModule,
     StorageModule,
+    CompanyShowcaseModule,
   ],
   controllers: [AppController, HealthController],
   providers: [AppService],

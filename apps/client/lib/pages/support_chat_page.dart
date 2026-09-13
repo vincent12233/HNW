@@ -51,7 +51,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F8FF),
+      backgroundColor: const Color(0xFFF3F6FC),
       body: SafeArea(
         child: Column(
           children: [
@@ -61,7 +61,10 @@ class _SupportChatPageState extends State<SupportChatPage> {
                 children: [
                   IconButton(
                     onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close_rounded),
+                    icon: const Icon(
+                      Icons.close_rounded,
+                      color: AppConfig.primaryDarkColor,
+                    ),
                   ),
                   Expanded(
                     child: Container(
@@ -70,10 +73,19 @@ class _SupportChatPageState extends State<SupportChatPage> {
                         vertical: 9,
                       ),
                       decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
+                        gradient: const LinearGradient(
+                          colors: [
+                            AppConfig.primaryDarkColor,
+                            AppConfig.primaryColor,
+                          ],
+                        ),
+                        borderRadius: BorderRadius.circular(18),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x16000000), blurRadius: 10),
+                          BoxShadow(
+                            color: Color(0x33165DFF),
+                            blurRadius: 14,
+                            offset: Offset(0, 6),
+                          ),
                         ],
                       ),
                       child: Row(
@@ -92,7 +104,10 @@ class _SupportChatPageState extends State<SupportChatPage> {
                             children: [
                               const AppText(
                                 'Online Customer Service',
-                                style: TextStyle(fontWeight: FontWeight.w700),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white,
+                                ),
                               ),
                               AppText(
                                 _opening
@@ -100,7 +115,7 @@ class _SupportChatPageState extends State<SupportChatPage> {
                                     : 'We are here to help',
                                 style: const TextStyle(
                                   fontSize: 11,
-                                  color: Colors.black54,
+                                  color: Color(0xCCDDE8FF),
                                 ),
                               ),
                             ],
@@ -117,11 +132,23 @@ class _SupportChatPageState extends State<SupportChatPage> {
                 padding: const EdgeInsets.fromLTRB(20, 18, 20, 20),
                 children: [
                   Center(
-                    child: AppText(
-                      'Today',
-                      style: const TextStyle(
-                        fontSize: 11,
-                        color: Colors.black45,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE7EDF8),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: const AppText(
+                        'TODAY',
+                        style: TextStyle(
+                          fontSize: 10,
+                          letterSpacing: 1.1,
+                          fontWeight: FontWeight.w800,
+                          color: Color(0xFF667085),
+                        ),
                       ),
                     ),
                   ),
@@ -137,13 +164,24 @@ class _SupportChatPageState extends State<SupportChatPage> {
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F3)),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0D0B1F44),
+                            blurRadius: 14,
+                            offset: Offset(0, 5),
+                          ),
+                        ],
                       ),
                       child: AppText(
                         _error ??
                             (_opening
                                 ? 'Welcome. Connecting you to customer service…'
                                 : 'Welcome to customer service. How can we help?'),
-                        style: const TextStyle(height: 1.35),
+                        style: const TextStyle(
+                          height: 1.45,
+                          color: Color(0xFF344054),
+                        ),
                       ),
                     ),
                   ),
@@ -162,9 +200,10 @@ class _SupportChatPageState extends State<SupportChatPage> {
                       ),
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
+                        borderRadius: BorderRadius.circular(18),
+                        border: Border.all(color: const Color(0xFFE2E8F3)),
                         boxShadow: const [
-                          BoxShadow(color: Color(0x12000000), blurRadius: 8),
+                          BoxShadow(color: Color(0x12000000), blurRadius: 10),
                         ],
                       ),
                       child: Row(

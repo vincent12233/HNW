@@ -884,7 +884,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
                 Positioned(
-                   right: 0,
+                  right: 0,
                   bottom: 86,
                   child: SafeArea(child: _floatingCustomerServiceButton()),
                 ),
@@ -1728,9 +1728,9 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const DepositPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const DepositPage()));
   }
 
   void _openSupportChat({String? initialMessage}) {
@@ -1754,22 +1754,39 @@ class _MarketHomePageState extends State<MarketHomePage>
       button: true,
       label: 'Customer Support',
       child: Material(
-        color: AppConfig.primaryColor,
+        color: Colors.transparent,
         elevation: 10,
         shadowColor: const Color(0x66000000),
         borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
         child: InkWell(
-          borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+          borderRadius: const BorderRadius.horizontal(
+            left: Radius.circular(12),
+          ),
           onTap: () => _openSupportChat(),
-          child: const SizedBox(
+          child: Ink(
             width: 42,
             height: 174,
-            child: Column(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF2F6BFF), Color(0xFF0B47D1)],
+              ),
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
+            ),
+            child: const Column(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 RotatedBox(
                   quarterTurns: 3,
-                  child: Text('Customer Service', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+                  child: Text(
+                    'Customer Service',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 19),
               ],

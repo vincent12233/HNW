@@ -35,6 +35,7 @@ apps/api/private-objects/
 .local/
 .codex-gitconfig
 .gradle-cache/
+apps/client/.gradle-final/
 
 # Flutter generated metadata and local release artifacts
 apps/client/.dart_tool/

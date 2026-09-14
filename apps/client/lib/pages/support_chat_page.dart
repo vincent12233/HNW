@@ -221,17 +221,14 @@ class _SupportChatPageState extends State<SupportChatPage>
               final columnChildren = <Widget>[
                 _buildHeader(m),
                 if (showNotice) _buildNotice(m),
-                if (constraints.hasBoundedHeight &&
-                    constraints.maxHeight < double.infinity)
-                  Flexible(child: SingleChildScrollView(child: body))
-                else
-                  body,
+                Expanded(child: SingleChildScrollView(child: body)),
                 _buildComposer(m),
               ];
 
-              return Column(
-                mainAxisSize: MainAxisSize.max,
-                children: columnChildren,
+              return SizedBox.expand(
+                child: Column(
+                  children: columnChildren,
+                ),
               );
             },
           ),

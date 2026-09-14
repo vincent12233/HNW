@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app_config.dart';
 import '../../models/portfolio_position.dart';
 import '../../models/stock_quote.dart';
+import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/product_category.dart';
 import '../stock_logo.dart';
@@ -59,9 +60,19 @@ class _HoldingsTabState extends State<HoldingsTab> {
     }).toList();
 
     if (allPositions.isEmpty) {
+      final content = AppContentService.instance.current;
       return _emptyState(
-        'No holdings',
-        'Your holdings will appear here after settled positions are added.',
+        content.text(
+          'trading',
+          'holdings.empty_title',
+          fallback: 'No holdings',
+        ),
+        content.text(
+          'trading',
+          'holdings.empty_subtitle',
+          fallback:
+              'Your holdings will appear here after settled positions are added.',
+        ),
       );
     }
 
@@ -89,7 +100,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
               : ListView.separated(
                   padding: const EdgeInsets.all(16),
                   itemCount: positionList.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) => const SizedBox(height: 10),
                   itemBuilder: (context, index) {
                     final position = positionList[index];
                     final stock = _findStock(
@@ -98,20 +109,34 @@ class _HoldingsTabState extends State<HoldingsTab> {
                     );
 
                     final currentPrice = stock?.price ?? position.averageCost;
+                    final invested = position.quantity * position.averageCost;
                     final marketValue = position.marketValue(currentPrice);
                     final profitLoss = position.unrealizedProfitLoss(
                       currentPrice,
                     );
                     final returnPercent = position.returnPercent(currentPrice);
                     final category = _positionCategory(position, stock);
+                    final dayChange = stock?.previousClose != null &&
+                            stock!.previousClose! > 0
+                        ? (currentPrice - stock.previousClose!) *
+                            position.quantity
+                        : null;
+                    final dayChangePercent = stock?.change;
 
                     final profitColor = profitLoss > 0
                         ? AppConfig.gainColor
                         : profitLoss < 0
                         ? AppConfig.lossColor
                         : AppConfig.neutralColor;
+                    final dayColor = (dayChange ?? 0) > 0
+                        ? AppConfig.gainColor
+                        : (dayChange ?? 0) < 0
+                        ? AppConfig.lossColor
+                        : AppConfig.neutralColor;
 
-                    return Card(
+                    return Material(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
                         onTap: stock == null
@@ -119,16 +144,22 @@ class _HoldingsTabState extends State<HoldingsTab> {
                             : () {
                                 widget.onStockTap(stock);
                               },
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFFE8EDF5)),
+                          ),
                           child: Column(
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   StockLogo(
                                     symbol: position.symbol,
-                                    logoUrl: position.logoUrl ?? stock?.logoUrl,
-                                    size: 42,
+                                    logoUrl:
+                                        position.logoUrl ?? stock?.logoUrl,
+                                    size: 38,
                                   ),
                                   const SizedBox(width: 12),
                                   Expanded(
@@ -138,12 +169,14 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                       children: [
                                         AppText(
                                           position.symbol,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            fontSize: 16,
-                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                            fontWeight: FontWeight.w800,
                                           ),
                                         ),
-                                        const SizedBox(height: 5),
+                                        const SizedBox(height: 3),
                                         AppText(
                                           position.name.isEmpty
                                               ? '${position.quantity} shares'
@@ -155,7 +188,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                             fontSize: 12,
                                           ),
                                         ),
-                                        const SizedBox(height: 7),
+                                        const SizedBox(height: 6),
                                         Wrap(
                                           spacing: 6,
                                           runSpacing: 4,
@@ -164,6 +197,9 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                             _holdingTag(
                                               _categoryLabel(category),
                                               accent: true,
+                                            ),
+                                            _holdingTag(
+                                              '${position.quantity} qty',
                                             ),
                                           ],
                                         ),
@@ -177,50 +213,147 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                           CrossAxisAlignment.end,
                                       children: [
                                         AppText(
-                                          formatPrice(marketValue),
+                                          formatPrice(currentPrice),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.end,
                                           style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 14,
                                           ),
                                         ),
-                                        const SizedBox(height: 3),
-                                        AppText(
-                                          '${profitLoss > 0
-                                              ? '+'
-                                              : profitLoss < 0
-                                              ? '-'
-                                              : ''}'
-                                          '${formatPrice(profitLoss.abs())}',
-                                          style: TextStyle(
-                                            color: profitColor,
-                                            fontWeight: FontWeight.w600,
+                                        if (dayChangePercent != null) ...[
+                                          const SizedBox(height: 3),
+                                          AppText(
+                                            '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}%',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.end,
+                                            style: TextStyle(
+                                              color: dayColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
                                           ),
-                                        ),
+                                        ],
                                       ],
                                     ),
                                   ),
                                 ],
                               ),
-                              const Divider(height: 24),
+                              const SizedBox(height: 12),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final stacked = constraints.maxWidth < 300;
+                                    final metrics = [
+                                      _metricColumn(
+                                        'Invested',
+                                        formatPrice(invested),
+                                      ),
+                                      _metricColumn(
+                                        'Current',
+                                        formatPrice(marketValue),
+                                      ),
+                                      _metricColumn(
+                                        'P&L',
+                                        '${profitLoss >= 0 ? '+' : ''}${formatPrice(profitLoss.abs())}',
+                                        valueColor: profitColor,
+                                        subtitle:
+                                            '${returnPercent >= 0 ? '+' : ''}${returnPercent.toStringAsFixed(2)}%',
+                                      ),
+                                    ];
+                                    if (stacked) {
+                                      return Column(
+                                        children: [
+                                          for (var i = 0;
+                                              i < metrics.length;
+                                              i++) ...[
+                                            if (i > 0)
+                                              const SizedBox(height: 10),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: metrics[i],
+                                            ),
+                                          ],
+                                        ],
+                                      );
+                                    }
+                                    return Row(
+                                      children: [
+                                        for (final metric in metrics)
+                                          Expanded(child: metric),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              ),
+                              if (dayChange != null) ...[
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    const Expanded(
+                                      child: AppText(
+                                        'Day’s change',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Color(0xFF64748B),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: AppText(
+                                        '${dayChange >= 0 ? '+' : ''}${formatPrice(dayChange.abs())}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: dayColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                              const SizedBox(height: 8),
                               Row(
                                 children: [
                                   Expanded(
-                                    child: _valueItem(
-                                      'Quantity / Available',
-                                      '${position.quantity} / ${position.availableQuantity}',
+                                    child: AppText(
+                                      'Avg ${formatPrice(position.averageCost)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        color: Color(0xFF94A3B8),
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ),
-                                  Expanded(
-                                    child: _valueItem(
-                                      'Avg. Price',
-                                      formatPrice(position.averageCost),
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: _valueItem(
-                                      'Returns',
-                                      '${returnPercent > 0 ? '+' : ''}'
-                                          '${returnPercent.toStringAsFixed(2)}%',
-                                      valueColor: profitColor,
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: AppText(
+                                      'Avail ${position.availableQuantity}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.end,
+                                      style: const TextStyle(
+                                        color: Color(0xFF94A3B8),
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -298,19 +431,48 @@ class _HoldingsTabState extends State<HoldingsTab> {
     );
   }
 
-  Widget _valueItem(String label, String value, {Color? valueColor}) {
+  Widget _metricColumn(
+    String label,
+    String value, {
+    Color? valueColor,
+    String? subtitle,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppText(
           label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
         ),
         const SizedBox(height: 4),
-        AppText(
-          value,
-          style: TextStyle(color: valueColor, fontWeight: FontWeight.w600),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: AppText(
+            value,
+            maxLines: 1,
+            style: TextStyle(
+              color: valueColor,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
+          ),
         ),
+        if (subtitle != null) ...[
+          const SizedBox(height: 2),
+          AppText(
+            subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: valueColor ?? const Color(0xFF64748B),
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
       ],
     );
   }

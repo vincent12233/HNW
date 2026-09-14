@@ -108,8 +108,12 @@ export default function FinanceOverviewPage() {
     if (!adjustment) return;
     setSubmitting(true);
     try {
-      await api.post(`/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`, values);
-        message.success("资金调整已执行并写入流水");
+      await api.post(`/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`, {
+        amount: Number(values.amount).toFixed(2),
+        referenceId: values.referenceId.trim(),
+        note: values.note?.trim(),
+      });
+      message.success(adjustment.direction === "credit" ? "上分订单已创建并入账" : "下分已执行并写入流水");
       setAdjustment(null);
       form.resetFields();
       await loadData();
@@ -160,8 +164,10 @@ export default function FinanceOverviewPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
-          <Title level={2}>资金总览</Title>
-          <Paragraph type="secondary">集中查看账户资产、提现待审、贷款未还、IPO 欠款和最近资金流水。</Paragraph>
+          <Title level={2}>上下分</Title>
+          <Paragraph type="secondary">
+            客户存款完成后，财务按交易账号单人创建上分或下分订单，确认后立即入账并留痕。无需双人复核。提现仍由客户在 APP 发起后走「提现审核」。
+          </Paragraph>
         </div>
         {error && <Alert type="error" title={error} showIcon />}
         <Row gutter={[16, 16]}>
@@ -171,7 +177,7 @@ export default function FinanceOverviewPage() {
           <Col xs={24} md={8} xl={5}><Card><Statistic title="贷款未还" value={metrics.loanOutstanding} prefix={<WarningOutlined />} formatter={(value) => formatMoney(value as number)} /></Card></Col>
           <Col xs={24} md={8} xl={4}><Card><Statistic title="IPO 欠款" value={metrics.ipoOutstanding} formatter={(value) => formatMoney(value as number)} /></Card></Col>
         </Row>
-        <Card title="客户账户" extra={<Text type="secondary">资金调整由当前财务员工确认后立即执行并留痕</Text>}>
+        <Card title="客户账户" extra={<Text type="secondary">当前财务员工单人确认后立即执行并留痕，无需复核</Text>}>
           <Table<AccountRecord> rowKey="id" columns={accountColumns} dataSource={accounts} loading={loading} scroll={{ x: 1100 }} pagination={{ pageSize: 10 }} />
         </Card>
         <Card title="最近资金流水" extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>刷新</Button>}>
@@ -181,10 +187,10 @@ export default function FinanceOverviewPage() {
           <Table<IpoDebt | LoanRecord> rowKey="id" columns={debtColumns} dataSource={[...ipoDebts.filter((item) => item.status !== "PAID"), ...loans.filter((item) => !["REPAID", "REJECTED"].includes(item.status))]} loading={loading} scroll={{ x: 900 }} pagination={{ pageSize: 10 }} />
         </Card>
       </Space>
-      <Modal title={`${adjustment?.direction === "credit" ? "账户上分" : "账户扣款"} · ${adjustment?.accountNumber || ""}`} open={Boolean(adjustment)} onCancel={() => { setAdjustment(null); form.resetFields(); }} onOk={() => form.submit()} confirmLoading={submitting} okText="确认执行" destroyOnHidden>
+      <Modal title={`${adjustment?.direction === "credit" ? "创建上分订单" : "账户下分"} · ${adjustment?.accountNumber || ""}`} open={Boolean(adjustment)} onCancel={() => { setAdjustment(null); form.resetFields(); }} onOk={() => form.submit()} confirmLoading={submitting} okText={adjustment?.direction === "credit" ? "确认创建并上分" : "确认下分"} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={submitAdjustment}>
           <Form.Item name="amount" label="调整金额" rules={[{ required: true, message: "请输入金额" }]}><InputNumber min={0.01} precision={2} style={{ width: "100%" }} prefix="₹" /></Form.Item>
-          <Form.Item name="referenceId" label="外部流水号" rules={[{ required: true, message: "请输入唯一流水号" }, { min: 6, message: "流水号至少 6 个字符" }]}><Input placeholder="银行流水或内部工单号" /></Form.Item>
+          <Form.Item name="referenceId" label="付款流水号" rules={[{ required: true, message: "请输入唯一流水号" }, { min: 8, message: "流水号至少 8 个字符" }]}><Input placeholder="银行流水或内部工单号" /></Form.Item>
           <Form.Item name="note" label="调整说明" rules={[{ required: true, message: "请输入调整原因" }]}><Input.TextArea rows={3} placeholder="说明资金来源或扣款原因" /></Form.Item>
         </Form>
       </Modal>

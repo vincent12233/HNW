@@ -22,15 +22,27 @@ class StockListTile extends StatelessWidget {
   final VoidCallback? onFavorite;
   final VoidCallback? onLogoLoadFailed;
 
+  double? get _absoluteChange {
+    if (stock.previousClose != null && stock.previousClose! > 0) {
+      return stock.price - stock.previousClose!;
+    }
+    if (stock.change == 0 || stock.price <= 0) return null;
+    final previous = stock.price / (1 + stock.change / 100);
+    if (previous <= 0) return null;
+    return stock.price - previous;
+  }
+
   @override
   Widget build(BuildContext context) {
     final positive = stock.change >= 0;
+    final changeColor = positive ? AppConfig.gainColor : AppConfig.lossColor;
+    final absolute = _absoluteChange;
 
     return InkWell(
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: 11),
         decoration: const BoxDecoration(
           color: Colors.white,
           border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
@@ -39,7 +51,7 @@ class StockListTile extends StatelessWidget {
           children: [
             StockLogo(
               symbol: stock.symbol,
-              size: 40,
+              size: 36,
               logoUrl: stock.logoUrl,
               onLoadFailed: onLogoLoadFailed,
             ),
@@ -61,15 +73,15 @@ class StockListTile extends StatelessWidget {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 7),
+                      const SizedBox(width: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 5,
-                          vertical: 2,
+                          vertical: 1,
                         ),
                         decoration: BoxDecoration(
                           color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(4),
+                          borderRadius: BorderRadius.circular(3),
                         ),
                         child: AppText(
                           stock.exchange,
@@ -80,47 +92,27 @@ class StockListTile extends StatelessWidget {
                           ),
                         ),
                       ),
+                      if (!stock.quoteFresh) ...[
+                        const SizedBox(width: 6),
+                        const Icon(
+                          Icons.schedule,
+                          size: 12,
+                          color: Color(0xFFF59E0B),
+                        ),
+                      ],
                     ],
                   ),
+                  const SizedBox(height: 2),
                   AppText(
                     stock.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF475569),
+                      color: Color(0xFF64748B),
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  AppText(
-                    'Traded volume · ${formatVolume(stock.volume)}',
-                    style: const TextStyle(
-                      color: Color(0xFF94A3B8),
-                      fontSize: 10,
-                    ),
-                  ),
-                  if (!stock.quoteFresh) ...[
-                    const SizedBox(height: 3),
-                    const Row(
-                      children: [
-                        Icon(
-                          Icons.schedule,
-                          size: 11,
-                          color: Color(0xFFF59E0B),
-                        ),
-                        SizedBox(width: 4),
-                        AppText(
-                          'Price delayed',
-                          style: TextStyle(
-                            color: Color(0xFFB45309),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
                 ],
               ),
             ),
@@ -135,27 +127,15 @@ class StockListTile extends StatelessWidget {
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 7,
-                    vertical: 3,
-                  ),
-                  decoration: BoxDecoration(
-                    color:
-                        (positive ? AppConfig.gainColor : AppConfig.lossColor)
-                            .withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: AppText(
-                    '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                    style: TextStyle(
-                      color: positive
-                          ? AppConfig.gainColor
-                          : AppConfig.lossColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                    ),
+                const SizedBox(height: 3),
+                AppText(
+                  absolute == null
+                      ? '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%'
+                      : '${formatSignedPrice(absolute)}  (${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%)',
+                  style: TextStyle(
+                    color: changeColor,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
                   ),
                 ),
               ],
@@ -164,10 +144,10 @@ class StockListTile extends StatelessWidget {
               IconButton(
                 onPressed: onFavorite,
                 visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 38, minHeight: 38),
+                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
                 icon: Icon(
                   isFavorite ? Icons.star : Icons.star_border,
-                  size: 21,
+                  size: 20,
                   color: isFavorite ? Colors.amber : Colors.grey,
                 ),
               ),

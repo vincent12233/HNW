@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../l10n/app_language.dart';
+import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
@@ -95,10 +96,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: AppText(
-                  'Portfolio',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  AppContentService.instance.current.text(
+                    'trading',
+                    'portfolio.page_title',
+                    fallback: 'Portfolio',
+                  ),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
               ),
               IconButton(
@@ -257,7 +262,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         ),
       ),
       const SizedBox(height: 18),
-      _heading('Investment Summary'),
+      _heading(
+        AppContentService.instance.current.text(
+          'trading',
+          'portfolio.summary_heading',
+          fallback: 'Investment Summary',
+        ),
+      ),
       AppText(
         '${tr('As of')} ${_date(data['asOf'])}',
         style: const TextStyle(
@@ -273,36 +284,63 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ]),
       const Divider(height: 20),
       _heading(
-        'Asset Allocation',
+        AppContentService.instance.current.text(
+          'trading',
+          'portfolio.allocation_heading',
+          fallback: 'Asset Allocation',
+        ),
         action: empty ? null : () => _showHoldings(categories),
       ),
       if (empty)
         Padding(
           padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            children: [
-              const Icon(
-                Icons.account_balance_outlined,
-                size: 42,
-                color: Color(0xFF0F9D92),
-              ),
-              const SizedBox(height: 12),
-              const AppText(
-                'No investments yet',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              const AppText(
-                'No Institutional, OTC or IPO holdings yet.',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 14),
-              FilledButton.icon(
-                onPressed: widget.onExplore,
-                icon: const Icon(Icons.arrow_forward),
-                label: const AppText('Explore offers'),
-              ),
-            ],
+          child: Builder(
+            builder: (context) {
+              final content = AppContentService.instance.current;
+              return Column(
+                children: [
+                  const Icon(
+                    Icons.account_balance_outlined,
+                    size: 42,
+                    color: Color(0xFF0F9D92),
+                  ),
+                  const SizedBox(height: 12),
+                  AppText(
+                    content.text(
+                      'trading',
+                      'portfolio.empty_title',
+                      fallback: 'No investments yet',
+                    ),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  AppText(
+                    content.text(
+                      'trading',
+                      'portfolio.empty_subtitle',
+                      fallback:
+                          'No Institutional, OTC or IPO holdings yet.',
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 14),
+                  FilledButton.icon(
+                    onPressed: widget.onExplore,
+                    icon: const Icon(Icons.arrow_forward),
+                    label: AppText(
+                      content.text(
+                        'trading',
+                        'portfolio.explore_cta',
+                        fallback: 'Explore offers',
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
         )
       else

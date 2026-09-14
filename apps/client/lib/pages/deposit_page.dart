@@ -57,11 +57,11 @@ class _DepositPageState extends State<DepositPage> {
   void _contact() {
     final content = _appContent.current;
     final message = content.text(
-      'support',
-      'chat_preset.deposit',
+      'deposit',
+      'chat_preset',
       fallback: content.text(
-        'deposit',
-        'chat_preset',
+        'support',
+        'chat_preset.deposit',
         fallback: 'Hello, I would like to make a deposit.',
       ),
     );
@@ -74,16 +74,44 @@ class _DepositPageState extends State<DepositPage> {
 
   @override
   Widget build(BuildContext context) {
-    final instructions = _appContent.current.text(
+    final content = _appContent.current;
+    final heroTitle = content.text(
+      'deposit',
+      'hero_title',
+      fallback: 'Fund your trading account',
+    );
+    final instructions = content.text(
       'deposit',
       'instructions',
       fallback:
           'Contact customer support to complete your deposit operation.',
     );
+    final ctaLabel = content.text(
+      'deposit',
+      'cta_label',
+      fallback: 'Contact customer support',
+    );
+    final historyEmpty = content.text(
+      'deposit',
+      'history_empty',
+      fallback: 'No deposit records yet.',
+    );
+    final terms = content.text(
+      'deposit',
+      'terms',
+      fallback:
+          '• Verify the beneficiary details with Online Customer Service before transferring.\n\n• Deposits are credited only after finance confirmation.\n\n• Keep your transfer receipt for settlement support.',
+    );
 
     return Scaffold(
       appBar: AppBar(
-        title: const AppText('Deposit'),
+        title: AppText(
+          content.text(
+            'deposit',
+            'page_title',
+            fallback: 'Deposit',
+          ),
+        ),
         leading: const BackButton(),
       ),
       body: RefreshIndicator(
@@ -124,12 +152,14 @@ class _DepositPageState extends State<DepositPage> {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const AppText(
-                        'Fund your trading account',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
+                      Expanded(
+                        child: AppText(
+                          heroTitle,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
                       ),
                     ],
@@ -151,7 +181,7 @@ class _DepositPageState extends State<DepositPage> {
                         foregroundColor: AppConfig.primaryColor,
                       ),
                       onPressed: _contact,
-                      child: const AppText('Contact customer support'),
+                      child: AppText(ctaLabel),
                     ),
                   ),
                 ],
@@ -167,9 +197,13 @@ class _DepositPageState extends State<DepositPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const AppText(
-                          'DEPOSIT HISTORY',
-                          style: TextStyle(
+                        AppText(
+                          content.text(
+                            'deposit',
+                            'history_section_title',
+                            fallback: 'DEPOSIT HISTORY',
+                          ),
+                          style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             letterSpacing: .5,
                           ),
@@ -186,9 +220,9 @@ class _DepositPageState extends State<DepositPage> {
                         child: Center(child: CircularProgressIndicator()),
                       )
                     else if (_history.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 24),
-                        child: AppText('No deposit records yet.'),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: AppText(historyEmpty),
                       )
                     else
                       ..._history.map(
@@ -218,24 +252,31 @@ class _DepositPageState extends State<DepositPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Card(
+            Card(
               child: Padding(
-                padding: EdgeInsets.all(18),
+                padding: const EdgeInsets.all(18),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AppText(
-                      'TERMS',
-                      style: TextStyle(
+                      content.text(
+                        'deposit',
+                        'terms_section_title',
+                        fallback: 'TERMS',
+                      ),
+                      style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         letterSpacing: .8,
                         color: AppConfig.primaryDarkColor,
                       ),
                     ),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 12),
                     AppText(
-                      '• Verify the beneficiary details with Online Customer Service before transferring.\n\n• Deposits are credited only after finance confirmation.\n\n• Keep your transfer receipt for settlement support.',
-                      style: TextStyle(height: 1.45, color: Color(0xFF52627A)),
+                      terms,
+                      style: const TextStyle(
+                        height: 1.45,
+                        color: Color(0xFF52627A),
+                      ),
                     ),
                   ],
                 ),

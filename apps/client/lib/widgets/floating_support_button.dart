@@ -5,9 +5,14 @@ import 'support_ui_metrics.dart';
 
 /// Compact right-edge support tab that scales with phone size.
 class FloatingSupportButton extends StatefulWidget {
-  const FloatingSupportButton({super.key, required this.onTap});
+  const FloatingSupportButton({
+    super.key,
+    required this.onTap,
+    this.label = 'Customer Service',
+  });
 
   final VoidCallback onTap;
+  final String label;
 
   @override
   State<FloatingSupportButton> createState() => _FloatingSupportButtonState();
@@ -45,7 +50,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
 
     return Semantics(
       button: true,
-      label: 'Customer Service',
+      label: widget.label,
       child: FadeTransition(
         opacity: _fade,
         child: SlideTransition(
@@ -72,7 +77,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                         child: RotatedBox(
                           quarterTurns: 3,
                           child: AppText(
-                            'Customer Service',
+                            widget.label,
                             maxLines: 1,
                             softWrap: false,
                             style: TextStyle(

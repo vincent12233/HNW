@@ -38,6 +38,7 @@ import 'two_factor_page.dart';
 import 'appearance_page.dart';
 import '../theme/appearance_settings.dart';
 import '../widgets/market_header.dart';
+import '../widgets/market_status_card.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/floating_support_button.dart';
 import '../widgets/support_ui_metrics.dart';
@@ -915,6 +916,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                   bottom: SupportUiMetrics.of(context).fabBottom,
                   child: SafeArea(
                     child: FloatingSupportButton(
+                      label: _appContent.text(
+                        'support',
+                        'fab_label',
+                        fallback: 'Customer Service',
+                      ),
                       onTap: () => _openSupportChat(),
                     ),
                   ),
@@ -1158,7 +1164,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 children: [
                   Expanded(
                     child: AppText(
-                      'Total Asset Value',
+                      _appContent.text(
+                        'home',
+                        'funds.total_asset_label',
+                        fallback: 'Total Asset Value',
+                      ),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
@@ -1288,7 +1298,13 @@ class _MarketHomePageState extends State<MarketHomePage>
         _homeQuickActions(),
         if (companyShowcases.isNotEmpty) ...[
           const SizedBox(height: 18),
-          _sectionTitle('Our Company'),
+          _sectionTitle(
+            _appContent.text(
+              'home',
+              'company.section_title',
+              fallback: 'Our Company',
+            ),
+          ),
           const SizedBox(height: 10),
           _companyShowcaseCard(companyShowcases.first),
         ],
@@ -1420,9 +1436,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                             ),
                           ),
                           const SizedBox(height: 10),
-                          const AppText(
-                            'Watch our company introduction',
-                            style: TextStyle(
+                          AppText(
+                            _appContent.text(
+                              'home',
+                              'company.video_cta',
+                              fallback: 'Watch our company introduction',
+                            ),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -1437,7 +1457,7 @@ class _MarketHomePageState extends State<MarketHomePage>
               const SizedBox(height: 16),
               AppText(company.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE7F0FF), fontSize: 13, height: 1.55)),
               const SizedBox(height: 16),
-              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: const Text('Visit website', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
+              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: Text(_appContent.text('home', 'company.website_cta', fallback: 'Visit website'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
             ]),
           ),
         ],
@@ -1450,8 +1470,16 @@ class _MarketHomePageState extends State<MarketHomePage>
       children: [
         Expanded(
           child: _HomeActionButton(
-            label: 'Add Funds',
-            subtitle: 'Funding Assistance',
+            label: _appContent.text(
+              'home',
+              'funds.cta_label',
+              fallback: 'Add Funds',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'funds.cta_subtitle',
+              fallback: 'Funding Assistance',
+            ),
             icon: Icons.account_balance_wallet_outlined,
             color: AppConfig.primaryColor,
             onTap: _openDepositSupport,
@@ -1460,8 +1488,16 @@ class _MarketHomePageState extends State<MarketHomePage>
         const SizedBox(width: 10),
         Expanded(
           child: _HomeActionButton(
-            label: 'Withdraw Funds',
-            subtitle: 'Transfer to Bank',
+            label: _appContent.text(
+              'home',
+              'funds.withdraw_cta_label',
+              fallback: 'Withdraw Funds',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'funds.withdraw_cta_subtitle',
+              fallback: 'Transfer to Bank',
+            ),
             icon: Icons.call_made_rounded,
             color: const Color(0xFF0F766E),
             onTap: _openWithdrawalRequest,
@@ -1491,13 +1527,19 @@ class _MarketHomePageState extends State<MarketHomePage>
               ),
             ),
             onPressed: onViewAll,
-            child: const AppText('View All'),
+            child: AppText(
+              _appContent.text(
+                'home',
+                'view_all_cta',
+                fallback: 'View All',
+              ),
+            ),
           ),
       ],
     );
   }
 
-  Widget _marketOverviewGrid() {
+  Widget _marketIndicesStrip() {
     final vix =
         indexQuotes['INDIAVIX'] ??
         indexQuotes['INDIA VIX'] ??
@@ -1507,138 +1549,84 @@ class _MarketHomePageState extends State<MarketHomePage>
         'NIFTY 50',
         nifty50Price > 0 ? formatIndex(nifty50Price) : '--',
         nifty50Change,
-        'NSE',
       ),
       (
         'SENSEX',
         sensexPrice > 0 ? formatIndex(sensexPrice) : '--',
         sensexChange,
-        'BSE',
       ),
       (
         'BANK NIFTY',
         bankNiftyPrice > 0 ? formatIndex(bankNiftyPrice) : '--',
         bankNiftyChange,
-        'NSE',
       ),
       (
         'INDIA VIX',
         vix != null && vix.$1 > 0 ? formatIndex(vix.$1) : '--',
         vix?.$2 ?? 0,
-        'NSE',
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns =
-            constraints.maxWidth >= 320 &&
-                MediaQuery.textScalerOf(context).scale(1) <= 1.15
-            ? 4
-            : 2;
-        const gap = 8.0;
-        final cardWidth =
-            (constraints.maxWidth - (columns - 1) * gap) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: indices.map((item) {
-            final positive = item.$3 >= 0;
-
-            return SizedBox(
-              width: cardWidth,
-              child: Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE8EDF5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.035),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: indices.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = indices[index];
+          final available = item.$2 != '--';
+          final positive = item.$3 >= 0;
+          final color = !available
+              ? AppConfig.neutralColor
+              : positive
+              ? AppConfig.gainColor
+              : AppConfig.lossColor;
+          return Container(
+            width: 148,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE8EDF5)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  item.$1,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppText(
-                            item.$1,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: AppText(
-                        item.$2,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    AppText(
-                      item.$2 == '--'
-                          ? 'Unavailable'
-                          : '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        color: item.$2 == '--'
-                            ? AppConfig.neutralColor
-                            : positive
-                            ? AppConfig.gainColor
-                            : AppConfig.lossColor,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    SizedBox(
-                      height: 24,
-                      width: double.infinity,
-                      child: (indexHistory[item.$1]?.length ?? 0) >= 2
-                          ? CustomPaint(
-                              painter: _MiniLineChartPainter(
-                                color: item.$2 == '--'
-                                    ? AppConfig.neutralColor
-                                    : positive
-                                    ? AppConfig.gainColor
-                                    : AppConfig.lossColor,
-                                values: indexHistory[item.$1]!,
-                              ),
-                            )
-                          : const Center(
-                              child: AppText(
-                                '--',
-                                style: TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                    ),
-                  ],
+                const Spacer(),
+                AppText(
+                  item.$2,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-            );
-          }).toList(),
-        );
-      },
+                const SizedBox(height: 2),
+                AppText(
+                  available
+                      ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
+                      : 'Unavailable',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -1911,8 +1899,14 @@ class _MarketHomePageState extends State<MarketHomePage>
   Future<void> _openWithdrawalRequest() async {
     if (_withdrawalSubmitting) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: AppText('A withdrawal request is being submitted'),
+        SnackBar(
+          content: AppText(
+            _appContent.text(
+              'home',
+              'withdraw.submitting',
+              fallback: 'A withdrawal request is being submitted',
+            ),
+          ),
         ),
       );
       return;
@@ -1966,9 +1960,14 @@ class _MarketHomePageState extends State<MarketHomePage>
     if (initialBankNumber.trim().isEmpty || initialIfsc.trim().isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: AppText(
-              'Complete your bank account details before withdrawing',
+              _appContent.text(
+                'home',
+                'withdraw.bank_incomplete',
+                fallback:
+                    'Complete your bank account details before withdrawing',
+              ),
             ),
           ),
         );
@@ -1990,17 +1989,21 @@ class _MarketHomePageState extends State<MarketHomePage>
               titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
               contentPadding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
               actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.account_balance_wallet_outlined,
                     color: AppConfig.primaryColor,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: AppText(
-                      'Withdrawal Request',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      _appContent.text(
+                        'home',
+                        'withdraw.dialog_title',
+                        fallback: 'Withdrawal Request',
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -2010,9 +2013,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppText(
-                      'Available Funds',
-                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                    AppText(
+                      _appContent.text(
+                        'home',
+                        'withdraw.available_label',
+                        fallback: 'Available Funds',
+                      ),
+                      style: const TextStyle(color: Colors.black54, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     AppText(
@@ -2025,7 +2032,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ),
                     const SizedBox(height: 6),
                     AppText(
-                      'Total frozen: ${formatPrice(frozenBalance)}',
+                      _appContent
+                          .text(
+                            'home',
+                            'withdraw.frozen_template',
+                            fallback: 'Total frozen: {amount}',
+                          )
+                          .replaceAll('{amount}', formatPrice(frozenBalance)),
                       style: const TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 12,
@@ -2046,16 +2059,27 @@ class _MarketHomePageState extends State<MarketHomePage>
                         ),
                       ],
                       decoration: InputDecoration(
-                        labelText: tr('Withdrawal Amount'),
+                        labelText: _appContent.text(
+                          'home',
+                          'withdraw.amount_label',
+                          fallback: 'Withdrawal Amount',
+                        ),
                         prefixText: '₹ ',
                         border: const OutlineInputBorder(),
                         errorText: errorText == null ? null : tr(errorText!),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const AppText(
-                      'Minimum withdrawal: ₹100',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                    AppText(
+                      _appContent.text(
+                        'home',
+                        'withdraw.min_hint',
+                        fallback: 'Minimum withdrawal: ₹100',
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 11,
+                      ),
                     ),
 
                     TextField(
@@ -2069,7 +2093,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                         LengthLimitingTextInputFormatter(6),
                       ],
                       decoration: InputDecoration(
-                        labelText: tr('Withdrawal PIN'),
+                        labelText: _appContent.text(
+                          'home',
+                          'withdraw.pin_label',
+                          fallback: 'Withdrawal PIN',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -2085,17 +2113,23 @@ class _MarketHomePageState extends State<MarketHomePage>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.account_balance_outlined,
                                 size: 20,
                                 color: AppConfig.primaryColor,
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               AppText(
-                                'Withdrawal Bank Account',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                _appContent.text(
+                                  'home',
+                                  'withdraw.bank_section_title',
+                                  fallback: 'Withdrawal Bank Account',
+                                ),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -2103,7 +2137,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                           DropdownButtonFormField<String>(
                             initialValue: selectedBank['id']?.toString(),
                             decoration: InputDecoration(
-                              labelText: tr('Bank account'),
+                              labelText: _appContent.text(
+                                'home',
+                                'withdraw.bank_picker_label',
+                                fallback: 'Bank account',
+                              ),
                             ),
                             items: bankAccounts.map((bank) {
                               final number =
@@ -2126,18 +2164,30 @@ class _MarketHomePageState extends State<MarketHomePage>
                           ),
                           const SizedBox(height: 12),
                           _withdrawBankRow(
-                            'Account Holder',
+                            _appContent.text(
+                              'home',
+                              'withdraw.holder_label',
+                              fallback: 'Account Holder',
+                            ),
                             selectedBank['accountHolder']?.toString() ??
                                 accountName,
                           ),
                           const SizedBox(height: 10),
                           _withdrawBankRow(
-                            'Bank Account',
+                            _appContent.text(
+                              'home',
+                              'withdraw.account_label',
+                              fallback: 'Bank Account',
+                            ),
                             selectedBank['accountNumber']?.toString() ?? '',
                           ),
                           const SizedBox(height: 10),
                           _withdrawBankRow(
-                            'Bank Status',
+                            _appContent.text(
+                              'home',
+                              'withdraw.status_label',
+                              fallback: 'Bank Status',
+                            ),
                             selectedBank['status']?.toString() ?? 'Added',
                           ),
                         ],
@@ -2146,11 +2196,16 @@ class _MarketHomePageState extends State<MarketHomePage>
 
                     const SizedBox(height: 14),
 
-                    const AppText(
-                      'Your withdrawal request will be submitted for review. '
-                      'The requested amount is frozen immediately. Approval '
-                      'deducts it from your cash balance; rejection releases it.',
-                      style: TextStyle(
+                    AppText(
+                      _appContent.text(
+                        'home',
+                        'withdraw.notice',
+                        fallback:
+                            'Your withdrawal request will be submitted for review. '
+                            'The requested amount is frozen immediately. Approval '
+                            'deducts it from your cash balance; rejection releases it.',
+                      ),
+                      style: const TextStyle(
                         color: Colors.black54,
                         fontSize: 12,
                         height: 1.4,
@@ -2161,10 +2216,14 @@ class _MarketHomePageState extends State<MarketHomePage>
 
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: AppText(
-                            'Withdrawal Records',
-                            style: TextStyle(
+                            _appContent.text(
+                              'home',
+                              'withdraw.records_title',
+                              fallback: 'Withdrawal Records',
+                            ),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -2225,7 +2284,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                   onPressed: () {
                     Navigator.pop(dialogContext, false);
                   },
-                  child: const AppText('Cancel'),
+                  child: AppText(
+                    _appContent.text(
+                      'home',
+                      'withdraw.cancel',
+                      fallback: 'Cancel',
+                    ),
+                  ),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -2235,15 +2300,27 @@ class _MarketHomePageState extends State<MarketHomePage>
 
                     if (amount == null || amount < _minimumWithdrawalAmount) {
                       setDialogState(() {
-                        errorText = 'Minimum withdrawal amount is ₹100';
+                        errorText = _appContent.text(
+                          'home',
+                          'withdraw.min_error',
+                          fallback: 'Minimum withdrawal amount is ₹100',
+                        );
                       });
                       return;
                     }
 
                     if (amount > availableWithdrawalBalance) {
                       setDialogState(() {
-                        errorText =
-                            'Maximum available: ${formatPrice(availableWithdrawalBalance)}';
+                        errorText = _appContent
+                            .text(
+                              'home',
+                              'withdraw.max_error_template',
+                              fallback: 'Maximum available: {amount}',
+                            )
+                            .replaceAll(
+                              '{amount}',
+                              formatPrice(availableWithdrawalBalance),
+                            );
                       });
                       return;
                     }
@@ -2253,18 +2330,34 @@ class _MarketHomePageState extends State<MarketHomePage>
                         (selectedBank['ifscCode']?.toString().trim() ?? '')
                             .isEmpty) {
                       setDialogState(() {
-                        errorText = 'Select a complete bank account';
+                        errorText = _appContent.text(
+                          'home',
+                          'withdraw.bank_error',
+                          fallback: 'Select a complete bank account',
+                        );
                       });
                       return;
                     }
 
                     if (!RegExp(r'^\d{6}$').hasMatch(pinController.text)) {
-                      setDialogState(() => errorText = 'Enter a 6-digit PIN');
+                      setDialogState(
+                        () => errorText = _appContent.text(
+                          'home',
+                          'withdraw.pin_error',
+                          fallback: 'Enter a 6-digit PIN',
+                        ),
+                      );
                       return;
                     }
                     Navigator.pop(dialogContext, true);
                   },
-                  child: const AppText('Submit Request'),
+                  child: AppText(
+                    _appContent.text(
+                      'home',
+                      'withdraw.submit',
+                      fallback: 'Submit Request',
+                    ),
+                  ),
                 ),
               ],
             );
@@ -2600,20 +2693,30 @@ class _MarketHomePageState extends State<MarketHomePage>
             onNotificationTap: _openNotifications,
             notificationCount: unreadNotificationCount,
           ),
+          const SizedBox(height: 10),
+          const MarketStatusCard(),
           const SizedBox(height: 14),
           _homeFundsCard(),
           const SizedBox(height: 18),
           _sectionTitle(
-            'Market Indices',
+            _appContent.text(
+              'home',
+              'indices.section_title',
+              fallback: 'Market Indices',
+            ),
             onViewAll: () => setState(() => selectedIndex = 1),
           ),
           const SizedBox(height: 10),
-          _marketOverviewGrid(),
+          _marketIndicesStrip(),
           const SizedBox(height: 18),
           _compactMovers(),
           const SizedBox(height: 18),
           _sectionTitle(
-            'Market News',
+            _appContent.text(
+              'home',
+              'news.section_title',
+              fallback: 'Market News',
+            ),
             onViewAll: marketNews.isEmpty
                 ? null
                 : () => unawaited(_openAllMarketNews()),
@@ -2671,10 +2774,15 @@ class _MarketHomePageState extends State<MarketHomePage>
             children: [
               const Icon(Icons.newspaper_outlined, color: Color(0xFF64748B)),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: AppText(
-                  'Live market news is temporarily unavailable.',
-                  style: TextStyle(color: Color(0xFF64748B)),
+                  _appContent.text(
+                    'home',
+                    'news.empty',
+                    fallback:
+                        'Live market news is temporarily unavailable.',
+                  ),
+                  style: const TextStyle(color: Color(0xFF64748B)),
                 ),
               ),
               IconButton(
@@ -3497,10 +3605,14 @@ class _MarketHomePageState extends State<MarketHomePage>
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: AppText(
-                'Profile',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                _appContent.text(
+                  'home',
+                  'profile.page_title',
+                  fallback: 'Profile',
+                ),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
             ),
             IconButton(
@@ -3514,9 +3626,13 @@ class _MarketHomePageState extends State<MarketHomePage>
         const SizedBox(height: 14),
         _profileHeader(),
         const SizedBox(height: 18),
-        const AppText(
-          'Account Overview',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.overview',
+            fallback: 'Account Overview',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 14),
         Container(
@@ -3526,7 +3642,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               children: [
                 Expanded(
                   child: _homeBalanceValue(
-                    'Available Balance',
+                    _appContent.text(
+                      'home',
+                      'profile.metric.available',
+                      fallback: 'Available Balance',
+                    ),
                     availableBalance,
                     AppConfig.textPrimaryColor,
                   ),
@@ -3534,7 +3654,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: _homeBalanceValue(
-                    'Total Portfolio',
+                    _appContent.text(
+                      'home',
+                      'profile.metric.portfolio',
+                      fallback: 'Total Portfolio',
+                    ),
                     productValue,
                     AppConfig.textPrimaryColor,
                   ),
@@ -3542,7 +3666,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: _homeBalanceValue(
-                    'Total Returns',
+                    _appContent.text(
+                      'home',
+                      'profile.metric.returns',
+                      fallback: 'Total Returns',
+                    ),
                     totalReturns,
                     totalReturns >= 0
                         ? AppConfig.gainColor
@@ -3554,9 +3682,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
         ),
         const SizedBox(height: 18),
-        const AppText(
-          'Account & Security',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.security',
+            fallback: 'Account & Security',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Card(
@@ -3643,9 +3775,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
         ),
         const SizedBox(height: 18),
-        const AppText(
-          'Preferences',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.preferences',
+            fallback: 'Preferences',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Card(
@@ -3691,9 +3827,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
         ),
         const SizedBox(height: 18),
-        const AppText(
-          'Support & More',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.support',
+            fallback: 'Support & More',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Card(
@@ -3703,8 +3843,16 @@ class _MarketHomePageState extends State<MarketHomePage>
             children: [
               _accountTile(
                 icon: Icons.help_outline,
-                title: 'Help & Support',
-                subtitle: 'FAQs, contact support and raise a ticket',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.help.title',
+                  fallback: 'Help & Support',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.help.subtitle',
+                  fallback: 'FAQs, contact support and raise a ticket',
+                ),
                 onTap: () => _openCustomerService(
                   title: 'Help & support',
                   initialMessage: _appContent.text(
@@ -3719,8 +3867,16 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.menu_book_outlined,
-                title: 'Wealth Insights',
-                subtitle: 'Knowledge for informed investment decisions',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.insights.title',
+                  fallback: 'Wealth Insights',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.insights.subtitle',
+                  fallback: 'Knowledge for informed investment decisions',
+                ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const WealthInsightsPage(),
@@ -3731,15 +3887,27 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.info_outline_rounded,
-                title: 'About Us',
-                subtitle: 'About our app, terms and policies',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.about.title',
+                  fallback: 'About Us',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.about.subtitle',
+                  fallback: 'About our app, terms and policies',
+                ),
                 onTap: _openAbout,
                 color: const Color(0xFF8B5CF6),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.description_outlined,
-                title: 'Terms & Conditions',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.terms.title',
+                  fallback: 'Terms & Conditions',
+                ),
                 subtitle: '',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -3750,7 +3918,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.privacy.title',
+                  fallback: 'Privacy Policy',
+                ),
                 subtitle: '',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -3761,8 +3933,16 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.logout_rounded,
-                title: 'Logout',
-                subtitle: 'Securely logout from your account',
+                title: _appContent.text(
+                  'home',
+                  'profile.logout_label',
+                  fallback: 'Logout',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.logout_subtitle',
+                  fallback: 'Securely logout from your account',
+                ),
                 onTap: _confirmSignOut,
                 color: AppConfig.lossColor,
               ),

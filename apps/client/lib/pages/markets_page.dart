@@ -14,6 +14,7 @@ import '../utils/number_formatters.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/stock_list_tile.dart';
+import '../widgets/market_status_card.dart';
 import 'stock_search_page.dart';
 
 class MarketsPage extends StatefulWidget {
@@ -73,6 +74,7 @@ class _MarketsPageState extends State<MarketsPage> {
   int _searchGeneration = 0;
 
   final tabs = const [
+    'Watchlist',
     'Indices',
     'Stocks',
     'Sectors',
@@ -361,20 +363,6 @@ class _MarketsPageState extends State<MarketsPage> {
                       ),
                     ),
                   ),
-                  IconButton(
-                    tooltip: 'Search',
-                    onPressed: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => StockSearchPage(
-                          initialStocks: widget.stocks,
-                          onSelected: widget.onStockTap,
-                          onWatchlistChanged: () => unawaited(_loadWatchlist()),
-                        ),
-                      ),
-                    ),
-                    icon: const Icon(Icons.search_rounded, size: 22),
-                  ),
-                  const SizedBox(width: 4),
                   Stack(
                     clipBehavior: Clip.none,
                     children: [
@@ -416,6 +404,55 @@ class _MarketsPageState extends State<MarketsPage> {
                     ],
                   ),
                 ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute<void>(
+                      builder: (_) => StockSearchPage(
+                        initialStocks: widget.stocks,
+                        onSelected: widget.onStockTap,
+                        onWatchlistChanged: () => unawaited(_loadWatchlist()),
+                      ),
+                    ),
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  child: Ink(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 11,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(
+                          Icons.search_rounded,
+                          size: 20,
+                          color: Color(0xFF94A3B8),
+                        ),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: AppText(
+                            'Search stocks…',
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
             SizedBox(
@@ -484,16 +521,22 @@ class _MarketsPageState extends State<MarketsPage> {
       case 0:
         return RefreshIndicator(
           onRefresh: _refreshAll,
-          child: _indicesContent(),
+          child: _watchlistContent(),
         );
 
       case 1:
         return RefreshIndicator(
           onRefresh: _refreshAll,
-          child: _stockList(_filteredStocks, emptyTitle: 'No stocks found'),
+          child: _indicesContent(),
         );
 
       case 2:
+        return RefreshIndicator(
+          onRefresh: _refreshAll,
+          child: _stockList(_filteredStocks, emptyTitle: 'No stocks found'),
+        );
+
+      case 3:
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: ListView(
@@ -507,7 +550,7 @@ class _MarketsPageState extends State<MarketsPage> {
           ),
         );
 
-      case 3:
+      case 4:
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: _categoryList(
@@ -517,9 +560,9 @@ class _MarketsPageState extends State<MarketsPage> {
                 'Derivative contracts will appear when enabled by the market catalog.',
           ),
         );
-      case 4:
-        return RefreshIndicator(onRefresh: _refreshAll, child: _etfList());
       case 5:
+        return RefreshIndicator(onRefresh: _refreshAll, child: _etfList());
+      case 6:
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: _categoryList(
@@ -529,7 +572,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 'Commodity quotes will appear when enabled by the market catalog.',
           ),
         );
-      case 6:
+      case 7:
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: _categoryList(
@@ -543,6 +586,59 @@ class _MarketsPageState extends State<MarketsPage> {
       default:
         return const SizedBox.shrink();
     }
+  }
+
+  Widget _watchlistContent() {
+    if (_watchlistStocks.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24),
+        children: [
+          const SizedBox(height: 48),
+          Icon(
+            Icons.star_border_rounded,
+            size: 40,
+            color: AppConfig.textSecondaryColor.withValues(alpha: 0.7),
+          ),
+          const SizedBox(height: 14),
+          const AppText(
+            'Your watchlist is empty',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
+          const AppText(
+            'Star stocks from search or detail pages to track them here.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+          ),
+          const SizedBox(height: 18),
+          Center(
+            child: FilledButton.icon(
+              onPressed: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => StockSearchPage(
+                    initialStocks: widget.stocks,
+                    onSelected: widget.onStockTap,
+                    onWatchlistChanged: () => unawaited(_loadWatchlist()),
+                  ),
+                ),
+              ),
+              icon: const Icon(Icons.search_rounded, size: 18),
+              label: const AppText('Search stocks'),
+            ),
+          ),
+        ],
+      );
+    }
+
+    return _stockList(
+      _watchlistStocks,
+      emptyTitle: 'Your watchlist is empty',
+      emptySubtitle: 'Add stocks from search or detail pages.',
+      allowPagination: false,
+      requireLogo: false,
+    );
   }
 
   Widget _indicesContent() {
@@ -608,6 +704,8 @@ class _MarketsPageState extends State<MarketsPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 24),
       children: [
+        const MarketStatusCard(),
+        const SizedBox(height: 14),
         _marketSectionHeading(
           'Indian Indices',
           onViewAll: () => _showIndices('Indian Indices', indices),
@@ -1288,12 +1386,14 @@ class _MarketsPageState extends State<MarketsPage> {
     required String emptyTitle,
     String emptySubtitle = 'Try a different search or market filter.',
     bool allowPagination = true,
+    bool requireLogo = true,
   }) {
     stocks = stocks
         .where(
           (stock) =>
-              stock.logoUrl?.trim().isNotEmpty == true &&
-              !_failedLogoUrls.contains(stock.logoUrl),
+              !requireLogo ||
+              (stock.logoUrl?.trim().isNotEmpty == true &&
+                  !_failedLogoUrls.contains(stock.logoUrl)),
         )
         .toList();
     if (_searchLoading && stocks.isEmpty) {
@@ -1310,7 +1410,9 @@ class _MarketsPageState extends State<MarketsPage> {
       return _emptyState(
         Icons.search_off,
         emptyTitle,
-        '$emptySubtitle Only stocks with available logos are shown. Refresh to retry.',
+        requireLogo
+            ? '$emptySubtitle Only stocks with available logos are shown. Refresh to retry.'
+            : emptySubtitle,
       );
     }
 

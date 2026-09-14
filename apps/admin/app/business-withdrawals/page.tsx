@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Space, Table, Tag, Typography } from "antd";
+import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -71,6 +71,7 @@ function payoutMethod(record: WithdrawalRecord) {
 export default function BusinessWithdrawalsPage() {
   const [records, setRecords] = useState<WithdrawalRecord[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "PENDING" | "APPROVED" | "REJECTED">("ALL");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -98,10 +99,14 @@ export default function BusinessWithdrawalsPage() {
   }, []);
 
   const filteredRecords = useMemo(() => {
+    const byStatus =
+      statusFilter === "ALL"
+        ? records
+        : records.filter((record) => record.status === statusFilter);
     const normalized = keyword.trim().toLowerCase();
-    if (!normalized) return records;
+    if (!normalized) return byStatus;
 
-    return records.filter((record) => {
+    return byStatus.filter((record) => {
       const values = [
         record.orderNo,
         record.account.user.customerNo,
@@ -119,7 +124,7 @@ export default function BusinessWithdrawalsPage() {
         String(value ?? "").toLowerCase().includes(normalized),
       );
     });
-  }, [keyword, records]);
+  }, [keyword, records, statusFilter]);
 
   const columns: ColumnsType<WithdrawalRecord> = [
     {
@@ -171,14 +176,27 @@ export default function BusinessWithdrawalsPage() {
 
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索订单号、客户编号、手机号、交易账号、UPI 或银行信息"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              style={{ width: 480 }}
-            />
+            <Space wrap>
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="搜索订单号、客户编号、手机号、交易账号、UPI 或银行信息"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                style={{ width: 420 }}
+              />
+              <Select
+                value={statusFilter}
+                style={{ width: 160 }}
+                onChange={(value: "ALL" | "PENDING" | "APPROVED" | "REJECTED") => setStatusFilter(value)}
+                options={[
+                  { value: "ALL", label: "全部状态" },
+                  { value: "PENDING", label: "待审核" },
+                  { value: "APPROVED", label: "已通过" },
+                  { value: "REJECTED", label: "已拒绝" },
+                ]}
+              />
+            </Space>
 
             <Button icon={<ReloadOutlined />} onClick={loadRecords} loading={loading}>
               刷新

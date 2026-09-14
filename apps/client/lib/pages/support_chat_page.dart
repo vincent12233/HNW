@@ -167,7 +167,11 @@ class _SupportChatPageState extends State<SupportChatPage>
                     ),
                     SizedBox(height: 10 * m.scale),
                     AppText(
-                      'Quick topics',
+                      content.text(
+                        'support',
+                        'quick_topics_label',
+                        fallback: 'Quick topics',
+                      ),
                       style: TextStyle(
                         fontSize: m.subtitleSize,
                         fontWeight: FontWeight.w800,
@@ -181,7 +185,11 @@ class _SupportChatPageState extends State<SupportChatPage>
                       runSpacing: 6 * m.scale,
                       children: [
                         _SupportTopic(
-                          label: 'Deposit',
+                          label: content.text(
+                            'support',
+                            'topic.deposit',
+                            fallback: 'Deposit',
+                          ),
                           icon: Icons.account_balance_wallet_outlined,
                           metrics: m,
                           onTap: () => _open(
@@ -192,7 +200,11 @@ class _SupportChatPageState extends State<SupportChatPage>
                           ),
                         ),
                         _SupportTopic(
-                          label: 'Trading',
+                          label: content.text(
+                            'support',
+                            'topic.trading',
+                            fallback: 'Trading',
+                          ),
                           icon: Icons.candlestick_chart_rounded,
                           metrics: m,
                           onTap: () => _open(
@@ -203,7 +215,11 @@ class _SupportChatPageState extends State<SupportChatPage>
                           ),
                         ),
                         _SupportTopic(
-                          label: 'Account',
+                          label: content.text(
+                            'support',
+                            'topic.account',
+                            fallback: 'Account',
+                          ),
                           icon: Icons.shield_outlined,
                           metrics: m,
                           onTap: () => _open(
@@ -318,7 +334,11 @@ class _SupportChatPageState extends State<SupportChatPage>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   AppText(
-                    'Online Customer Service',
+                    _appContent.current.text(
+                      'support',
+                      'header_title',
+                      fallback: 'Online Customer Service',
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -465,7 +485,12 @@ class _SupportChatPageState extends State<SupportChatPage>
                             ? 'Connecting…'
                             : (_nativeChatAvailable
                                 ? 'Message opens in live chat'
-                                : 'Use a topic or open on mobile'),
+                                : _appContent.current.text(
+                                    'support',
+                                    'composer_hint',
+                                    fallback:
+                                        'Use a topic or open on mobile',
+                                  )),
                         hintStyle: TextStyle(
                           color: Colors.blueGrey.shade400,
                           fontSize: m.bodySize - 1,

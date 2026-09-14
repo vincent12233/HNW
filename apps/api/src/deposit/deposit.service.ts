@@ -161,6 +161,43 @@ export class DepositService {
     });
   }
 
+  async listDepositHistory(role: string, actorId?: string, status?: string) {
+    const normalized = String(status ?? 'ALL').trim().toUpperCase();
+    const allowed = new Set(['ALL', 'PENDING', 'APPROVED', 'REJECTED']);
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('Invalid deposit status filter');
+    }
+
+    return this.prisma.depositRequest.findMany({
+      where: {
+        ...(normalized === 'ALL' ? {} : { status: normalized as 'PENDING' | 'APPROVED' | 'REJECTED' }),
+        account: { user: this.depositCustomerScope(role, actorId) },
+      },
+      include: {
+        account: {
+          select: {
+            id: true,
+            accountNumber: true,
+            currency: true,
+            user: {
+              select: {
+                id: true,
+                customerNo: true,
+                fullName: true,
+                phone: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 200,
+    });
+  }
+
   async approveDeposit(depositId: string, actorId: string, role: string) {
     const deposit = await this.prisma.depositRequest.findUnique({
       where: {

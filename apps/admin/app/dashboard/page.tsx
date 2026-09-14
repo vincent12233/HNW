@@ -90,14 +90,14 @@ function MetricCard({
   suffix?: string;
 }) {
   return (
-    <Card style={{ borderRadius: 8, border: "1px solid #e8edf5" }}>
+    <Card className="ops-metric-card">
       <Space align="start" style={{ justifyContent: "space-between", width: "100%" }}>
         <Statistic title={title} value={value} suffix={suffix} />
         <span
           style={{
             width: 42,
             height: 42,
-            borderRadius: 8,
+            borderRadius: 10,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -130,7 +130,7 @@ function QuickAction({
     <Card
       hoverable
       onClick={onClick}
-      style={{ borderRadius: 8, border: "1px solid #e8edf5" }}
+      className="ops-quick-card"
       styles={{ body: { padding: 18 } }}
     >
       <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
@@ -233,26 +233,33 @@ export default function DashboardPage() {
 
   const isBusiness = user?.role === "BUSINESS" || user?.role === "SUPPORT";
   const isSupport = user?.role === "SUPPORT";
+  const isFinance = user?.role === "FINANCE";
+  const heroTag = isSupport
+    ? "专用运营工作台"
+    : isBusiness
+      ? "业务工作台"
+      : isFinance
+        ? "资金结算工作台"
+        : "运营控制台";
+  const heroTitle = isSupport
+    ? "固定邀请码客户运营"
+    : isBusiness
+      ? "我的客户运营"
+      : isFinance
+        ? "财务实时工作台"
+        : "平台实时概览";
+  const heroDesc = isFinance
+    ? "客户存款完成后由财务单人创建上分订单；提现由客户在 APP 发起，财务审核。无需双人复核。"
+    : "聚合客户、资金、风控和待办数据，优先处理会影响入金、提现和账号安全的事项。";
 
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div
-          style={{
-            borderRadius: 8,
-            padding: 24,
-            background: "linear-gradient(135deg, #07192d 0%, #123e66 62%, #1f8fff 100%)",
-            color: "#fff",
-          }}
-        >
+        <div className="ops-hero">
           <Space orientation="vertical" size={4}>
-            <Tag color="blue">{isSupport ? "专用运营工作台" : isBusiness ? "业务工作台" : "运营控制台"}</Tag>
-            <Title level={2} style={{ color: "#fff", margin: 0 }}>
-              {isSupport ? "固定邀请码客户运营" : isBusiness ? "我的客户运营" : "平台实时概览"}
-            </Title>
-            <Paragraph style={{ color: "rgba(255,255,255,0.72)", margin: 0 }}>
-              聚合客户、资金、风控和待办数据，优先处理会影响入金、提现和账号安全的事项。
-            </Paragraph>
+            <Tag color={isFinance ? "gold" : isBusiness ? "green" : "blue"}>{heroTag}</Tag>
+            <Title level={2}>{heroTitle}</Title>
+            <Paragraph>{heroDesc}</Paragraph>
           </Space>
         </div>
 
@@ -351,13 +358,35 @@ export default function DashboardPage() {
               </Col>
             </Row>
 
-            <Card title="交易产品运营" style={{ borderRadius: 8 }}>
-              <Row gutter={[12, 12]}>
-                <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理机构股票上架、报价和预期收益" icon={<StockOutlined />} tone="#2563eb" onClick={() => router.push("/watchlist")} /></Col>
-                <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" onClick={() => router.push("/block-trades")} /></Col>
-                <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" onClick={() => router.push("/ipo-management")} /></Col>
-              </Row>
-            </Card>
+            {isFinance ? (
+              <Card title="财务快捷入口" style={{ borderRadius: 8 }}>
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} md={8}>
+                    <QuickAction title="上下分" description="单人操作：按交易账号创建上分或下分" icon={<WalletOutlined />} tone="#0d9488" onClick={() => router.push("/finance-overview")} />
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <QuickAction title="上分订单" description="客户存款完成后核对到账并完成上分" icon={<DollarOutlined />} tone="#c98200" onClick={() => router.push("/deposits")} />
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <QuickAction title="提现审核" description="客户 APP 发起后，核对收款信息并审核" icon={<BankOutlined />} tone="#dc2626" onClick={() => router.push("/withdrawals")} />
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <QuickAction title="资金流水" description="查询账户资金变动记录" icon={<TransactionOutlined />} tone="#7c3aed" onClick={() => router.push("/transactions")} />
+                  </Col>
+                  <Col xs={24} md={8}>
+                    <QuickAction title="贷款处理" description="审核客户贷款申请" icon={<DollarOutlined />} tone="#ea580c" onClick={() => router.push("/loans")} />
+                  </Col>
+                </Row>
+              </Card>
+            ) : (
+              <Card title="交易产品运营" style={{ borderRadius: 8 }}>
+                <Row gutter={[12, 12]}>
+                  <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理机构股票上架、报价和预期收益" icon={<StockOutlined />} tone="#2563eb" onClick={() => router.push("/watchlist")} /></Col>
+                  <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" onClick={() => router.push("/block-trades")} /></Col>
+                  <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" onClick={() => router.push("/ipo-management")} /></Col>
+                </Row>
+              </Card>
+            )}
 
             <Row gutter={[16, 16]}>
               <Col xs={24} lg={14}>
@@ -370,7 +399,9 @@ export default function DashboardPage() {
                     <div>
                       <Text strong>财务处理建议</Text>
                       <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                        客户充值由在线客服确认付款方式，财务在“财务上分”中按交易账号手动入账；提现仍走后台审核。
+                        {isFinance
+                          ? "客户存款完成后，财务单人创建上分订单并执行上下分；提现由客户在 APP 发起，财务审核通过后出金。无需双人复核。"
+                          : "客户充值由在线客服确认付款方式，财务确认到账后单人创建上分；提现由客户在 APP 发起后走财务审核。"}
                       </Paragraph>
                     </div>
                   </Space>
@@ -380,52 +411,54 @@ export default function DashboardPage() {
                 <Card title="今日工作流" style={{ borderRadius: 8 }}>
                   <Space orientation="vertical" size="middle">
                     <Tag color="blue">客户开户：手机号注册 + 邀请码 + KYC</Tag>
-                    <Tag color="green">充值：在线客服沟通，财务手动上分</Tag>
-                    <Tag color="orange">提现：后台审核后扣款出金</Tag>
+                    <Tag color="green">充值：客服沟通付款，存款完成后财务单人上分</Tag>
+                    <Tag color="orange">提现：客户 APP 发起，财务审核后出金</Tag>
                     <Tag color="red">风控：失败登录、共享 IP、共享设备</Tag>
                   </Space>
                 </Card>
               </Col>
             </Row>
 
-            <Row gutter={[16, 16]}>
-              <Col xs={24} md={6}>
-                <QuickAction
-                  title="客户管理"
-                  description="查看客户资料、KYC、账号和登录风险"
-                  icon={<TeamOutlined />}
-                  tone="#1f8fff"
-                  onClick={() => router.push("/customers")}
-                />
-              </Col>
-              <Col xs={24} md={6}>
-                <QuickAction
-                  title="业务员管理"
-                  description="管理业务员账号、客户归属和邀请码"
-                  icon={<UserAddOutlined />}
-                  tone="#16a34a"
-                  onClick={() => router.push("/business-users")}
-                />
-              </Col>
-              <Col xs={24} md={6}>
-                <QuickAction
-                  title="操作日志"
-                  description="查看账户、资金、IPO、贷款等关键操作"
-                  icon={<SafetyCertificateOutlined />}
-                  tone="#dc2626"
-                  onClick={() => router.push("/audit-logs")}
-                />
-              </Col>
-              <Col xs={24} md={6}>
-                <QuickAction
-                  title="股票管理"
-                  description="维护可交易股票、价格和启用状态"
-                  icon={<StockOutlined />}
-                  tone="#7c3aed"
-                  onClick={() => router.push("/market")}
-                />
-              </Col>
-            </Row>
+            {!isFinance && (
+              <Row gutter={[16, 16]}>
+                <Col xs={24} md={6}>
+                  <QuickAction
+                    title="客户管理"
+                    description="查看客户资料、KYC、账号和登录风险"
+                    icon={<TeamOutlined />}
+                    tone="#1f8fff"
+                    onClick={() => router.push("/customers")}
+                  />
+                </Col>
+                <Col xs={24} md={6}>
+                  <QuickAction
+                    title="业务员管理"
+                    description="管理业务员账号、客户归属和邀请码"
+                    icon={<UserAddOutlined />}
+                    tone="#16a34a"
+                    onClick={() => router.push("/business-users")}
+                  />
+                </Col>
+                <Col xs={24} md={6}>
+                  <QuickAction
+                    title="操作日志"
+                    description="查看账户、资金、IPO、贷款等关键操作"
+                    icon={<SafetyCertificateOutlined />}
+                    tone="#dc2626"
+                    onClick={() => router.push("/audit-logs")}
+                  />
+                </Col>
+                <Col xs={24} md={6}>
+                  <QuickAction
+                    title="股票管理"
+                    description="维护可交易股票、价格和启用状态"
+                    icon={<StockOutlined />}
+                    tone="#7c3aed"
+                    onClick={() => router.push("/market")}
+                  />
+                </Col>
+              </Row>
+            )}
           </>
         )}
       </Space>

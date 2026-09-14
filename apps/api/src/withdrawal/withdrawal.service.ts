@@ -224,6 +224,10 @@ export class WithdrawalService {
       const frozenBalanceAfter = hasDedicatedFreeze
         ? frozenBalance.sub(amount)
         : frozenBalance;
+      const amountNumber = amount.toNumber();
+      const balanceAfterNumber = balanceAfter.toNumber();
+      const cashBalanceNumber = cashBalance.toNumber();
+      const frozenBalanceAfterNumber = frozenBalanceAfter.toNumber();
 
       const claimed = await tx.withdrawalRequest.updateMany({
         where: { id: withdrawalId, status: 'PENDING' },
@@ -236,10 +240,15 @@ export class WithdrawalService {
       await tx.account.update({
         where: { id: account.id },
         data: {
-          cashBalance: balanceAfter,
+          cashBalance: balanceAfterNumber,
           ...(hasDedicatedFreeze
-            ? { frozenBalance: { decrement: amount } }
-            : { buyingPower: Prisma.Decimal.max(0, buyingPower.sub(amount)) }),
+            ? { frozenBalance: { decrement: amountNumber } }
+            : {
+                buyingPower: Math.max(
+                  0,
+                  buyingPower.sub(amount).toNumber(),
+                ),
+              }),
         },
       });
 
@@ -249,8 +258,8 @@ export class WithdrawalService {
           type: 'WITHDRAWAL',
           status: 'COMPLETED',
           amount: withdrawal.amount,
-          balanceBefore: cashBalance,
-          balanceAfter,
+          balanceBefore: cashBalanceNumber,
+          balanceAfter: balanceAfterNumber,
           referenceId: withdrawalId,
           note: 'Withdrawal approved',
         },
@@ -269,9 +278,9 @@ export class WithdrawalService {
         message: 'Withdrawal approved',
         withdrawalId,
         amount: withdrawal.amount,
-        balanceBefore: cashBalance,
-        balanceAfter,
-        frozenBalanceAfter,
+        balanceBefore: cashBalanceNumber,
+        balanceAfter: balanceAfterNumber,
+        frozenBalanceAfter: frozenBalanceAfterNumber,
       };
     }, { isolationLevel: 'Serializable' });
     if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_APPROVED', resource: 'withdrawal', resourceId: withdrawalId, description: 'Withdrawal approved by finance operator', metadata: { amount: String(result.amount) } });
@@ -317,11 +326,12 @@ export class WithdrawalService {
         throw new BadRequestException('Withdrawal already processed');
       }
       if (hasDedicatedFreeze) {
+        const amountNumber = amount.toNumber();
         await tx.account.update({
           where: { id: account.id },
           data: {
-            buyingPower: { increment: amount },
-            frozenBalance: { decrement: amount },
+            buyingPower: { increment: amountNumber },
+            frozenBalance: { decrement: amountNumber },
           },
         });
       }

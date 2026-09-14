@@ -532,6 +532,7 @@ const hindi = <String, String>{
   'Choose your preferred language': 'अपनी पसंदीदा भाषा चुनें',
   'Support & More': 'सहायता और अन्य',
   'Support': 'सहायता',
+  'Customer Service': 'ग्राहक सेवा',
   'Online now': 'अभी ऑनलाइन',
   'In-app support': 'ऐप में सहायता',
 

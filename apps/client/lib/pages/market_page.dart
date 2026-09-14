@@ -1851,8 +1851,8 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   void _openSupportChat({String? initialMessage}) {
     final media = MediaQuery.of(context);
-    final panelWidth = (media.size.width - 56).clamp(280.0, 340.0);
-    final panelMaxHeight = (media.size.height * 0.58).clamp(360.0, 500.0);
+    final panelWidth = (media.size.width - 80).clamp(260.0, 300.0);
+    final panelMaxHeight = (media.size.height * 0.55).clamp(320.0, 460.0);
 
     showGeneralDialog<void>(
       context: context,
@@ -1865,7 +1865,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           child: Align(
             alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(22, 12, 22, 78),
+              padding: const EdgeInsets.fromLTRB(28, 12, 28, 78),
               child: ConstrainedBox(
                 constraints: BoxConstraints(
                   maxWidth: panelWidth,
@@ -1873,13 +1873,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
                 child: Material(
                   color: Colors.transparent,
-                  elevation: 18,
+                  elevation: 16,
                   shadowColor: const Color(0x66071326),
                   borderRadius: BorderRadius.circular(16),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: SupportChatPage(initialMessage: initialMessage),
-                  ),
+                  clipBehavior: Clip.antiAlias,
+                  child: SupportChatPage(initialMessage: initialMessage),
                 ),
               ),
             ),

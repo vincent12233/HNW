@@ -12,6 +12,7 @@ import '../models/pending_order.dart';
 import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
+import '../services/app_content_service.dart';
 import '../services/trading_service.dart';
 import '../widgets/trading/history_tab.dart';
 import '../widgets/trading/funds_tab.dart';
@@ -81,40 +82,71 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   Future<void>? _refreshInFlight;
   int selectedTab = 0;
 
-  final List<_TradingModule> tabs = const [
-    _TradingModule('Trades', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
-    _TradingModule(
-      'Institutional',
-      Icons.account_balance_outlined,
-      Color(0xFF1D4ED8),
-    ),
-    _TradingModule(
-      'Holdings',
-      Icons.account_balance_wallet_outlined,
-      Color(0xFF059669),
-    ),
-    _TradingModule('Pending', Icons.schedule_rounded, Color(0xFFF97316)),
-    _TradingModule(
-      'Order Book',
-      Icons.receipt_long_outlined,
-      Color(0xFF7C3AED),
-    ),
-    _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
-    _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
-    _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
-    _TradingModule(
-      'Funds Ledger',
-      Icons.account_balance_wallet_outlined,
-      Color(0xFF64748B),
-    ),
-  ];
+  List<_TradingModule> get tabs {
+    final c = AppContentService.instance.current;
+    String label(String key, String fallback) =>
+        c.text('trading', key, fallback: fallback);
+    return [
+      _TradingModule(
+        label('tab.trades', 'Trades'),
+        Icons.swap_horiz_rounded,
+        const Color(0xFF2563EB),
+      ),
+      _TradingModule(
+        label('tab.institutional', 'Institutional'),
+        Icons.account_balance_outlined,
+        const Color(0xFF1D4ED8),
+      ),
+      _TradingModule(
+        label('tab.holdings', 'Holdings'),
+        Icons.account_balance_wallet_outlined,
+        const Color(0xFF059669),
+      ),
+      _TradingModule(
+        label('tab.pending', 'Pending'),
+        Icons.schedule_rounded,
+        const Color(0xFFF97316),
+      ),
+      _TradingModule(
+        label('tab.order_book', 'Order Book'),
+        Icons.receipt_long_outlined,
+        const Color(0xFF7C3AED),
+      ),
+      _TradingModule(
+        label('tab.otc', 'OTC'),
+        Icons.handshake_outlined,
+        const Color(0xFF0D9488),
+      ),
+      _TradingModule(
+        label('tab.ipo', 'IPO'),
+        Icons.campaign_outlined,
+        const Color(0xFFEF4444),
+      ),
+      _TradingModule(
+        label('tab.history', 'History'),
+        Icons.history_rounded,
+        const Color(0xFFF59E0B),
+      ),
+      _TradingModule(
+        label('tab.funds_ledger', 'Funds Ledger'),
+        Icons.account_balance_wallet_outlined,
+        const Color(0xFF64748B),
+      ),
+    ];
+  }
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AppContentService.instance.addListener(_onAppContentChanged);
+    unawaited(AppContentService.instance.load());
     _syncFromWidget();
     unawaited(_refreshTradingData(ensureAfterCurrent: true));
+  }
+
+  void _onAppContentChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -128,6 +160,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
 
   @override
   void dispose() {
+    AppContentService.instance.removeListener(_onAppContentChanged);
     _refreshTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
@@ -469,7 +502,40 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     padding: const EdgeInsets.symmetric(horizontal: 16),
     child: Row(
       children: [
-        for (final item in <(int, String)>[(0, 'All'), (1, 'Ins. Stock'), (5, 'OTC'), (6, 'IPO')])
+        for (final item in <(int, String)>[
+          (
+            0,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.all',
+              fallback: 'All',
+            ),
+          ),
+          (
+            1,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.ins_stock',
+              fallback: 'Ins. Stock',
+            ),
+          ),
+          (
+            5,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.otc',
+              fallback: 'OTC',
+            ),
+          ),
+          (
+            6,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.ipo',
+              fallback: 'IPO',
+            ),
+          ),
+        ])
           Expanded(
             child: Semantics(
               selected:
@@ -507,10 +573,42 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     child: Row(
       children: [
         for (final item in <(int, String, IconData)>[
-          (4, 'Orders', Icons.receipt_long_outlined),
-          (3, 'Pending', Icons.pending_actions_outlined),
-          (2, 'Holdings', Icons.account_balance_outlined),
-          (7, 'History', Icons.history),
+          (
+            4,
+            AppContentService.instance.current.text(
+              'trading',
+              'shortcut.orders',
+              fallback: 'Orders',
+            ),
+            Icons.receipt_long_outlined,
+          ),
+          (
+            3,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.pending',
+              fallback: 'Pending',
+            ),
+            Icons.pending_actions_outlined,
+          ),
+          (
+            2,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.holdings',
+              fallback: 'Holdings',
+            ),
+            Icons.account_balance_outlined,
+          ),
+          (
+            7,
+            AppContentService.instance.current.text(
+              'trading',
+              'tab.history',
+              fallback: 'History',
+            ),
+            Icons.history,
+          ),
         ])
           Expanded(
             child: Semantics(

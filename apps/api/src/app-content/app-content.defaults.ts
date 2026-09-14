@@ -692,6 +692,321 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'hi',
     sortOrder: 107,
   },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.dialog_title',
+    body: 'Withdrawal Request',
+    locale: 'en',
+    sortOrder: 110,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.dialog_title',
+    body: 'निकासी अनुरोध',
+    locale: 'hi',
+    sortOrder: 110,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.available_label',
+    body: 'Available Funds',
+    locale: 'en',
+    sortOrder: 111,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.available_label',
+    body: 'उपलब्ध राशि',
+    locale: 'hi',
+    sortOrder: 111,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.frozen_template',
+    body: 'Total frozen: {amount}',
+    locale: 'en',
+    sortOrder: 112,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.frozen_template',
+    body: 'कुल रोकी गई राशि: {amount}',
+    locale: 'hi',
+    sortOrder: 112,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.amount_label',
+    body: 'Withdrawal Amount',
+    locale: 'en',
+    sortOrder: 113,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.amount_label',
+    body: 'निकासी राशि',
+    locale: 'hi',
+    sortOrder: 113,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.min_hint',
+    body: 'Minimum withdrawal: ₹100',
+    locale: 'en',
+    sortOrder: 114,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.min_hint',
+    body: 'न्यूनतम निकासी: ₹100',
+    locale: 'hi',
+    sortOrder: 114,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.pin_label',
+    body: 'Withdrawal PIN',
+    locale: 'en',
+    sortOrder: 115,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.pin_label',
+    body: 'निकासी पिन',
+    locale: 'hi',
+    sortOrder: 115,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_section_title',
+    body: 'Withdrawal Bank Account',
+    locale: 'en',
+    sortOrder: 116,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_section_title',
+    body: 'निकासी बैंक खाता',
+    locale: 'hi',
+    sortOrder: 116,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_picker_label',
+    body: 'Bank account',
+    locale: 'en',
+    sortOrder: 117,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_picker_label',
+    body: 'बैंक खाता',
+    locale: 'hi',
+    sortOrder: 117,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.holder_label',
+    body: 'Account Holder',
+    locale: 'en',
+    sortOrder: 118,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.holder_label',
+    body: 'खाताधारक',
+    locale: 'hi',
+    sortOrder: 118,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.account_label',
+    body: 'Bank Account',
+    locale: 'en',
+    sortOrder: 119,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.account_label',
+    body: 'बैंक खाता संख्या',
+    locale: 'hi',
+    sortOrder: 119,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.status_label',
+    body: 'Bank Status',
+    locale: 'en',
+    sortOrder: 120,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.status_label',
+    body: 'बैंक स्थिति',
+    locale: 'hi',
+    sortOrder: 120,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.notice',
+    body: 'Your withdrawal request will be submitted for review. The requested amount is frozen immediately. Approval deducts it from your cash balance; rejection releases it.',
+    locale: 'en',
+    sortOrder: 121,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.notice',
+    body: 'आपका निकासी अनुरोध समीक्षा के लिए भेजा जाएगा। अनुरोधित राशि तुरंत रोक दी जाती है। स्वीकृति पर नकदी से कटती है; अस्वीकृति पर मुक्त होती है।',
+    locale: 'hi',
+    sortOrder: 121,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.records_title',
+    body: 'Withdrawal Records',
+    locale: 'en',
+    sortOrder: 122,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.records_title',
+    body: 'निकासी रिकॉर्ड',
+    locale: 'hi',
+    sortOrder: 122,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.cancel',
+    body: 'Cancel',
+    locale: 'en',
+    sortOrder: 123,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.cancel',
+    body: 'रद्द करें',
+    locale: 'hi',
+    sortOrder: 123,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.submit',
+    body: 'Submit Request',
+    locale: 'en',
+    sortOrder: 124,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.submit',
+    body: 'अनुरोध जमा करें',
+    locale: 'hi',
+    sortOrder: 124,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_incomplete',
+    body: 'Complete your bank account details before withdrawing',
+    locale: 'en',
+    sortOrder: 125,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_incomplete',
+    body: 'निकासी से पहले बैंक खाते का विवरण पूरा करें',
+    locale: 'hi',
+    sortOrder: 125,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.submitting',
+    body: 'A withdrawal request is being submitted',
+    locale: 'en',
+    sortOrder: 126,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.submitting',
+    body: 'निकासी अनुरोध जमा किया जा रहा है',
+    locale: 'hi',
+    sortOrder: 126,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.min_error',
+    body: 'Minimum withdrawal amount is ₹100',
+    locale: 'en',
+    sortOrder: 127,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.min_error',
+    body: 'न्यूनतम निकासी राशि ₹100 है',
+    locale: 'hi',
+    sortOrder: 127,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.max_error_template',
+    body: 'Maximum available: {amount}',
+    locale: 'en',
+    sortOrder: 128,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.max_error_template',
+    body: 'अधिकतम उपलब्ध: {amount}',
+    locale: 'hi',
+    sortOrder: 128,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_error',
+    body: 'Select a complete bank account',
+    locale: 'en',
+    sortOrder: 129,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.bank_error',
+    body: 'पूरा बैंक खाता चुनें',
+    locale: 'hi',
+    sortOrder: 129,
+  },
+
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.pin_error',
+    body: 'Enter a 6-digit PIN',
+    locale: 'en',
+    sortOrder: 130,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'withdraw.pin_error',
+    body: '6 अंकों का पिन दर्ज करें',
+    locale: 'hi',
+    sortOrder: 130,
+  },
+
 
   // DEPOSIT (copy only — no receiving / bank accounts)
   {
@@ -1302,6 +1617,186 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'hi',
     sortOrder: 86,
   },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.trades',
+    body: 'Trades',
+    locale: 'en',
+    sortOrder: 610,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.trades',
+    body: 'ट्रेड्स',
+    locale: 'hi',
+    sortOrder: 610,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.institutional',
+    body: 'Institutional',
+    locale: 'en',
+    sortOrder: 611,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.institutional',
+    body: 'संस्थागत',
+    locale: 'hi',
+    sortOrder: 611,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.holdings',
+    body: 'Holdings',
+    locale: 'en',
+    sortOrder: 612,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.holdings',
+    body: 'होल्डिंग',
+    locale: 'hi',
+    sortOrder: 612,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.pending',
+    body: 'Pending',
+    locale: 'en',
+    sortOrder: 613,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.pending',
+    body: 'लंबित',
+    locale: 'hi',
+    sortOrder: 613,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.order_book',
+    body: 'Order Book',
+    locale: 'en',
+    sortOrder: 614,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.order_book',
+    body: 'ऑर्डर बुक',
+    locale: 'hi',
+    sortOrder: 614,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.otc',
+    body: 'OTC',
+    locale: 'en',
+    sortOrder: 615,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.otc',
+    body: 'ओटीसी',
+    locale: 'hi',
+    sortOrder: 615,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.ipo',
+    body: 'IPO',
+    locale: 'en',
+    sortOrder: 616,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.ipo',
+    body: 'आईपीओ',
+    locale: 'hi',
+    sortOrder: 616,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.history',
+    body: 'History',
+    locale: 'en',
+    sortOrder: 617,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.history',
+    body: 'इतिहास',
+    locale: 'hi',
+    sortOrder: 617,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.funds_ledger',
+    body: 'Funds Ledger',
+    locale: 'en',
+    sortOrder: 618,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.funds_ledger',
+    body: 'राशि लेजर',
+    locale: 'hi',
+    sortOrder: 618,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.all',
+    body: 'All',
+    locale: 'en',
+    sortOrder: 619,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.all',
+    body: 'सभी',
+    locale: 'hi',
+    sortOrder: 619,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.ins_stock',
+    body: 'Ins. Stock',
+    locale: 'en',
+    sortOrder: 620,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'tab.ins_stock',
+    body: 'संस्थागत शेयर',
+    locale: 'hi',
+    sortOrder: 620,
+  },
+
+  {
+    module: AppContentModule.TRADING,
+    key: 'shortcut.orders',
+    body: 'Orders',
+    locale: 'en',
+    sortOrder: 621,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'shortcut.orders',
+    body: 'ऑर्डर',
+    locale: 'hi',
+    sortOrder: 621,
+  },
+
   {
     module: AppContentModule.TRADING,
     key: 'guide.institutional',

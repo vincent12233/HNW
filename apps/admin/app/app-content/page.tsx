@@ -163,12 +163,45 @@ const homeProfileFields: FieldDef[] = [
   { key: "profile.logout_subtitle", label: "退出登录副标题", rows: 1 },
 ];
 
+const homeWithdrawFields: FieldDef[] = [
+  { key: "withdraw.dialog_title", label: "提现弹窗标题", rows: 1 },
+  { key: "withdraw.available_label", label: "可用资金标签", rows: 1 },
+  {
+    key: "withdraw.frozen_template",
+    label: "冻结金额文案（可用 {amount}）",
+    rows: 1,
+  },
+  { key: "withdraw.amount_label", label: "提现金额字段标签", rows: 1 },
+  { key: "withdraw.min_hint", label: "最低提现提示", rows: 1 },
+  { key: "withdraw.pin_label", label: "提现 PIN 字段标签", rows: 1 },
+  { key: "withdraw.bank_section_title", label: "银行信息区标题", rows: 1 },
+  { key: "withdraw.bank_picker_label", label: "银行账户下拉标签", rows: 1 },
+  { key: "withdraw.holder_label", label: "户名标签", rows: 1 },
+  { key: "withdraw.account_label", label: "账号标签", rows: 1 },
+  { key: "withdraw.status_label", label: "银行状态标签", rows: 1 },
+  { key: "withdraw.notice", label: "提现说明正文", rows: 4 },
+  { key: "withdraw.records_title", label: "提现记录标题", rows: 1 },
+  { key: "withdraw.cancel", label: "取消按钮", rows: 1 },
+  { key: "withdraw.submit", label: "提交按钮", rows: 1 },
+  { key: "withdraw.bank_incomplete", label: "银行信息不完整提示", rows: 2 },
+  { key: "withdraw.submitting", label: "提交中提示", rows: 1 },
+  { key: "withdraw.min_error", label: "低于最低金额错误", rows: 1 },
+  {
+    key: "withdraw.max_error_template",
+    label: "超过可用余额错误（可用 {amount}）",
+    rows: 1,
+  },
+  { key: "withdraw.bank_error", label: "未选完整银行账户错误", rows: 1 },
+  { key: "withdraw.pin_error", label: "PIN 格式错误", rows: 1 },
+];
+
 const homeFields: FieldDef[] = [
   ...homeBannerFields,
   ...homeCompanyFields,
   ...homeFundsFields,
   ...homeNewsFields,
   ...homeProfileFields,
+  ...homeWithdrawFields,
 ];
 
 const depositFields: FieldDef[] = [
@@ -247,6 +280,18 @@ const supportQuickReplies = [
 ] as const;
 
 const tradingFields: FieldDef[] = [
+  { key: "tab.trades", label: "Tab · Trades", rows: 1 },
+  { key: "tab.institutional", label: "Tab · Institutional", rows: 1 },
+  { key: "tab.holdings", label: "Tab · Holdings", rows: 1 },
+  { key: "tab.pending", label: "Tab · Pending", rows: 1 },
+  { key: "tab.order_book", label: "Tab · Order Book", rows: 1 },
+  { key: "tab.otc", label: "Tab · OTC", rows: 1 },
+  { key: "tab.ipo", label: "Tab · IPO", rows: 1 },
+  { key: "tab.history", label: "Tab · History", rows: 1 },
+  { key: "tab.funds_ledger", label: "Tab · Funds Ledger", rows: 1 },
+  { key: "tab.all", label: "产品筛选 · All", rows: 1 },
+  { key: "tab.ins_stock", label: "产品筛选 · Ins. Stock", rows: 1 },
+  { key: "shortcut.orders", label: "快捷入口 · Orders", rows: 1 },
   { key: "institutional.empty_title", label: "机构空状态标题", rows: 2 },
   { key: "institutional.empty_subtitle", label: "机构空状态说明", rows: 3 },
   { key: "otc.empty_title", label: "OTC 空状态标题", rows: 2 },
@@ -279,6 +324,9 @@ const tradingFields: FieldDef[] = [
   { key: "guide.ipo", label: "交易说明 · IPO", rows: 4, title: true },
 ];
 
+const tradingTabFields = tradingFields.filter(
+  (field) => field.key.startsWith("tab.") || field.key.startsWith("shortcut."),
+);
 const tradingEmptyFields = tradingFields.filter(
   (field) =>
     field.key.includes("empty") ||
@@ -579,6 +627,11 @@ export default function AppOpsContentPage() {
                       hint="Profile 分区标题、概览指标与运营入口文案"
                       fields={homeProfileFields}
                     />
+                    <FieldGroup
+                      title="提现弹窗"
+                      hint="首页 Withdraw 打开的提现申请弹窗文案"
+                      fields={homeWithdrawFields}
+                    />
                     <Button
                       type="primary"
                       icon={<SaveOutlined />}
@@ -711,6 +764,11 @@ export default function AppOpsContentPage() {
                     <Paragraph type="secondary">
                       当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
                     </Paragraph>
+                    <FieldGroup
+                      title="交易中心 Tab / 快捷入口"
+                      hint="Trade 页顶部筛选与快捷入口标签"
+                      fields={tradingTabFields}
+                    />
                     <FieldGroup
                       title="空状态与组合页"
                       hint="机构/OTC/IPO 空态、组合页标题与持仓空态"

@@ -1952,8 +1952,14 @@ class _MarketHomePageState extends State<MarketHomePage>
   Future<void> _openWithdrawalRequest() async {
     if (_withdrawalSubmitting) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: AppText('A withdrawal request is being submitted'),
+        SnackBar(
+          content: AppText(
+            _appContent.text(
+              'home',
+              'withdraw.submitting',
+              fallback: 'A withdrawal request is being submitted',
+            ),
+          ),
         ),
       );
       return;
@@ -2007,9 +2013,14 @@ class _MarketHomePageState extends State<MarketHomePage>
     if (initialBankNumber.trim().isEmpty || initialIfsc.trim().isEmpty) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: AppText(
-              'Complete your bank account details before withdrawing',
+              _appContent.text(
+                'home',
+                'withdraw.bank_incomplete',
+                fallback:
+                    'Complete your bank account details before withdrawing',
+              ),
             ),
           ),
         );
@@ -2031,17 +2042,21 @@ class _MarketHomePageState extends State<MarketHomePage>
               titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
               contentPadding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
               actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.account_balance_wallet_outlined,
                     color: AppConfig.primaryColor,
                   ),
-                  SizedBox(width: 10),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: AppText(
-                      'Withdrawal Request',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      _appContent.text(
+                        'home',
+                        'withdraw.dialog_title',
+                        fallback: 'Withdrawal Request',
+                      ),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ],
@@ -2051,9 +2066,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppText(
-                      'Available Funds',
-                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                    AppText(
+                      _appContent.text(
+                        'home',
+                        'withdraw.available_label',
+                        fallback: 'Available Funds',
+                      ),
+                      style: const TextStyle(color: Colors.black54, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     AppText(
@@ -2066,7 +2085,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ),
                     const SizedBox(height: 6),
                     AppText(
-                      'Total frozen: ${formatPrice(frozenBalance)}',
+                      _appContent
+                          .text(
+                            'home',
+                            'withdraw.frozen_template',
+                            fallback: 'Total frozen: {amount}',
+                          )
+                          .replaceAll('{amount}', formatPrice(frozenBalance)),
                       style: const TextStyle(
                         color: Color(0xFF64748B),
                         fontSize: 12,
@@ -2087,16 +2112,27 @@ class _MarketHomePageState extends State<MarketHomePage>
                         ),
                       ],
                       decoration: InputDecoration(
-                        labelText: tr('Withdrawal Amount'),
+                        labelText: _appContent.text(
+                          'home',
+                          'withdraw.amount_label',
+                          fallback: 'Withdrawal Amount',
+                        ),
                         prefixText: '₹ ',
                         border: const OutlineInputBorder(),
                         errorText: errorText == null ? null : tr(errorText!),
                       ),
                     ),
                     const SizedBox(height: 6),
-                    const AppText(
-                      'Minimum withdrawal: ₹100',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                    AppText(
+                      _appContent.text(
+                        'home',
+                        'withdraw.min_hint',
+                        fallback: 'Minimum withdrawal: ₹100',
+                      ),
+                      style: const TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 11,
+                      ),
                     ),
 
                     TextField(
@@ -2110,7 +2146,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                         LengthLimitingTextInputFormatter(6),
                       ],
                       decoration: InputDecoration(
-                        labelText: tr('Withdrawal PIN'),
+                        labelText: _appContent.text(
+                          'home',
+                          'withdraw.pin_label',
+                          fallback: 'Withdrawal PIN',
+                        ),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -2126,17 +2166,23 @@ class _MarketHomePageState extends State<MarketHomePage>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Row(
+                          Row(
                             children: [
-                              Icon(
+                              const Icon(
                                 Icons.account_balance_outlined,
                                 size: 20,
                                 color: AppConfig.primaryColor,
                               ),
-                              SizedBox(width: 8),
+                              const SizedBox(width: 8),
                               AppText(
-                                'Withdrawal Bank Account',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                _appContent.text(
+                                  'home',
+                                  'withdraw.bank_section_title',
+                                  fallback: 'Withdrawal Bank Account',
+                                ),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ),
@@ -2144,7 +2190,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                           DropdownButtonFormField<String>(
                             initialValue: selectedBank['id']?.toString(),
                             decoration: InputDecoration(
-                              labelText: tr('Bank account'),
+                              labelText: _appContent.text(
+                                'home',
+                                'withdraw.bank_picker_label',
+                                fallback: 'Bank account',
+                              ),
                             ),
                             items: bankAccounts.map((bank) {
                               final number =
@@ -2167,18 +2217,30 @@ class _MarketHomePageState extends State<MarketHomePage>
                           ),
                           const SizedBox(height: 12),
                           _withdrawBankRow(
-                            'Account Holder',
+                            _appContent.text(
+                              'home',
+                              'withdraw.holder_label',
+                              fallback: 'Account Holder',
+                            ),
                             selectedBank['accountHolder']?.toString() ??
                                 accountName,
                           ),
                           const SizedBox(height: 10),
                           _withdrawBankRow(
-                            'Bank Account',
+                            _appContent.text(
+                              'home',
+                              'withdraw.account_label',
+                              fallback: 'Bank Account',
+                            ),
                             selectedBank['accountNumber']?.toString() ?? '',
                           ),
                           const SizedBox(height: 10),
                           _withdrawBankRow(
-                            'Bank Status',
+                            _appContent.text(
+                              'home',
+                              'withdraw.status_label',
+                              fallback: 'Bank Status',
+                            ),
                             selectedBank['status']?.toString() ?? 'Added',
                           ),
                         ],
@@ -2187,11 +2249,16 @@ class _MarketHomePageState extends State<MarketHomePage>
 
                     const SizedBox(height: 14),
 
-                    const AppText(
-                      'Your withdrawal request will be submitted for review. '
-                      'The requested amount is frozen immediately. Approval '
-                      'deducts it from your cash balance; rejection releases it.',
-                      style: TextStyle(
+                    AppText(
+                      _appContent.text(
+                        'home',
+                        'withdraw.notice',
+                        fallback:
+                            'Your withdrawal request will be submitted for review. '
+                            'The requested amount is frozen immediately. Approval '
+                            'deducts it from your cash balance; rejection releases it.',
+                      ),
+                      style: const TextStyle(
                         color: Colors.black54,
                         fontSize: 12,
                         height: 1.4,
@@ -2202,10 +2269,14 @@ class _MarketHomePageState extends State<MarketHomePage>
 
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: AppText(
-                            'Withdrawal Records',
-                            style: TextStyle(
+                            _appContent.text(
+                              'home',
+                              'withdraw.records_title',
+                              fallback: 'Withdrawal Records',
+                            ),
+                            style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
@@ -2266,7 +2337,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                   onPressed: () {
                     Navigator.pop(dialogContext, false);
                   },
-                  child: const AppText('Cancel'),
+                  child: AppText(
+                    _appContent.text(
+                      'home',
+                      'withdraw.cancel',
+                      fallback: 'Cancel',
+                    ),
+                  ),
                 ),
                 FilledButton(
                   onPressed: () {
@@ -2276,15 +2353,27 @@ class _MarketHomePageState extends State<MarketHomePage>
 
                     if (amount == null || amount < _minimumWithdrawalAmount) {
                       setDialogState(() {
-                        errorText = 'Minimum withdrawal amount is ₹100';
+                        errorText = _appContent.text(
+                          'home',
+                          'withdraw.min_error',
+                          fallback: 'Minimum withdrawal amount is ₹100',
+                        );
                       });
                       return;
                     }
 
                     if (amount > availableWithdrawalBalance) {
                       setDialogState(() {
-                        errorText =
-                            'Maximum available: ${formatPrice(availableWithdrawalBalance)}';
+                        errorText = _appContent
+                            .text(
+                              'home',
+                              'withdraw.max_error_template',
+                              fallback: 'Maximum available: {amount}',
+                            )
+                            .replaceAll(
+                              '{amount}',
+                              formatPrice(availableWithdrawalBalance),
+                            );
                       });
                       return;
                     }
@@ -2294,18 +2383,34 @@ class _MarketHomePageState extends State<MarketHomePage>
                         (selectedBank['ifscCode']?.toString().trim() ?? '')
                             .isEmpty) {
                       setDialogState(() {
-                        errorText = 'Select a complete bank account';
+                        errorText = _appContent.text(
+                          'home',
+                          'withdraw.bank_error',
+                          fallback: 'Select a complete bank account',
+                        );
                       });
                       return;
                     }
 
                     if (!RegExp(r'^\d{6}$').hasMatch(pinController.text)) {
-                      setDialogState(() => errorText = 'Enter a 6-digit PIN');
+                      setDialogState(
+                        () => errorText = _appContent.text(
+                          'home',
+                          'withdraw.pin_error',
+                          fallback: 'Enter a 6-digit PIN',
+                        ),
+                      );
                       return;
                     }
                     Navigator.pop(dialogContext, true);
                   },
-                  child: const AppText('Submit Request'),
+                  child: AppText(
+                    _appContent.text(
+                      'home',
+                      'withdraw.submit',
+                      fallback: 'Submit Request',
+                    ),
+                  ),
                 ),
               ],
             );

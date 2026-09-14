@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/ipo.dart';
+import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
 import '../responsive_empty_state.dart';
+import 'trading_guide_card.dart';
 
 class IpoTab extends StatefulWidget {
   const IpoTab({
@@ -36,8 +38,16 @@ class _IpoTabState extends State<IpoTab> {
 
   @override
   Widget build(BuildContext context) {
+    final content = AppContentService.instance.current;
+    final guideTitle = content.title('trading', 'guide.ipo');
+    final guideBody = content.text('trading', 'guide.ipo');
     return Column(
       children: [
+        if (guideBody.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: TradingGuideCard(title: guideTitle, body: guideBody),
+          ),
         SizedBox(
           height: 46,
           child: ListView.separated(
@@ -312,6 +322,18 @@ class _IpoTabState extends State<IpoTab> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
+        final template = AppContentService.instance.current.text(
+          'trading',
+          'ipo.confirm_template',
+          fallback:
+              'Submit IPO application {current} of {max}?\n\n'
+              'You will be notified when your allotment is announced. '
+              'Payment is automatic after allotment. If more funds are '
+              'needed, we will show the amount to add.',
+        );
+        final message = template
+            .replaceAll('{current}', '${currentCount + 1}')
+            .replaceAll('{max}', '5');
         return AlertDialog(
           title: const AppText('IPO Application'),
           content: Column(
@@ -331,12 +353,7 @@ class _IpoTabState extends State<IpoTab> {
                 style: const TextStyle(color: Colors.black54),
               ),
               const SizedBox(height: 18),
-              AppText(
-                'Submit IPO application ${currentCount + 1} of 5?\n\n'
-                'You will be notified when your allotment is announced. '
-                'Payment is automatic after allotment. If more funds are '
-                'needed, we will show the amount to add.',
-              ),
+              AppText(message),
             ],
           ),
           actions: [

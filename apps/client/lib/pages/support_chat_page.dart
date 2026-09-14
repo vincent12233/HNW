@@ -2,6 +2,7 @@ import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
+import '../services/app_content_service.dart';
 import '../services/auth_service.dart';
 import '../services/salesmartly_service.dart';
 
@@ -37,9 +38,12 @@ class _SupportChatPageState extends State<SupportChatPage> {
       if (session == null) {
         throw const SaleSmartlyException('Please sign in again.');
       }
+      final content = await AppContentService.instance.load();
+      final scriptUrl = content.text('support', 'salesmartly_script_url');
       await _saleSmartly.openChat(
         session: session,
         initialMessage: widget.initialMessage,
+        scriptUrlOverride: scriptUrl.isEmpty ? null : scriptUrl,
       );
     } on SaleSmartlyException catch (error) {
       if (mounted) setState(() => _error = error.message);

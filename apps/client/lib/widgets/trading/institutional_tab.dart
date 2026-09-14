@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/institutional_opportunity.dart';
 import '../../models/stock_quote.dart';
+import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
 import '../stock_logo.dart';
 import '../responsive_empty_state.dart';
+import 'trading_guide_card.dart';
 
 class InstitutionalTab extends StatelessWidget {
   const InstitutionalTab({
@@ -21,20 +23,47 @@ class InstitutionalTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final content = AppContentService.instance.current;
+    final guideTitle = content.title('trading', 'guide.institutional');
+    final guideBody = content.text('trading', 'guide.institutional');
+
     if (stocks.isEmpty) {
-      return const ResponsiveEmptyState(
-        icon: Icons.business_center_outlined,
-        title: 'No institutional offers available',
-        subtitle: 'Stocks will appear here when live market data is available.',
+      return Column(
+        children: [
+          if (guideBody.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: TradingGuideCard(title: guideTitle, body: guideBody),
+            ),
+          Expanded(
+            child: ResponsiveEmptyState(
+              icon: Icons.business_center_outlined,
+              title: content.text(
+                'trading',
+                'institutional.empty_title',
+                fallback: 'No institutional offers available',
+              ),
+              subtitle: content.text(
+                'trading',
+                'institutional.empty_subtitle',
+                fallback:
+                    'Stocks will appear here when live market data is available.',
+              ),
+            ),
+          ),
+        ],
       );
     }
 
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      itemCount: stocks.length,
+      itemCount: stocks.length + (guideBody.isNotEmpty ? 1 : 0),
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) {
-        final stock = stocks[index];
+        if (guideBody.isNotEmpty && index == 0) {
+          return TradingGuideCard(title: guideTitle, body: guideBody);
+        }
+        final stock = stocks[guideBody.isNotEmpty ? index - 1 : index];
         StockQuote? quote;
         for (final item in marketStocks) {
           if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&

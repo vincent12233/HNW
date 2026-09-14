@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/institutional_opportunity.dart';
+import '../../services/app_content_service.dart';
 import '../../services/otc_service.dart';
 import '../../utils/number_formatters.dart';
 import '../responsive_empty_state.dart';
 import '../stock_logo.dart';
+import 'trading_guide_card.dart';
 
 class OtcTab extends StatefulWidget {
   const OtcTab({super.key});
@@ -44,14 +46,36 @@ class _OtcTabState extends State<OtcTab> {
   @override
   Widget build(BuildContext context) {
     final items = offers;
+    final content = AppContentService.instance.current;
+    final guideTitle = content.title('trading', 'guide.otc');
+    final guideBody = content.text('trading', 'guide.otc');
 
     if (loading) return const Center(child: CircularProgressIndicator());
     if (items.isEmpty && orders.isEmpty) {
-      return const ResponsiveEmptyState(
-        icon: Icons.handshake_outlined,
-        title: 'No OTC opportunities available',
-        subtitle:
-            'Backend-approved opportunities will appear here during the trading session.',
+      return Column(
+        children: [
+          if (guideBody.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+              child: TradingGuideCard(title: guideTitle, body: guideBody),
+            ),
+          Expanded(
+            child: ResponsiveEmptyState(
+              icon: Icons.handshake_outlined,
+              title: content.text(
+                'trading',
+                'otc.empty_title',
+                fallback: 'No OTC opportunities available',
+              ),
+              subtitle: content.text(
+                'trading',
+                'otc.empty_subtitle',
+                fallback:
+                    'Backend-approved opportunities will appear here during the trading session.',
+              ),
+            ),
+          ),
+        ],
       );
     }
 
@@ -59,13 +83,18 @@ class _OtcTabState extends State<OtcTab> {
       onRefresh: _refresh,
       child: ListView.separated(
         padding: const EdgeInsets.all(16),
-        itemCount: items.length + orders.length,
+        itemCount:
+            items.length + orders.length + (guideBody.isNotEmpty ? 1 : 0),
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          if (index >= items.length) {
-            return _orderCard(orders[index - items.length]);
+          if (guideBody.isNotEmpty && index == 0) {
+            return TradingGuideCard(title: guideTitle, body: guideBody);
           }
-          final item = items[index];
+          final offset = guideBody.isNotEmpty ? index - 1 : index;
+          if (offset >= items.length) {
+            return _orderCard(orders[offset - items.length]);
+          }
+          final item = items[offset];
 
           return Card(
             child: Padding(

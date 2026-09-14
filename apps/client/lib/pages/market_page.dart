@@ -18,6 +18,7 @@ import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../models/withdrawal_request.dart';
+import '../services/app_content_service.dart';
 import '../services/auth_service.dart';
 import '../services/client_account_service.dart';
 import '../services/ipo_service.dart';
@@ -132,6 +133,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
   final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
+  AppContentBundle _appContent = AppContentBundle.empty;
 
   Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
@@ -469,6 +471,13 @@ class _MarketHomePageState extends State<MarketHomePage>
 
     _loadAppData();
     unawaited(_loadHomeIndexHistory());
+    unawaited(_loadAppContent());
+  }
+
+  Future<void> _loadAppContent({bool force = false}) async {
+    final content = await AppContentService.instance.load(force: force);
+    if (!mounted) return;
+    setState(() => _appContent = content);
   }
 
   Future<void> _loadHomeIndexHistory() async {
@@ -570,6 +579,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Future<void> _performMarketRefresh() async {
+    unawaited(_loadAppContent(force: true));
     final results = await Future.wait<dynamic>([
       marketDataService.fetchSnapshot(),
       marketDataService.fetchIndexSnapshot(),
@@ -1727,8 +1737,15 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
-    _openSupportChat(
-      initialMessage: 'Hello, I would like to add money to my account.',
+    _openCustomerService(
+      title: 'Add Funds',
+      initialMessage: _appContent.text(
+        'deposit',
+        'chat_preset',
+        fallback: 'Hello, I would like to add money to my account.',
+      ),
+      icon: Icons.account_balance_wallet_outlined,
+      showDepositDetails: true,
     );
   }
 
@@ -2317,8 +2334,17 @@ class _MarketHomePageState extends State<MarketHomePage>
     required String title,
     required String initialMessage,
     required IconData icon,
+    bool showDepositDetails = false,
   }) {
     final messageController = TextEditingController(text: initialMessage);
+    final greeting = _appContent.text(
+      'support',
+      'greeting',
+      fallback: 'You are contacting online customer service inside the app.',
+    );
+    final hours = _appContent.text('support', 'hours');
+    final depositInstructions = _appContent.text('deposit', 'instructions');
+    final accounts = _appContent.receivingAccounts;
 
     showDialog<void>(
       context: context,
@@ -2360,27 +2386,97 @@ class _MarketHomePageState extends State<MarketHomePage>
                     color: const Color(0xFFF5F7FB),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.support_agent,
                         size: 22,
                         color: AppConfig.primaryColor,
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: AppText(
-                          'You are contacting online customer service inside the app.',
-                          style: TextStyle(height: 1.4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              greeting,
+                              style: const TextStyle(height: 1.4),
+                            ),
+                            if (hours.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              AppText(
+                                hours,
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 12,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-
+                if (showDepositDetails && depositInstructions.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  AppText(
+                    depositInstructions,
+                    style: const TextStyle(height: 1.45),
+                  ),
+                ],
+                if (showDepositDetails && accounts.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  ...accounts.map((account) {
+                    final details = account.method == 'UPI'
+                        ? (account.upiId ?? '')
+                        : [
+                            account.accountName,
+                            account.bankName,
+                            account.accountNumber,
+                            account.ifsc,
+                          ].whereType<String>().where((v) => v.trim().isNotEmpty).join(' · ');
+                    return Container(
+                      width: double.infinity,
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: const Color(0xFFE8EDF5)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(
+                            account.label,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          if (details.isNotEmpty) ...[
+                            const SizedBox(height: 4),
+                            AppText(
+                              details,
+                              style: const TextStyle(
+                                color: Color(0xFF64748B),
+                                fontSize: 12,
+                                height: 1.4,
+                              ),
+                            ),
+                          ],
+                          if (account.notes?.trim().isNotEmpty == true) ...[
+                            const SizedBox(height: 4),
+                            AppText(
+                              account.notes!,
+                              style: const TextStyle(fontSize: 12, height: 1.35),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }),
+                ],
                 const SizedBox(height: 18),
-
                 TextField(
                   controller: messageController,
                   minLines: 3,
@@ -2391,9 +2487,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     border: OutlineInputBorder(),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 const AppText(
                   'Send a message directly to online customer service. '
                   'Customer service will assist you in this conversation.',
@@ -2701,6 +2795,16 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _homeTradingBanner() {
+    final title = _appContent.text(
+      'home',
+      'banner.title',
+      fallback: 'Track live markets & place orders on the go',
+    );
+    final subtitle = _appContent.text(
+      'home',
+      'banner.subtitle',
+      fallback: 'Explore equities, institutional offers, OTC and IPOs',
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -2709,24 +2813,24 @@ class _MarketHomePageState extends State<MarketHomePage>
       ),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppText(
-                  'Track live markets & place orders on the go',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                  title,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 AppText(
-                  'Explore equities, institutional offers, OTC and IPOs',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                  subtitle,
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
                 ),
               ],
             ),
           ),
-          SizedBox(width: 12),
-          Icon(
+          const SizedBox(width: 12),
+          const Icon(
             Icons.candlestick_chart_rounded,
             size: 52,
             color: AppConfig.gainColor,
@@ -3554,7 +3658,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 subtitle: 'FAQs, contact support and raise a ticket',
                 onTap: () => _openCustomerService(
                   title: 'Help & support',
-                  initialMessage: 'Hello, I need help with my account.',
+                  initialMessage: _appContent.text(
+                    'support',
+                    'chat_preset.help',
+                    fallback: 'Hello, I need help with my account.',
+                  ),
                   icon: Icons.help_outline,
                 ),
                 color: const Color(0xFF2563EB),

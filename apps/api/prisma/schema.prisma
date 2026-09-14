@@ -874,4 +874,49 @@ enum LoanStatus {
   OVERDUE
 }
 
+enum AppContentModule {
+  HOME
+  DEPOSIT
+  SUPPORT
+  TRADING
+}
+
+model AppContentEntry {
+  id        String           @id @default(uuid())
+  module    AppContentModule
+  key       String
+  title     String?
+  body      String           @db.Text
+  locale    String           @default("en")
+  metadata  Json?
+  isActive  Boolean          @default(true)
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([module, key, locale])
+  @@index([module, isActive])
+  @@index([module, sortOrder])
+  @@map("app_content_entries")
+}
+
+model DepositReceivingAccount {
+  id            String   @id @default(uuid())
+  label         String
+  method        String
+  accountName   String?
+  bankName      String?
+  accountNumber String?
+  ifsc          String?
+  upiId         String?
+  notes         String?
+  isActive      Boolean  @default(true)
+  sortOrder     Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([isActive, sortOrder])
+  @@map("deposit_receiving_accounts")
+}
+
 

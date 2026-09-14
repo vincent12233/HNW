@@ -15,19 +15,21 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scope.guard';
+import { AppContentService } from '../app-content/app-content.service';
 import { DepositService } from './deposit.service';
 
 @Controller('deposit')
 @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
 export class DepositController {
-  constructor(private readonly depositService: DepositService) {}
+  constructor(
+    private readonly depositService: DepositService,
+    private readonly appContent: AppContentService,
+  ) {}
 
   @Post('request')
   @Roles(UserRole.CLIENT)
-  createRequest() {
-    throw new BadRequestException(
-      'Please contact online support for deposit instructions. Finance will credit your account after payment is confirmed.',
-    );
+  async createRequest() {
+    throw new BadRequestException(await this.appContent.getDepositRejectMessage());
   }
 
   @Get('me')

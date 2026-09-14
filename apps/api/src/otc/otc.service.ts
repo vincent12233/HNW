@@ -3,10 +3,28 @@ import * as bcrypt from 'bcrypt';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { fixedInviteCode } from '../common/fixed-invite';
+
+function resolveOtcEncryptionSecret() {
+  const dedicated = process.env.OTC_KEY_ENCRYPTION_SECRET?.trim() ?? '';
+  if (process.env.NODE_ENV === 'production') {
+    if (
+      dedicated.length < 32 ||
+      /replace|change-me|development/i.test(dedicated) ||
+      dedicated === process.env.JWT_SECRET
+    ) {
+      throw new Error(
+        'OTC_KEY_ENCRYPTION_SECRET must be a unique random value of at least 32 characters',
+      );
+    }
+    return dedicated;
+  }
+  return dedicated || process.env.JWT_SECRET || 'development-only-change-me';
+}
 
 @Injectable()
 export class OtcService {
-  private readonly encryptionSecret = process.env.OTC_KEY_ENCRYPTION_SECRET || process.env.JWT_SECRET || 'development-only-change-me';
+  private readonly encryptionSecret = resolveOtcEncryptionSecret();
   constructor(private readonly prisma: PrismaService) {}
 
   async listOffers() {
@@ -115,7 +133,7 @@ export class OtcService {
 
   async pendingOrders(reviewerId: string) {
     const reviewer = await this.prisma.user.findUnique({ where: { id: reviewerId } });
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     return this.prisma.otcOrder.findMany({
       where: {
         status: 'PENDING',
@@ -125,7 +143,25 @@ export class OtcService {
             ? { account: { user: { assignedBusinessId: reviewerId, usedInviteCode: { is: { code: fixedCode } } } } }
             : {}),
       },
-      include: { instrument: true, account: { include: { user: true } } },
+      include: {
+        instrument: true,
+        account: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                phone: true,
+                customerNo: true,
+                role: true,
+                status: true,
+                assignedBusinessId: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
   }
@@ -136,14 +172,17 @@ export class OtcService {
       if (!order) throw new NotFoundException('OTC order not found');
       if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
       const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
-      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      const fixedCode = fixedInviteCode();
       if ((reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') && order.account.user.assignedBusinessId !== reviewerId) {
         throw new UnauthorizedException('OTC order is not assigned to this business account');
       }
       if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
         throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
       }
-      if (order.account.cashBalance.lessThan(order.amount)) throw new BadRequestException('Insufficient cash balance');
+      const availableCash = order.account.cashBalance.sub(order.account.frozenBalance);
+      if (availableCash.lessThan(order.amount)) {
+        throw new BadRequestException('Insufficient available cash balance');
+      }
       const balanceAfter = order.account.cashBalance.sub(order.amount);
       const reducedBuyingPower = order.account.buyingPower.sub(order.amount);
       const buyingPowerAfter = reducedBuyingPower.greaterThan(0)
@@ -189,7 +228,9 @@ export class OtcService {
         },
       });
       await tx.accountTransaction.create({ data: { accountId: order.accountId, type: 'OTC_SETTLEMENT', status: 'COMPLETED', amount: order.amount.negated(), balanceBefore: order.account.cashBalance, balanceAfter, referenceId: order.id, note: 'OTC purchase approved and settled' } });
-      const approved = await tx.otcOrder.update({ where: { id: order.id }, data: { status: 'APPROVED', reviewedById: reviewerId, reviewedAt: new Date() }, include: { instrument: true } });
+      const claimed = await tx.otcOrder.updateMany({ where: { id: order.id, status: 'PENDING' }, data: { status: 'APPROVED', reviewedById: reviewerId, reviewedAt: new Date() } });
+      if (claimed.count !== 1) throw new BadRequestException('OTC order already reviewed');
+      const approved = await tx.otcOrder.findUniqueOrThrow({ where: { id: order.id }, include: { instrument: true } });
       await tx.notification.create({ data: { userId: order.account.user.id, type: 'OTC', title: 'OTC order approved', body: `${approved.instrument.symbol} has been settled and added to your holdings.`, referenceId: order.id } });
       return approved;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
@@ -201,7 +242,7 @@ export class OtcService {
       if (!order) throw new NotFoundException('OTC order not found');
       if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
       const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
-      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      const fixedCode = fixedInviteCode();
       if ((reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') && order.account.user.assignedBusinessId !== reviewerId) {
         throw new UnauthorizedException('OTC order is not assigned to this business account');
       }
@@ -216,8 +257,15 @@ export class OtcService {
   }
 
   private encryptionKey() {
-    if (process.env.NODE_ENV === 'production' && (!process.env.OTC_KEY_ENCRYPTION_SECRET || this.encryptionSecret.length < 32 || this.encryptionSecret === process.env.JWT_SECRET)) {
-      throw new Error('OTC_KEY_ENCRYPTION_SECRET must be a unique random value of at least 32 characters');
+    if (
+      process.env.NODE_ENV === 'production' &&
+      (!process.env.OTC_KEY_ENCRYPTION_SECRET ||
+        this.encryptionSecret.length < 32 ||
+        this.encryptionSecret === process.env.JWT_SECRET)
+    ) {
+      throw new Error(
+        'OTC_KEY_ENCRYPTION_SECRET must be a unique random value of at least 32 characters',
+      );
     }
     return createHash('sha256').update(this.encryptionSecret).digest();
   }

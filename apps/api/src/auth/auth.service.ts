@@ -24,8 +24,12 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { normalizePhone, internationalPhone } from './phone-number';
 import { TwoFactorService } from './two-factor.service';
+import { fixedInviteCode } from '../common/fixed-invite';
 @Injectable()
 export class AuthService {
+  private static readonly CLIENT_TOKEN_SECONDS = 3600;
+  private static readonly STAFF_TOKEN_SECONDS = 7 * 24 * 60 * 60;
+
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
@@ -33,6 +37,33 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly twoFactor: TwoFactorService,
   ) {}
+
+  private isStaffRole(role: UserRole) {
+    return role !== UserRole.CLIENT;
+  }
+
+  private accessTokenExpiresIn(role: UserRole) {
+    return this.isStaffRole(role)
+      ? AuthService.STAFF_TOKEN_SECONDS
+      : AuthService.CLIENT_TOKEN_SECONDS;
+  }
+
+  private async issueAccessToken(user: {
+    id: string;
+    phone: string | null;
+    role: UserRole;
+    authVersion: number;
+  }) {
+    return this.jwtService.signAsync(
+      {
+        sub: user.id,
+        phone: user.phone,
+        role: user.role,
+        version: user.authVersion,
+      },
+      { expiresIn: this.isStaffRole(user.role) ? '7d' : '1h' },
+    );
+  }
 
   async register(dto: RegisterDto) {
     const phone = normalizePhone(dto.phone);
@@ -43,8 +74,8 @@ export class AuthService {
 
     const email = this.phoneEmail(phone);
     const inviteCodeValue = dto.inviteCode.trim().toUpperCase();
-    const fixedInviteCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
-    const reusableInvite = inviteCodeValue === fixedInviteCode;
+    const fixedCode = fixedInviteCode();
+    const reusableInvite = inviteCodeValue === fixedCode;
 
     const existingUser = await this.usersService.findByPhone(phone);
 
@@ -277,18 +308,13 @@ export class AuthService {
       },
     });
 
-    const accessToken = await this.jwtService.signAsync({
-      sub: user.id,
-      phone: user.phone,
-      role: user.role,
-      version: user.authVersion,
-    });
+    const accessToken = await this.issueAccessToken(user);
 
     return {
       message: 'Login successful',
       accessToken,
       tokenType: 'Bearer',
-      expiresIn: 3600,
+      expiresIn: this.accessTokenExpiresIn(user.role),
       user: {
         id: user.id,
         fullName: user.fullName,
@@ -310,12 +336,34 @@ export class AuthService {
 
   async googleLogin(idToken: string) {
     const { subject, email } = await this.verifyGoogleToken(idToken);
-    const user = await this.prisma.user.findFirst({ where: { OR: [{ googleSubject: subject }, { email }] }, include: { account: true } });
+    let user = await this.prisma.user.findFirst({
+      where: { googleSubject: subject },
+      include: { account: true },
+    });
+    if (!user) {
+      user = await this.prisma.user.findFirst({
+        where: { email },
+        include: { account: true },
+      });
+    }
     if (!user || user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Google account is not linked to an active trading account');
     if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
     if (!user.googleSubject) await this.prisma.user.update({ where: { id: user.id }, data: { googleSubject: subject } });
-    const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role, version: user.authVersion });
-    return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
+    const accessToken = await this.issueAccessToken(user);
+    return {
+      message: 'Login successful',
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: this.accessTokenExpiresIn(user.role),
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+      account: user.account,
+    };
   }
 
   async linkGoogle(userId: string, idToken: string) {
@@ -336,7 +384,12 @@ export class AuthService {
     const email = String(response.data?.email || '').toLowerCase();
     const audience = String(response.data?.aud || '');
     const clientId = this.config.get<string>('GOOGLE_CLIENT_ID')?.trim();
-    if (!subject || !email || !clientId || audience !== clientId || response.data?.email_verified !== 'true') throw new UnauthorizedException('Google account could not be verified');
+    const emailVerified =
+      response.data?.email_verified === true ||
+      response.data?.email_verified === 'true';
+    if (!subject || !email || !clientId || audience !== clientId || !emailVerified) {
+      throw new UnauthorizedException('Google account could not be verified');
+    }
     return { subject, email };
   }
 
@@ -357,8 +410,21 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, include: { account: true } });
     if (!user || user.status !== UserStatus.ACTIVE || payload.version !== user.authVersion) throw new UnauthorizedException('Biometric quick login must be enabled again');
     if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
-    const accessToken = await this.jwtService.signAsync({ sub: user.id, phone: user.phone, role: user.role, version: user.authVersion });
-    return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: 3600, user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
+    const accessToken = await this.issueAccessToken(user);
+    return {
+      message: 'Login successful',
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: this.accessTokenExpiresIn(user.role),
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+      account: user.account,
+    };
   }
 
   private generateAccountNumber(): string {

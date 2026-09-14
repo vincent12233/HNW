@@ -11,6 +11,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
 import '../theme/app_ui.dart';
+import '../widgets/home/home_action_button.dart';
+import '../widgets/home/mini_line_chart_painter.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
 import '../models/ipo.dart';
@@ -1208,7 +1210,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     height: 38,
                     child: !_amountsHidden && _portfolioSeries.length >= 2
                         ? CustomPaint(
-                            painter: _MiniLineChartPainter(
+                            painter: MiniLineChartPainter(
                               color: AppConfig.chartGainColor,
                               values: _portfolioSeries,
                             ),
@@ -1565,7 +1567,7 @@ class _MarketHomePageState extends State<MarketHomePage>
     return Row(
       children: [
         Expanded(
-          child: _HomeActionButton(
+          child: HomeActionButton(
             label: _appContent.text(
               'home',
               'funds.cta_label',
@@ -1583,7 +1585,7 @@ class _MarketHomePageState extends State<MarketHomePage>
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _HomeActionButton(
+          child: HomeActionButton(
             label: _appContent.text(
               'home',
               'funds.withdraw_cta_label',
@@ -1856,7 +1858,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                         width: 34,
                         height: 16,
                         child: CustomPaint(
-                          painter: _MiniLineChartPainter(
+                          painter: MiniLineChartPainter(
                             color: stock.change >= 0
                                 ? AppConfig.gainColor
                                 : AppConfig.lossColor,
@@ -4314,141 +4316,4 @@ class _MarketHomePageState extends State<MarketHomePage>
       ),
     );
   }
-}
-
-class _HomeActionButton extends StatelessWidget {
-  const _HomeActionButton({
-    required this.label,
-    required this.subtitle,
-    required this.icon,
-    required this.color,
-    required this.onTap,
-  });
-
-  final String label;
-  final String subtitle;
-  final IconData icon;
-  final Color color;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: AppUi.borderRadiusMd,
-        onTap: onTap,
-        child: Container(
-          constraints: const BoxConstraints(minHeight: 58),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: AppUi.surface(radius: AppUi.radiusMd),
-          child: Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: color, size: 18),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      label,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppConfig.textPrimaryColor,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    AppText(
-                      subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: AppConfig.textSecondaryColor,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Icon(
-                Icons.chevron_right_rounded,
-                size: 18,
-                color: AppConfig.textSecondaryColor.withValues(alpha: 0.7),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MiniLineChartPainter extends CustomPainter {
-  const _MiniLineChartPainter({
-    required this.color,
-    this.values = const <double>[],
-  });
-
-  final Color color;
-  final List<double> values;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    if (values.length < 2) return;
-    final source = values;
-    final minimum = source.reduce((left, right) => math.min(left, right));
-    final maximum = source.reduce((left, right) => math.max(left, right));
-    final spread = math
-        .max(math.max(maximum - minimum, maximum.abs() * .01), .000001)
-        .toDouble();
-    final normalized = source
-        .map((value) => .88 - ((value - minimum) / spread) * .76)
-        .toList(growable: false);
-    final line = Paint()
-      ..color = color
-      ..strokeWidth = 2
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-    final fill = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [color.withValues(alpha: .22), color.withValues(alpha: 0)],
-      ).createShader(Offset.zero & size);
-    final path = Path();
-    for (var index = 0; index < normalized.length; index++) {
-      final point = Offset(
-        size.width * index / (normalized.length - 1),
-        size.height * normalized[index],
-      );
-      if (index == 0) {
-        path.moveTo(point.dx, point.dy);
-      } else {
-        path.lineTo(point.dx, point.dy);
-      }
-    }
-    final area = Path.from(path)
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(area, fill);
-    canvas.drawPath(path, line);
-  }
-
-  @override
-  bool shouldRepaint(covariant _MiniLineChartPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.values != values;
 }

@@ -570,13 +570,14 @@ class AuthService {
   Future<AuthSession?> restoreSession() async {
     final preferences = await SharedPreferences.getInstance();
     var saved = await _secureStorage.read(key: _sessionKey);
-    // One-time migration from legacy plaintext preferences.
+    // One-time migration from legacy plaintext preferences, then scrub.
     final legacySaved = preferences.getString(_sessionKey);
-    saved ??= legacySaved;
-    if (saved != null &&
-        legacySaved != null &&
-        await _secureStorage.read(key: _sessionKey) == null) {
-      await _secureStorage.write(key: _sessionKey, value: saved);
+    if (saved == null && legacySaved != null) {
+      saved = legacySaved;
+      await _secureStorage.write(key: _sessionKey, value: legacySaved);
+    }
+    if (legacySaved != null) {
+      await preferences.remove(_sessionKey);
     }
 
     if (saved == null) {
@@ -598,9 +599,8 @@ class AuthService {
     final preferences = await SharedPreferences.getInstance();
     final encoded = jsonEncode(session.toJson());
     await _secureStorage.write(key: _sessionKey, value: encoded);
-    // Keep a web-compatible fallback for local HTTP deployments where the
-    // secure-storage backend may not persist across a browser refresh.
-    await preferences.setString(_sessionKey, encoded);
+    // Never persist access tokens in plaintext SharedPreferences.
+    await preferences.remove(_sessionKey);
     await preferences.setString('account_name', session.fullName);
     await preferences.setString('account_phone', session.phone);
   }

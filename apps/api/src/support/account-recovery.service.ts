@@ -84,11 +84,11 @@ export class AccountRecoveryService {
       const user = await tx.user.findFirst({ where: { phone: session.phone, role: 'CLIENT', status: { not: 'DISABLED' } } });
       if (!user) throw new BadRequestException('No eligible customer account matches this phone');
       await tx.$executeRaw`UPDATE account_recovery_sessions SET "codeHash" = ${codeHash}, "codeExpiresAt" = CURRENT_TIMESTAMP + INTERVAL '10 minutes', "codeUsedAt" = NULL, "codeAttempts" = 0, "issuedById" = ${actorId}, "issuedUserId" = ${user.id}, "updatedAt" = CURRENT_TIMESTAMP WHERE id = ${id}::uuid`;
-      const content = `Your password reset code is ${code}. It expires in 10 minutes and can only be used once.`;
+      const content = `A one-time password reset code was issued. It expires in 10 minutes and can only be used once. Ask support for the code shown on their screen — it is not stored in chat.`;
       await tx.$executeRaw`INSERT INTO account_recovery_messages (id, "sessionId", sender, content) VALUES (${randomUUID()}::uuid, ${id}::uuid, 'SUPPORT', ${content})`;
       await tx.auditLog.create({ data: { actorId, action: 'SUPPORT_PASSWORD_RESET_ISSUED', resource: 'account_recovery', resourceId: id, description: 'Support confirmed identity and issued a single-use reset code' } });
     });
-    return { sent: true };
+    return { sent: true, code };
   }
 
   async reset(token: string, codeValue: string, newPassword: string) {

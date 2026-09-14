@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
+import { availableCash } from '../common/money';
 import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
@@ -20,7 +21,7 @@ export class FreezeService {
 
     if (
       account.buyingPower.lessThan(amount) ||
-      account.cashBalance.lessThan(amount)
+      availableCash(account).lessThan(amount)
     ) {
       throw new BadRequestException('Insufficient buying power or cash balance');
     }

@@ -40,5 +40,5 @@ export class ClientExperienceController {
   @Post('client/notifications/:id/read') @Roles(UserRole.CLIENT) read(@Req() req: any, @Param('id') id: string) { return this.service.read(req.user.userId, id); }
   @Get('client/portfolio/reconciliation') @Roles(UserRole.CLIENT) reconciliation(@Req() req: any) { return this.service.reconciliation(req.user.userId); }
 
-  @Get('admin/bank-accounts') @Roles('ADMIN', 'FINANCE') adminBanks() { return this.service.adminBanks(); }
+  @Get('admin/bank-accounts') @Roles('ADMIN', 'FINANCE') adminBanks(@Req() req: any) { return this.service.adminBanks(req.user.role); }
 }

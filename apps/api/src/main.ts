@@ -18,6 +18,7 @@ function validateProductionEnvironment() {
     'JWT_SECRET',
     'OTC_KEY_ENCRYPTION_SECRET',
     'OBJECT_SIGNING_SECRET',
+    'TWO_FACTOR_ENCRYPTION_KEY',
   ];
   for (const name of requiredSecrets) {
     const value = process.env[name]?.trim() ?? '';
@@ -25,8 +26,15 @@ function validateProductionEnvironment() {
       throw new Error(`${name} must be a random value of at least 32 characters`);
     }
   }
-  if (new Set(requiredSecrets.map((name) => process.env[name])).size !== requiredSecrets.length) {
+  if (new Set(requiredSecrets.map((name) => process.env[name]?.trim())).size !== requiredSecrets.length) {
     throw new Error('Production encryption and signing secrets must be different');
+  }
+  const inviteCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim() ?? '';
+  if (inviteCode.length < 12 || /replace|change-me|adminfixed2026/i.test(inviteCode)) {
+    throw new Error('ADMIN_FIXED_INVITE_CODE must be set to a strong unique value in production');
+  }
+  if (requiredSecrets.some((name) => process.env[name]?.trim() === inviteCode)) {
+    throw new Error('ADMIN_FIXED_INVITE_CODE must be distinct from encryption secrets');
   }
   const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
   if (!origins.length || origins.some((origin) => !origin.startsWith('https://'))) {
@@ -38,10 +46,26 @@ function validateProductionEnvironment() {
 }
 
 function requestLimit(path: string) {
-  if (path === '/auth/recovery/messages') return 120;
+  if (
+    path === '/auth/login' ||
+    path === '/auth/google' ||
+    path === '/auth/biometric' ||
+    path.startsWith('/auth/recovery')
+  ) {
+    return 10;
+  }
   if (path.startsWith('/auth/')) return 20;
   if (path.startsWith('/kyc/')) return 10;
   if (path === '/otc/orders') return 10;
+  if (
+    path.includes('/deposit') ||
+    path.includes('/withdrawal') ||
+    path.includes('/loans') ||
+    (path.includes('/accounts/') &&
+      (path.includes('/credit') || path.includes('/debit')))
+  ) {
+    return 30;
+  }
   if (path.includes('/orders') || path.includes('/withdrawal')) return 60;
   return 300;
 }

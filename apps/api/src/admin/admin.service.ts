@@ -3,13 +3,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { fixedInviteCode } from '../common/fixed-invite';
 
 @Injectable()
 export class AdminService {
   constructor(private readonly prisma: PrismaService) {}
 
   async pendingCounts(role: UserRole, userId: string) {
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     const customerFilter = role === UserRole.SUPPORT
       ? { user: { assignedBusinessId: userId, usedInviteCode: { is: { code: fixedCode } } } }
       : role === UserRole.FINANCE
@@ -41,7 +42,7 @@ export class AdminService {
   }
 
   private customerScope(role: UserRole): Prisma.UserWhereInput {
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     if (role === UserRole.FINANCE) {
       return { role: UserRole.CLIENT, NOT: { usedInviteCode: { is: { code: fixedCode } } } };
     }

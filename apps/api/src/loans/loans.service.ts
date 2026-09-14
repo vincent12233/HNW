@@ -4,6 +4,8 @@ import { Prisma } from '../generated/prisma/client';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { fixedInviteCode } from '../common/fixed-invite';
+import { moneyDecimal } from '../common/money';
 
 @Injectable()
 export class LoansService {
@@ -77,7 +79,7 @@ export class LoansService {
 
   async list(userId: string, role: UserRole, query: { search?: string; status?: LoanStatus }) {
     const search = query.search?.trim();
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     const where: Prisma.LoanApplicationWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(role === UserRole.BUSINESS
@@ -297,11 +299,11 @@ export class LoansService {
     this.assertFinanceLoanVisible(role, loan.account.user.usedInviteCode?.code);
     if (loan.status !== LoanStatus.APPROVED) throw new BadRequestException('贷款审核通过后已自动到账，无需重复放款');
 
-    const amount = Number(loan.approvedAmount ?? 0);
-    if (amount <= 0) throw new BadRequestException('贷款批准金额不正确');
+    const amount = moneyDecimal(loan.approvedAmount ?? 0);
+    if (amount.lte(0)) throw new BadRequestException('贷款批准金额不正确');
 
     return this.prisma.$transaction(async (tx) => {
-      const before = loan.account.cashBalance;
+      const before = moneyDecimal(loan.account.cashBalance);
       const after = before.add(amount);
 
       await tx.account.update({
@@ -339,8 +341,8 @@ export class LoansService {
   }
 
   async repay(id: string, operatorId: string, role: UserRole, amount: number, note?: string) {
-    const repayment = Number(amount);
-    if (!Number.isFinite(repayment) || repayment <= 0) throw new BadRequestException('还款金额不正确');
+    const repayment = moneyDecimal(amount);
+    if (!repayment.isFinite() || repayment.lte(0)) throw new BadRequestException('还款金额不正确');
 
     const loan = await this.prisma.loanApplication.findUnique({ where: { id }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
     if (!loan) throw new NotFoundException('贷款申请不存在');
@@ -353,15 +355,16 @@ export class LoansService {
       throw new BadRequestException('当前贷款状态不能登记还款');
     }
 
-    const outstanding = Number(loan.outstandingAmount);
-    const nextOutstanding = Math.max(outstanding - repayment, 0);
+    const outstanding = moneyDecimal(loan.outstandingAmount);
+    const remaining = outstanding.sub(repayment);
+    const nextOutstanding = remaining.gt(0) ? remaining : new Prisma.Decimal(0);
 
     const result = await this.prisma.loanApplication.update({
       where: { id },
       data: {
         outstandingAmount: nextOutstanding,
-        status: nextOutstanding <= 0 ? LoanStatus.REPAID : LoanStatus.PARTIAL_REPAID,
-        closedAt: nextOutstanding <= 0 ? new Date() : null,
+        status: nextOutstanding.lte(0) ? LoanStatus.REPAID : LoanStatus.PARTIAL_REPAID,
+        closedAt: nextOutstanding.lte(0) ? new Date() : null,
         note: note?.trim() || loan.note,
         approvedById: operatorId,
       },
@@ -374,7 +377,11 @@ export class LoansService {
       resource: 'loan',
       resourceId: result.id,
       description: `登记贷款还款 ${result.orderNo}`,
-      metadata: { orderNo: result.orderNo, repayment, outstandingAmount: nextOutstanding },
+      metadata: {
+        orderNo: result.orderNo,
+        repayment: repayment.toFixed(2),
+        outstandingAmount: nextOutstanding.toFixed(2),
+      },
     });
 
     return result;
@@ -412,7 +419,7 @@ export class LoansService {
 
   private assertFinanceLoanVisible(role: UserRole, inviteCode?: string | null) {
     if (role !== UserRole.FINANCE) throw new ForbiddenException('Only finance can manage loans');
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     if (role === UserRole.FINANCE && inviteCode?.toUpperCase() === fixedCode) {
       throw new NotFoundException('贷款申请不存在');
     }

@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
+import { availableCash, moneyDecimal } from '../common/money';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
 import { UpdateIpoStatusDto } from './dto/update-ipo-status.dto';
@@ -580,8 +581,8 @@ export class IpoService {
     if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) {
       throw new BadRequestException('IPO allocation price is invalid');
     }
-    const totalAmount = Number((quantity * price).toFixed(2));
-    if (!Number.isSafeInteger(Math.round(totalAmount * 100))) {
+    const totalAmount = moneyDecimal(new Prisma.Decimal(quantity).mul(price));
+    if (!totalAmount.isFinite() || totalAmount.lte(0)) {
       throw new BadRequestException('IPO allocation amount is too large');
     }
 
@@ -673,23 +674,22 @@ export class IpoService {
         if (!application.ipo.instrumentId)
           throw new BadRequestException('IPO instrument not configured');
         const quantity = application.draftQuantity;
-        const price = Number(application.draftPrice);
-        if (!quantity || price <= 0 || !Number.isFinite(price))
+        const price = moneyDecimal(application.draftPrice ?? 0);
+        if (!quantity || price.lte(0) || !price.isFinite())
           throw new BadRequestException(
             'Save IPO allocation before publication',
           );
-        const totalAmount = Number((quantity * price).toFixed(2));
+        const totalAmount = moneyDecimal(new Prisma.Decimal(quantity).mul(price));
 
         const instrumentId = application.ipo.instrumentId;
         const account = application.account;
 
         // Reserved withdrawal/order funds must not be consumed by IPO settlement.
-        const cashBalance = Math.max(
-          0,
-          Number(account.cashBalance) - Number(account.frozenBalance ?? 0),
-        );
-        const debitAmount = Math.min(cashBalance, totalAmount);
-        let debtAmount = 0;
+        const cashAvailable = availableCash(account);
+        const debitAmount = cashAvailable.lt(totalAmount)
+          ? cashAvailable
+          : totalAmount;
+        let debtAmount = new Prisma.Decimal(0);
 
         const claimed = await tx.ipoApplication.updateMany({
           where: { id: application.id, status: 'PENDING', publishedAt: null },
@@ -699,7 +699,7 @@ export class IpoService {
             allocatedAmount: totalAmount,
             status: 'ALLOTTED',
             publishedAt: new Date(),
-            paymentStatus: cashBalance >= totalAmount ? 'PAID' : 'PENDING',
+            paymentStatus: cashAvailable.gte(totalAmount) ? 'PAID' : 'PENDING',
           },
         });
         if (claimed.count !== 1)
@@ -707,7 +707,14 @@ export class IpoService {
             'IPO application was processed by another operator',
           );
 
-        if (cashBalance >= totalAmount) {
+        const buyingPowerAfter = moneyDecimal(account.buyingPower ?? 0).sub(
+          debitAmount,
+        );
+        const nextBuyingPower = buyingPowerAfter.gt(0)
+          ? buyingPowerAfter
+          : new Prisma.Decimal(0);
+
+        if (cashAvailable.gte(totalAmount)) {
           await tx.account.update({
             where: {
               id: account.id,
@@ -716,14 +723,11 @@ export class IpoService {
               cashBalance: {
                 decrement: totalAmount,
               },
-              buyingPower: Math.max(
-                0,
-                Number(account.buyingPower ?? 0) - debitAmount,
-              ),
+              buyingPower: nextBuyingPower,
             },
           });
         } else {
-          debtAmount = totalAmount - cashBalance;
+          debtAmount = totalAmount.sub(cashAvailable);
 
           await tx.account.update({
             where: {
@@ -731,10 +735,7 @@ export class IpoService {
             },
             data: {
               cashBalance: { decrement: debitAmount },
-              buyingPower: Math.max(
-                0,
-                Number(account.buyingPower ?? 0) - debitAmount,
-              ),
+              buyingPower: nextBuyingPower,
             },
           });
 
@@ -753,7 +754,7 @@ export class IpoService {
           });
         }
 
-        if (debtAmount <= 0) {
+        if (debtAmount.lte(0)) {
           await this.settleIpoApplication(tx, {
             applicationId: application.id,
             accountId: account.id,
@@ -768,15 +769,15 @@ export class IpoService {
           where: { id: application.id },
         });
 
-        if (debitAmount > 0) {
+        if (debitAmount.gt(0)) {
           await tx.accountTransaction.create({
             data: {
               accountId: account.id,
               type: 'TRADE_SETTLEMENT',
               status: 'COMPLETED',
-              amount: -debitAmount,
+              amount: debitAmount.negated(),
               balanceBefore: account.cashBalance,
-              balanceAfter: Number(account.cashBalance) - debitAmount,
+              balanceAfter: moneyDecimal(account.cashBalance).sub(debitAmount),
               referenceId: application.id,
               createdById: actorId,
               note: 'IPO allotment payment on publication',
@@ -790,7 +791,12 @@ export class IpoService {
             action: 'IPO_ALLOCATION_PUBLISHED',
             resource: 'IPO_APPLICATION',
             resourceId: application.id,
-            metadata: { quantity, price, totalAmount, debtAmount },
+            metadata: {
+              quantity,
+              price: price.toFixed(2),
+              totalAmount: totalAmount.toFixed(2),
+              debtAmount: debtAmount.toFixed(2),
+            },
           },
         });
 
@@ -798,13 +804,13 @@ export class IpoService {
           data: {
             userId: account.userId,
             type:
-              debtAmount > 0 ? 'IPO_PAYMENT_REQUIRED' : 'IPO_ALLOTMENT_SETTLED',
+              debtAmount.gt(0) ? 'IPO_PAYMENT_REQUIRED' : 'IPO_ALLOTMENT_SETTLED',
             title:
-              debtAmount > 0
+              debtAmount.gt(0)
                 ? 'IPO allotment payment required'
                 : 'IPO allotment completed',
             body:
-              debtAmount > 0
+              debtAmount.gt(0)
                 ? `${quantity} shares of ${application.ipo.symbol} allotted for INR ${totalAmount.toFixed(2)}. Add INR ${debtAmount.toFixed(2)} to complete your subscription. No further action is needed after funds arrive.`
                 : `${quantity} shares of ${application.ipo.symbol} allotted. INR ${totalAmount.toFixed(2)} deducted. Payment completed and shares added to your holdings.`,
             referenceId: application.id,
@@ -817,7 +823,7 @@ export class IpoService {
           debtAmount,
 
           message:
-            debtAmount > 0
+            debtAmount.gt(0)
               ? 'IPO allocated with outstanding debt'
               : 'IPO allocated and settled successfully',
         };
@@ -833,10 +839,12 @@ export class IpoService {
       accountId: string;
       instrumentId: string;
       quantity: number;
-      price: number;
-      totalAmount: number;
+      price: Prisma.Decimal | number;
+      totalAmount: Prisma.Decimal | number;
     },
   ) {
+    const price = moneyDecimal(input.price);
+    const totalAmount = moneyDecimal(input.totalAmount);
     const existingOrder = await tx.order.findUnique({
       where: {
         accountId_clientOrderId: {
@@ -860,8 +868,8 @@ export class IpoService {
         status: 'FILLED',
         quantity: input.quantity,
         filledQuantity: input.quantity,
-        limitPrice: input.price,
-        averageFillPrice: input.price,
+        limitPrice: price,
+        averageFillPrice: price,
         completedAt: new Date(),
       },
     });
@@ -873,10 +881,10 @@ export class IpoService {
         accountId: input.accountId,
         instrumentId: input.instrumentId,
         quantity: input.quantity,
-        price: input.price,
-        grossAmount: input.totalAmount,
+        price,
+        grossAmount: totalAmount,
         fees: 0,
-        netAmount: input.totalAmount,
+        netAmount: totalAmount,
       },
     });
 
@@ -892,10 +900,11 @@ export class IpoService {
     if (position) {
       const oldQty = position.quantity;
       const newQty = oldQty + input.quantity;
-      const avgPrice =
-        (Number(position.averagePrice) * oldQty +
-          input.price * input.quantity) /
-        newQty;
+      const avgPrice = new Prisma.Decimal(position.averagePrice)
+        .mul(oldQty)
+        .add(price.mul(input.quantity))
+        .div(newQty)
+        .toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP);
 
       await tx.position.update({
         where: {
@@ -912,7 +921,7 @@ export class IpoService {
           accountId: input.accountId,
           instrumentId: input.instrumentId,
           quantity: input.quantity,
-          averagePrice: input.price,
+          averagePrice: price,
         },
       });
     }

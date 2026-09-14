@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { availableCash } from '../common/money';
 import { OrderSide, Prisma } from '../generated/prisma/client';
 
 @Injectable()
@@ -13,7 +14,7 @@ export class ValidatorService {
     if (side === OrderSide.BUY) {
       if (
         account.buyingPower.lessThan(netAmount) ||
-        account.cashBalance.lessThan(netAmount)
+        availableCash(account).lessThan(netAmount)
       ) {
         throw new BadRequestException('Insufficient buying power');
       }

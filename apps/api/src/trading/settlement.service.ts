@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { availableCash } from '../common/money';
 import { OrderSide, Prisma } from '../generated/prisma/client';
 import { CalculatorService } from './calculator.service';
 
@@ -29,6 +30,14 @@ export class SettlementService {
       fillPrice,
       netAmount,
     } = params;
+
+    if (
+      side === OrderSide.BUY &&
+      (account.buyingPower.lessThan(netAmount) ||
+        availableCash(account).lessThan(netAmount))
+    ) {
+      throw new BadRequestException('Insufficient buying power or cash balance');
+    }
 
     const balanceBefore = account.cashBalance;
     const updatedAccount = await tx.account.update({

@@ -6,6 +6,7 @@ import {
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListAdminOrdersQueryDto } from './dto/list-admin-orders-query.dto';
+import { fixedInviteCode } from '../common/fixed-invite';
 
 @Injectable()
 export class AdminOrdersService {
@@ -192,7 +193,7 @@ export class AdminOrdersService {
 
   private financeOrderScope(role: string): Prisma.OrderWhereInput {
     if (role !== 'FINANCE') return {};
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     return { account: { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } } };
   }
 }

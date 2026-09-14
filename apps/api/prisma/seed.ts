@@ -10,6 +10,7 @@ import {
   UserRole,
   UserStatus,
 } from '../src/generated/prisma/enums';
+import { fixedInviteCode } from '../src/common/fixed-invite';
 
 const connectionString = process.env.DATABASE_URL;
 
@@ -179,7 +180,7 @@ async function createInviteCodes(businessProfileId: string) {
 }
 
 async function createFixedOperatorInviteCode(businessProfileId: string) {
-  const code = (process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026');
+  const code = fixedInviteCode();
   await prisma.inviteCode.upsert({
     where: { code },
     update: { businessProfileId, status: InviteCodeStatus.UNUSED, disabledAt: null, expiresAt: null },

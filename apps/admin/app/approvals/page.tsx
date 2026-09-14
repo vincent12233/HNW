@@ -133,9 +133,9 @@ export default function ApprovalsPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <OpsPageHeader
-          eyebrow="FINANCE CONTROL"
-          title="高风险操作双人复核"
-          description="申请人与批准人必须是不同员工。批准前资金不会发生变化；请独立核对账户、金额和业务流水号。"
+          eyebrow="ADMIN CONTROL"
+          title="余额调整复核（超管）"
+          description="仅用于超级管理员发起的余额调整申请。财务日常上下分/上分订单为单人确认，不走本页。申请人与批准人必须是不同员工。"
           extra={
             <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
               刷新
@@ -161,6 +161,13 @@ export default function ApprovalsPage() {
         {error && (
           <Alert type="error" showIcon title={error} action={<Button onClick={() => void load()}>重试</Button>} />
         )}
+
+        <Alert
+          type="info"
+          showIcon
+          title="与财务单人上分的区别"
+          description="财务后台创建上分订单或直接上下分后立即入账，无需在此复核。本页只处理超管角色队列中的余额调整申请；请勿批准自己发起的申请。"
+        />
 
         <Alert
           type="warning"

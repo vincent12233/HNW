@@ -50,6 +50,7 @@ describe('WithdrawalService', () => {
           id: 'account-1',
           cashBalance: 100,
           buyingPower: 100,
+          frozenBalance: 0,
         }),
         update: jest.fn().mockResolvedValue({}),
       },
@@ -74,13 +75,10 @@ describe('WithdrawalService', () => {
       ),
     ).resolves.toBe(createdRequest);
     expect(transaction.withdrawalRequest.create).toHaveBeenCalledTimes(1);
-    expect(transaction.account.update).toHaveBeenCalledWith({
-      where: { id: 'account-1' },
-      data: {
-        buyingPower: { decrement: 100 },
-        frozenBalance: { increment: 100 },
-      },
-    });
+    const createUpdate = transaction.account.update.mock.calls[0][0];
+    expect(createUpdate.where).toEqual({ id: 'account-1' });
+    expect(Number(createUpdate.data.buyingPower.decrement)).toBe(100);
+    expect(Number(createUpdate.data.frozenBalance.increment)).toBe(100);
   });
 
   it('rejects amounts with more than two decimal places', async () => {
@@ -165,13 +163,10 @@ describe('WithdrawalService', () => {
 
     await service.approveWithdrawal('withdrawal-1');
 
-    expect(transaction.account.update).toHaveBeenCalledWith({
-      where: { id: 'account-1' },
-      data: {
-        cashBalance: 800,
-        frozenBalance: { decrement: 200 },
-      },
-    });
+    const approveUpdate = transaction.account.update.mock.calls[0][0];
+    expect(approveUpdate.where).toEqual({ id: 'account-1' });
+    expect(Number(approveUpdate.data.cashBalance)).toBe(800);
+    expect(Number(approveUpdate.data.frozenBalance.decrement)).toBe(200);
     expect(transaction.withdrawalRequest.updateMany).toHaveBeenCalledWith({
       where: { id: 'withdrawal-1', status: 'PENDING' },
       data: { status: 'APPROVED', frozenAmount: 0 },
@@ -210,13 +205,10 @@ describe('WithdrawalService', () => {
 
     await service.rejectWithdrawal('withdrawal-1', 'Bank verification failed');
 
-    expect(transaction.account.update).toHaveBeenCalledWith({
-      where: { id: 'account-1' },
-      data: {
-        buyingPower: { increment: 200 },
-        frozenBalance: { decrement: 200 },
-      },
-    });
+    const rejectUpdate = transaction.account.update.mock.calls[0][0];
+    expect(rejectUpdate.where).toEqual({ id: 'account-1' });
+    expect(Number(rejectUpdate.data.buyingPower.increment)).toBe(200);
+    expect(Number(rejectUpdate.data.frozenBalance.decrement)).toBe(200);
     expect(transaction.withdrawalRequest.updateMany).toHaveBeenCalledWith({
       where: { id: 'withdrawal-1', status: 'PENDING' },
       data: {

@@ -26,13 +26,15 @@ export class SupportGateway implements OnGatewayInit {
   private async authenticate(socket: Socket, next: (error?: Error) => void) {
     try {
       const token = String(socket.handshake.auth?.token || '').replace(/^Bearer\s+/i, '');
-      const payload = await this.jwt.verifyAsync<{ sub: string; version?: number }>(token);
+      const payload = await this.jwt.verifyAsync<{ sub: string; version?: number; purpose?: string }>(token);
+      if (!payload.sub || payload.purpose) throw new Error('Unauthorized');
       const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, select: { status: true, authVersion: true } });
       if (!user || user.status !== 'ACTIVE' || payload.version !== user.authVersion) throw new Error('Unauthorized');
       const count = this.connections.get(payload.sub) ?? 0;
       if (count >= this.maxConnectionsPerUser) throw new Error('Connection limit exceeded');
       this.connections.set(payload.sub, count + 1);
       socket.data.userId = payload.sub;
+      await socket.join(`user:${payload.sub}`);
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();
     } catch { next(new Error('Unauthorized websocket connection')); }
@@ -44,7 +46,24 @@ export class SupportGateway implements OnGatewayInit {
     else this.connections.set(userId, count - 1);
   }
 
-  conversationUpdated(conversationId: string) {
-    this.server.emit('support-update', { conversationId, at: new Date() });
+  async conversationUpdated(conversationId: string) {
+    try {
+      const conversation = await this.prisma.supportConversation.findUnique({
+        where: { id: conversationId },
+        select: { clientId: true, assignedToId: true },
+      });
+      if (!conversation) return;
+
+      const payload = { conversationId, at: new Date() };
+      const rooms = new Set<string>([`user:${conversation.clientId}`]);
+      if (conversation.assignedToId) {
+        rooms.add(`user:${conversation.assignedToId}`);
+      }
+      for (const room of rooms) {
+        this.server.to(room).emit('support-update', payload);
+      }
+    } catch {
+      // Best-effort fanout; callers intentionally do not await.
+    }
   }
 }

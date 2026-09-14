@@ -2,6 +2,7 @@ import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@
 
 import { UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { fixedInviteCode } from '../common/fixed-invite';
 
 @Injectable()
 export class DedicatedOperatorScopeGuard implements CanActivate {
@@ -12,7 +13,7 @@ export class DedicatedOperatorScopeGuard implements CanActivate {
     if (request.user?.role !== UserRole.SUPPORT) return true;
 
     const userId = request.user.userId;
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     if (!userId) throw new ForbiddenException('Dedicated operator identity is missing');
 
     const operator = await this.prisma.user.findFirst({

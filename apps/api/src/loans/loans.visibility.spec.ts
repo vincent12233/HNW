@@ -1,5 +1,6 @@
 import { LoansService } from './loans.service';
 import { UserRole } from '../generated/prisma/enums';
+import { fixedInviteCode } from '../common/fixed-invite';
 
 describe('Loan record visibility', () => {
   function fixture() {
@@ -34,7 +35,7 @@ describe('Loan record visibility', () => {
   it('preserves finance fixed-invite exclusion during search', async () => {
     const { service, findMany } = fixture();
     await service.list('finance', UserRole.FINANCE, { search: 'customer' });
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     expect(findMany.mock.calls[0][0].where.account).toEqual({
       user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } },
     });

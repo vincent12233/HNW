@@ -542,8 +542,6 @@ const hindi = <String, String>{
   'Deposit': 'जमा',
   'Trading': 'ट्रेडिंग',
   'Dedicated help for deposits, account security and trading.': 'जमा, खाता सुरक्षा और ट्रेडिंग के लिए समर्पित सहायता।',
-  'Live chat opens in the Android and iOS apps. Choose a topic below, then continue on your phone.': 'लाइव चैट Android और iOS ऐप में खुलती है। नीचे एक विषय चुनें, फिर अपने फ़ोन पर जारी रखें।',
-  'For live SaleSmartly chat, open this account in the Android or iOS app. Topic shortcuts still prepare your request here.': 'लाइव SaleSmartly चैट के लिए इस खाते को Android या iOS ऐप में खोलें। विषय शॉर्टकट यहाँ भी आपका अनुरोध तैयार करते हैं।',
   'Message opens in live chat': 'संदेश लाइव चैट में खुलता है',
   'Use a topic or open on mobile': 'एक विषय चुनें या मोबाइल पर खोलें',
   'We are here to help': 'हम मदद के लिए यहाँ हैं',

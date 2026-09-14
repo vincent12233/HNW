@@ -70,10 +70,6 @@ class _SupportChatPageState extends State<SupportChatPage>
     final launchMessage = _selectedMessage?.trim();
 
     if (!_nativeChatAvailable) {
-      setState(() {
-        _error =
-            'Live chat opens in the Android and iOS apps. Choose a topic below, then continue on your phone.';
-      });
       return;
     }
 
@@ -159,10 +155,6 @@ class _SupportChatPageState extends State<SupportChatPage>
                         isError: _error != null,
                         isConnecting: _opening,
                       ),
-                      if (!_nativeChatAvailable) ...[
-                        const SizedBox(height: 14),
-                        const _PlatformHint(),
-                      ],
                       const SizedBox(height: 18),
                       AppText(
                         'Quick topics',
@@ -548,40 +540,6 @@ class _AgentBubble extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PlatformHint extends StatelessWidget {
-  const _PlatformHint();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: const Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Icons.phone_iphone_rounded, color: AppConfig.primaryColor),
-          SizedBox(width: 10),
-          Expanded(
-            child: AppText(
-              'For live SaleSmartly chat, open this account in the Android or iOS app. Topic shortcuts still prepare your request here.',
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.4,
-                color: Color(0xFF475569),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

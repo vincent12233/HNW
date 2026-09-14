@@ -40,6 +40,7 @@ import '../theme/appearance_settings.dart';
 import '../widgets/market_header.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/floating_support_button.dart';
+import '../widgets/support_ui_metrics.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
 import 'market_news_page.dart';
@@ -911,7 +912,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
                 Positioned(
                   right: 0,
-                  bottom: 86,
+                  bottom: SupportUiMetrics.of(context).fabBottom,
                   child: SafeArea(
                     child: FloatingSupportButton(
                       onTap: () => _openSupportChat(),
@@ -1850,10 +1851,6 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openSupportChat({String? initialMessage}) {
-    final media = MediaQuery.of(context);
-    final panelWidth = (media.size.width - 80).clamp(260.0, 300.0);
-    final panelMaxHeight = (media.size.height * 0.55).clamp(320.0, 460.0);
-
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
@@ -1862,25 +1859,40 @@ class _MarketHomePageState extends State<MarketHomePage>
       transitionDuration: const Duration(milliseconds: 260),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
         return SafeArea(
-          child: Align(
-            alignment: Alignment.bottomCenter,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(28, 12, 28, 78),
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: panelWidth,
-                  maxHeight: panelMaxHeight,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final m = SupportUiMetrics.of(context);
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    m.panelHorizontalInset,
+                    12,
+                    m.panelHorizontalInset,
+                    m.panelBottomInset,
+                  ),
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    widthFactor: 1,
+                    heightFactor: 1,
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        maxWidth: m.panelWidth,
+                        maxHeight: m.panelMaxHeight,
+                      ),
+                      child: Material(
+                        color: Colors.transparent,
+                        elevation: 16,
+                        shadowColor: const Color(0x66071326),
+                        borderRadius: BorderRadius.circular(m.panelRadius),
+                        clipBehavior: Clip.antiAlias,
+                        child: SupportChatPage(initialMessage: initialMessage),
+                      ),
+                    ),
+                  ),
                 ),
-                child: Material(
-                  color: Colors.transparent,
-                  elevation: 16,
-                  shadowColor: const Color(0x66071326),
-                  borderRadius: BorderRadius.circular(16),
-                  clipBehavior: Clip.antiAlias,
-                  child: SupportChatPage(initialMessage: initialMessage),
-                ),
-              ),
-            ),
+              );
+            },
           ),
         );
       },

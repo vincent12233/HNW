@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_language.dart';
+import 'support_ui_metrics.dart';
 
-/// Compact right-edge support tab, sized like the product reference screenshot.
+/// Compact right-edge support tab that scales with phone size.
 class FloatingSupportButton extends StatefulWidget {
   const FloatingSupportButton({super.key, required this.onTap});
 
@@ -39,6 +40,9 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
 
   @override
   Widget build(BuildContext context) {
+    final m = SupportUiMetrics.of(context);
+    final radius = BorderRadius.horizontal(left: Radius.circular(m.fabRadius));
+
     return Semantics(
       button: true,
       label: 'Customer Service',
@@ -50,24 +54,18 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
             color: Colors.transparent,
             elevation: 6,
             shadowColor: const Color(0x4D000000),
-            borderRadius: const BorderRadius.horizontal(
-              left: Radius.circular(8),
-            ),
+            borderRadius: radius,
             child: InkWell(
-              borderRadius: const BorderRadius.horizontal(
-                left: Radius.circular(8),
-              ),
+              borderRadius: radius,
               onTap: widget.onTap,
               child: Ink(
-                width: 26,
-                height: 112,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF1E88E5),
-                  borderRadius: BorderRadius.horizontal(
-                    left: Radius.circular(8),
-                  ),
+                width: m.fabWidth,
+                height: m.fabHeight,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5),
+                  borderRadius: radius,
                 ),
-                child: const Column(
+                child: Column(
                   children: [
                     Expanded(
                       child: Center(
@@ -79,7 +77,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                             softWrap: false,
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: m.fabFontSize,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.15,
                               height: 1,
@@ -89,12 +87,12 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                       ),
                     ),
                     Padding(
-                      padding: EdgeInsets.only(bottom: 7),
+                      padding: EdgeInsets.only(bottom: 6 * m.scale),
                       child: SizedBox(
-                        width: 16,
-                        height: 16,
+                        width: m.fabIconSize + 6,
+                        height: m.fabIconSize + 6,
                         child: DecoratedBox(
-                          decoration: BoxDecoration(
+                          decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.fromBorderSide(
                               BorderSide(color: Colors.white, width: 1),
@@ -103,7 +101,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                           child: Icon(
                             Icons.headset_mic_rounded,
                             color: Colors.white,
-                            size: 10,
+                            size: m.fabIconSize,
                           ),
                         ),
                       ),

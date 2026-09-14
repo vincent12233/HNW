@@ -319,16 +319,20 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     sortOrder: 10,
   },
   {
+  {
     module: AppContentModule.SUPPORT,
     key: 'hours',
-    body: 'Support is available during business hours via in-app chat.',
+    body:
+      'Online customer service hours: Mon-Sun 09:00-22:00 (IST). We are here to help with deposits, trading and account questions.',
     locale: 'en',
     sortOrder: 20,
   },
   {
+  {
     module: AppContentModule.SUPPORT,
     key: 'hours',
-    body: 'सहायता व्यावसायिक घंटों में ऐप चैट के माध्यम से उपलब्ध है।',
+    body:
+      'ऑनलाइन ग्राहक सेवा समय: सोम-रवि 09:00-22:00 (IST)। जमा, ट्रेडिंग और खाते में सहायता के लिए हम उपलब्ध हैं।',
     locale: 'hi',
     sortOrder: 20,
   },

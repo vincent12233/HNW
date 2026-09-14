@@ -52,7 +52,11 @@ const homeFields = [
 
 const supportFields = [
   { key: "greeting", label: "客服欢迎语", rows: 3 },
-  { key: "hours", label: "服务时间说明", rows: 2 },
+  {
+    key: "hours",
+    label: "服务时间滚动提示（客服面板顶部公告，可横向滚动）",
+    rows: 2,
+  },
   { key: "chat_preset.help", label: "帮助入口预填消息", rows: 2 },
   { key: "chat_preset.deposit", label: "点击充值时预填客服消息", rows: 2 },
   { key: "salesmartly_script_url", label: "SaleSmartly Script URL", rows: 2 },
@@ -402,7 +406,7 @@ export default function AppOpsContentPage() {
                 children: (
                   <Form form={supportForm} layout="vertical">
                     <Paragraph type="secondary">
-                      欢迎语/服务时间/预填消息/SaleSmartly URL 按运营文案语言编辑（当前{" "}
+                      欢迎语/服务时间滚动公告/预填消息/SaleSmartly URL 按运营文案语言编辑（当前{" "}
                       {opsLocale === "hi" ? "Hindi" : "English"}）；标签与快捷回复固定为中文，供后台客服台使用。
                     </Paragraph>
                     {supportFields.map((field) => (

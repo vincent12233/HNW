@@ -9,6 +9,7 @@ import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/auth_service.dart';
 import '../services/salesmartly_service.dart';
+import '../widgets/scrolling_notice_text.dart';
 import '../widgets/support_ui_metrics.dart';
 
 class SupportChatPage extends StatefulWidget {
@@ -116,7 +117,8 @@ class _SupportChatPageState extends State<SupportChatPage>
     final hours = content.text(
       'support',
       'hours',
-      fallback: 'Support is available during business hours via in-app chat.',
+      fallback:
+          'Online customer service hours: Mon–Sun 09:00–22:00 (IST). We are here to help with deposits, trading and account questions.',
     );
 
     final bubbleText = _error ??
@@ -126,9 +128,8 @@ class _SupportChatPageState extends State<SupportChatPage>
                 ? greeting
                 : '$greeting\n\n$hours'));
 
-    // Hide the notice strip on very short screens to keep the panel compact.
-    final showNotice =
-        _noticeVisible && MediaQuery.sizeOf(context).height >= 640;
+    // Always show the CMS hours notice unless the user dismisses it.
+    final showNotice = _noticeVisible && hours.trim().isNotEmpty;
 
     return Material(
       color: const Color(0xFFF4F7FC),
@@ -220,7 +221,7 @@ class _SupportChatPageState extends State<SupportChatPage>
 
               final columnChildren = <Widget>[
                 _buildHeader(m),
-                if (showNotice) _buildNotice(m),
+                if (showNotice) _buildNotice(m, hours.trim()),
                 Expanded(child: SingleChildScrollView(child: body)),
                 _buildComposer(m),
               ];
@@ -361,7 +362,12 @@ class _SupportChatPageState extends State<SupportChatPage>
     );
   }
 
-  Widget _buildNotice(SupportUiMetrics m) {
+  Widget _buildNotice(SupportUiMetrics m, String hoursNotice) {
+    final noticeStyle = TextStyle(
+      fontSize: m.subtitleSize,
+      color: const Color(0xFF35558A),
+      height: 1.2,
+    );
     return Padding(
       padding: EdgeInsets.fromLTRB(
         m.contentPadding,
@@ -382,20 +388,17 @@ class _SupportChatPageState extends State<SupportChatPage>
           child: Row(
             children: [
               Icon(
-                Icons.verified_user_outlined,
+                Icons.schedule_rounded,
                 size: 15 * m.scale,
                 color: AppConfig.primaryColor,
               ),
               SizedBox(width: 6 * m.scale),
               Expanded(
-                child: AppText(
-                  'Dedicated help for deposits, account security and trading.',
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: m.subtitleSize,
-                    color: const Color(0xFF35558A),
-                  ),
+                child: ScrollingNoticeText(
+                  text: hoursNotice,
+                  style: noticeStyle,
+                  height: (m.subtitleSize * 1.35).clamp(16.0, 22.0),
+                  pixelsPerSecond: 34,
                 ),
               ),
               IconButton(

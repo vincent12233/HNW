@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../l10n/app_language.dart';
@@ -23,6 +25,7 @@ class _DepositPageState extends State<DepositPage> {
   void initState() {
     super.initState();
     _appContent.addListener(_onContentChanged);
+    unawaited(_appContent.load());
     _load();
   }
 
@@ -52,10 +55,11 @@ class _DepositPageState extends State<DepositPage> {
   }
 
   void _contact() {
-    final message = _appContent.text(
+    final content = _appContent.current;
+    final message = content.text(
       'support',
       'chat_preset.deposit',
-      fallback: _appContent.text(
+      fallback: content.text(
         'deposit',
         'chat_preset',
         fallback: 'Hello, I would like to make a deposit.',
@@ -70,7 +74,7 @@ class _DepositPageState extends State<DepositPage> {
 
   @override
   Widget build(BuildContext context) {
-    final instructions = _appContent.text(
+    final instructions = _appContent.current.text(
       'deposit',
       'instructions',
       fallback:

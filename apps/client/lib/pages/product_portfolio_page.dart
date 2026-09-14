@@ -28,7 +28,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   bool _hidden = false;
   int _request = 0;
   static const _colors = {
-    'Institutional': Color(0xFF2563EB),
+    'Institutional': AppConfig.primaryColor,
     'OTC': Color(0xFF0F9D92),
     'IPO': Color(0xFF9333EA),
   };

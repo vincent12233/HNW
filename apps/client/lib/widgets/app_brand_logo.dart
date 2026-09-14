@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../app_config.dart';
+
 class AppBrandLogo extends StatelessWidget {
   const AppBrandLogo({super.key, this.size = 58});
 
@@ -7,25 +9,21 @@ class AppBrandLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(
-      gradient: const LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [Color(0xFF087AF8), Color(0xFF3155F5)],
-      ),
-      borderRadius: BorderRadius.circular(size * .26),
-      boxShadow: const [
-        BoxShadow(
-          color: Color(0x332D6BFF),
-          blurRadius: 18,
-          offset: Offset(0, 7),
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          gradient: AppConfig.brandGradient,
+          borderRadius: BorderRadius.circular(size * .26),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x33165DFF),
+              blurRadius: 18,
+              offset: Offset(0, 7),
+            ),
+          ],
         ),
-      ],
-    ),
-    child: CustomPaint(painter: _LogoPainter()),
-  );
+        child: CustomPaint(painter: _LogoPainter()),
+      );
 }
 
 class _LogoPainter extends CustomPainter {

@@ -115,7 +115,7 @@ class _OrdersTabState extends State<OrdersTab> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                          border: Border.all(color: AppConfig.borderColor),
                         ),
                         child: Column(
                           children: [
@@ -285,7 +285,7 @@ class _OrdersTabState extends State<OrdersTab> {
       case 'FILLED':
         return AppConfig.gainColor;
       case 'PARTIALLY_FILLED':
-        return const Color(0xFFF59E0B);
+        return AppConfig.warningColor;
       case 'OPEN':
         return AppConfig.primaryColor;
       case 'CANCELLED':

@@ -243,7 +243,7 @@ class TradeList extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE8EDF5)),
+            border: Border.all(color: AppConfig.dividerColor),
           ),
           child: positions.isEmpty
               ? const Padding(
@@ -251,7 +251,7 @@ class TradeList extends StatelessWidget {
                   child: Center(
                     child: AppText(
                       'No open positions',
-                      style: TextStyle(color: Color(0xFF64748B)),
+                      style: TextStyle(color: AppConfig.textSecondaryColor),
                     ),
                   ),
                 )
@@ -342,7 +342,7 @@ class TradeList extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+          border: Border(bottom: BorderSide(color: AppConfig.dividerColor)),
         ),
         child: Row(
           children: [
@@ -363,7 +363,7 @@ class TradeList extends StatelessWidget {
                     '${position.quantity} Shares · ${position.exchange}',
                     style: const TextStyle(
                       fontSize: 10,
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -385,7 +385,7 @@ class TradeList extends StatelessWidget {
                     'Avg. ${formatPrice(position.averageCost)}',
                     style: const TextStyle(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                     ),
                   ),
                 ],
@@ -433,7 +433,7 @@ class TradeList extends StatelessWidget {
         AppText(
           label,
           maxLines: 2,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+          style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 11),
         ),
         const SizedBox(height: 7),
         FittedBox(

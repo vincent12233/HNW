@@ -21,7 +21,7 @@ class AppPageScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: appBar,
-    backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.surface,
+    backgroundColor: backgroundColor ?? AppConfig.backgroundColor,
     body: SafeArea(
       top: appBar == null,
       child: Align(

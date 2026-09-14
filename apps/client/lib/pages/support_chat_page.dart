@@ -132,13 +132,13 @@ class _SupportChatPageState extends State<SupportChatPage>
     final showNotice = _noticeVisible && hours.trim().isNotEmpty;
 
     return Material(
-      color: const Color(0xFFF4F7FC),
+      color: AppConfig.backgroundColor,
       child: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Color(0xFFE8F1FF), Color(0xFFF7F9FC), Color(0xFFFCFDFE)],
+            colors: [AppConfig.primarySoftColor, Color(0xFFF7F9FC), Color(0xFFFCFDFE)],
             stops: [0, 0.4, 1],
           ),
         ),
@@ -376,7 +376,7 @@ class _SupportChatPageState extends State<SupportChatPage>
         2 * m.scale,
       ),
       child: Material(
-        color: const Color(0xFFDCE9FF),
+        color: AppConfig.primarySoftColor,
         borderRadius: BorderRadius.circular(10 * m.scale),
         child: Padding(
           padding: EdgeInsets.fromLTRB(

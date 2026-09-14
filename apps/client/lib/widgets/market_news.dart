@@ -1,5 +1,6 @@
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
+import '../app_config.dart';
 
 class MarketNews extends StatelessWidget {
   const MarketNews({super.key});
@@ -43,7 +44,7 @@ class MarketNews extends StatelessWidget {
           elevation: 0,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
-            side: const BorderSide(color: Color(0xFFE8EDF5)),
+            side: const BorderSide(color: AppConfig.dividerColor),
           ),
           child: Column(
             children: news.take(2).toList().asMap().entries.map((entry) {

@@ -79,7 +79,7 @@ class MarketHeader extends StatelessWidget {
                       const Icon(
                         Icons.waving_hand_rounded,
                         size: 15,
-                        color: Color(0xFFF59E0B),
+                        color: AppConfig.warningColor,
                       ),
                     ],
                   ),
@@ -123,7 +123,7 @@ class MarketHeader extends StatelessWidget {
                       height: 17,
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
+                        color: AppConfig.lossColor,
                         shape: BoxShape.circle,
                       ),
                       child: AppText(

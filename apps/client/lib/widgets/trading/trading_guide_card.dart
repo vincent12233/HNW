@@ -1,5 +1,6 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
+import '../../app_config.dart';
 
 class TradingGuideCard extends StatelessWidget {
   const TradingGuideCard({super.key, required this.body, this.title});
@@ -13,9 +14,9 @@ class TradingGuideCard extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppConfig.surfaceMutedColor,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -30,7 +31,7 @@ class TradingGuideCard extends StatelessWidget {
           AppText(
             body,
             style: const TextStyle(
-              color: Color(0xFF64748B),
+              color: AppConfig.textSecondaryColor,
               fontSize: 12,
               height: 1.45,
             ),

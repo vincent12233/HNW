@@ -40,6 +40,7 @@ import '../theme/appearance_settings.dart';
 import '../widgets/market_header.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/floating_support_button.dart';
+import '../widgets/module_surface.dart';
 import '../widgets/support_ui_metrics.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
@@ -1141,15 +1142,9 @@ class _MarketHomePageState extends State<MarketHomePage>
           width: double.infinity,
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppConfig.primaryDarkColor,
-                AppConfig.primaryGradientEnd,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(8),
+            gradient: AppConfig.heroGradient,
+            borderRadius: AppConfig.cardRadius,
+            boxShadow: AppConfig.softShadow,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1342,7 +1337,7 @@ class _MarketHomePageState extends State<MarketHomePage>
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+            style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 10),
           ),
           const SizedBox(height: 8),
           FittedBox(
@@ -1472,28 +1467,22 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _sectionTitle(String title, {VoidCallback? onViewAll}) {
-    return Row(
-      children: [
-        Expanded(
-          child: AppText(
-            title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-          ),
-        ),
-        if (onViewAll != null)
-          TextButton(
-            style: TextButton.styleFrom(
-              minimumSize: const Size(0, 32),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              textStyle: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
+    return ModuleSectionHeader(
+      title: title,
+      trailing: onViewAll == null
+          ? null
+          : TextButton(
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 32),
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                textStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
+              onPressed: onViewAll,
+              child: const AppText('View All'),
             ),
-            onPressed: onViewAll,
-            child: const AppText('View All'),
-          ),
-      ],
     );
   }
 
@@ -1552,7 +1541,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE8EDF5)),
+                  border: Border.all(color: AppConfig.dividerColor),
                   boxShadow: [
                     BoxShadow(
                       color: const Color(0xFF0F172A).withValues(alpha: 0.035),
@@ -1572,7 +1561,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: Color(0xFF64748B),
+                              color: AppConfig.textSecondaryColor,
                               fontSize: 9,
                               fontWeight: FontWeight.w700,
                             ),
@@ -1699,7 +1688,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
+        border: Border.all(color: AppConfig.dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1740,7 +1729,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 positive
                     ? 'No gainers available with logos'
                     : 'No losers available with logos',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 11),
               ),
             ),
           ...items.map(
@@ -2027,7 +2016,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     AppText(
                       'Total frozen: ${formatPrice(frozenBalance)}',
                       style: const TextStyle(
-                        color: Color(0xFF64748B),
+                        color: AppConfig.textSecondaryColor,
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
                       ),
@@ -2055,7 +2044,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     const SizedBox(height: 6),
                     const AppText(
                       'Minimum withdrawal: ₹100',
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                      style: TextStyle(color: AppConfig.textSecondaryColor, fontSize: 11),
                     ),
 
                     TextField(
@@ -2080,7 +2069,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       decoration: BoxDecoration(
                         color: const Color(0xFFF5F7FB),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        border: Border.all(color: AppConfig.borderColor),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2369,7 +2358,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       decoration: BoxDecoration(
         color: const Color(0xFFF9FAFB),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2513,7 +2502,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                               AppText(
                                 hours,
                                 style: const TextStyle(
-                                  color: Color(0xFF64748B),
+                                  color: AppConfig.textSecondaryColor,
                                   fontSize: 12,
                                   height: 1.35,
                                 ),
@@ -2669,12 +2658,12 @@ class _MarketHomePageState extends State<MarketHomePage>
           padding: const EdgeInsets.all(18),
           child: Row(
             children: [
-              const Icon(Icons.newspaper_outlined, color: Color(0xFF64748B)),
+              const Icon(Icons.newspaper_outlined, color: AppConfig.textSecondaryColor),
               const SizedBox(width: 12),
               const Expanded(
                 child: AppText(
                   'Live market news is temporarily unavailable.',
-                  style: TextStyle(color: Color(0xFF64748B)),
+                  style: TextStyle(color: AppConfig.textSecondaryColor),
                 ),
               ),
               IconButton(
@@ -2710,7 +2699,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE8EDF5)),
+                        border: Border.all(color: AppConfig.dividerColor),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2738,7 +2727,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                                       );
                                     },
                                     errorBuilder: (_, _, _) => const ColoredBox(
-                                      color: Color(0xFFEEF5FF),
+                                      color: AppConfig.primarySoftColor,
                                       child: Icon(
                                         Icons.candlestick_chart_rounded,
                                         color: AppConfig.primaryColor,
@@ -2747,7 +2736,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                                     ),
                                   )
                                 : const ColoredBox(
-                                    color: Color(0xFFEEF5FF),
+                                    color: AppConfig.primarySoftColor,
                                     child: Icon(
                                       Icons.candlestick_chart_rounded,
                                       color: AppConfig.primaryColor,
@@ -2777,7 +2766,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                                   overflow: TextOverflow.ellipsis,
                                   style: const TextStyle(
                                     fontSize: 9,
-                                    color: Color(0xFF64748B),
+                                    color: AppConfig.textSecondaryColor,
                                   ),
                                 ),
                               ],
@@ -2857,7 +2846,7 @@ class _MarketHomePageState extends State<MarketHomePage>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: const Color(0xFFEEF5FF),
+        color: AppConfig.primarySoftColor,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
@@ -2873,7 +2862,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 const SizedBox(height: 4),
                 AppText(
                   subtitle,
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                  style: const TextStyle(fontSize: 10, color: AppConfig.textSecondaryColor),
                 ),
               ],
             ),
@@ -2939,7 +2928,7 @@ class _MarketHomePageState extends State<MarketHomePage>
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: const BoxDecoration(
-                color: Color(0xFFEF233C),
+                color: AppConfig.lossColor,
                 shape: BoxShape.circle,
               ),
               child: AppText(
@@ -3569,14 +3558,14 @@ class _MarketHomePageState extends State<MarketHomePage>
                 title: 'Personal Information',
                 subtitle: 'Account ID and full name',
                 onTap: _editProfile,
-                color: const Color(0xFF2563EB),
+                color: AppConfig.primaryColor,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.request_quote_outlined,
                 title: 'Loan Applications',
                 subtitle: 'Application Status',
-                color: const Color(0xFF059669),
+                color: AppConfig.gainColor,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const LoanPage()),
                 ),
@@ -3592,7 +3581,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ? 'Pending'
                     : 'Required',
                 onTap: () => _openAccountSettings('kyc'),
-                color: const Color(0xFF10B981),
+                color: AppConfig.gainColor,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3604,7 +3593,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const AccountSecurityPage(),
                   ),
                 ),
-                color: const Color(0xFF2563EB),
+                color: AppConfig.primaryColor,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3629,7 +3618,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                         const AccountSecurityPage(withdrawalPin: true),
                   ),
                 ),
-                color: const Color(0xFFF59E0B),
+                color: AppConfig.warningColor,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3637,7 +3626,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 title: 'Bank Accounts',
                 subtitle: 'Manage linked bank accounts and UPI',
                 onTap: () => _openAccountSettings('banks'),
-                color: const Color(0xFFF59E0B),
+                color: AppConfig.warningColor,
               ),
             ],
           ),
@@ -3685,7 +3674,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const LanguagePage()),
                 ),
-                color: const Color(0xFFF59E0B),
+                color: AppConfig.warningColor,
               ),
             ],
           ),
@@ -3714,7 +3703,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                   icon: Icons.help_outline,
                 ),
-                color: const Color(0xFF2563EB),
+                color: AppConfig.primaryColor,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3726,7 +3715,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const WealthInsightsPage(),
                   ),
                 ),
-                color: const Color(0xFF10B981),
+                color: AppConfig.gainColor,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3926,7 +3915,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   AppText(
                     summary,
                     style: const TextStyle(
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       height: 1.45,
                     ),
                   ),
@@ -4063,7 +4052,7 @@ class _HomeActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE8EDF5)),
+          border: Border.all(color: AppConfig.dividerColor),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -4090,7 +4079,7 @@ class _HomeActionButton extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       fontSize: 10,
                     ),
                   ),
@@ -4100,7 +4089,7 @@ class _HomeActionButton extends StatelessWidget {
             const Icon(
               Icons.chevron_right_rounded,
               size: 18,
-              color: Color(0xFF64748B),
+              color: AppConfig.textSecondaryColor,
             ),
           ],
         ),

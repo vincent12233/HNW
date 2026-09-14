@@ -398,7 +398,7 @@ class _MarketsPageState extends State<MarketsPage> {
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             alignment: Alignment.center,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFEF233C),
+                              color: AppConfig.lossColor,
                               shape: BoxShape.circle,
                             ),
                             child: AppText(
@@ -459,7 +459,7 @@ class _MarketsPageState extends State<MarketsPage> {
                         style: TextStyle(
                           color: selected
                               ? AppConfig.primaryColor
-                              : const Color(0xFF475569),
+                              : AppConfig.textSecondaryColor,
                           fontSize: 11,
                           fontWeight: selected
                               ? FontWeight.w700
@@ -913,7 +913,7 @@ class _MarketsPageState extends State<MarketsPage> {
                         fontSize: 11,
                         color: entry.key == selectedMoverFilter
                             ? AppConfig.primaryColor
-                            : const Color(0xFF475569),
+                            : AppConfig.textSecondaryColor,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -938,7 +938,7 @@ class _MarketsPageState extends State<MarketsPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               else
-                const Icon(Icons.query_stats_rounded, color: Color(0xFF64748B)),
+                const Icon(Icons.query_stats_rounded, color: AppConfig.textSecondaryColor),
               const SizedBox(width: 12),
               Expanded(
                 child: AppText(
@@ -947,7 +947,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       : selectedMoverFilter >= 3
                       ? 'One-year history is unavailable for these instruments.'
                       : 'No instruments match this market filter.',
-                  style: const TextStyle(color: Color(0xFF64748B)),
+                  style: const TextStyle(color: AppConfig.textSecondaryColor),
                 ),
               ),
             ],
@@ -974,7 +974,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     'Name',
                     style: TextStyle(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -987,7 +987,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -999,7 +999,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1011,7 +1011,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     textAlign: TextAlign.right,
                     style: TextStyle(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1055,7 +1055,7 @@ class _MarketsPageState extends State<MarketsPage> {
                             stock.exchange,
                             style: const TextStyle(
                               fontSize: 10,
-                              color: Color(0xFF64748B),
+                              color: AppConfig.textSecondaryColor,
                             ),
                           ),
                         ],
@@ -1108,7 +1108,7 @@ class _MarketsPageState extends State<MarketsPage> {
                         formatVolume(stock.volume),
                         textAlign: TextAlign.right,
                         style: const TextStyle(
-                          color: Color(0xFF64748B),
+                          color: AppConfig.textSecondaryColor,
                           fontSize: 10,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1161,7 +1161,7 @@ class _MarketsPageState extends State<MarketsPage> {
             alignment: Alignment.centerLeft,
             child: AppText(
               'Loaded instruments',
-              style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              style: TextStyle(fontSize: 10, color: AppConfig.textSecondaryColor),
             ),
           ),
           const SizedBox(height: 7),
@@ -1218,7 +1218,7 @@ class _MarketsPageState extends State<MarketsPage> {
           ),
           AppText(
             '${(advances / total * 100).toStringAsFixed(0)}% advancing',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            style: const TextStyle(fontSize: 11, color: AppConfig.textSecondaryColor),
           ),
         ],
       ),
@@ -1243,7 +1243,7 @@ class _MarketsPageState extends State<MarketsPage> {
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: const Color(0xFFEEF5FF),
+            color: AppConfig.primarySoftColor,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -1264,7 +1264,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       subtitle,
                       style: const TextStyle(
                         fontSize: 10,
-                        color: Color(0xFF64748B),
+                        color: AppConfig.textSecondaryColor,
                       ),
                     ),
                   ],

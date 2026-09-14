@@ -39,7 +39,7 @@ class ProductOfferCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -117,7 +117,7 @@ class ProductOfferCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: (expected ?? 0) < 0
                       ? const Color(0xFFFEE2E2)
-                      : const Color(0xFF10B981),
+                      : AppConfig.gainColor,
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: AppText(

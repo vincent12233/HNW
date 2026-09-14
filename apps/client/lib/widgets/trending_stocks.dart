@@ -44,7 +44,7 @@ class TrendingStocks extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            border: Border.all(color: AppConfig.borderColor),
           ),
           child: displayStocks.isEmpty
               ? const Padding(
@@ -88,7 +88,7 @@ class TrendingStocks extends StatelessWidget {
                                     '$rank',
                                     style: const TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF475569),
+                                      color: AppConfig.textSecondaryColor,
                                     ),
                                   ),
                                 ),

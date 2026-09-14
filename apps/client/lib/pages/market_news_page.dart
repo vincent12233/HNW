@@ -2,6 +2,7 @@ import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../models/market_news_item.dart';
+import '../app_config.dart';
 
 class MarketNewsPage extends StatefulWidget {
   const MarketNewsPage({
@@ -138,7 +139,7 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
                                       AppText(
                                         '${item.source} · ${_age(item.publishedAt)}',
                                         style: const TextStyle(
-                                          color: Color(0xFF64748B),
+                                          color: AppConfig.textSecondaryColor,
                                           fontSize: 12,
                                         ),
                                       ),
@@ -159,7 +160,7 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
   );
 
   static const Widget _fallbackImage = ColoredBox(
-    color: Color(0xFFEEF5FF),
+    color: AppConfig.primarySoftColor,
     child: Center(
       child: Icon(Icons.candlestick_chart_rounded, color: Color(0xFF0878F9)),
     ),

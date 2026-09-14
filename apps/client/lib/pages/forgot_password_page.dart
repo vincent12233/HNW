@@ -223,7 +223,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: item['sender'] == 'CLIENT'
-                                ? const Color(0xFFEAF1FF)
+                                ? AppConfig.primarySoftColor
                                 : const Color(0xFFF5F6F8),
                             borderRadius: BorderRadius.circular(6),
                           ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../app_config.dart';
 
 class StockLogo extends StatelessWidget {
   const StockLogo({
@@ -18,22 +19,22 @@ class StockLogo extends StatelessWidget {
     'RELIANCE': _LogoStyle(Color(0xFF123B8A), Icons.energy_savings_leaf),
     'TCS': _LogoStyle(Color(0xFF0A6FB7), Icons.hub_outlined),
     'HDFCBANK': _LogoStyle(Color(0xFF174EA6), Icons.account_balance),
-    'INFY': _LogoStyle(Color(0xFF2563EB), Icons.memory),
+    'INFY': _LogoStyle(AppConfig.primaryColor, Icons.memory),
     'ICICIBANK': _LogoStyle(Color(0xFFE85D04), Icons.account_balance_wallet),
-    'ITC': _LogoStyle(Color(0xFF1D4ED8), Icons.apartment),
+    'ITC': _LogoStyle(AppConfig.moduleInstitutional, Icons.apartment),
     'HINDUNILVR': _LogoStyle(Color(0xFF0EA5E9), Icons.water_drop),
     'NESTLEIND': _LogoStyle(Color(0xFF9D174D), Icons.local_cafe),
-    'SBIN': _LogoStyle(Color(0xFF2563EB), Icons.account_balance),
+    'SBIN': _LogoStyle(AppConfig.primaryColor, Icons.account_balance),
     'BHARTIARTL': _LogoStyle(Color(0xFFDC2626), Icons.network_cell),
     'LT': _LogoStyle(Color(0xFF1E40AF), Icons.engineering),
     'AXISBANK': _LogoStyle(Color(0xFF9F1239), Icons.account_balance),
-    'KOTAKBANK': _LogoStyle(Color(0xFF1D4ED8), Icons.account_balance),
-    'MARUTI': _LogoStyle(Color(0xFF2563EB), Icons.directions_car),
+    'KOTAKBANK': _LogoStyle(AppConfig.moduleInstitutional, Icons.account_balance),
+    'MARUTI': _LogoStyle(AppConfig.primaryColor, Icons.directions_car),
     'TITAN': _LogoStyle(Color(0xFF7C2D12), Icons.watch),
     'BAJFINANCE': _LogoStyle(Color(0xFF0369A1), Icons.payments),
     'SUNPHARMA': _LogoStyle(Color(0xFFEA580C), Icons.medication),
-    'TATACAP': _LogoStyle(Color(0xFF1D4ED8), Icons.business),
-    'NSDL': _LogoStyle(Color(0xFF475569), Icons.security),
+    'TATACAP': _LogoStyle(AppConfig.moduleInstitutional, Icons.business),
+    'NSDL': _LogoStyle(AppConfig.textSecondaryColor, Icons.security),
   };
 
   @override
@@ -98,10 +99,10 @@ class StockLogo extends StatelessWidget {
 
   static _LogoStyle _fallbackStyle(String symbol) {
     const palette = [
-      Color(0xFF2563EB),
-      Color(0xFF059669),
+      AppConfig.primaryColor,
+      AppConfig.gainColor,
       Color(0xFFDC2626),
-      Color(0xFF7C3AED),
+      AppConfig.moduleOrderBook,
       Color(0xFFEA580C),
       Color(0xFF0891B2),
     ];

@@ -33,7 +33,7 @@ class StockListTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+          border: Border(bottom: BorderSide(color: AppConfig.dividerColor)),
         ),
         child: Row(
           children: [
@@ -74,7 +74,7 @@ class StockListTile extends StatelessWidget {
                         child: AppText(
                           stock.exchange,
                           style: const TextStyle(
-                            color: Color(0xFF64748B),
+                            color: AppConfig.textSecondaryColor,
                             fontSize: 9,
                             fontWeight: FontWeight.w700,
                           ),
@@ -87,7 +87,7 @@ class StockListTile extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      color: Color(0xFF475569),
+                      color: AppConfig.textSecondaryColor,
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
                     ),
@@ -107,7 +107,7 @@ class StockListTile extends StatelessWidget {
                         Icon(
                           Icons.schedule,
                           size: 11,
-                          color: Color(0xFFF59E0B),
+                          color: AppConfig.warningColor,
                         ),
                         SizedBox(width: 4),
                         AppText(

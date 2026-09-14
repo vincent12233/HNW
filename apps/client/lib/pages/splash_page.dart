@@ -37,7 +37,7 @@ class _SplashPageState extends State<SplashPage>
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFFFFFF), Color(0xFFEEF5FF)],
+          colors: [Color(0xFFFFFFFF), AppConfig.primarySoftColor],
         ),
       ),
       child: Center(

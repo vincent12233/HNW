@@ -50,7 +50,7 @@ class SectorPerformance extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
+                border: Border.all(color: AppConfig.borderColor),
               ),
               child: Row(
                 children: [

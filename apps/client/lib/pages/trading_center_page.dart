@@ -82,30 +82,30 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   int selectedTab = 0;
 
   final List<_TradingModule> tabs = const [
-    _TradingModule('Trades', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
+    _TradingModule('Trades', Icons.swap_horiz_rounded, AppConfig.moduleTrades),
     _TradingModule(
       'Institutional',
       Icons.account_balance_outlined,
-      Color(0xFF1D4ED8),
+      AppConfig.moduleInstitutional,
     ),
     _TradingModule(
       'Holdings',
       Icons.account_balance_wallet_outlined,
-      Color(0xFF059669),
+      AppConfig.moduleHoldings,
     ),
-    _TradingModule('Pending', Icons.schedule_rounded, Color(0xFFF97316)),
+    _TradingModule('Pending', Icons.schedule_rounded, AppConfig.modulePending),
     _TradingModule(
       'Order Book',
       Icons.receipt_long_outlined,
-      Color(0xFF7C3AED),
+      AppConfig.moduleOrderBook,
     ),
-    _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
-    _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
-    _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
+    _TradingModule('OTC', Icons.handshake_outlined, AppConfig.moduleOtc),
+    _TradingModule('IPO', Icons.campaign_outlined, AppConfig.moduleIpo),
+    _TradingModule('History', Icons.history_rounded, AppConfig.moduleHistory),
     _TradingModule(
       'Funds Ledger',
       Icons.account_balance_wallet_outlined,
-      Color(0xFF64748B),
+      AppConfig.moduleLedger,
     ),
   ];
 
@@ -358,7 +358,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             alignment: Alignment.center,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFEF233C),
+                              color: AppConfig.lossColor,
                               shape: BoxShape.circle,
                             ),
                             child: AppText(

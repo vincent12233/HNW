@@ -54,8 +54,12 @@ class AppTheme {
           .copyWith(
             primary: AppConfig.primaryColor,
             onPrimary: Colors.white,
-            surface: Colors.white,
+            secondary: AppConfig.primaryGradientEnd,
+            surface: AppConfig.surfaceColor,
             onSurface: AppConfig.textPrimaryColor,
+            error: AppConfig.lossColor,
+            outline: AppConfig.borderColor,
+            surfaceContainerHighest: AppConfig.surfaceMutedColor,
           ),
       visualDensity: VisualDensity.standard,
       splashFactory: InkSparkle.splashFactory,
@@ -228,7 +232,7 @@ class AppTheme {
       ),
       chipTheme: ChipThemeData(
         backgroundColor: Colors.white,
-        selectedColor: const Color(0xFFEAF1FF),
+        selectedColor: AppConfig.primarySoftColor,
         checkmarkColor: AppConfig.primaryColor,
         side: const BorderSide(color: AppConfig.borderColor),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
@@ -289,7 +293,7 @@ class AppTheme {
           color: AppConfig.textSecondaryColor,
         ),
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: AppConfig.surfaceMutedColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: const BorderSide(color: AppConfig.borderColor),

@@ -96,9 +96,9 @@ class _StandardOrderDetailsSheetState
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
+                  color: AppConfig.surfaceMutedColor,
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  border: Border.all(color: AppConfig.borderColor),
                 ),
                 child: Column(
                   children: [
@@ -172,7 +172,7 @@ class _StandardOrderDetailsSheetState
               _timelineItem(
                 label: 'Submitted',
                 time: order.placedAt,
-                color: const Color(0xFF2563EB),
+                color: AppConfig.primaryColor,
                 last:
                     order.updatedAt == null &&
                     order.completedAt == null &&
@@ -330,7 +330,7 @@ class _StandardOrderDetailsSheetState
       children: [
         AppText(
           label,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+          style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 11),
         ),
         const SizedBox(height: 5),
         AppText(
@@ -351,7 +351,7 @@ class _StandardOrderDetailsSheetState
             width: 110,
             child: AppText(
               label,
-              style: const TextStyle(color: Color(0xFF64748B)),
+              style: const TextStyle(color: AppConfig.textSecondaryColor),
             ),
           ),
           const SizedBox(width: 12),
@@ -391,7 +391,7 @@ class _StandardOrderDetailsSheetState
                 ),
                 if (!last)
                   Expanded(
-                    child: Container(width: 2, color: const Color(0xFFE2E8F0)),
+                    child: Container(width: 2, color: AppConfig.borderColor),
                   ),
               ],
             ),
@@ -411,7 +411,7 @@ class _StandardOrderDetailsSheetState
                   AppText(
                     _formatTimelineTime(time),
                     style: const TextStyle(
-                      color: Color(0xFF64748B),
+                      color: AppConfig.textSecondaryColor,
                       fontSize: 12,
                     ),
                   ),
@@ -430,9 +430,9 @@ class _StandardOrderDetailsSheetState
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
+        color: AppConfig.surfaceMutedColor,
         borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -447,7 +447,7 @@ class _StandardOrderDetailsSheetState
               ),
               AppText(
                 _formatTimelineTime(fill.executedAt),
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 11),
               ),
             ],
           ),
@@ -455,13 +455,13 @@ class _StandardOrderDetailsSheetState
           AppText(
             'Gross ${formatPrice(fill.grossAmount)}  |  '
             'Fees ${formatPrice(fill.fees)}',
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+            style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 11),
           ),
           if (fill.executionId.isNotEmpty) ...[
             const SizedBox(height: 4),
             SelectableText(
               fill.executionId,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+              style: const TextStyle(color: AppConfig.textSecondaryColor, fontSize: 10),
             ),
           ],
         ],
@@ -502,7 +502,7 @@ class _StandardOrderDetailsSheetState
       case 'REJECTED':
         return AppConfig.lossColor;
       default:
-        return const Color(0xFF2563EB);
+        return AppConfig.primaryColor;
     }
   }
 }

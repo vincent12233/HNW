@@ -70,16 +70,66 @@ class AppConfig {
     return 'http://localhost:3000';
   }
 
+  // Brand — keep a single blue finance identity across client + admin.
   static const Color primaryColor = Color(0xFF165DFF);
+  static const Color primaryHoverColor = Color(0xFF1248D6);
   static const Color primaryDarkColor = Color(0xFF071F4A);
   static const Color primaryGradientEnd = Color(0xFF1849A9);
+  static const Color primarySoftColor = Color(0xFFE8F0FF);
+
+  // Surfaces
+  static const Color backgroundColor = Color(0xFFF3F6FB);
   static const Color surfaceColor = Colors.white;
+  static const Color surfaceMutedColor = Color(0xFFF8FAFC);
   static const Color borderColor = Color(0xFFE1E7F0);
-  static const Color gainColor = Color(0xFF087F5B);
-  static const Color lossColor = Color(0xFFD92D4B);
-  static const Color neutralColor = Color(0xFF667085);
-  static const Color backgroundColor = Color(0xFFF4F7FB);
+  static const Color dividerColor = Color(0xFFE8EDF5);
+
+  // Text
   static const Color textPrimaryColor = Color(0xFF101828);
   static const Color textSecondaryColor = Color(0xFF5D6B82);
-  static const Color chartGainColor = Color(0xFF43C987);
+  static const Color textTertiaryColor = Color(0xFF98A2B3);
+
+  // Status
+  static const Color gainColor = Color(0xFF0A7A56);
+  static const Color lossColor = Color(0xFFD92D4B);
+  static const Color warningColor = Color(0xFFD97706);
+  static const Color neutralColor = Color(0xFF667085);
+  static const Color chartGainColor = Color(0xFF0A7A56);
+  static const Color chartLossColor = Color(0xFFD92D4B);
+
+  // Module accents (blue-family + status only — no purple chrome)
+  static const Color moduleTrades = primaryColor;
+  static const Color moduleInstitutional = Color(0xFF1849A9);
+  static const Color moduleHoldings = gainColor;
+  static const Color modulePending = warningColor;
+  static const Color moduleOrderBook = Color(0xFF334155);
+  static const Color moduleOtc = Color(0xFF0F766E);
+  static const Color moduleIpo = lossColor;
+  static const Color moduleHistory = Color(0xFFB45309);
+  static const Color moduleLedger = neutralColor;
+
+  static const LinearGradient brandGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryColor, primaryGradientEnd, primaryDarkColor],
+    stops: [0, 0.55, 1],
+  );
+
+  static const LinearGradient heroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryDarkColor, primaryGradientEnd, primaryColor],
+    stops: [0, 0.55, 1],
+  );
+
+  static List<BoxShadow> get softShadow => const [
+        BoxShadow(
+          color: Color(0x14071F4A),
+          blurRadius: 18,
+          offset: Offset(0, 8),
+        ),
+      ];
+
+  static BorderRadius get cardRadius => BorderRadius.circular(16);
+  static BorderRadius get chipRadius => BorderRadius.circular(10);
 }

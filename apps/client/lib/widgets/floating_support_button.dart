@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../app_config.dart';
 import '../l10n/app_language.dart';
 import 'support_ui_metrics.dart';
 
@@ -62,7 +63,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                 width: m.fabWidth,
                 height: m.fabHeight,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E88E5),
+                  color: AppConfig.primaryColor,
                   borderRadius: radius,
                 ),
                 child: Column(

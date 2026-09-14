@@ -151,7 +151,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
-                                            color: Color(0xFF64748B),
+                                            color: AppConfig.textSecondaryColor,
                                             fontSize: 12,
                                           ),
                                         ),
@@ -283,13 +283,13 @@ class _HoldingsTabState extends State<HoldingsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: accent ? const Color(0xFFEAF1FF) : const Color(0xFFF1F5F9),
+        color: accent ? AppConfig.primarySoftColor : const Color(0xFFF1F5F9),
         borderRadius: BorderRadius.circular(5),
       ),
       child: AppText(
         label,
         style: TextStyle(
-          color: accent ? AppConfig.primaryColor : const Color(0xFF64748B),
+          color: accent ? AppConfig.primaryColor : AppConfig.textSecondaryColor,
           fontSize: 9,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.3,

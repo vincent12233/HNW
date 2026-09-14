@@ -1005,7 +1005,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
           icon: const Icon(
             Icons.hourglass_top_rounded,
             size: 56,
-            color: Color(0xFF2563EB),
+            color: AppConfig.primaryColor,
           ),
           content: const SizedBox(
             width: 320,

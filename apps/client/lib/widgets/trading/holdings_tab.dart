@@ -153,6 +153,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
                           child: Column(
                             children: [
                               Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   StockLogo(
                                     symbol: position.symbol,
@@ -168,6 +169,8 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                       children: [
                                         AppText(
                                           position.symbol,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
                                           style: const TextStyle(
                                             fontSize: 15,
                                             fontWeight: FontWeight.w800,
@@ -204,33 +207,43 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      AppText(
-                                        formatPrice(currentPrice),
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      if (dayChangePercent != null) ...[
-                                        const SizedBox(height: 3),
+                                  Flexible(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: [
                                         AppText(
-                                          '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}%',
-                                          style: TextStyle(
-                                            color: dayColor,
-                                            fontSize: 11,
-                                            fontWeight: FontWeight.w700,
+                                          formatPrice(currentPrice),
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.end,
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.w800,
+                                            fontSize: 14,
                                           ),
                                         ),
+                                        if (dayChangePercent != null) ...[
+                                          const SizedBox(height: 3),
+                                          AppText(
+                                            '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}%',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            textAlign: TextAlign.end,
+                                            style: TextStyle(
+                                              color: dayColor,
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
                                       ],
-                                    ],
+                                    ),
                                   ),
                                 ],
                               ),
                               const SizedBox(height: 12),
                               Container(
+                                width: double.infinity,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
                                   vertical: 10,
@@ -239,50 +252,78 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                   color: const Color(0xFFF8FAFC),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: _metricColumn(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    final stacked = constraints.maxWidth < 300;
+                                    final metrics = [
+                                      _metricColumn(
                                         'Invested',
                                         formatPrice(invested),
                                       ),
-                                    ),
-                                    Expanded(
-                                      child: _metricColumn(
+                                      _metricColumn(
                                         'Current',
                                         formatPrice(marketValue),
                                       ),
-                                    ),
-                                    Expanded(
-                                      child: _metricColumn(
+                                      _metricColumn(
                                         'P&L',
                                         '${profitLoss >= 0 ? '+' : ''}${formatPrice(profitLoss.abs())}',
                                         valueColor: profitColor,
                                         subtitle:
                                             '${returnPercent >= 0 ? '+' : ''}${returnPercent.toStringAsFixed(2)}%',
                                       ),
-                                    ),
-                                  ],
+                                    ];
+                                    if (stacked) {
+                                      return Column(
+                                        children: [
+                                          for (var i = 0;
+                                              i < metrics.length;
+                                              i++) ...[
+                                            if (i > 0)
+                                              const SizedBox(height: 10),
+                                            SizedBox(
+                                              width: double.infinity,
+                                              child: metrics[i],
+                                            ),
+                                          ],
+                                        ],
+                                      );
+                                    }
+                                    return Row(
+                                      children: [
+                                        for (final metric in metrics)
+                                          Expanded(child: metric),
+                                      ],
+                                    );
+                                  },
                                 ),
                               ),
                               if (dayChange != null) ...[
                                 const SizedBox(height: 8),
                                 Row(
                                   children: [
-                                    const AppText(
-                                      'Day’s change',
-                                      style: TextStyle(
-                                        color: Color(0xFF64748B),
-                                        fontSize: 11,
+                                    const Expanded(
+                                      child: AppText(
+                                        'Day’s change',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: TextStyle(
+                                          color: Color(0xFF64748B),
+                                          fontSize: 11,
+                                        ),
                                       ),
                                     ),
-                                    const Spacer(),
-                                    AppText(
-                                      '${dayChange >= 0 ? '+' : ''}${formatPrice(dayChange.abs())}',
-                                      style: TextStyle(
-                                        color: dayColor,
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w700,
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: AppText(
+                                        '${dayChange >= 0 ? '+' : ''}${formatPrice(dayChange.abs())}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.end,
+                                        style: TextStyle(
+                                          color: dayColor,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -294,17 +335,25 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                   Expanded(
                                     child: AppText(
                                       'Avg ${formatPrice(position.averageCost)}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
                                         color: Color(0xFF94A3B8),
                                         fontSize: 11,
                                       ),
                                     ),
                                   ),
-                                  AppText(
-                                    'Avail ${position.availableQuantity}',
-                                    style: const TextStyle(
-                                      color: Color(0xFF94A3B8),
-                                      fontSize: 11,
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: AppText(
+                                      'Avail ${position.availableQuantity}',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.end,
+                                      style: const TextStyle(
+                                        color: Color(0xFF94A3B8),
+                                        fontSize: 11,
+                                      ),
                                     ),
                                   ),
                                 ],
@@ -393,23 +442,30 @@ class _HoldingsTabState extends State<HoldingsTab> {
       children: [
         AppText(
           label,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
         ),
         const SizedBox(height: 4),
-        AppText(
-          value,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-            color: valueColor,
-            fontWeight: FontWeight.w800,
-            fontSize: 12,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: AppText(
+            value,
+            maxLines: 1,
+            style: TextStyle(
+              color: valueColor,
+              fontWeight: FontWeight.w800,
+              fontSize: 12,
+            ),
           ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 2),
           AppText(
             subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(
               color: valueColor ?? const Color(0xFF64748B),
               fontSize: 10,

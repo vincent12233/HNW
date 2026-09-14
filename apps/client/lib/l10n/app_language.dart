@@ -449,6 +449,7 @@ const hindi = <String, String>{
   'Done': 'हो गया',
   'Add Funds': 'राशि जोड़ें',
   'Funding Assistance': 'राशि जोड़ने में सहायता',
+  'Contact Support': 'सहायता से संपर्क करें',
   'Withdraw Funds': 'राशि निकालें',
   'Transfer to Bank': 'बैंक में भेजें',
   'Withdrawal Request': 'निकासी अनुरोध',

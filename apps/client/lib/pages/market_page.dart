@@ -1352,7 +1352,7 @@ class _MarketHomePageState extends State<MarketHomePage>
         Expanded(
           child: _HomeActionButton(
             label: 'Add Funds',
-            subtitle: 'Funding Assistance',
+            subtitle: 'Contact Support',
             icon: Icons.account_balance_wallet_outlined,
             color: AppConfig.primaryColor,
             onTap: _openDepositSupport,
@@ -1745,20 +1745,14 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
-    // Keep the original flow: dialog first, then online support chat.
-    // Support staff share deposit methods — do not show receiving accounts here.
-    _openCustomerService(
-      title: 'Add Funds',
+    // Match ops console guidance: funding is handled in online SaleSmartly chat.
+    // Same entry pattern as the side Support button, with the deposit chat preset.
+    _openSupportChat(
       initialMessage: _appContent.text(
         'support',
         'chat_preset.deposit',
-        fallback: _appContent.text(
-          'deposit',
-          'chat_preset',
-          fallback: 'Hello, I would like to add money to my account.',
-        ),
+        fallback: 'Hello, I would like to add money to my account.',
       ),
-      icon: Icons.account_balance_wallet_outlined,
     );
   }
 

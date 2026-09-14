@@ -113,6 +113,8 @@
     "testEnvironment": "node"
   },
   "overrides": {
-    "multer": "2.4.0"
+    "multer": "2.4.0",
+    "fast-uri": "3.1.6",
+    "qs": "6.16.0"
   }
 }

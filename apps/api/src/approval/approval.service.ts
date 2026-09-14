@@ -2,6 +2,8 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { AuditService } from '../audit/audit.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { fixedInviteCode } from '../common/fixed-invite';
+import { availableCash, moneyDecimal } from '../common/money';
 
 @Injectable()
 export class ApprovalService {
@@ -40,17 +42,17 @@ export class ApprovalService {
       if (decision === 'REJECTED') return tx.approvalRequest.update({ where: { id }, data: { status: 'REJECTED', decidedById: deciderId, decisionNote: note, decidedAt: new Date() } });
       if (request.resource !== 'ACCOUNT_BALANCE') throw new BadRequestException('Unsupported approval action');
       const payload = request.payload as { accountNumber: string; amount: string; referenceId: string; note?: string };
-      const amount = new Prisma.Decimal(payload.amount);
+      const amount = moneyDecimal(payload.amount);
       if (!amount.isPositive()) throw new BadRequestException('Amount must be positive');
       const account = await tx.account.findUnique({ where: { accountNumber: payload.accountNumber }, include: { user: { include: { usedInviteCode: true } } } });
       if (!account) throw new NotFoundException('Account not found');
       const decider = await tx.user.findUnique({ where: { id: deciderId }, select: { role: true } });
-      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      const fixedCode = fixedInviteCode();
       if (decider?.role === 'FINANCE' && account.user.usedInviteCode?.code === fixedCode) {
         throw new ForbiddenException('Finance cannot adjust dedicated operator accounts');
       }
       const debit = request.action === 'ACCOUNT_DEBIT';
-      if (debit && (account.cashBalance.lt(amount) || account.buyingPower.lt(amount))) throw new BadRequestException('Insufficient available balance');
+      if (debit && (account.buyingPower.lt(amount) || availableCash(account).lt(amount))) throw new BadRequestException('Insufficient available balance');
       const existing = await tx.accountTransaction.findFirst({ where: { referenceId: payload.referenceId } });
       if (existing) throw new ConflictException('Reference number already processed');
       const updated = await tx.account.update({ where: { id: account.id }, data: debit ? { cashBalance: { decrement: amount }, buyingPower: { decrement: amount } } : { cashBalance: { increment: amount }, buyingPower: { increment: amount } } });

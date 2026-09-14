@@ -34,6 +34,7 @@ export class SupportGateway implements OnGatewayInit {
       if (count >= this.maxConnectionsPerUser) throw new Error('Connection limit exceeded');
       this.connections.set(payload.sub, count + 1);
       socket.data.userId = payload.sub;
+      await socket.join(`user:${payload.sub}`);
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();
     } catch { next(new Error('Unauthorized websocket connection')); }
@@ -45,7 +46,24 @@ export class SupportGateway implements OnGatewayInit {
     else this.connections.set(userId, count - 1);
   }
 
-  conversationUpdated(conversationId: string) {
-    this.server.emit('support-update', { conversationId, at: new Date() });
+  async conversationUpdated(conversationId: string) {
+    try {
+      const conversation = await this.prisma.supportConversation.findUnique({
+        where: { id: conversationId },
+        select: { clientId: true, assignedToId: true },
+      });
+      if (!conversation) return;
+
+      const payload = { conversationId, at: new Date() };
+      const rooms = new Set<string>([`user:${conversation.clientId}`]);
+      if (conversation.assignedToId) {
+        rooms.add(`user:${conversation.assignedToId}`);
+      }
+      for (const room of rooms) {
+        this.server.to(room).emit('support-update', payload);
+      }
+    } catch {
+      // Best-effort fanout; callers intentionally do not await.
+    }
   }
 }

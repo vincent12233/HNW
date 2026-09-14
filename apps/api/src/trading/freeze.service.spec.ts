@@ -13,6 +13,7 @@ describe('FreezeService consistency guards', () => {
         findUnique: jest.fn().mockResolvedValue({
           buyingPower: new Prisma.Decimal('600'),
           cashBalance: new Prisma.Decimal('700'),
+          frozenBalance: new Prisma.Decimal('0'),
         }),
         update: jest.fn(),
       },
@@ -43,6 +44,7 @@ describe('FreezeService consistency guards', () => {
         findUnique: jest.fn().mockResolvedValue({
           buyingPower: new Prisma.Decimal('300'),
           cashBalance: new Prisma.Decimal('1000'),
+          frozenBalance: new Prisma.Decimal('0'),
         }),
         update: jest.fn(),
       },
@@ -70,6 +72,7 @@ describe('FreezeService consistency guards', () => {
         findUnique: jest.fn().mockResolvedValue({
           buyingPower: new Prisma.Decimal('800'),
           cashBalance: new Prisma.Decimal('200'),
+          frozenBalance: new Prisma.Decimal('0'),
         }),
         update: jest.fn(),
       },
@@ -86,6 +89,33 @@ describe('FreezeService consistency guards', () => {
         'freeze',
       ),
     ).rejects.toThrow('Insufficient buying power or cash balance');
+  });
+
+  it('rejects a BUY reservation when available cash is already frozen', async () => {
+    const tx = {
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          buyingPower: new Prisma.Decimal('800'),
+          cashBalance: new Prisma.Decimal('1000'),
+          frozenBalance: new Prisma.Decimal('700'),
+        }),
+        update: jest.fn(),
+      },
+      accountTransaction: { create: jest.fn() },
+    } as any;
+
+    await expect(
+      service.freezeBuy(
+        tx,
+        'account-1',
+        new Prisma.Decimal('1000'),
+        new Prisma.Decimal('500'),
+        'order-4',
+        'freeze',
+      ),
+    ).rejects.toThrow('Insufficient buying power or cash balance');
+
+    expect(tx.account.update).not.toHaveBeenCalled();
   });
 
   it('freezes SELL quantity from the current position state', async () => {

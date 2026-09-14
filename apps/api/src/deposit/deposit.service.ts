@@ -2,6 +2,8 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { fixedInviteCode } from '../common/fixed-invite';
+import { moneyDecimal } from '../common/money';
 
 @Injectable()
 export class DepositService {
@@ -31,7 +33,7 @@ export class DepositService {
       if (conversation.assignedToId !== supportUserId) {
         throw new BadRequestException('This conversation is not assigned to the current dedicated operator');
       }
-      const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+      const fixedCode = fixedInviteCode();
       const customer = await tx.user.findFirst({
         where: { id: conversation.clientId, role: 'CLIENT', assignedBusinessId: supportUserId, usedInviteCode: { is: { code: fixedCode } } },
         select: { id: true },
@@ -217,9 +219,9 @@ export class DepositService {
       throw new BadRequestException('Deposit already processed');
     }
 
-    let repayAmount = 0;
+    let repayAmount = new Prisma.Decimal(0);
 
-    let availableAmount = Number(deposit.amount);
+    let availableAmount = moneyDecimal(deposit.amount);
 
     await this.prisma.$transaction(async (tx) => {
       const claimed = await tx.depositRequest.updateMany({
@@ -240,7 +242,7 @@ export class DepositService {
       }
       await this.assertDepositVisible(account.userId, role, actorId, tx);
 
-      const balanceBefore = Number(account.cashBalance);
+      const balanceBefore = moneyDecimal(account.cashBalance);
       const debts = await tx.ipoDebt.findMany({
         where: {
           accountId: deposit.accountId,
@@ -256,13 +258,18 @@ export class DepositService {
         */
 
       for (const debt of debts) {
-        if (availableAmount <= 0) {
+        if (availableAmount.lte(0)) {
           break;
         }
 
-        const remainingDebt = Number(debt.amount) - Number(debt.paidAmount);
+        const remainingDebt = moneyDecimal(debt.amount).sub(moneyDecimal(debt.paidAmount));
+        if (remainingDebt.lte(0)) {
+          continue;
+        }
 
-        const payment = Math.min(availableAmount, remainingDebt);
+        const payment = availableAmount.lt(remainingDebt)
+          ? availableAmount
+          : remainingDebt;
 
         await tx.ipoDebt.update({
           where: {
@@ -274,11 +281,11 @@ export class DepositService {
               increment: payment,
             },
 
-            status: payment >= remainingDebt ? 'PAID' : 'PARTIAL',
+            status: payment.gte(remainingDebt) ? 'PAID' : 'PARTIAL',
           },
         });
 
-        if (payment >= remainingDebt) {
+        if (payment.gte(remainingDebt)) {
           await tx.ipoApplication.update({
             where: {
               id: debt.ipoApplicationId,
@@ -294,11 +301,11 @@ export class DepositService {
               accountId: deposit.accountId,
               instrumentId: debt.ipoApplication.ipo.instrumentId,
               quantity: debt.ipoApplication.allocatedQuantity ?? 0,
-              price: Number(
+              price: moneyDecimal(
                 debt.ipoApplication.allocatedPrice ??
                   debt.ipoApplication.ipo.issuePrice,
               ),
-              totalAmount: Number(
+              totalAmount: moneyDecimal(
                 debt.ipoApplication.allocatedAmount ?? debt.amount,
               ),
             });
@@ -326,9 +333,9 @@ export class DepositService {
           },
         });
 
-        availableAmount -= payment;
+        availableAmount = availableAmount.sub(payment);
 
-        repayAmount += payment;
+        repayAmount = repayAmount.add(payment);
       }
 
       /*
@@ -346,9 +353,7 @@ export class DepositService {
           剩余资金进入账户
         */
 
-      if (availableAmount > 0) {
-        const balanceAfter = balanceBefore + availableAmount;
-
+      if (availableAmount.gt(0)) {
         await tx.account.update({
           where: {
             id: deposit.accountId,
@@ -373,9 +378,9 @@ export class DepositService {
           status: 'COMPLETED',
           amount: availableAmount,
           balanceBefore,
-          balanceAfter: balanceBefore + availableAmount,
+          balanceAfter: balanceBefore.add(availableAmount),
           referenceId: depositId,
-          note: repayAmount > 0
+          note: repayAmount.gt(0)
             ? `Deposit approved; ${repayAmount.toFixed(2)} applied to IPO debt`
             : 'Deposit approved',
         },
@@ -402,7 +407,7 @@ export class DepositService {
 
       creditedAmount: availableAmount,
     };
-    if (actorId) await this.audit.createLog({ actorId, action: 'DEPOSIT_APPROVED', resource: 'deposit', resourceId: depositId, description: 'Deposit approved by finance operator', metadata: { depositAmount: String(deposit.amount), ipoRepayment: String(repayAmount), creditedAmount: String(availableAmount) } });
+    if (actorId) await this.audit.createLog({ actorId, action: 'DEPOSIT_APPROVED', resource: 'deposit', resourceId: depositId, description: 'Deposit approved by finance operator', metadata: { depositAmount: String(deposit.amount), ipoRepayment: repayAmount.toFixed(2), creditedAmount: availableAmount.toFixed(2) } });
     return result;
   }
 
@@ -440,7 +445,7 @@ export class DepositService {
   }
 
   private depositCustomerScope(role: string, actorId?: string): Prisma.UserWhereInput {
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     if (role === 'SUPPORT') {
       return { assignedBusinessId: actorId, usedInviteCode: { is: { code: fixedCode } } };
     }
@@ -460,8 +465,8 @@ export class DepositService {
       accountId: string;
       instrumentId: string;
       quantity: number;
-      price: number;
-      totalAmount: number;
+      price: Prisma.Decimal;
+      totalAmount: Prisma.Decimal;
     },
   ) {
     if (input.quantity <= 0) {
@@ -523,10 +528,11 @@ export class DepositService {
     if (position) {
       const oldQty = position.quantity;
       const newQty = oldQty + input.quantity;
-      const avgPrice =
-        (Number(position.averagePrice) * oldQty +
-          input.price * input.quantity) /
-        newQty;
+      const avgPrice = new Prisma.Decimal(position.averagePrice)
+        .mul(oldQty)
+        .add(input.price.mul(input.quantity))
+        .div(newQty)
+        .toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP);
 
       await tx.position.update({
         where: {

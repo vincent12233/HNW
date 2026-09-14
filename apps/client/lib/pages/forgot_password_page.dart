@@ -23,7 +23,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       code = TextEditingController(),
       password = TextEditingController(),
       confirm = TextEditingController();
-  final storage = const FlutterSecureStorage();
+  final storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
   Country country = Country.parse('IN');
   String? token, error;
   bool busy = false,

@@ -8,11 +8,20 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
+import { fixedInviteCode } from '../common/fixed-invite';
+import {
+  assertAtMostTwoDecimals,
+  assertPositiveMoney,
+  availableCash,
+  moneyDecimal,
+} from '../common/money';
 
 @Injectable()
 export class WithdrawalService {
-  private static readonly MINIMUM_WITHDRAWAL_AMOUNT = 100;
-  private static readonly MAXIMUM_WITHDRAWAL_AMOUNT = 9_999_999_999_999.99;
+  private static readonly MINIMUM_WITHDRAWAL_AMOUNT = new Prisma.Decimal(100);
+  private static readonly MAXIMUM_WITHDRAWAL_AMOUNT = new Prisma.Decimal(
+    '9999999999999.99',
+  );
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
@@ -21,7 +30,7 @@ export class WithdrawalService {
 
   async createRequest(
     userId: string,
-    amount: number,
+    amountInput: number | string,
     bankName?: string,
     accountNumber?: string,
     ifscCode?: string,
@@ -29,25 +38,20 @@ export class WithdrawalService {
     note?: string,
     withdrawalPin?: string,
   ) {
-    if (!Number.isFinite(amount) || amount <= 0) {
-      throw new BadRequestException('Amount must be greater than zero');
-    }
+    assertAtMostTwoDecimals(
+      amountInput,
+      'Withdrawal amount',
+    );
+    const amount = moneyDecimal(amountInput);
+    assertPositiveMoney(amount, 'Amount');
 
-    if (amount < WithdrawalService.MINIMUM_WITHDRAWAL_AMOUNT) {
+    if (amount.lt(WithdrawalService.MINIMUM_WITHDRAWAL_AMOUNT)) {
       throw new BadRequestException('Minimum withdrawal amount is ₹100');
     }
 
-    if (amount > WithdrawalService.MAXIMUM_WITHDRAWAL_AMOUNT) {
+    if (amount.gt(WithdrawalService.MAXIMUM_WITHDRAWAL_AMOUNT)) {
       throw new BadRequestException('Withdrawal amount exceeds the limit');
     }
-
-    const normalizedAmount = Math.round((amount + Number.EPSILON) * 100) / 100;
-    if (Math.abs(amount - normalizedAmount) > 1e-9) {
-      throw new BadRequestException(
-        'Withdrawal amount cannot have more than two decimal places',
-      );
-    }
-    amount = normalizedAmount;
 
     if (!upiId && (!bankName || !accountNumber || !ifscCode)) {
       throw new BadRequestException(
@@ -64,8 +68,8 @@ export class WithdrawalService {
         }
 
         if (
-          Number(account.cashBalance) < amount ||
-          Number(account.buyingPower) < amount
+          moneyDecimal(account.buyingPower).lt(amount) ||
+          availableCash(account).lt(amount)
         ) {
           throw new BadRequestException(
             'Insufficient available balance',
@@ -125,7 +129,7 @@ export class WithdrawalService {
   }
 
   async listPendingWithdrawals(role?: string) {
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     return this.prisma.withdrawalRequest.findMany({
       where: {
         status: 'PENDING',
@@ -156,7 +160,7 @@ export class WithdrawalService {
       throw new BadRequestException('Invalid withdrawal status filter');
     }
 
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     return this.prisma.withdrawalRequest.findMany({
       where: {
         ...(normalized === 'ALL' ? {} : { status: normalized as 'PENDING' | 'APPROVED' | 'REJECTED' }),
@@ -204,12 +208,12 @@ export class WithdrawalService {
       }
       if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
 
-      const amount = new Prisma.Decimal(withdrawal.amount).toDecimalPlaces(2);
-      const withdrawalFrozenAmount = new Prisma.Decimal(withdrawal.frozenAmount ?? 0);
+      const amount = moneyDecimal(withdrawal.amount);
+      const withdrawalFrozenAmount = moneyDecimal(withdrawal.frozenAmount ?? 0);
       const hasDedicatedFreeze = withdrawalFrozenAmount.gte(amount);
-      const cashBalance = new Prisma.Decimal(account.cashBalance);
-      const frozenBalance = new Prisma.Decimal(account.frozenBalance);
-      const buyingPower = new Prisma.Decimal(account.buyingPower);
+      const cashBalance = moneyDecimal(account.cashBalance);
+      const frozenBalance = moneyDecimal(account.frozenBalance);
+      const buyingPower = moneyDecimal(account.buyingPower);
 
       if (cashBalance.lt(amount)) {
         throw new BadRequestException('Insufficient cash balance');
@@ -224,10 +228,6 @@ export class WithdrawalService {
       const frozenBalanceAfter = hasDedicatedFreeze
         ? frozenBalance.sub(amount)
         : frozenBalance;
-      const amountNumber = amount.toNumber();
-      const balanceAfterNumber = balanceAfter.toNumber();
-      const cashBalanceNumber = cashBalance.toNumber();
-      const frozenBalanceAfterNumber = frozenBalanceAfter.toNumber();
 
       const claimed = await tx.withdrawalRequest.updateMany({
         where: { id: withdrawalId, status: 'PENDING' },
@@ -240,13 +240,13 @@ export class WithdrawalService {
       await tx.account.update({
         where: { id: account.id },
         data: {
-          cashBalance: balanceAfterNumber,
+          cashBalance: balanceAfter,
           ...(hasDedicatedFreeze
-            ? { frozenBalance: { decrement: amountNumber } }
+            ? { frozenBalance: { decrement: amount } }
             : {
-                buyingPower: Math.max(
-                  0,
-                  buyingPower.sub(amount).toNumber(),
+                buyingPower: Prisma.Decimal.max(
+                  new Prisma.Decimal(0),
+                  buyingPower.sub(amount),
                 ),
               }),
         },
@@ -258,8 +258,8 @@ export class WithdrawalService {
           type: 'WITHDRAWAL',
           status: 'COMPLETED',
           amount: withdrawal.amount,
-          balanceBefore: cashBalanceNumber,
-          balanceAfter: balanceAfterNumber,
+          balanceBefore: cashBalance,
+          balanceAfter,
           referenceId: withdrawalId,
           note: 'Withdrawal approved',
         },
@@ -278,9 +278,9 @@ export class WithdrawalService {
         message: 'Withdrawal approved',
         withdrawalId,
         amount: withdrawal.amount,
-        balanceBefore: cashBalanceNumber,
-        balanceAfter: balanceAfterNumber,
-        frozenBalanceAfter: frozenBalanceAfterNumber,
+        balanceBefore: cashBalance,
+        balanceAfter,
+        frozenBalanceAfter,
       };
     }, { isolationLevel: 'Serializable' });
     if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_APPROVED', resource: 'withdrawal', resourceId: withdrawalId, description: 'Withdrawal approved by finance operator', metadata: { amount: String(result.amount) } });
@@ -306,9 +306,9 @@ export class WithdrawalService {
         throw new NotFoundException('Account not found');
       }
       if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
-      const amount = new Prisma.Decimal(withdrawal.amount).toDecimalPlaces(2);
-      const hasDedicatedFreeze = new Prisma.Decimal(withdrawal.frozenAmount ?? 0).gte(amount);
-      if (hasDedicatedFreeze && new Prisma.Decimal(account.frozenBalance).lt(amount)) {
+      const amount = moneyDecimal(withdrawal.amount);
+      const hasDedicatedFreeze = moneyDecimal(withdrawal.frozenAmount ?? 0).gte(amount);
+      if (hasDedicatedFreeze && moneyDecimal(account.frozenBalance).lt(amount)) {
         throw new BadRequestException(
           'Frozen balance is inconsistent with withdrawal request',
         );
@@ -326,12 +326,11 @@ export class WithdrawalService {
         throw new BadRequestException('Withdrawal already processed');
       }
       if (hasDedicatedFreeze) {
-        const amountNumber = amount.toNumber();
         await tx.account.update({
           where: { id: account.id },
           data: {
-            buyingPower: { increment: amountNumber },
-            frozenBalance: { decrement: amountNumber },
+            buyingPower: { increment: amount },
+            frozenBalance: { decrement: amount },
           },
         });
       }
@@ -353,7 +352,7 @@ export class WithdrawalService {
   }
 
   private async assertFinanceAccount(userId: string, tx: any) {
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     const user = await tx.user.findUnique({ where: { id: userId }, select: { usedInviteCode: { select: { code: true } } } });
     if (user?.usedInviteCode?.code?.toUpperCase() === fixedCode) throw new NotFoundException('Withdrawal request not found');
   }

@@ -24,6 +24,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { normalizePhone, internationalPhone } from './phone-number';
 import { TwoFactorService } from './two-factor.service';
+import { fixedInviteCode } from '../common/fixed-invite';
 @Injectable()
 export class AuthService {
   private static readonly CLIENT_TOKEN_SECONDS = 3600;
@@ -47,7 +48,7 @@ export class AuthService {
       : AuthService.CLIENT_TOKEN_SECONDS;
   }
 
-private async issueAccessToken(user: {
+  private async issueAccessToken(user: {
     id: string;
     phone: string | null;
     role: UserRole;
@@ -73,8 +74,8 @@ private async issueAccessToken(user: {
 
     const email = this.phoneEmail(phone);
     const inviteCodeValue = dto.inviteCode.trim().toUpperCase();
-    const fixedInviteCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
-    const reusableInvite = inviteCodeValue === fixedInviteCode;
+    const fixedCode = fixedInviteCode();
+    const reusableInvite = inviteCodeValue === fixedCode;
 
     const existingUser = await this.usersService.findByPhone(phone);
 
@@ -335,7 +336,16 @@ private async issueAccessToken(user: {
 
   async googleLogin(idToken: string) {
     const { subject, email } = await this.verifyGoogleToken(idToken);
-    const user = await this.prisma.user.findFirst({ where: { OR: [{ googleSubject: subject }, { email }] }, include: { account: true } });
+    let user = await this.prisma.user.findFirst({
+      where: { googleSubject: subject },
+      include: { account: true },
+    });
+    if (!user) {
+      user = await this.prisma.user.findFirst({
+        where: { email },
+        include: { account: true },
+      });
+    }
     if (!user || user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Google account is not linked to an active trading account');
     if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
     if (!user.googleSubject) await this.prisma.user.update({ where: { id: user.id }, data: { googleSubject: subject } });
@@ -374,7 +384,12 @@ private async issueAccessToken(user: {
     const email = String(response.data?.email || '').toLowerCase();
     const audience = String(response.data?.aud || '');
     const clientId = this.config.get<string>('GOOGLE_CLIENT_ID')?.trim();
-    if (!subject || !email || !clientId || audience !== clientId || response.data?.email_verified !== 'true') throw new UnauthorizedException('Google account could not be verified');
+    const emailVerified =
+      response.data?.email_verified === true ||
+      response.data?.email_verified === 'true';
+    if (!subject || !email || !clientId || audience !== clientId || !emailVerified) {
+      throw new UnauthorizedException('Google account could not be verified');
+    }
     return { subject, email };
   }
 

@@ -1,12 +1,13 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { fixedInviteCode } from '../common/fixed-invite';
 
 @Injectable()
 export class OperatorService {
   constructor(private readonly prisma: PrismaService) {}
 
   private scope() {
-    const fixedCode = (process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026');
+    const fixedCode = (fixedInviteCode());
     return {
       role: 'CLIENT' as const,
       usedInviteCode: { code: fixedCode },

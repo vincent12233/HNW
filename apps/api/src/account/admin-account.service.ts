@@ -11,6 +11,8 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdjustBalanceDto } from './dto/adjust-balance.dto';
 import { ListAdminAccountsQueryDto } from './dto/list-admin-accounts-query.dto';
 import { ListAdminAccountTransactionsQueryDto } from './dto/list-admin-account-transactions-query.dto';
+import { fixedInviteCode } from '../common/fixed-invite';
+import { availableCash, moneyDecimal } from '../common/money';
 type AdjustmentDirection = 'CREDIT' | 'DEBIT';
 
 @Injectable()
@@ -22,7 +24,7 @@ export class AdminAccountService {
   ) {}
   private financeScope(role: string): Prisma.AccountWhereInput {
     if (role !== 'FINANCE') return {};
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    const fixedCode = fixedInviteCode();
     return { NOT: { user: { usedInviteCode: { is: { code: fixedCode } } } } };
   }
 
@@ -51,8 +53,8 @@ export class AdminAccountService {
     role: string,
   ) {
     const normalizedAccountNumber = accountNumber.trim().toUpperCase();
-    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
-    const amount = new Prisma.Decimal(dto.amount);
+    const fixedCode = fixedInviteCode();
+    const amount = moneyDecimal(dto.amount);
     if (!amount.isFinite() || !amount.isPositive()) throw new BadRequestException('Amount must be positive');
     const referenceId = dto.referenceId.trim();
     if (!referenceId) throw new BadRequestException('Reference number is required');
@@ -70,7 +72,10 @@ export class AdminAccountService {
       if (!account) throw new NotFoundException('Dedicated operator customer account not found');
       const duplicate = await tx.accountTransaction.findFirst({ where: { referenceId } });
       if (duplicate) throw new ConflictException('Reference number has already been processed');
-      if (direction === 'DEBIT' && (account.cashBalance.lt(amount) || account.buyingPower.lt(amount))) {
+      if (
+        direction === 'DEBIT' &&
+        (account.buyingPower.lt(amount) || availableCash(account).lt(amount))
+      ) {
         throw new BadRequestException('Insufficient available balance');
       }
       const balanceBefore = account.cashBalance;
@@ -547,7 +552,7 @@ export class AdminAccountService {
   ) {
     const normalizedAccountNumber = accountNumber.trim().toUpperCase();
     const referenceId = dto.referenceId.trim();
-    const amount = new Prisma.Decimal(dto.amount);
+    const amount = moneyDecimal(dto.amount);
 
     let attempt = 0;
 
@@ -578,7 +583,7 @@ export class AdminAccountService {
 
             if (
               direction === 'DEBIT' &&
-              (account.cashBalance.lt(amount) || account.buyingPower.lt(amount))
+              (account.buyingPower.lt(amount) || availableCash(account).lt(amount))
             ) {
               throw new BadRequestException('可用余额不足');
             }

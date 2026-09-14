@@ -123,89 +123,84 @@ class _SupportChatPageState extends State<SupportChatPage>
                 ? greeting
                 : '$greeting\n\n$hours'));
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FC),
-      body: DecoratedBox(
+    return Material(
+      color: const Color(0xFFF4F7FC),
+      child: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [Color(0xFFE8F1FF), Color(0xFFF7F9FC), Color(0xFFFCFDFE)],
-            stops: [0, 0.35, 1],
+            stops: [0, 0.4, 1],
           ),
         ),
-        child: SafeArea(
-          top: false,
-          bottom: false,
+        child: FadeTransition(
+          opacity: CurvedAnimation(parent: _intro, curve: Curves.easeOut),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
               _buildHeader(),
               if (_noticeVisible) _buildNotice(),
-              Expanded(
-                child: FadeTransition(
-                  opacity: CurvedAnimation(
-                    parent: _intro,
-                    curve: Curves.easeOut,
-                  ),
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
-                    children: [
-                      const Center(child: _DayChip()),
-                      const SizedBox(height: 12),
-                      _AgentBubble(
-                        text: bubbleText,
-                        isError: _error != null,
-                        isConnecting: _opening,
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 8, 14, 6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Center(child: _DayChip()),
+                    const SizedBox(height: 10),
+                    _AgentBubble(
+                      text: bubbleText,
+                      isError: _error != null,
+                      isConnecting: _opening,
+                    ),
+                    const SizedBox(height: 12),
+                    AppText(
+                      'Quick topics',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.25,
+                        color: Colors.blueGrey.shade600,
                       ),
-                      const SizedBox(height: 14),
-                      AppText(
-                        'Quick topics',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.25,
-                          color: Colors.blueGrey.shade600,
+                    ),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _SupportTopic(
+                          label: 'Deposit',
+                          icon: Icons.account_balance_wallet_outlined,
+                          onTap: () => _open(
+                            message: _preset(
+                              'chat_preset.deposit',
+                              'Hello, I would like to add money to my account.',
+                            ),
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: [
-                          _SupportTopic(
-                            label: 'Deposit',
-                            icon: Icons.account_balance_wallet_outlined,
-                            onTap: () => _open(
-                              message: _preset(
-                                'chat_preset.deposit',
-                                'Hello, I would like to add money to my account.',
-                              ),
+                        _SupportTopic(
+                          label: 'Trading',
+                          icon: Icons.candlestick_chart_rounded,
+                          onTap: () => _open(
+                            message: _preset(
+                              'chat_preset.help',
+                              'Hello, I need help with a trade.',
                             ),
                           ),
-                          _SupportTopic(
-                            label: 'Trading',
-                            icon: Icons.candlestick_chart_rounded,
-                            onTap: () => _open(
-                              message: _preset(
-                                'chat_preset.help',
-                                'Hello, I need help with a trade.',
-                              ),
+                        ),
+                        _SupportTopic(
+                          label: 'Account',
+                          icon: Icons.shield_outlined,
+                          onTap: () => _open(
+                            message: _preset(
+                              'chat_preset.help',
+                              'Hello, I need help with my account.',
                             ),
                           ),
-                          _SupportTopic(
-                            label: 'Account',
-                            icon: Icons.shield_outlined,
-                            onTap: () => _open(
-                              message: _preset(
-                                'chat_preset.help',
-                                'Hello, I need help with my account.',
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               _buildComposer(),

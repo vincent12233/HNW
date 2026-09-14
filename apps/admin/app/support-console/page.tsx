@@ -88,15 +88,20 @@ export default function SupportConsolePage() {
         support?: Record<string, { body?: string }>;
       }>("/app-content", { params: { locale: "zh" } });
       const support = response.data?.support ?? {};
-      const ordered = [
-        support["quick_reply.deposit"]?.body,
-        support["quick_reply.withdrawal"]?.body,
-        support["quick_reply.kyc"]?.body,
-        support["quick_reply.general"]?.body,
-      ]
-        .map((value) => String(value ?? "").trim())
-        .filter(Boolean);
-      if (ordered.length > 0) setQuickReplies(ordered);
+      const keys = [
+        "quick_reply.deposit",
+        "quick_reply.withdrawal",
+        "quick_reply.kyc",
+        "quick_reply.general",
+      ] as const;
+      // Merge by key so a missing CMS entry keeps the built-in default
+      // instead of dropping that slot from the console toolbar.
+      setQuickReplies(
+        keys.map((key, index) => {
+          const body = String(support[key]?.body ?? "").trim();
+          return body || defaultQuickReplies[index];
+        }),
+      );
       const tags = String(support.tags?.body ?? "")
         .split(/[,，]/)
         .map((item) => item.trim())

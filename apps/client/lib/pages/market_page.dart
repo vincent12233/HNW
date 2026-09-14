@@ -795,6 +795,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       await AppLanguage.instance.select(
         settings['language']?.toString() ?? 'en',
       );
+      await AppContentService.instance.load(force: true);
       await AppearanceSettings.instance.select(
         settings['theme']?.toString() ?? 'light',
       );

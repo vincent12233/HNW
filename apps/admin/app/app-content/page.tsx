@@ -182,6 +182,7 @@ export default function AppOpsContentPage() {
   const [aboutForm] = Form.useForm();
   const [legalForm] = Form.useForm();
   const [insightsForm] = Form.useForm();
+  const [opsLocale, setOpsLocale] = useState<"en" | "hi">("en");
   const [insightsLocale, setInsightsLocale] = useState<"en" | "hi">("en");
   const [accountOpen, setAccountOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<DepositAccount | null>(
@@ -205,58 +206,7 @@ export default function AppOpsContentPage() {
         : [];
       setEntries(nextEntries);
       setAccounts(nextAccounts);
-      homeForm.setFieldsValue(
-        Object.fromEntries(
-          homeFields.map((field) => [
-            field.key,
-            entryValue(nextEntries, "HOME", field.key),
-          ]),
-        ),
-      );
-      depositForm.setFieldsValue(
-        Object.fromEntries(
-          depositFields.map((field) => [
-            field.key,
-            entryValue(nextEntries, "DEPOSIT", field.key),
-          ]),
-        ),
-      );
-      supportForm.setFieldsValue({
-        ...Object.fromEntries(
-          supportFields.map((field) => [
-            field.key,
-            entryValue(nextEntries, "SUPPORT", field.key),
-          ]),
-        ),
-        [supportTagField.key]: entryValue(
-          nextEntries,
-          "SUPPORT",
-          supportTagField.key,
-          supportTagField.locale,
-        ),
-        ...Object.fromEntries(
-          supportQuickReplies.map((field) => [
-            field.key,
-            entryValue(nextEntries, "SUPPORT", field.key, field.locale),
-          ]),
-        ),
-      });
-      tradingForm.setFieldsValue({
-        ...Object.fromEntries(
-          tradingFields.map((field) => [
-            field.key,
-            entryValue(nextEntries, "TRADING", field.key),
-          ]),
-        ),
-        ...Object.fromEntries(
-          tradingFields
-            .filter((field) => "title" in field && field.title)
-            .map((field) => [
-              `${field.key}__title`,
-              entryTitle(nextEntries, "TRADING", field.key),
-            ]),
-        ),
-      });
+      applyOpsForms(nextEntries, opsLocale);
       aboutForm.setFieldsValue(
         Object.fromEntries(
           aboutFields.map((field) => [
@@ -279,28 +229,87 @@ export default function AppOpsContentPage() {
           "terms.document",
         ),
       });
-      insightsForm.setFieldsValue({
-        ...Object.fromEntries(
-          insightIntroFields.map((field) => [
-            field.key,
-            entryValue(nextEntries, "INSIGHTS", field.key, insightsLocale),
-          ]),
-        ),
-        ...Object.fromEntries(
-          insightArticleKeys.flatMap((key) => [
-            [key, entryValue(nextEntries, "INSIGHTS", key, insightsLocale)],
-            [
-              `${key}__title`,
-              entryTitle(nextEntries, "INSIGHTS", key, insightsLocale),
-            ],
-          ]),
-        ),
-      });
+      applyInsightsForm(nextEntries, insightsLocale);
     } catch (requestError: unknown) {
       setError(apiError(requestError, "运营配置加载失败"));
     } finally {
       setLoading(false);
     }
+  }
+
+  function applyOpsForms(nextEntries: ContentEntry[], locale: "en" | "hi") {
+    homeForm.setFieldsValue(
+      Object.fromEntries(
+        homeFields.map((field) => [
+          field.key,
+          entryValue(nextEntries, "HOME", field.key, locale),
+        ]),
+      ),
+    );
+    depositForm.setFieldsValue(
+      Object.fromEntries(
+        depositFields.map((field) => [
+          field.key,
+          entryValue(nextEntries, "DEPOSIT", field.key, locale),
+        ]),
+      ),
+    );
+    supportForm.setFieldsValue({
+      ...Object.fromEntries(
+        supportFields.map((field) => [
+          field.key,
+          entryValue(nextEntries, "SUPPORT", field.key, locale),
+        ]),
+      ),
+      [supportTagField.key]: entryValue(
+        nextEntries,
+        "SUPPORT",
+        supportTagField.key,
+        supportTagField.locale,
+      ),
+      ...Object.fromEntries(
+        supportQuickReplies.map((field) => [
+          field.key,
+          entryValue(nextEntries, "SUPPORT", field.key, field.locale),
+        ]),
+      ),
+    });
+    tradingForm.setFieldsValue({
+      ...Object.fromEntries(
+        tradingFields.map((field) => [
+          field.key,
+          entryValue(nextEntries, "TRADING", field.key, locale),
+        ]),
+      ),
+      ...Object.fromEntries(
+        tradingFields
+          .filter((field) => "title" in field && field.title)
+          .map((field) => [
+            `${field.key}__title`,
+            entryTitle(nextEntries, "TRADING", field.key, locale),
+          ]),
+      ),
+    });
+  }
+
+  function applyInsightsForm(
+    nextEntries: ContentEntry[],
+    locale: "en" | "hi",
+  ) {
+    insightsForm.setFieldsValue({
+      ...Object.fromEntries(
+        insightIntroFields.map((field) => [
+          field.key,
+          entryValue(nextEntries, "INSIGHTS", field.key, locale),
+        ]),
+      ),
+      ...Object.fromEntries(
+        insightArticleKeys.flatMap((key) => [
+          [key, entryValue(nextEntries, "INSIGHTS", key, locale)],
+          [`${key}__title`, entryTitle(nextEntries, "INSIGHTS", key, locale)],
+        ]),
+      ),
+    });
   }
 
   useEffect(() => {
@@ -310,23 +319,13 @@ export default function AppOpsContentPage() {
 
   useEffect(() => {
     if (!entries.length) return;
-    insightsForm.setFieldsValue({
-      ...Object.fromEntries(
-        insightIntroFields.map((field) => [
-          field.key,
-          entryValue(entries, "INSIGHTS", field.key, insightsLocale),
-        ]),
-      ),
-      ...Object.fromEntries(
-        insightArticleKeys.flatMap((key) => [
-          [key, entryValue(entries, "INSIGHTS", key, insightsLocale)],
-          [
-            `${key}__title`,
-            entryTitle(entries, "INSIGHTS", key, insightsLocale),
-          ],
-        ]),
-      ),
-    });
+    applyOpsForms(entries, opsLocale);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opsLocale, entries]);
+
+  useEffect(() => {
+    if (!entries.length) return;
+    applyInsightsForm(entries, insightsLocale);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insightsLocale, entries]);
 
@@ -476,7 +475,8 @@ export default function AppOpsContentPage() {
         <div>
           <Title level={2}>客户端运营配置</Title>
           <Paragraph type="secondary">
-            维护 APP 首页、充值、客服、交易说明、About、法律文本与 Wealth Insights。修改后客户端下次拉取配置即生效，无需发版。
+            维护 APP 首页、充值、客服、交易说明、About、法律文本与 Wealth Insights。首页/充值/客服客户端文案/交易说明支持
+            English 与 Hindi；客服标签与快捷回复仍为中文（后台客服台）。修改后客户端下次拉取配置即生效，无需发版。
           </Paragraph>
         </div>
 
@@ -484,9 +484,21 @@ export default function AppOpsContentPage() {
 
         <Card
           extra={
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={loadAll}>
-              刷新
-            </Button>
+            <Space>
+              <Text type="secondary">运营文案语言</Text>
+              <Select
+                value={opsLocale}
+                style={{ width: 140 }}
+                options={[
+                  { value: "en", label: "English" },
+                  { value: "hi", label: "Hindi" },
+                ]}
+                onChange={(value) => setOpsLocale(value)}
+              />
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={loadAll}>
+                刷新
+              </Button>
+            </Space>
           }
         >
           <Tabs
@@ -500,6 +512,9 @@ export default function AppOpsContentPage() {
                 ),
                 children: (
                   <Form form={homeForm} layout="vertical">
+                    <Paragraph type="secondary">
+                      当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
+                    </Paragraph>
                     {homeFields.map((field) => (
                       <Form.Item
                         key={field.key}
@@ -515,14 +530,19 @@ export default function AppOpsContentPage() {
                       icon={<SaveOutlined />}
                       loading={saving}
                       onClick={() =>
-                        homeForm
-                          .validateFields()
-                          .then((values) =>
-                            saveModule("HOME", values, [...homeFields]),
-                          )
+                        homeForm.validateFields().then((values) =>
+                          saveModule(
+                            "HOME",
+                            values,
+                            homeFields.map((field) => ({
+                              key: field.key,
+                              locale: opsLocale,
+                            })),
+                          ),
+                        )
                       }
                     >
-                      保存首页配置
+                      保存首页配置（{opsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -537,6 +557,9 @@ export default function AppOpsContentPage() {
                 children: (
                   <Space orientation="vertical" size="large" style={{ width: "100%" }}>
                     <Form form={depositForm} layout="vertical">
+                      <Paragraph type="secondary">
+                        当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
+                      </Paragraph>
                       {depositFields.map((field) => (
                         <Form.Item
                           key={field.key}
@@ -552,14 +575,19 @@ export default function AppOpsContentPage() {
                         icon={<SaveOutlined />}
                         loading={saving}
                         onClick={() =>
-                          depositForm
-                            .validateFields()
-                            .then((values) =>
-                              saveModule("DEPOSIT", values, [...depositFields]),
-                            )
+                          depositForm.validateFields().then((values) =>
+                            saveModule(
+                              "DEPOSIT",
+                              values,
+                              depositFields.map((field) => ({
+                                key: field.key,
+                                locale: opsLocale,
+                              })),
+                            ),
+                          )
                         }
                       >
-                        保存充值文案
+                        保存充值文案（{opsLocale.toUpperCase()}）
                       </Button>
                     </Form>
 
@@ -599,6 +627,10 @@ export default function AppOpsContentPage() {
                 ),
                 children: (
                   <Form form={supportForm} layout="vertical">
+                    <Paragraph type="secondary">
+                      欢迎语/服务时间/预填消息/SaleSmartly URL 按运营文案语言编辑（当前{" "}
+                      {opsLocale === "hi" ? "Hindi" : "English"}）；标签与快捷回复固定为中文，供后台客服台使用。
+                    </Paragraph>
                     {supportFields.map((field) => (
                       <Form.Item
                         key={field.key}
@@ -632,14 +664,17 @@ export default function AppOpsContentPage() {
                       onClick={() =>
                         supportForm.validateFields().then((values) =>
                           saveModule("SUPPORT", values, [
-                            ...supportFields,
+                            ...supportFields.map((field) => ({
+                              key: field.key,
+                              locale: opsLocale,
+                            })),
                             supportTagField,
                             ...supportQuickReplies,
                           ]),
                         )
                       }
                     >
-                      保存客服配置
+                      保存客服配置（客户端 {opsLocale.toUpperCase()} + 中文快捷回复）
                     </Button>
                   </Form>
                 ),
@@ -653,6 +688,9 @@ export default function AppOpsContentPage() {
                 ),
                 children: (
                   <Form form={tradingForm} layout="vertical">
+                    <Paragraph type="secondary">
+                      当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
+                    </Paragraph>
                     {tradingFields.map((field) => (
                       <div key={field.key}>
                         {"title" in field && field.title ? (
@@ -681,14 +719,20 @@ export default function AppOpsContentPage() {
                       icon={<SaveOutlined />}
                       loading={saving}
                       onClick={() =>
-                        tradingForm
-                          .validateFields()
-                          .then((values) =>
-                            saveModule("TRADING", values, [...tradingFields]),
-                          )
+                        tradingForm.validateFields().then((values) =>
+                          saveModule(
+                            "TRADING",
+                            values,
+                            tradingFields.map((field) => ({
+                              key: field.key,
+                              locale: opsLocale,
+                              title: "title" in field ? field.title : undefined,
+                            })),
+                          ),
+                        )
                       }
                     >
-                      保存交易说明
+                      保存交易说明（{opsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),

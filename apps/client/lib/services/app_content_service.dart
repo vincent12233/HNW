@@ -250,8 +250,10 @@ class AppContentService {
         _bundle.hasContent) {
       return _bundle;
     }
-    final existing = _inFlight;
-    if (existing != null) return existing;
+    if (!force) {
+      final existing = _inFlight;
+      if (existing != null) return existing;
+    }
 
     final future = _fetch();
     _inFlight = future;

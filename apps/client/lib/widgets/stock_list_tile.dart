@@ -41,11 +41,11 @@ class StockListTile extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16),
-        padding: const EdgeInsets.symmetric(vertical: 11),
+        margin: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
         decoration: const BoxDecoration(
           color: Colors.white,
-          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+          border: Border(bottom: BorderSide(color: AppConfig.borderColor)),
         ),
         child: Row(
           children: [
@@ -86,8 +86,8 @@ class StockListTile extends StatelessWidget {
                         child: AppText(
                           stock.exchange,
                           style: const TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 9,
+                            color: AppConfig.textSecondaryColor,
+                            fontSize: 10,
                             fontWeight: FontWeight.w700,
                           ),
                         ),

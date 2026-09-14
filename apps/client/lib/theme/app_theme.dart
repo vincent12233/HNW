@@ -120,21 +120,28 @@ class AppTheme {
         foregroundColor: Color(0xFF0F172A),
       ),
       cardTheme: CardThemeData(
-        elevation: 1,
-        shadowColor: const Color(0x16071F4A),
+        elevation: 0,
+        shadowColor: const Color(0x14071F4A),
         margin: EdgeInsets.zero,
         color: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(14),
           side: const BorderSide(color: AppConfig.borderColor),
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 76,
+        height: 72,
         backgroundColor: Colors.white,
-        indicatorColor: Colors.transparent,
+        indicatorColor: const Color(0xFFEAF1FF),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-        iconTheme: WidgetStatePropertyAll(IconThemeData(size: 25)),
+        iconTheme: WidgetStateProperty.resolveWith((states) {
+          return IconThemeData(
+            size: 23,
+            color: states.contains(WidgetState.selected)
+                ? AppConfig.primaryColor
+                : AppConfig.textSecondaryColor,
+          );
+        }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           return TextStyle(
             fontFamily: 'Roboto',

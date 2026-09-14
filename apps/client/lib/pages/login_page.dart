@@ -271,12 +271,20 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const AppText(
-                            'Remember Me',
-                            style: TextStyle(fontSize: 11),
+                          const Flexible(
+                            child: AppText(
+                              'Remember Me',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 11),
+                            ),
                           ),
-                          const Spacer(),
                           TextButton(
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                              ),
+                            ),
                             onPressed: busy
                                 ? null
                                 : () => Navigator.push(

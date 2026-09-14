@@ -10,6 +10,7 @@ import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/market_socket_service.dart';
 import '../services/watchlist_service.dart';
+import '../theme/app_ui.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_logo.dart';
@@ -883,7 +884,7 @@ class _MarketsPageState extends State<MarketsPage> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppUi.radiusMd),
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
@@ -1056,7 +1057,7 @@ class _MarketsPageState extends State<MarketsPage> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppUi.radiusMd),
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
@@ -1250,7 +1251,7 @@ class _MarketsPageState extends State<MarketsPage> {
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppUi.radiusMd),
         border: Border.all(color: AppConfig.borderColor),
       ),
       child: Column(
@@ -1342,7 +1343,7 @@ class _MarketsPageState extends State<MarketsPage> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
             color: const Color(0xFFEEF5FF),
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppUi.radiusMd),
           ),
           child: Row(
             children: [

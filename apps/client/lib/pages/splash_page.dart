@@ -51,19 +51,21 @@ class _SplashPageState extends State<SplashPage>
               AppBrandLogo(size: 86),
               SizedBox(height: 22),
               AppText(
-                'India Trading',
+                AppConfig.appName,
                 style: TextStyle(
-                  color: Color(0xFF0C1832),
-                  fontSize: 27,
+                  color: AppConfig.primaryDarkColor,
+                  fontSize: 28,
                   fontWeight: FontWeight.w900,
+                  letterSpacing: -0.5,
                 ),
               ),
-              SizedBox(height: 7),
+              SizedBox(height: 8),
               AppText(
-                'Smart Investing, Better Future',
+                AppConfig.slogan,
                 style: TextStyle(
                   color: AppConfig.textSecondaryColor,
-                  fontSize: 13,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
               SizedBox(height: 30),

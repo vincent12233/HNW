@@ -205,7 +205,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 AppText('No bank account linked'),
                 SizedBox(height: 4),
                 AppText(
-                  'Add an approved bank account before withdrawing funds.',
+                  'Add a bank account before withdrawing funds.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.black54),
                 ),

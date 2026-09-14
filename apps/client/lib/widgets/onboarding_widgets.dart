@@ -4,17 +4,21 @@ import '../app_config.dart';
 
 InputDecoration onboardingInput(String hint) => InputDecoration(
   hintText: tr(hint),
-  hintStyle: const TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor),
+  hintStyle: const TextStyle(fontSize: 13, color: AppConfig.textSecondaryColor),
   filled: true,
-  fillColor: const Color(0xFFFAFBFE),
-  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+  fillColor: const Color(0xFFF8FAFC),
+  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
   border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(4),
-    borderSide: const BorderSide(color: Color(0xFFF0F2F6)),
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: AppConfig.borderColor),
   ),
   enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(4),
-    borderSide: const BorderSide(color: Color(0xFFF0F2F6)),
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: AppConfig.borderColor),
+  ),
+  focusedBorder: OutlineInputBorder(
+    borderRadius: BorderRadius.circular(12),
+    borderSide: const BorderSide(color: AppConfig.primaryColor, width: 1.5),
   ),
 );
 
@@ -24,27 +28,23 @@ class FinvestWordmark extends StatelessWidget {
   Widget build(BuildContext context) => const Column(
     children: [
       AppText(
-        'FinVest',
+        AppConfig.appName,
+        textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 36,
+          fontSize: 28,
           fontWeight: FontWeight.w900,
-          fontStyle: FontStyle.italic,
-          color: Color(0xFF111A55),
+          letterSpacing: -0.5,
+          color: AppConfig.primaryDarkColor,
         ),
       ),
-      SizedBox(height: 3),
+      SizedBox(height: 6),
       AppText(
-        'India Trading',
+        AppConfig.slogan,
         style: TextStyle(
-          fontSize: 11,
+          fontSize: 13,
           fontWeight: FontWeight.w600,
-          color: Color(0xFF111A55),
+          color: AppConfig.textSecondaryColor,
         ),
-      ),
-      SizedBox(height: 2),
-      AppText(
-        'Smart Trading. Real Growth.',
-        style: TextStyle(fontSize: 10, color: AppConfig.textSecondaryColor),
       ),
     ],
   );

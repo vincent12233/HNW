@@ -66,40 +66,56 @@ class AppEmptyState extends StatelessWidget {
   final IconData icon;
   final VoidCallback? onRetry;
   @override
-  Widget build(BuildContext context) => Center(
-    child: SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 420),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 32, color: AppConfig.textSecondaryColor),
-            const SizedBox(height: 16),
-            AppText(
-              title,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
-            if (message != null) ...[
-              const SizedBox(height: 8),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(28),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 420),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: AppConfig.primaryColor.withValues(alpha: 0.10),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, size: 34, color: AppConfig.primaryColor),
+              ),
+              const SizedBox(height: 18),
               AppText(
-                message!,
+                title,
                 textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
+                style: theme.textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
               ),
+              if (message != null) ...[
+                const SizedBox(height: 10),
+                AppText(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppConfig.textSecondaryColor,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+              if (onRetry != null) ...[
+                const SizedBox(height: 18),
+                OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: const AppText('Retry'),
+                ),
+              ],
             ],
-            if (onRetry != null) ...[
-              const SizedBox(height: 16),
-              OutlinedButton.icon(
-                onPressed: onRetry,
-                icon: const Icon(Icons.refresh, size: 18),
-                label: const AppText('Retry'),
-              ),
-            ],
-          ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

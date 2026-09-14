@@ -84,7 +84,7 @@ class _DepositPageState extends State<DepositPage> {
       'deposit',
       'instructions',
       fallback:
-          'Contact customer support to complete your deposit operation.',
+          'Contact support for payment details. After you pay, finance credits your account. Deposits are not submitted inside the app.',
     );
     final ctaLabel = content.text(
       'deposit',
@@ -106,11 +106,7 @@ class _DepositPageState extends State<DepositPage> {
     return Scaffold(
       appBar: AppBar(
         title: AppText(
-          content.text(
-            'deposit',
-            'page_title',
-            fallback: 'Deposit',
-          ),
+          content.text('deposit', 'page_title', fallback: 'Deposit'),
         ),
         leading: const BackButton(),
       ),
@@ -221,8 +217,30 @@ class _DepositPageState extends State<DepositPage> {
                       )
                     else if (_history.isEmpty)
                       Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 24),
-                        child: AppText(historyEmpty),
+                        padding: const EdgeInsets.symmetric(vertical: 20),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(historyEmpty),
+                            const SizedBox(height: 6),
+                            const AppText(
+                              'Credited deposits appear here after finance confirms your payment.',
+                              style: TextStyle(
+                                color: Color(0xFF64748B),
+                                height: 1.4,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton.icon(
+                              onPressed: _contact,
+                              icon: const Icon(
+                                Icons.support_agent_rounded,
+                                size: 18,
+                              ),
+                              label: const AppText('Contact customer support'),
+                            ),
+                          ],
+                        ),
                       )
                     else
                       ..._history.map(

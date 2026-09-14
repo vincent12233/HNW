@@ -10,6 +10,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
+import '../theme/app_ui.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
 import '../models/ipo.dart';
@@ -938,79 +939,57 @@ class _MarketHomePageState extends State<MarketHomePage>
             heightFactor: 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: NavigationBarTheme(
-                data: NavigationBarThemeData(
-                  labelTextStyle: WidgetStateProperty.resolveWith(
-                    (states) => TextStyle(
-                      fontSize: 10,
-                      color: states.contains(WidgetState.selected)
-                          ? AppConfig.primaryColor
-                          : AppConfig.textSecondaryColor,
-                      fontWeight: states.contains(WidgetState.selected)
-                          ? FontWeight.w700
-                          : FontWeight.w500,
+              child: NavigationBar(
+                height: MediaQuery.sizeOf(context).height < 650 ? 68 : 72,
+                elevation: 0,
+                backgroundColor: Colors.white,
+                surfaceTintColor: Colors.transparent,
+                shadowColor: Colors.transparent,
+                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                selectedIndex: selectedIndex,
+                onDestinationSelected: _onDestinationSelected,
+                destinations: [
+                  NavigationDestination(
+                    icon: Icon(Icons.home_outlined),
+                    selectedIcon: Icon(
+                      Icons.home,
+                      color: AppConfig.primaryColor,
                     ),
+                    label: tr('Home'),
                   ),
-                  iconTheme: const WidgetStatePropertyAll(
-                    IconThemeData(
-                      size: 21,
-                      color: AppConfig.textSecondaryColor,
+                  NavigationDestination(
+                    icon: Icon(Icons.bar_chart_outlined),
+                    selectedIcon: Icon(
+                      Icons.bar_chart,
+                      color: AppConfig.primaryColor,
                     ),
+                    label: tr('Markets'),
                   ),
-                ),
-                child: NavigationBar(
-                  height: MediaQuery.sizeOf(context).height < 650 ? 64 : 68,
-                  elevation: 0,
-                  backgroundColor: Colors.white,
-                  indicatorColor: Colors.transparent,
-                  surfaceTintColor: Colors.transparent,
-                  shadowColor: Colors.transparent,
-                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                  selectedIndex: selectedIndex,
-                  onDestinationSelected: _onDestinationSelected,
-                  destinations: [
-                    NavigationDestination(
-                      icon: Icon(Icons.home_outlined),
-                      selectedIcon: Icon(
-                        Icons.home,
-                        color: AppConfig.primaryColor,
-                      ),
-                      label: tr('Home'),
+                  NavigationDestination(
+                    icon: Icon(Icons.swap_horiz_rounded),
+                    selectedIcon: Icon(
+                      Icons.swap_horiz_rounded,
+                      color: AppConfig.primaryColor,
                     ),
-                    NavigationDestination(
-                      icon: Icon(Icons.bar_chart_outlined),
-                      selectedIcon: Icon(
-                        Icons.bar_chart,
-                        color: AppConfig.primaryColor,
-                      ),
-                      label: tr('Markets'),
+                    label: tr('Trade'),
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.pie_chart_outline),
+                    selectedIcon: Icon(
+                      Icons.pie_chart,
+                      color: AppConfig.primaryColor,
                     ),
-                    NavigationDestination(
-                      icon: Icon(Icons.swap_horiz_rounded),
-                      selectedIcon: Icon(
-                        Icons.swap_horiz_rounded,
-                        color: AppConfig.primaryColor,
-                      ),
-                      label: tr('Trade'),
+                    label: tr('Portfolio'),
+                  ),
+                  NavigationDestination(
+                    icon: Icon(Icons.person_outline),
+                    selectedIcon: Icon(
+                      Icons.person,
+                      color: AppConfig.primaryColor,
                     ),
-                    NavigationDestination(
-                      icon: Icon(Icons.pie_chart_outline),
-                      selectedIcon: Icon(
-                        Icons.pie_chart,
-                        color: AppConfig.primaryColor,
-                      ),
-                      label: tr('Portfolio'),
-                    ),
-                    NavigationDestination(
-                      icon: Icon(Icons.person_outline),
-                      selectedIcon: Icon(
-                        Icons.person,
-                        color: AppConfig.primaryColor,
-                      ),
-                      label: tr('Profile'),
-                    ),
-                  ],
-                ),
+                    label: tr('Profile'),
+                  ),
+                ],
               ),
             ),
           ),
@@ -1145,18 +1124,8 @@ class _MarketHomePageState extends State<MarketHomePage>
       children: [
         Container(
           width: double.infinity,
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                AppConfig.primaryDarkColor,
-                AppConfig.primaryGradientEnd,
-              ],
-            ),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          padding: const EdgeInsets.fromLTRB(18, 16, 14, 18),
+          decoration: AppUi.heroGradient(radius: AppUi.radiusLg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1310,11 +1279,8 @@ class _MarketHomePageState extends State<MarketHomePage>
         ],
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-          ),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+          decoration: AppUi.surface(radius: AppUi.radiusMd),
           child: Row(
             children: [
               Expanded(
@@ -1392,73 +1358,203 @@ class _MarketHomePageState extends State<MarketHomePage>
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(22),
-        boxShadow: const [BoxShadow(color: Color(0x33152F5F), blurRadius: 18, offset: Offset(0, 8))],
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x33152F5F),
+            blurRadius: 18,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Stack(
         children: [
-          Positioned(right: -28, top: -34, child: Container(width: 130, height: 130, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: .08)))),
+          Positioned(
+            right: -28,
+            top: -34,
+            child: Container(
+              width: 130,
+              height: 130,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withValues(alpha: .08),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: company.logoUrl?.isNotEmpty == true ? ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(company.logoUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.business_rounded, color: Colors.white))) : const Icon(Icons.business_rounded, color: Colors.white)),
-                const SizedBox(width: 12),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppText(company.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), const SizedBox(height: 4), AppText(company.tagline, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD5E6FF), fontSize: 12, height: 1.3))])),
-                const Icon(Icons.verified_rounded, color: Color(0xFF8DE7D3), size: 22),
-              ]),
-              if (company.videoUrl?.isNotEmpty == true) ...[
-                const SizedBox(height: 16),
-                InkWell(
-                  onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    height: 150,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF07152F),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Container(
-                            width: 52,
-                            height: 52,
-                            decoration: const BoxDecoration(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white.withValues(alpha: .14),
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: company.logoUrl?.isNotEmpty == true
+                          ? ClipRRect(
+                              borderRadius: BorderRadius.circular(15),
+                              child: Image.network(
+                                company.logoUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, _, _) => const Icon(
+                                  Icons.business_rounded,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            )
+                          : const Icon(
+                              Icons.business_rounded,
                               color: Colors.white,
-                              shape: BoxShape.circle,
                             ),
-                            child: const Icon(
-                              Icons.play_arrow_rounded,
-                              color: Color(0xFF123B72),
-                              size: 34,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           AppText(
-                            _appContent.text(
-                              'home',
-                              'company.video_cta',
-                              fallback: 'Watch our company introduction',
-                            ),
+                            company.name,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          AppText(
+                            company.tagline,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Color(0xFFD5E6FF),
                               fontSize: 12,
-                              fontWeight: FontWeight.w700,
+                              height: 1.3,
                             ),
                           ),
                         ],
                       ),
                     ),
+                    const Icon(
+                      Icons.verified_rounded,
+                      color: Color(0xFF8DE7D3),
+                      size: 22,
+                    ),
+                  ],
+                ),
+                if (company.videoUrl?.isNotEmpty == true) ...[
+                  const SizedBox(height: 16),
+                  InkWell(
+                    onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
+                    borderRadius: BorderRadius.circular(16),
+                    child: Container(
+                      height: 150,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF07152F),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Container(
+                              width: 52,
+                              height: 52,
+                              decoration: const BoxDecoration(
+                                color: Colors.white,
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(
+                                Icons.play_arrow_rounded,
+                                color: Color(0xFF123B72),
+                                size: 34,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            AppText(
+                              _appContent.text(
+                                'home',
+                                'company.video_cta',
+                                fallback: 'Watch our company introduction',
+                              ),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                AppText(
+                  company.description,
+                  maxLines: 4,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFFE7F0FF),
+                    fontSize: 13,
+                    height: 1.55,
                   ),
                 ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    if (company.sector?.isNotEmpty == true)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: .12),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: AppText(
+                          company.sector!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    const Spacer(),
+                    if (company.websiteUrl?.isNotEmpty == true)
+                      TextButton.icon(
+                        onPressed: () =>
+                            launchUrl(Uri.parse(company.websiteUrl!)),
+                        icon: const Icon(
+                          Icons.open_in_new_rounded,
+                          size: 15,
+                          color: Colors.white,
+                        ),
+                        label: Text(
+                          _appContent.text(
+                            'home',
+                            'company.website_cta',
+                            fallback: 'Visit website',
+                          ),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
-              const SizedBox(height: 16),
-              AppText(company.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE7F0FF), fontSize: 13, height: 1.55)),
-              const SizedBox(height: 16),
-              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: Text(_appContent.text('home', 'company.website_cta', fallback: 'Visit website'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
-            ]),
+            ),
           ),
         ],
       ),
@@ -1478,7 +1574,7 @@ class _MarketHomePageState extends State<MarketHomePage>
             subtitle: _appContent.text(
               'home',
               'funds.cta_subtitle',
-              fallback: 'Funding Assistance',
+              fallback: 'Contact support to fund',
             ),
             icon: Icons.account_balance_wallet_outlined,
             color: AppConfig.primaryColor,
@@ -1510,12 +1606,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   Widget _sectionTitle(String title, {VoidCallback? onViewAll}) {
     return Row(
       children: [
-        Expanded(
-          child: AppText(
-            title,
-            style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-          ),
-        ),
+        Expanded(child: AppText(title, style: AppUi.sectionTitle)),
         if (onViewAll != null)
           TextButton(
             style: TextButton.styleFrom(
@@ -1528,11 +1619,7 @@ class _MarketHomePageState extends State<MarketHomePage>
             ),
             onPressed: onViewAll,
             child: AppText(
-              _appContent.text(
-                'home',
-                'view_all_cta',
-                fallback: 'View All',
-              ),
+              _appContent.text('home', 'view_all_cta', fallback: 'View All'),
             ),
           ),
       ],
@@ -1833,9 +1920,9 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   void _openDepositSupport() {
     // APP Add Funds opens the in-app Deposit page (not the side Support button).
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(builder: (_) => const DepositPage()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute<void>(builder: (_) => const DepositPage()));
   }
 
   void _openSupportChat({String? initialMessage}) {
@@ -2019,7 +2106,10 @@ class _MarketHomePageState extends State<MarketHomePage>
                         'withdraw.available_label',
                         fallback: 'Available Funds',
                       ),
-                      style: const TextStyle(color: Colors.black54, fontSize: 12),
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                      ),
                     ),
                     const SizedBox(height: 4),
                     AppText(
@@ -2201,9 +2291,9 @@ class _MarketHomePageState extends State<MarketHomePage>
                         'home',
                         'withdraw.notice',
                         fallback:
-                            'Your withdrawal request will be submitted for review. '
-                            'The requested amount is frozen immediately. Approval '
-                            'deducts it from your cash balance; rejection releases it.',
+                            'Submit here in the app. Finance reviews your request. '
+                            'The amount is frozen right away. Approval deducts cash; '
+                            'rejection releases the freeze.',
                       ),
                       style: const TextStyle(
                         color: Colors.black54,
@@ -2449,7 +2539,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       SnackBar(
         content: AppText(
           'Withdrawal request ${request.orderNo ?? request.id} submitted. '
-          'Funds are now frozen.',
+          'Funds are frozen while finance reviews it.',
         ),
       ),
     );
@@ -2779,8 +2869,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   _appContent.text(
                     'home',
                     'news.empty',
-                    fallback:
-                        'Live market news is temporarily unavailable.',
+                    fallback: 'Live market news is temporarily unavailable.',
                   ),
                   style: const TextStyle(color: Color(0xFF64748B)),
                 ),
@@ -2976,12 +3065,18 @@ class _MarketHomePageState extends State<MarketHomePage>
               children: [
                 AppText(
                   title,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 AppText(
                   subtitle,
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                  style: const TextStyle(
+                    fontSize: 10,
+                    color: Color(0xFF64748B),
+                  ),
                 ),
               ],
             ),
@@ -3612,7 +3707,10 @@ class _MarketHomePageState extends State<MarketHomePage>
                   'profile.page_title',
                   fallback: 'Profile',
                 ),
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
             ),
             IconButton(
@@ -3632,11 +3730,12 @@ class _MarketHomePageState extends State<MarketHomePage>
             'profile.section.overview',
             fallback: 'Account Overview',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          style: AppUi.sectionTitle,
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
+          decoration: AppUi.surface(radius: AppUi.radiusMd),
           child: IntrinsicHeight(
             child: Row(
               children: [
@@ -4234,55 +4333,62 @@ class _HomeActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(8),
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 54),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: const Color(0xFFE8EDF5)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: color, size: 19),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    label,
-                    maxLines: 2,
-                    style: const TextStyle(
-                      color: Color(0xFF0F172A),
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  AppText(
-                    subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 10,
-                    ),
-                  ),
-                ],
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        borderRadius: AppUi.borderRadiusMd,
+        onTap: onTap,
+        child: Container(
+          constraints: const BoxConstraints(minHeight: 58),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          decoration: AppUi.surface(radius: AppUi.radiusMd),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 18),
               ),
-            ),
-            const Icon(
-              Icons.chevron_right_rounded,
-              size: 18,
-              color: Color(0xFF64748B),
-            ),
-          ],
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      label,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppConfig.textPrimaryColor,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: AppConfig.textSecondaryColor,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                size: 18,
+                color: AppConfig.textSecondaryColor.withValues(alpha: 0.7),
+              ),
+            ],
+          ),
         ),
       ),
     );

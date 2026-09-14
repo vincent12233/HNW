@@ -172,9 +172,20 @@ class _RegisterPageState extends State<RegisterPage> {
                   ),
                 ),
                 const SizedBox(width: 6),
-                const AppText('I agree to the', style: TextStyle(fontSize: 11)),
+                const Flexible(
+                  child: AppText(
+                    'I agree to the',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 11),
+                  ),
+                ),
                 Flexible(
+                  flex: 2,
                   child: TextButton(
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                    ),
                     onPressed: () => Navigator.push(
                       context,
                       MaterialPageRoute<void>(
@@ -184,6 +195,7 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                     child: const AppText(
                       'Terms & Conditions',
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(fontSize: 11),
                     ),
                   ),
@@ -215,14 +227,22 @@ class _RegisterPageState extends State<RegisterPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const AppText(
-                  'Already have an account?',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: AppConfig.textSecondaryColor,
+                const Flexible(
+                  child: AppText(
+                    'Already have an account?',
+                    overflow: TextOverflow.ellipsis,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppConfig.textSecondaryColor,
+                    ),
                   ),
                 ),
                 TextButton(
+                  style: TextButton.styleFrom(
+                    visualDensity: VisualDensity.compact,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                  ),
                   onPressed: busy ? null : () => Navigator.pop(context),
                   child: const AppText('Login', style: TextStyle(fontSize: 11)),
                 ),

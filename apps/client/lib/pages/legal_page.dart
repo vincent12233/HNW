@@ -179,7 +179,7 @@ const _termsSections = <_LegalSection>[
   ),
   _LegalSection(
     '7. Money, bank accounts, charges and taxes',
-    'Add Funds opens Online Customer Service; it is not an automatic deposit or payment confirmation. Follow only verified in-app instructions and confirm that funds are credited to your account record. A bank account you add is recorded in the backend without a separate approval step, but ownership or compliance checks may still be required before withdrawal or settlement. Applicable prices, fees, taxes, deductions and settlement amounts must be shown or otherwise disclosed before they are charged.',
+    'Add Funds opens the Deposit page where you can contact Online Customer Service. It is not an automatic deposit or payment confirmation. Follow only verified in-app instructions and confirm that funds are credited to your account record. A bank account you add is recorded without a separate approval step, but ownership or compliance checks may still be required before withdrawal or settlement. Applicable prices, fees, taxes, deductions and settlement amounts must be shown or otherwise disclosed before they are charged.',
   ),
   _LegalSection(
     '8. Prohibited use',

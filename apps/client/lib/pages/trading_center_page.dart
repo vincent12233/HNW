@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
+import '../theme/app_ui.dart';
 import '../utils/number_formatters.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/account_transaction.dart';
@@ -110,7 +111,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
       _TradingModule(
         label('tab.order_book', 'Order Book'),
         Icons.receipt_long_outlined,
-        const Color(0xFF7C3AED),
+        const Color(0xFF0F766E),
       ),
       _TradingModule(
         label('tab.otc', 'OTC'),
@@ -412,17 +413,9 @@ class _TradingCenterPageState extends State<TradingCenterPage>
               ),
             ),
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 4, 16, 10),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(8),
-                gradient: const LinearGradient(
-                  colors: [
-                    AppConfig.primaryDarkColor,
-                    AppConfig.primaryGradientEnd,
-                  ],
-                ),
-              ),
+              margin: const EdgeInsets.fromLTRB(16, 6, 16, 12),
+              padding: const EdgeInsets.all(18),
+              decoration: AppUi.heroGradient(radius: AppUi.radiusLg),
               child: Row(
                 children: [
                   Expanded(
@@ -750,6 +743,3 @@ class _TradingModule {
   final IconData icon;
   final Color color;
 }
-
-
-

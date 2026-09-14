@@ -449,6 +449,7 @@ const hindi = <String, String>{
   'Done': 'हो गया',
   'Add Funds': 'राशि जोड़ें',
   'Funding Assistance': 'राशि जोड़ने में सहायता',
+  'Contact support to fund': 'जमा के लिए सहायता से संपर्क करें',
   'Contact Support': 'सहायता से संपर्क करें',
   'Withdraw Funds': 'राशि निकालें',
   'Transfer to Bank': 'बैंक में भेजें',
@@ -496,8 +497,10 @@ const hindi = <String, String>{
   'No bank account linked': 'कोई बैंक खाता लिंक नहीं है',
   'Manage linked bank accounts and UPI': 'लिंक किए गए बैंक खाते प्रबंधित करें',
   'Remove bank account?': 'बैंक खाता हटाएँ?',
+  'Add a bank account before withdrawing funds.':
+      'निकासी से पहले बैंक खाता जोड़ें',
   'Add an approved bank account before withdrawing funds.':
-      'निकासी से पहले स्वीकृत बैंक खाता जोड़ें।',
+      'निकासी से पहले बैंक खाता जोड़ें',
   'KYC & Verification': 'केवाईसी और सत्यापन',
   'KYC Verification': 'केवाईसी सत्यापन',
   'KYC Verified': 'केवाईसी सत्यापित',

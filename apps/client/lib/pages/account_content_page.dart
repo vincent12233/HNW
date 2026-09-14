@@ -170,7 +170,7 @@ const wealthInsightArticles = <(String, String, String)>[
   ),
   (
     'Funding and withdrawals',
-    'Use Add Funds to contact the in-app support team. Funds appear only after the finance team confirms and credits the account. Check the Funds Ledger for completed entries.\n\nSet a six-digit Withdrawal PIN in Profile. This is separate from your login password and is required when submitting a withdrawal. Add an approved bank account and check available funds. The minimum withdrawal is INR 100. Submitted funds are frozen during review; approval debits cash, while rejection releases the frozen amount. Keep the withdrawal order number for follow-up.',
+    'Use Add Funds to open the Deposit page and contact in-app support. Finance credits your account after payment is confirmed. Check the Funds Ledger for completed entries.\n\nSet a six-digit Withdrawal PIN in Profile. This is separate from your login password and is required when submitting a withdrawal. Add a bank account and check available funds. The minimum withdrawal is INR 100. Submitted funds are frozen during review; approval debits cash, while rejection releases the frozen amount. Keep the withdrawal order number for follow-up.',
     'राशि जोड़ने के लिए ऐप की सहायता टीम से संपर्क करें। वित्त टीम की पुष्टि और क्रेडिट के बाद ही राशि दिखाई देती है। पूरे हुए लेनदेन राशि के लेजर में देखें।\n\nप्रोफ़ाइल में छह अंकों का निकासी पिन सेट करें। यह लॉगिन पासवर्ड से अलग है और निकासी अनुरोध के लिए आवश्यक है। स्वीकृत बैंक खाता जोड़ें और उपलब्ध राशि जाँचें। न्यूनतम निकासी 100 रुपये है। समीक्षा के दौरान राशि रोक दी जाती है; स्वीकृति पर कटती है और अस्वीकृति पर मुक्त होती है। अनुरोध का ऑर्डर नंबर सुरक्षित रखें।',
   ),
   (

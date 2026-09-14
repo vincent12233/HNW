@@ -77,7 +77,7 @@ class FundsTab extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             AppText(
-              'Deposits, withdrawals and other account entries will appear here.',
+              'Deposits credited by finance and withdrawals you submit will appear here.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,

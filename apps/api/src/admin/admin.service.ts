@@ -33,7 +33,7 @@ export class AdminService {
       role === UserRole.FINANCE ? this.prisma.loanApplication.count({ where: { status: 'PENDING', account: customerFilter } }) : Promise.resolve(0),
       this.prisma.otcOrder.count({ where: { status: 'PENDING', account: customerFilter } }),
       this.prisma.ipoApplication.count({ where: { status: 'PENDING', account: customerFilter } }),
-      role === UserRole.ADMIN || role === UserRole.FINANCE
+      role === UserRole.ADMIN
         ? this.prisma.approvalRequest.count({ where: { status: 'PENDING' } })
         : Promise.resolve(0),
     ]);

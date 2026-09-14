@@ -129,12 +129,12 @@ export default function DepositsPage() {
       {loadError && <Alert type="error" showIcon title={loadError} action={<Button onClick={load} loading={loading}>重试</Button>} />}
       <OpsPageHeader
         eyebrow="FUNDS"
-        title="客户存款核对与上分"
+        title="上分订单"
         description={dedicatedOperator
           ? "仅显示归属当前专用运营员、使用固定邀请码注册的客户。请核对付款流水和实际到账金额后处理。可通过状态筛选查看历史；待审列表仍使用原有审核接口。"
-          : "财务须自行核对收款账户、付款流水号和实际到账金额，确认后直接上分。固定邀请码客户不会出现在这里。可通过状态筛选查看历史；待审列表仍使用原有审核接口。"}
+          : "客户完成存款后，由财务单人核对收款账户、付款流水号与实际到账金额，确认后直接创建并完成上分。无需双人复核。固定邀请码客户不会出现在这里。"}
       />
-      <Alert type="warning" showIcon title={`只有${dedicatedOperator ? "当前专用运营员" : "财务"}可以处理本页显示的客户。未在收款渠道查到实际资金时，请勿上分。`} />
+      <Alert type="warning" showIcon title={`只有${dedicatedOperator ? "当前专用运营员" : "财务"}可以处理本页显示的客户。未在收款渠道查到实际资金时，请勿上分。财务也可在「上下分」中按交易账号单人创建上分订单。`} />
       <Card>
         <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
           <Space wrap>

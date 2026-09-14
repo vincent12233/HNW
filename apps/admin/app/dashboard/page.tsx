@@ -249,7 +249,7 @@ export default function DashboardPage() {
         ? "财务实时工作台"
         : "平台实时概览";
   const heroDesc = isFinance
-    ? "聚焦入金提现审核、双人复核与资金调整，不改变现有资金流程与权限边界。"
+    ? "客户存款完成后由财务单人创建上分订单；提现由客户在 APP 发起，财务审核。无需双人复核。"
     : "聚合客户、资金、风控和待办数据，优先处理会影响入金、提现和账号安全的事项。";
 
   return (
@@ -362,16 +362,13 @@ export default function DashboardPage() {
               <Card title="财务快捷入口" style={{ borderRadius: 8 }}>
                 <Row gutter={[12, 12]}>
                   <Col xs={24} md={8}>
-                    <QuickAction title="入金审核" description="核对到账后完成上分，流程保持不变" icon={<DollarOutlined />} tone="#c98200" onClick={() => router.push("/deposits")} />
+                    <QuickAction title="上下分" description="单人操作：按交易账号创建上分或下分" icon={<WalletOutlined />} tone="#0d9488" onClick={() => router.push("/finance-overview")} />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="提现审核" description="核对收款信息后通过或拒绝" icon={<BankOutlined />} tone="#dc2626" onClick={() => router.push("/withdrawals")} />
+                    <QuickAction title="上分订单" description="客户存款完成后核对到账并完成上分" icon={<DollarOutlined />} tone="#c98200" onClick={() => router.push("/deposits")} />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="双人复核" description="处理高风险资金调整复核单" icon={<SafetyCertificateOutlined />} tone="#2563eb" onClick={() => router.push("/approvals")} />
-                  </Col>
-                  <Col xs={24} md={8}>
-                    <QuickAction title="资金调整" description="进入财务上分与调账工作台" icon={<WalletOutlined />} tone="#0d9488" onClick={() => router.push("/finance-overview")} />
+                    <QuickAction title="提现审核" description="客户 APP 发起后，核对收款信息并审核" icon={<BankOutlined />} tone="#dc2626" onClick={() => router.push("/withdrawals")} />
                   </Col>
                   <Col xs={24} md={8}>
                     <QuickAction title="资金流水" description="查询账户资金变动记录" icon={<TransactionOutlined />} tone="#7c3aed" onClick={() => router.push("/transactions")} />
@@ -402,7 +399,9 @@ export default function DashboardPage() {
                     <div>
                       <Text strong>财务处理建议</Text>
                       <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-                        客户充值由在线客服确认付款方式，财务在“财务上分”中按交易账号手动入账；提现仍走后台审核。
+                        {isFinance
+                          ? "客户存款完成后，财务单人创建上分订单并执行上下分；提现由客户在 APP 发起，财务审核通过后出金。无需双人复核。"
+                          : "客户充值由在线客服确认付款方式，财务确认到账后单人创建上分；提现由客户在 APP 发起后走财务审核。"}
                       </Paragraph>
                     </div>
                   </Space>
@@ -412,8 +411,8 @@ export default function DashboardPage() {
                 <Card title="今日工作流" style={{ borderRadius: 8 }}>
                   <Space orientation="vertical" size="middle">
                     <Tag color="blue">客户开户：手机号注册 + 邀请码 + KYC</Tag>
-                    <Tag color="green">充值：在线客服沟通，财务手动上分</Tag>
-                    <Tag color="orange">提现：后台审核后扣款出金</Tag>
+                    <Tag color="green">充值：客服沟通付款，存款完成后财务单人上分</Tag>
+                    <Tag color="orange">提现：客户 APP 发起，财务审核后出金</Tag>
                     <Tag color="red">风控：失败登录、共享 IP、共享设备</Tag>
                   </Space>
                 </Card>

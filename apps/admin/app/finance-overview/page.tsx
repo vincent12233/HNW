@@ -160,8 +160,10 @@ export default function FinanceOverviewPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
-          <Title level={2}>资金总览</Title>
-          <Paragraph type="secondary">集中查看账户资产、提现待审、贷款未还、IPO 欠款和最近资金流水。</Paragraph>
+          <Title level={2}>上下分</Title>
+          <Paragraph type="secondary">
+            客户存款完成后，财务按交易账号单人创建上分或下分订单，确认后立即入账并留痕。无需双人复核。提现仍由客户在 APP 发起后走「提现审核」。
+          </Paragraph>
         </div>
         {error && <Alert type="error" title={error} showIcon />}
         <Row gutter={[16, 16]}>
@@ -171,7 +173,7 @@ export default function FinanceOverviewPage() {
           <Col xs={24} md={8} xl={5}><Card><Statistic title="贷款未还" value={metrics.loanOutstanding} prefix={<WarningOutlined />} formatter={(value) => formatMoney(value as number)} /></Card></Col>
           <Col xs={24} md={8} xl={4}><Card><Statistic title="IPO 欠款" value={metrics.ipoOutstanding} formatter={(value) => formatMoney(value as number)} /></Card></Col>
         </Row>
-        <Card title="客户账户" extra={<Text type="secondary">资金调整由当前财务员工确认后立即执行并留痕</Text>}>
+        <Card title="客户账户" extra={<Text type="secondary">当前财务员工单人确认后立即执行并留痕，无需复核</Text>}>
           <Table<AccountRecord> rowKey="id" columns={accountColumns} dataSource={accounts} loading={loading} scroll={{ x: 1100 }} pagination={{ pageSize: 10 }} />
         </Card>
         <Card title="最近资金流水" extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={loadData}>刷新</Button>}>

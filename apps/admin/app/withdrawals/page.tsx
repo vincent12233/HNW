@@ -266,7 +266,7 @@ export default function WithdrawalsPage() {
         <OpsPageHeader
           eyebrow="FUNDS"
           title="提现审核"
-          description="财务确认客户收款信息后，通过或拒绝提现申请。可通过状态筛选查看历史记录；待审列表仍使用原有审核接口。"
+          description="客户在 APP 发起提现后，财务核对收款信息并单人通过或拒绝。可通过状态筛选查看历史记录；待审列表仍使用原有审核接口。"
         />
 
         {error && <Alert type="error" showIcon title={error} />}

@@ -16,7 +16,7 @@ const serverBackendRole = () => undefined;
 const roleHints: Record<BackendRole, string> = {
   ADMIN: "平台治理、产品上架、权限与审计",
   MANAGER: "客户资料、团队业务员与业务审核",
-  FINANCE: "入金提现审核、资金调整与双人复核",
+  FINANCE: "客户存款后创建上分、单人上下分、提现审核",
   BUSINESS: "名下客户、KYC 与业务跟进",
   SUPPORT: "固定邀请码客户与专用客服运营",
 };

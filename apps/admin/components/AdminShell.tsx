@@ -109,9 +109,8 @@ const menus: Record<Role, MenuItemDef[]> = {
   FINANCE: [
     { key: "/dashboard", icon: <DashboardOutlined />, label: "财务工作台", badge: "total" },
     { key: "/customers", icon: <TeamOutlined />, label: "客户账户" },
-    { key: "/finance-overview", icon: <DollarOutlined />, label: "资金调整" },
-    { key: "/approvals", icon: <AuditOutlined />, label: "双人复核", badge: "approvals" },
-    { key: "/deposits", icon: <DollarOutlined />, label: "入金审核", badge: "deposits" },
+    { key: "/finance-overview", icon: <DollarOutlined />, label: "上下分" },
+    { key: "/deposits", icon: <DollarOutlined />, label: "上分订单", badge: "deposits" },
     { key: "/withdrawals", icon: <BankOutlined />, label: "提现审核", badge: "withdrawals" },
     { key: "/transactions", icon: <TransactionOutlined />, label: "资金流水" },
     { key: "/bank-accounts", icon: <BankOutlined />, label: "银行账户" },
@@ -177,10 +176,10 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
   ],
   FINANCE: [
     { title: "工作台", keys: ["/dashboard"] },
-    { title: "资金审核", keys: ["/deposits", "/withdrawals", "/approvals", "/loans"] },
+    { title: "资金操作", keys: ["/finance-overview", "/deposits", "/withdrawals", "/loans"] },
     {
       title: "账户与流水",
-      keys: ["/customers", "/finance-overview", "/transactions", "/bank-accounts", "/ipo-debts"],
+      keys: ["/customers", "/transactions", "/bank-accounts", "/ipo-debts"],
     },
     { title: "交易查询", keys: ["/orders", "/trades"] },
   ],

@@ -1745,15 +1745,20 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
+    // Keep the original flow: dialog first, then online support chat.
+    // Support staff share deposit methods — do not show receiving accounts here.
     _openCustomerService(
       title: 'Add Funds',
       initialMessage: _appContent.text(
-        'deposit',
-        'chat_preset',
-        fallback: 'Hello, I would like to add money to my account.',
+        'support',
+        'chat_preset.deposit',
+        fallback: _appContent.text(
+          'deposit',
+          'chat_preset',
+          fallback: 'Hello, I would like to add money to my account.',
+        ),
       ),
       icon: Icons.account_balance_wallet_outlined,
-      showDepositDetails: true,
     );
   }
 
@@ -2342,7 +2347,6 @@ class _MarketHomePageState extends State<MarketHomePage>
     required String title,
     required String initialMessage,
     required IconData icon,
-    bool showDepositDetails = false,
   }) {
     final messageController = TextEditingController(text: initialMessage);
     final greeting = _appContent.text(
@@ -2351,8 +2355,6 @@ class _MarketHomePageState extends State<MarketHomePage>
       fallback: 'You are contacting online customer service inside the app.',
     );
     final hours = _appContent.text('support', 'hours');
-    final depositInstructions = _appContent.text('deposit', 'instructions');
-    final accounts = _appContent.receivingAccounts;
 
     showDialog<void>(
       context: context,
@@ -2428,62 +2430,6 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ],
                   ),
                 ),
-                if (showDepositDetails && depositInstructions.isNotEmpty) ...[
-                  const SizedBox(height: 14),
-                  AppText(
-                    depositInstructions,
-                    style: const TextStyle(height: 1.45),
-                  ),
-                ],
-                if (showDepositDetails && accounts.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  ...accounts.map((account) {
-                    final details = account.method == 'UPI'
-                        ? (account.upiId ?? '')
-                        : [
-                            account.accountName,
-                            account.bankName,
-                            account.accountNumber,
-                            account.ifsc,
-                          ].whereType<String>().where((v) => v.trim().isNotEmpty).join(' · ');
-                    return Container(
-                      width: double.infinity,
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: const Color(0xFFE8EDF5)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            account.label,
-                            style: const TextStyle(fontWeight: FontWeight.w700),
-                          ),
-                          if (details.isNotEmpty) ...[
-                            const SizedBox(height: 4),
-                            AppText(
-                              details,
-                              style: const TextStyle(
-                                color: Color(0xFF64748B),
-                                fontSize: 12,
-                                height: 1.4,
-                              ),
-                            ),
-                          ],
-                          if (account.notes?.trim().isNotEmpty == true) ...[
-                            const SizedBox(height: 4),
-                            AppText(
-                              account.notes!,
-                              style: const TextStyle(fontSize: 12, height: 1.35),
-                            ),
-                          ],
-                        ],
-                      ),
-                    );
-                  }),
-                ],
                 const SizedBox(height: 18),
                 TextField(
                   controller: messageController,

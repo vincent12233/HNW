@@ -1,13 +1,11 @@
 "use client";
 
 import {
-  BankOutlined,
   BookOutlined,
   CustomerServiceOutlined,
   FileProtectOutlined,
   HomeOutlined,
   InfoCircleOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SaveOutlined,
   StockOutlined,
@@ -18,20 +16,13 @@ import {
   Card,
   Form,
   Input,
-  InputNumber,
-  Modal,
-  Popconfirm,
   Select,
   Space,
-  Switch,
-  Table,
   Tabs,
-  Tag,
   Typography,
   message,
 } from "antd";
-import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -50,19 +41,6 @@ type ContentEntry = {
   sortOrder: number;
 };
 
-type DepositAccount = {
-  id: string;
-  label: string;
-  method: string;
-  accountName?: string | null;
-  bankName?: string | null;
-  accountNumber?: string | null;
-  ifsc?: string | null;
-  upiId?: string | null;
-  notes?: string | null;
-  isActive: boolean;
-  sortOrder: number;
-};
 
 const homeFields = [
   { key: "banner.title", label: "首页横幅标题", rows: 2 },
@@ -71,16 +49,12 @@ const homeFields = [
   { key: "markets.banner.subtitle", label: "行情页横幅副标题", rows: 2 },
 ] as const;
 
-const depositFields = [
-  { key: "instructions", label: "充值说明（客户端展示）", rows: 5 },
-  { key: "chat_preset", label: "点击充值时预填客服消息", rows: 3 },
-  { key: "api_reject_message", label: "客户端入金接口拒绝提示", rows: 3 },
-] as const;
 
 const supportFields = [
   { key: "greeting", label: "客服欢迎语", rows: 3 },
   { key: "hours", label: "服务时间说明", rows: 2 },
   { key: "chat_preset.help", label: "帮助入口预填消息", rows: 2 },
+  { key: "chat_preset.deposit", label: "点击充值时预填客服消息", rows: 2 },
   { key: "salesmartly_script_url", label: "SaleSmartly Script URL", rows: 2 },
 ] as const;
 
@@ -171,12 +145,10 @@ function entryTitle(
 
 export default function AppOpsContentPage() {
   const [entries, setEntries] = useState<ContentEntry[]>([]);
-  const [accounts, setAccounts] = useState<DepositAccount[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [homeForm] = Form.useForm();
-  const [depositForm] = Form.useForm();
   const [supportForm] = Form.useForm();
   const [tradingForm] = Form.useForm();
   const [aboutForm] = Form.useForm();
@@ -184,28 +156,16 @@ export default function AppOpsContentPage() {
   const [insightsForm] = Form.useForm();
   const [opsLocale, setOpsLocale] = useState<"en" | "hi">("en");
   const [insightsLocale, setInsightsLocale] = useState<"en" | "hi">("en");
-  const [accountOpen, setAccountOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<DepositAccount | null>(
-    null,
-  );
-  const [accountForm] = Form.useForm();
 
   async function loadAll() {
     setLoading(true);
     setError("");
     try {
-      const [contentResponse, accountResponse] = await Promise.all([
-        api.get<ContentEntry[]>("/admin/app-content"),
-        api.get<DepositAccount[]>("/admin/app-content/deposit-accounts"),
-      ]);
+      const contentResponse = await api.get<ContentEntry[]>("/admin/app-content");
       const nextEntries = Array.isArray(contentResponse.data)
         ? contentResponse.data
         : [];
-      const nextAccounts = Array.isArray(accountResponse.data)
-        ? accountResponse.data
-        : [];
       setEntries(nextEntries);
-      setAccounts(nextAccounts);
       applyOpsForms(nextEntries, opsLocale);
       aboutForm.setFieldsValue(
         Object.fromEntries(
@@ -243,14 +203,6 @@ export default function AppOpsContentPage() {
         homeFields.map((field) => [
           field.key,
           entryValue(nextEntries, "HOME", field.key, locale),
-        ]),
-      ),
-    );
-    depositForm.setFieldsValue(
-      Object.fromEntries(
-        depositFields.map((field) => [
-          field.key,
-          entryValue(nextEntries, "DEPOSIT", field.key, locale),
         ]),
       ),
     );
@@ -361,113 +313,6 @@ export default function AppOpsContentPage() {
     }
   }
 
-  function openAccount(record?: DepositAccount) {
-    setEditingAccount(record ?? null);
-    accountForm.setFieldsValue(
-      record ?? {
-        method: "BANK",
-        isActive: true,
-        sortOrder: accounts.length,
-      },
-    );
-    setAccountOpen(true);
-  }
-
-  async function submitAccount() {
-    const values = await accountForm.validateFields();
-    try {
-      if (editingAccount) {
-        await api.patch(
-          `/admin/app-content/deposit-accounts/${editingAccount.id}`,
-          values,
-        );
-        message.success("收款账户已更新");
-      } else {
-        await api.post("/admin/app-content/deposit-accounts", values);
-        message.success("收款账户已添加");
-      }
-      setAccountOpen(false);
-      setEditingAccount(null);
-      await loadAll();
-    } catch (requestError: unknown) {
-      message.error(apiError(requestError, "收款账户保存失败"));
-    }
-  }
-
-  const accountColumns: ColumnsType<DepositAccount> = useMemo(
-    () => [
-      { title: "名称", dataIndex: "label", width: 160 },
-      {
-        title: "方式",
-        dataIndex: "method",
-        width: 90,
-        render: (value) => <Tag>{value}</Tag>,
-      },
-      {
-        title: "账户信息",
-        render: (_, record) => (
-          <Space orientation="vertical" size={0}>
-            <Text>{record.accountName || record.upiId || "-"}</Text>
-            <Text type="secondary">
-              {record.method === "UPI"
-                ? record.upiId
-                : [record.bankName, record.accountNumber, record.ifsc]
-                    .filter(Boolean)
-                    .join(" · ") || "-"}
-            </Text>
-          </Space>
-        ),
-      },
-      {
-        title: "状态",
-        dataIndex: "isActive",
-        width: 110,
-        render: (value: boolean, record) => (
-          <Switch
-            checked={value}
-            checkedChildren="启用"
-            unCheckedChildren="停用"
-            onChange={async (checked) => {
-              await api.patch(
-                `/admin/app-content/deposit-accounts/${record.id}/status`,
-                { isActive: checked },
-              );
-              await loadAll();
-            }}
-          />
-        ),
-      },
-      {
-        title: "操作",
-        width: 160,
-        render: (_, record) => (
-          <Space>
-            <Button size="small" onClick={() => openAccount(record)}>
-              编辑
-            </Button>
-            <Popconfirm
-              title="确认删除该收款账户？"
-              okText="删除"
-              cancelText="取消"
-              onConfirm={async () => {
-                await api.delete(
-                  `/admin/app-content/deposit-accounts/${record.id}`,
-                );
-                message.success("已删除");
-                await loadAll();
-              }}
-            >
-              <Button size="small" danger>
-                删除
-              </Button>
-            </Popconfirm>
-          </Space>
-        ),
-      },
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [accounts.length],
-  );
 
   return (
     <AdminShell>
@@ -475,8 +320,8 @@ export default function AppOpsContentPage() {
         <div>
           <Title level={2}>客户端运营配置</Title>
           <Paragraph type="secondary">
-            维护 APP 首页、充值、客服、交易说明、About、法律文本与 Wealth Insights。首页/充值/客服客户端文案/交易说明支持
-            English 与 Hindi；客服标签与快捷回复仍为中文（后台客服台）。修改后客户端下次拉取配置即生效，无需发版。
+            维护 APP 首页、客服、交易说明、About、法律文本与 Wealth Insights。首页/客服客户端文案/交易说明支持
+            English 与 Hindi；客服标签与快捷回复仍为中文（后台客服台）。客户充值仍通过在线客服完成，本页不配置存款/收款账户。修改后客户端下次拉取配置即生效，无需发版。
           </Paragraph>
         </div>
 
@@ -545,86 +390,6 @@ export default function AppOpsContentPage() {
                       保存首页配置（{opsLocale.toUpperCase()}）
                     </Button>
                   </Form>
-                ),
-              },
-              {
-                key: "deposit",
-                label: (
-                  <span>
-                    <BankOutlined /> 充值
-                  </span>
-                ),
-                children: (
-                  <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-                    <Form form={depositForm} layout="vertical">
-                      <Paragraph type="secondary">
-                        当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
-                      </Paragraph>
-                      {depositFields.map((field) => (
-                        <Form.Item
-                          key={field.key}
-                          name={field.key}
-                          label={field.label}
-                          rules={[{ required: true, message: "请填写内容" }]}
-                        >
-                          <TextArea rows={field.rows} />
-                        </Form.Item>
-                      ))}
-                      <Button
-                        type="primary"
-                        icon={<SaveOutlined />}
-                        loading={saving}
-                        onClick={() =>
-                          depositForm.validateFields().then((values) =>
-                            saveModule(
-                              "DEPOSIT",
-                              values,
-                              depositFields.map((field) => ({
-                                key: field.key,
-                                locale: opsLocale,
-                              })),
-                            ),
-                          )
-                        }
-                      >
-                        保存充值文案（{opsLocale.toUpperCase()}）
-                      </Button>
-                    </Form>
-
-                    <Card
-                      size="small"
-                      title="平台收款账户"
-                      extra={
-                        <Button
-                          type="primary"
-                          icon={<PlusOutlined />}
-                          onClick={() => openAccount()}
-                        >
-                          新增账户
-                        </Button>
-                      }
-                    >
-                      <Paragraph type="secondary">
-                        这些账户会随充值配置下发给客户端，供客服或充值说明引用；不会自动完成上分。
-                      </Paragraph>
-                      {accounts.length === 0 ? (
-                        <Alert
-                          type="warning"
-                          showIcon
-                          style={{ marginBottom: 12 }}
-                          title="尚未配置收款账户"
-                          description="客户端充值弹窗将只显示文案说明。请至少新增一个启用中的 BANK/UPI 账户，方便客服与客户核对付款信息。"
-                        />
-                      ) : null}
-                      <Table
-                        rowKey="id"
-                        columns={accountColumns}
-                        dataSource={accounts}
-                        loading={loading}
-                        pagination={false}
-                      />
-                    </Card>
-                  </Space>
                 ),
               },
               {
@@ -908,64 +673,6 @@ export default function AppOpsContentPage() {
         </Card>
       </Space>
 
-      <Modal
-        title={editingAccount ? "编辑收款账户" : "新增收款账户"}
-        open={accountOpen}
-        onCancel={() => {
-          setAccountOpen(false);
-          setEditingAccount(null);
-        }}
-        onOk={submitAccount}
-        okText="保存"
-        cancelText="取消"
-      >
-        <Form form={accountForm} layout="vertical">
-          <Form.Item
-            name="label"
-            label="显示名称"
-            rules={[{ required: true, message: "请输入名称" }]}
-          >
-            <Input placeholder="例如 HDFC 对公账户" />
-          </Form.Item>
-          <Form.Item
-            name="method"
-            label="收款方式"
-            rules={[{ required: true }]}
-          >
-            <Select
-              options={[
-                { value: "BANK", label: "银行转账" },
-                { value: "UPI", label: "UPI" },
-                { value: "OTHER", label: "其他" },
-              ]}
-            />
-          </Form.Item>
-          <Form.Item name="accountName" label="账户名">
-            <Input />
-          </Form.Item>
-          <Form.Item name="bankName" label="银行名称">
-            <Input />
-          </Form.Item>
-          <Form.Item name="accountNumber" label="账号">
-            <Input />
-          </Form.Item>
-          <Form.Item name="ifsc" label="IFSC">
-            <Input />
-          </Form.Item>
-          <Form.Item name="upiId" label="UPI ID">
-            <Input />
-          </Form.Item>
-          <Form.Item name="notes" label="备注">
-            <TextArea rows={3} />
-          </Form.Item>
-          <Form.Item name="sortOrder" label="排序">
-            <InputNumber min={0} style={{ width: "100%" }} />
-          </Form.Item>
-          <Form.Item name="isActive" label="启用" valuePropName="checked">
-            <Switch />
-          </Form.Item>
-        </Form>
-      </Modal>
     </AdminShell>
   );
 }

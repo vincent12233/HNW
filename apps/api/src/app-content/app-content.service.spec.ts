@@ -102,7 +102,7 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
       },
       {
         module: AppContentModule.SUPPORT,
-        keys: ['greeting', 'hours', 'chat_preset.help', 'salesmartly_script_url'],
+        keys: ['greeting', 'hours', 'chat_preset.help', 'chat_preset.deposit', 'salesmartly_script_url'],
       },
       {
         module: AppContentModule.TRADING,

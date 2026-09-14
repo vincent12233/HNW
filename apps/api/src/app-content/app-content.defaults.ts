@@ -348,6 +348,20 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
   },
   {
     module: AppContentModule.SUPPORT,
+    key: 'chat_preset.deposit',
+    body: 'Hello, I would like to add money to my account.',
+    locale: 'en',
+    sortOrder: 35,
+  },
+  {
+    module: AppContentModule.SUPPORT,
+    key: 'chat_preset.deposit',
+    body: 'नमस्ते, मैं अपने खाते में पैसे जोड़ना चाहता/चाहती हूँ।',
+    locale: 'hi',
+    sortOrder: 35,
+  },
+  {
+    module: AppContentModule.SUPPORT,
     key: 'salesmartly_script_url',
     body: '',
     locale: 'en',

@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
 import '../models/institutional_opportunity.dart';
+import '../models/company_showcase.dart';
 import '../models/ipo.dart';
 import '../models/market_news_item.dart';
 import '../models/pending_order.dart';
@@ -132,6 +133,7 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   final List<StockQuote> stocks = <StockQuote>[];
   final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
+  final List<CompanyShowcase> companyShowcases = <CompanyShowcase>[];
   final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
   AppContentBundle _appContent = AppContentBundle.empty;
@@ -588,6 +590,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       marketDataService.fetchMarketSession(),
       marketDataService.fetchInstitutionalOffers(),
       marketDataService.fetchMarketNews(),
+      marketDataService.fetchCompanyShowcase(),
     ]);
     if (!mounted) return;
     final refreshedStocks = results[0] as List<StockQuote>;
@@ -595,12 +598,16 @@ class _MarketHomePageState extends State<MarketHomePage>
     final session = results[2] as Map<String, dynamic>?;
     final refreshedInstitutional = results[3] as List<InstitutionalStock>;
     final refreshedNews = results[4] as List<MarketNewsItem>;
+    final refreshedCompanies = results[5] as List<CompanyShowcase>;
     setState(() {
       if (refreshedStocks.isNotEmpty) {
         stocks
           ..clear()
           ..addAll(refreshedStocks);
       }
+      companyShowcases
+        ..clear()
+        ..addAll(refreshedCompanies);
       for (final item in indices) {
         final symbol = item['symbol']?.toString().trim().toUpperCase();
         final price = double.tryParse(item['price']?.toString() ?? '');
@@ -903,8 +910,8 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
                 Positioned(
                   right: 0,
-                  bottom: 112,
-                  child: SafeArea(child: _sideCustomerServiceButton()),
+                  bottom: 86,
+                  child: SafeArea(child: _floatingCustomerServiceButton()),
                 ),
               ],
             ),
@@ -1273,6 +1280,12 @@ class _MarketHomePageState extends State<MarketHomePage>
         ),
         const SizedBox(height: 8),
         _homeQuickActions(),
+        if (companyShowcases.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _sectionTitle('Our Company'),
+          const SizedBox(height: 10),
+          _companyShowcaseCard(companyShowcases.first),
+        ],
         const SizedBox(height: 8),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
@@ -1341,6 +1354,85 @@ class _MarketHomePageState extends State<MarketHomePage>
                 fontWeight: FontWeight.w800,
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _companyShowcaseCard(CompanyShowcase company) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [Color(0xFF0B1F44), Color(0xFF123B72), Color(0xFF176B88)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [BoxShadow(color: Color(0x33152F5F), blurRadius: 18, offset: Offset(0, 8))],
+      ),
+      child: Stack(
+        children: [
+          Positioned(right: -28, top: -34, child: Container(width: 130, height: 130, decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.white.withValues(alpha: .08)))),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(children: [
+                Container(width: 50, height: 50, decoration: BoxDecoration(color: Colors.white.withValues(alpha: .14), borderRadius: BorderRadius.circular(15), border: Border.all(color: Colors.white24)), child: company.logoUrl?.isNotEmpty == true ? ClipRRect(borderRadius: BorderRadius.circular(15), child: Image.network(company.logoUrl!, fit: BoxFit.cover, errorBuilder: (_, _, _) => const Icon(Icons.business_rounded, color: Colors.white))) : const Icon(Icons.business_rounded, color: Colors.white)),
+                const SizedBox(width: 12),
+                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppText(company.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), const SizedBox(height: 4), AppText(company.tagline, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD5E6FF), fontSize: 12, height: 1.3))])),
+                const Icon(Icons.verified_rounded, color: Color(0xFF8DE7D3), size: 22),
+              ]),
+              if (company.videoUrl?.isNotEmpty == true) ...[
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF07152F),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Color(0xFF123B72),
+                              size: 34,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const AppText(
+                            'Watch our company introduction',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+              const SizedBox(height: 16),
+              AppText(company.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE7F0FF), fontSize: 13, height: 1.55)),
+              const SizedBox(height: 16),
+              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: const Text('Visit website', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
+            ]),
           ),
         ],
       ),
@@ -1753,50 +1845,63 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openSupportChat({String? initialMessage}) {
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SupportChatPage(initialMessage: initialMessage),
+    showDialog<void>(
+      context: context,
+      barrierColor: const Color(0x66071326),
+      builder: (dialogContext) => Dialog(
+        insetPadding: const EdgeInsets.fromLTRB(14, 36, 14, 86),
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
+          child: SupportChatPage(initialMessage: initialMessage),
+        ),
       ),
     );
   }
 
-  Widget _sideCustomerServiceButton() {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: () => _openSupportChat(),
+  Widget _floatingCustomerServiceButton() {
+    return Semantics(
+      button: true,
+      label: 'Customer Support',
+      child: Material(
+        color: Colors.transparent,
+        elevation: 10,
+        shadowColor: const Color(0x66000000),
         borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-        child: Ink(
-          width: 28,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          decoration: const BoxDecoration(
-            color: AppConfig.primaryColor,
-            borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
-            boxShadow: [
-              BoxShadow(
-                color: Color(0x33000000),
-                blurRadius: 10,
-                offset: Offset(0, 3),
-              ),
-            ],
+        child: InkWell(
+          borderRadius: const BorderRadius.horizontal(
+            left: Radius.circular(12),
           ),
-          child: const Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.support_agent_rounded, color: Colors.white, size: 16),
-              SizedBox(height: 8),
-              RotatedBox(
-                quarterTurns: 3,
-                child: AppText(
-                  'Support',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w700,
+          onTap: () => _openSupportChat(),
+          child: Ink(
+            width: 42,
+            height: 174,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Color(0xFF2F6BFF), Color(0xFF0B47D1)],
+              ),
+              borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
+            ),
+            child: const Column(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                RotatedBox(
+                  quarterTurns: 3,
+                  child: Text(
+                    'Customer Service',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 19),
+              ],
+            ),
           ),
         ),
       ),

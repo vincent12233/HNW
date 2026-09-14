@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   BankOutlined,
@@ -8,6 +8,7 @@ import {
   SafetyCertificateOutlined,
   StockOutlined,
   TeamOutlined,
+  TransactionOutlined,
   UserAddOutlined,
   WalletOutlined,
   WarningOutlined,
@@ -350,6 +351,14 @@ export default function DashboardPage() {
               </Col>
             </Row>
 
+            <Card title="交易产品运营" style={{ borderRadius: 8 }}>
+              <Row gutter={[12, 12]}>
+                <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理机构股票上架、报价和预期收益" icon={<StockOutlined />} tone="#2563eb" onClick={() => router.push("/watchlist")} /></Col>
+                <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" onClick={() => router.push("/block-trades")} /></Col>
+                <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" onClick={() => router.push("/ipo-management")} /></Col>
+              </Row>
+            </Card>
+
             <Row gutter={[16, 16]}>
               <Col xs={24} lg={14}>
                 <Card title="运营优先级" style={{ borderRadius: 8 }}>
@@ -423,3 +432,4 @@ export default function DashboardPage() {
     </AdminShell>
   );
 }
+

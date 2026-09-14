@@ -5,8 +5,8 @@ import '../../models/institutional_opportunity.dart';
 import '../../models/stock_quote.dart';
 import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
-import '../stock_logo.dart';
 import '../responsive_empty_state.dart';
+import 'product_offer_card.dart';
 import 'trading_guide_card.dart';
 
 class InstitutionalTab extends StatelessWidget {
@@ -77,102 +77,46 @@ class InstitutionalTab extends StatelessWidget {
             }
 
             final live = quote != null && quote.quoteFresh;
-            final positive = (quote?.change ?? 0) >= 0;
-            final changeColor = positive
-                ? const Color(0xFF16A364)
-                : const Color(0xFFDC3545);
-        return Material(
-          color: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE5E7EB)),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: onOpen != null && live ? () => onOpen!(stock) : null,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 15),
-              child: Row(
-                children: [
-                  StockLogo(
-                    symbol: stock.symbol,
-                    logoUrl: quote?.logoUrl,
-                    size: 42,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
+            return ProductOfferCard(
+              name: stock.companyName,
+              symbol: stock.symbol,
+              type: 'Ins. Stock',
+              marketPrice: stock.marketPrice > 0
+                  ? stock.marketPrice
+                  : (live ? quote.price : 0),
+              offerPrice: stock.price,
+              actionLabel: onOpen == null ? 'View details' : 'Trade Now',
+              onTrade: () {
+                if (onOpen != null && live) {
+                  onOpen!(stock);
+                  return;
+                }
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: AppText(stock.companyName),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AppText(
-                          stock.companyName,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        AppText(
-                          '${stock.symbol} · ${stock.exchange}',
-                          style: const TextStyle(
-                            color: Color(0xFF64748B),
-                            fontSize: 11,
-                          ),
-                        ),
-                        if (!live)
-                          const Padding(
-                            padding: EdgeInsets.only(top: 3),
-                            child: AppText(
-                              'Live quote unavailable',
-                              style: TextStyle(
-                                color: Color(0xFF94A3B8),
-                                fontSize: 10,
-                              ),
-                            ),
-                          ),
+                        AppText('${stock.symbol} · ${stock.exchange}'),
+                        const SizedBox(height: 16),
+                        AppText('Offer Price: ${formatPrice(stock.price)}'),
+                        if (!live) const AppText('Live quote unavailable'),
                       ],
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      AppText(
-                        live ? formatPrice(quote.price) : '--',
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      AppText(
-                        live
-                            ? '${positive ? '+' : ''}${quote.change.toStringAsFixed(2)}%'
-                            : '--',
-                        style: TextStyle(
-                          color: live ? changeColor : const Color(0xFF94A3B8),
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const AppText('Close'),
                       ),
                     ],
                   ),
-                  if (onOpen != null && live)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8),
-                      child: Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF94A3B8),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+                );
+              },
+            );
+          },
         );
-      },
-    );
       },
     );
   }

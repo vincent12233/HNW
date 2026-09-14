@@ -864,6 +864,24 @@ model LoanApplication {
   @@map("loan_applications")
 }
 
+model CompanyShowcase {
+  id          String   @id @default(uuid())
+  name        String
+  tagline     String
+  description String
+  logoUrl     String?
+  videoUrl    String?
+  websiteUrl  String?
+  sector      String?
+  status      String   @default("ACTIVE")
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, sortOrder])
+  @@map("company_showcases")
+}
+
 enum LoanStatus {
   PENDING
   APPROVED

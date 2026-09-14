@@ -1,6 +1,6 @@
 "use client";
 
-import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
+import { AuditOutlined, BankOutlined, BarChartOutlined, CustomerServiceOutlined, DashboardOutlined, DollarOutlined, GiftOutlined, IdcardOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, SettingOutlined, ShopOutlined, StockOutlined, TeamOutlined, TransactionOutlined, UsergroupAddOutlined } from "@ant-design/icons";
 import { Alert, Avatar, Badge, Button, Drawer, Layout, Menu, Space, Spin, Tag, Typography } from "antd";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
@@ -25,6 +25,7 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/block-trades", icon: <BankOutlined />, label: "OTC 上架" },
     { key: "/ipo-management", icon: <GiftOutlined />, label: "IPO 上架" },
     { key: "/app-content", icon: <SettingOutlined />, label: "客户端运营配置" },
+    { key: "/company-showcase", icon: <ShopOutlined />, label: "平台公司信息" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
   ],
   MANAGER: [
@@ -43,7 +44,6 @@ const menus: Record<Role, MenuItem[]> = {
     { key: "/business-customers", icon: <TeamOutlined />, label: "我的客户" },
     { key: "/business-kyc", icon: <IdcardOutlined />, label: "KYC 审核", badge: "kyc" },
     { key: "/business-accounts", icon: <BankOutlined />, label: "客户账户" },
-    { key: "/business-institutional", icon: <StockOutlined />, label: "Inst. 业务" },
     { key: "/business-otc", icon: <TransactionOutlined />, label: "OTC 审核", badge: "otc" },
     { key: "/business-ipo", icon: <GiftOutlined />, label: "IPO 分配" },
     { key: "/business-positions", icon: <BarChartOutlined />, label: "客户持仓" },

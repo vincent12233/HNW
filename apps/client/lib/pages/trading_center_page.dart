@@ -82,7 +82,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   int selectedTab = 0;
 
   final List<_TradingModule> tabs = const [
-    _TradingModule('Overview', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
+    _TradingModule('Trades', Icons.swap_horiz_rounded, Color(0xFF2563EB)),
     _TradingModule(
       'Institutional',
       Icons.account_balance_outlined,
@@ -93,7 +93,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
       Icons.account_balance_wallet_outlined,
       Color(0xFF059669),
     ),
-    _TradingModule('Pending Orders', Icons.schedule_rounded, Color(0xFFF97316)),
+    _TradingModule('Pending', Icons.schedule_rounded, Color(0xFFF97316)),
     _TradingModule(
       'Order Book',
       Icons.receipt_long_outlined,
@@ -101,7 +101,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     ),
     _TradingModule('OTC', Icons.handshake_outlined, Color(0xFF0D9488)),
     _TradingModule('IPO', Icons.campaign_outlined, Color(0xFFEF4444)),
-    _TradingModule('Order History', Icons.history_rounded, Color(0xFFF59E0B)),
+    _TradingModule('History', Icons.history_rounded, Color(0xFFF59E0B)),
     _TradingModule(
       'Funds Ledger',
       Icons.account_balance_wallet_outlined,
@@ -469,25 +469,25 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     padding: const EdgeInsets.symmetric(horizontal: 16),
     child: Row(
       children: [
-        for (final index in [0, 1, 5, 6])
+        for (final item in <(int, String)>[(0, 'All'), (1, 'Ins. Stock'), (5, 'OTC'), (6, 'IPO')])
           Expanded(
             child: Semantics(
               selected:
-                  selectedTab == index ||
-                  (index == 0 && [2, 3, 4, 7].contains(selectedTab)),
+                  selectedTab == item.$1 ||
+                  (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab)),
               child: TextButton(
-                onPressed: () => _selectTab(index),
+                onPressed: () => _selectTab(item.$1),
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 3),
                   minimumSize: const Size(0, 48),
                   foregroundColor:
-                      selectedTab == index ||
-                          (index == 0 && [2, 3, 4, 7].contains(selectedTab))
+                      selectedTab == item.$1 ||
+                          (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
                       ? AppConfig.primaryColor
                       : AppConfig.textSecondaryColor,
                 ),
                 child: AppText(
-                  tabs[index].label,
+                  item.$2,
                   textAlign: TextAlign.center,
                   maxLines: 2,
                   style: const TextStyle(
@@ -652,3 +652,6 @@ class _TradingModule {
   final IconData icon;
   final Color color;
 }
+
+
+

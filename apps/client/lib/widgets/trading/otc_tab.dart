@@ -9,7 +9,7 @@ import '../../services/app_content_service.dart';
 import '../../services/otc_service.dart';
 import '../../utils/number_formatters.dart';
 import '../responsive_empty_state.dart';
-import '../stock_logo.dart';
+import 'product_offer_card.dart';
 import 'trading_guide_card.dart';
 
 class OtcTab extends StatefulWidget {
@@ -110,100 +110,14 @@ class _OtcTabState extends State<OtcTab> {
           }
           final item = items[offset];
 
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      StockLogo(symbol: item.symbol, size: 44),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(
-                              item.symbol,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            AppText(
-                              item.companyName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.black54),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F7F3),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: AppText(
-                          item.status.isEmpty ? 'Available' : item.status,
-                          style: const TextStyle(
-                            color: AppConfig.primaryColor,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _value(
-                          'Market Price',
-                          formatPrice(item.marketPrice),
-                        ),
-                      ),
-                      Expanded(
-                        child: _value(
-                          'Discount Price',
-                          formatPrice(item.price),
-                          valueColor: AppConfig.gainColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (item.marketPrice > item.price && item.price > 0)
-                    AppText(
-                      'Settlement uses discount price · Save ${formatPrice(item.marketPrice - item.price)}',
-                      style: const TextStyle(
-                        color: AppConfig.gainColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  const SizedBox(height: 14),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      onPressed: item.price > 0
-                          ? () => _submitDialog(item)
-                          : null,
-                      icon: const Icon(Icons.shopping_cart_checkout_rounded),
-                      label: const AppText('Buy'),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+          return ProductOfferCard(
+            name: item.companyName,
+            symbol: item.symbol,
+            type: 'OTC',
+            marketPrice: item.marketPrice,
+            offerPrice: item.price,
+            onTrade: item.price > 0 ? () => _submitDialog(item) : null,
+          );        },
       ),
     );
   }
@@ -317,20 +231,5 @@ class _OtcTabState extends State<OtcTab> {
     );
   }
 
-  Widget _value(String label, String value, {Color? valueColor}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
-        ),
-        const SizedBox(height: 4),
-        AppText(
-          value,
-          style: TextStyle(fontWeight: FontWeight.w600, color: valueColor),
-        ),
-      ],
-    );
-  }
 }
+

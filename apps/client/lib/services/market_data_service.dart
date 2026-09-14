@@ -9,6 +9,7 @@ import '../models/institutional_opportunity.dart';
 import '../models/stock_quote.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
+import '../models/company_showcase.dart';
 
 class MarketSearchPage {
   const MarketSearchPage({
@@ -27,6 +28,15 @@ class MarketSearchPage {
 }
 
 class MarketDataService {
+  Future<List<CompanyShowcase>> fetchCompanyShowcase() async {
+    try {
+      final response = await http.get(Uri.parse('${AppConfig.apiBaseUrl}/company-showcase')).timeout(const Duration(seconds: 8));
+      if (response.statusCode < 200 || response.statusCode >= 300) return const [];
+      final decoded = jsonDecode(response.body);
+      if (decoded is! List) return const [];
+      return decoded.whereType<Map>().map((row) => CompanyShowcase.fromJson(Map<String, dynamic>.from(row))).toList();
+    } catch (_) { return const []; }
+  }
   Future<List<MarketNewsItem>> fetchMarketNews({int limit = 8}) async {
     try {
       final response = await http

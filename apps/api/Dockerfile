@@ -12,6 +12,9 @@ RUN npm ci
 
 COPY nest-cli.json tsconfig.json tsconfig.build.json ./
 COPY src ./src
+# Generate the Prisma client after copying source so generated runtime files are
+# present in the final build output.
+RUN npx prisma generate
 RUN npm run build
 
 EXPOSE 3000

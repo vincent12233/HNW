@@ -4,6 +4,7 @@ build
 .flutter-plugins-dependencies
 .packages
 .pub-cache
+.gradle*
 android
 ios
 linux

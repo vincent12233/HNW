@@ -38,6 +38,7 @@ import 'two_factor_page.dart';
 import 'appearance_page.dart';
 import '../theme/appearance_settings.dart';
 import '../widgets/market_header.dart';
+import '../widgets/market_status_card.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/floating_support_button.dart';
 import '../widgets/support_ui_metrics.dart';
@@ -1538,7 +1539,7 @@ class _MarketHomePageState extends State<MarketHomePage>
     );
   }
 
-  Widget _marketOverviewGrid() {
+  Widget _marketIndicesStrip() {
     final vix =
         indexQuotes['INDIAVIX'] ??
         indexQuotes['INDIA VIX'] ??
@@ -1548,138 +1549,84 @@ class _MarketHomePageState extends State<MarketHomePage>
         'NIFTY 50',
         nifty50Price > 0 ? formatIndex(nifty50Price) : '--',
         nifty50Change,
-        'NSE',
       ),
       (
         'SENSEX',
         sensexPrice > 0 ? formatIndex(sensexPrice) : '--',
         sensexChange,
-        'BSE',
       ),
       (
         'BANK NIFTY',
         bankNiftyPrice > 0 ? formatIndex(bankNiftyPrice) : '--',
         bankNiftyChange,
-        'NSE',
       ),
       (
         'INDIA VIX',
         vix != null && vix.$1 > 0 ? formatIndex(vix.$1) : '--',
         vix?.$2 ?? 0,
-        'NSE',
       ),
     ];
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns =
-            constraints.maxWidth >= 320 &&
-                MediaQuery.textScalerOf(context).scale(1) <= 1.15
-            ? 4
-            : 2;
-        const gap = 8.0;
-        final cardWidth =
-            (constraints.maxWidth - (columns - 1) * gap) / columns;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: indices.map((item) {
-            final positive = item.$3 >= 0;
-
-            return SizedBox(
-              width: cardWidth,
-              child: Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE8EDF5)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFF0F172A).withValues(alpha: 0.035),
-                      blurRadius: 10,
-                      offset: const Offset(0, 5),
-                    ),
-                  ],
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: indices.length,
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final item = indices[index];
+          final available = item.$2 != '--';
+          final positive = item.$3 >= 0;
+          final color = !available
+              ? AppConfig.neutralColor
+              : positive
+              ? AppConfig.gainColor
+              : AppConfig.lossColor;
+          return Container(
+            width: 148,
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFFE8EDF5)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  item.$1,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Color(0xFF64748B),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppText(
-                            item.$1,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFF64748B),
-                              fontSize: 9,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 7),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: AppText(
-                        item.$2,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 5),
-                    AppText(
-                      item.$2 == '--'
-                          ? 'Unavailable'
-                          : '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%',
-                      style: TextStyle(
-                        color: item.$2 == '--'
-                            ? AppConfig.neutralColor
-                            : positive
-                            ? AppConfig.gainColor
-                            : AppConfig.lossColor,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 7),
-                    SizedBox(
-                      height: 24,
-                      width: double.infinity,
-                      child: (indexHistory[item.$1]?.length ?? 0) >= 2
-                          ? CustomPaint(
-                              painter: _MiniLineChartPainter(
-                                color: item.$2 == '--'
-                                    ? AppConfig.neutralColor
-                                    : positive
-                                    ? AppConfig.gainColor
-                                    : AppConfig.lossColor,
-                                values: indexHistory[item.$1]!,
-                              ),
-                            )
-                          : const Center(
-                              child: AppText(
-                                '--',
-                                style: TextStyle(
-                                  color: Color(0xFF94A3B8),
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ),
-                    ),
-                  ],
+                const Spacer(),
+                AppText(
+                  item.$2,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-            );
-          }).toList(),
-        );
-      },
+                const SizedBox(height: 2),
+                AppText(
+                  available
+                      ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
+                      : 'Unavailable',
+                  style: TextStyle(
+                    color: color,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -2746,6 +2693,8 @@ class _MarketHomePageState extends State<MarketHomePage>
             onNotificationTap: _openNotifications,
             notificationCount: unreadNotificationCount,
           ),
+          const SizedBox(height: 10),
+          const MarketStatusCard(),
           const SizedBox(height: 14),
           _homeFundsCard(),
           const SizedBox(height: 18),
@@ -2758,7 +2707,7 @@ class _MarketHomePageState extends State<MarketHomePage>
             onViewAll: () => setState(() => selectedIndex = 1),
           ),
           const SizedBox(height: 10),
-          _marketOverviewGrid(),
+          _marketIndicesStrip(),
           const SizedBox(height: 18),
           _compactMovers(),
           const SizedBox(height: 18),

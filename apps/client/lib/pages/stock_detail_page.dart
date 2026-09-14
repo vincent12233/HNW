@@ -639,6 +639,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
           ),
         ],
       ),
+      bottomNavigationBar: _stickyTradeBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -816,6 +817,20 @@ class _StockDetailPageState extends State<StockDetailPage> {
               ButtonSegment<bool>(value: false, label: AppText('Sell')),
             ],
             selected: {isBuy},
+            style: ButtonStyle(
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return AppConfig.textPrimaryColor;
+              }),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (!states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
+              }),
+            ),
             onSelectionChanged: (selection) =>
                 setState(() => isBuy = selection.first),
           ),
@@ -914,20 +929,75 @@ class _StockDetailPageState extends State<StockDetailPage> {
           ),
           const SizedBox(height: 16),
           _orderPreviewCard(),
-          const SizedBox(height: 18),
-          SizedBox(
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: placeOrder,
-              icon: Icon(
-                isBuy ? Icons.shopping_cart_outlined : Icons.sell_outlined,
+          const SizedBox(height: 8),
+          AppText(
+            'Use Buy / Sell below to review and submit your order.',
+            style: TextStyle(
+              color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _stickyTradeBar() {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(top: BorderSide(color: Color(0xFFE8EDF5))),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: FilledButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () {
+                        setState(() => isBuy = true);
+                        placeOrder();
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppConfig.gainColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const AppText(
+                  'BUY',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                ),
               ),
-              style: FilledButton.styleFrom(
-                backgroundColor: isBuy
-                    ? AppConfig.gainColor
-                    : AppConfig.lossColor,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: 48,
+              child: FilledButton(
+                onPressed: isSubmitting
+                    ? null
+                    : () {
+                        setState(() => isBuy = false);
+                        placeOrder();
+                      },
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppConfig.lossColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const AppText(
+                  'SELL',
+                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                ),
               ),
-              label: AppText(isBuy ? 'Review Buy Order' : 'Review Sell Order'),
             ),
           ),
         ],

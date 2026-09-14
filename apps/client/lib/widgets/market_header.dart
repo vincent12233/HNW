@@ -97,11 +97,6 @@ class MarketHeader extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
-              tooltip: 'Search',
-              onPressed: onSearchTap,
-              icon: const Icon(Icons.search_rounded, size: 22),
-            ),
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -141,6 +136,38 @@ class MarketHeader extends StatelessWidget {
               ],
             ),
           ],
+        ),
+        const SizedBox(height: 12),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: onSearchTap,
+            borderRadius: BorderRadius.circular(10),
+            child: Ink(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: const Color(0xFFE2E8F0)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.search_rounded, size: 20, color: Color(0xFF94A3B8)),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: AppText(
+                      'Search stocks, indices…',
+                      style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ),
       ],
     );

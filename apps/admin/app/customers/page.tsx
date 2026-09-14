@@ -2,6 +2,7 @@
 
 import {
   HistoryOutlined,
+  ProfileOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
@@ -11,6 +12,8 @@ import {
   Alert,
   Button,
   Card,
+  Descriptions,
+  Drawer,
   Input,
   Select,
   message,
@@ -84,6 +87,68 @@ type Customer = {
   loginAudits?: LoginAudit[];
   loginRisk?: LoginRisk | null;
 };
+
+type CustomerOverview = {
+  customer: Customer & {
+    email?: string | null;
+  };
+  kyc?: {
+    id?: string;
+    status: string;
+    documentType?: string;
+    reviewNote?: string | null;
+    createdAt?: string;
+  };
+  recentDeposits?: Array<{
+    id: string;
+    amount: string | number;
+    paymentMethod?: string | null;
+    referenceId?: string | null;
+    status: string;
+    note?: string | null;
+    createdAt: string;
+  }>;
+  recentWithdrawals?: Array<{
+    id: string;
+    orderNo?: string | null;
+    amount: string | number;
+    status: string;
+    note?: string | null;
+    createdAt: string;
+  }>;
+  recentOrders?: Array<{
+    id: string;
+    clientOrderId: string;
+    side: string;
+    type: string;
+    status: string;
+    quantity: number;
+    filledQuantity: number;
+    limitPrice?: string | number | null;
+    averageFillPrice?: string | number | null;
+    placedAt: string;
+    instrument?: {
+      symbol: string;
+      name: string;
+      exchange: string;
+    } | null;
+  }>;
+};
+
+function statusTag(status?: string) {
+  const map: Record<string, { color: string; label: string }> = {
+    PENDING: { color: "orange", label: "待处理" },
+    APPROVED: { color: "green", label: "已通过" },
+    REJECTED: { color: "red", label: "已拒绝" },
+    NOT_SUBMITTED: { color: "default", label: "未提交" },
+    FILLED: { color: "green", label: "已成交" },
+    CANCELLED: { color: "default", label: "已取消" },
+    OPEN: { color: "blue", label: "挂单中" },
+    PARTIALLY_FILLED: { color: "blue", label: "部分成交" },
+  };
+  const config = map[status ?? ""] ?? { color: "default", label: status || "-" };
+  return <Tag color={config.color}>{config.label}</Tag>;
+}
 
 function formatMoney(value?: string | number | null) {
   return new Intl.NumberFormat("en-IN", {
@@ -205,6 +270,10 @@ export default function CustomersPage() {
     null,
   );
 
+  const [overviewOpen, setOverviewOpen] = useState(false);
+  const [overviewLoading, setOverviewLoading] = useState(false);
+  const [overview, setOverview] = useState<CustomerOverview | null>(null);
+
   async function loadCustomers() {
     setLoading(true);
     setError("");
@@ -253,6 +322,29 @@ export default function CustomersPage() {
 
     loadCustomers();
   }, []);
+
+  async function openOverview(customer: Customer) {
+    setSelectedCustomer(customer);
+    setOverviewOpen(true);
+    setOverviewLoading(true);
+    setOverview(null);
+
+    try {
+      const response = await api.get<CustomerOverview>(
+        `/admin/customers/${customer.id}/overview`,
+      );
+      setOverview(response.data);
+    } catch (requestError: any) {
+      const responseMessage = requestError.response?.data?.message;
+      message.error(
+        Array.isArray(responseMessage)
+          ? responseMessage.join("，")
+          : responseMessage || "客户详情加载失败",
+      );
+    } finally {
+      setOverviewLoading(false);
+    }
+  }
 
   async function openLoginHistory(customer: Customer) {
     setSelectedCustomer(customer);
@@ -470,10 +562,19 @@ export default function CustomersPage() {
     {
       title: "操作",
       key: "actions",
-      width: 260,
+      width: 340,
       fixed: "right",
       render: (_, record) => (
-        <Space>
+        <Space wrap>
+          <Button
+            size="small"
+            type="primary"
+            icon={<ProfileOutlined />}
+            onClick={() => openOverview(record)}
+          >
+            客户详情
+          </Button>
+
           <Button
             size="small"
             icon={<HistoryOutlined />}
@@ -589,6 +690,117 @@ export default function CustomersPage() {
           />
         </Card>
       </Space>
+
+      <Drawer
+        title={
+          selectedCustomer
+            ? `${selectedCustomer.fullName} · 客户详情`
+            : "客户详情"
+        }
+        open={overviewOpen}
+        onClose={() => setOverviewOpen(false)}
+        width={920}
+        destroyOnHidden
+      >
+        {overviewLoading && <Paragraph type="secondary">加载中…</Paragraph>}
+        {!overviewLoading && overview && (
+          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+            <Descriptions size="small" column={2} bordered>
+              <Descriptions.Item label="客户编号">
+                {overview.customer.customerNo || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="手机号">
+                {overview.customer.phone ? `+91 ${overview.customer.phone}` : "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="邮箱">
+                {overview.customer.email || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="状态">
+                <Tag color={overview.customer.status === "ACTIVE" ? "green" : "red"}>
+                  {overview.customer.status === "ACTIVE" ? "正常" : "已停用"}
+                </Tag>
+              </Descriptions.Item>
+              <Descriptions.Item label="交易账号">
+                {overview.customer.account?.accountNumber || "-"}
+              </Descriptions.Item>
+              <Descriptions.Item label="KYC">
+                {statusTag(overview.kyc?.status)}
+              </Descriptions.Item>
+              <Descriptions.Item label="现金余额">
+                {formatMoney(overview.customer.account?.cashBalance)}
+              </Descriptions.Item>
+              <Descriptions.Item label="可用资金">
+                {formatMoney(overview.customer.account?.buyingPower)}
+              </Descriptions.Item>
+              <Descriptions.Item label="冻结资金">
+                {formatMoney(overview.customer.account?.frozenBalance)}
+              </Descriptions.Item>
+              <Descriptions.Item label="所属业务员">
+                {overview.customer.assignedBusiness?.fullName || "-"}
+              </Descriptions.Item>
+            </Descriptions>
+
+            <Card size="small" title="最近入金（最多 20 笔）">
+              <Table
+                rowKey="id"
+                size="small"
+                pagination={false}
+                dataSource={overview.recentDeposits ?? []}
+                columns={[
+                  { title: "金额", dataIndex: "amount", render: formatMoney, width: 120 },
+                  { title: "状态", dataIndex: "status", render: statusTag, width: 100 },
+                  { title: "流水号", dataIndex: "referenceId", render: (v) => v || "-" },
+                  { title: "时间", dataIndex: "createdAt", render: formatDate, width: 170 },
+                ]}
+                locale={{ emptyText: "暂无入金记录" }}
+              />
+            </Card>
+
+            <Card size="small" title="最近提现（最多 20 笔）">
+              <Table
+                rowKey="id"
+                size="small"
+                pagination={false}
+                dataSource={overview.recentWithdrawals ?? []}
+                columns={[
+                  { title: "订单号", dataIndex: "orderNo", render: (v) => v || "-", width: 160 },
+                  { title: "金额", dataIndex: "amount", render: formatMoney, width: 120 },
+                  { title: "状态", dataIndex: "status", render: statusTag, width: 100 },
+                  { title: "时间", dataIndex: "createdAt", render: formatDate, width: 170 },
+                ]}
+                locale={{ emptyText: "暂无提现记录" }}
+              />
+            </Card>
+
+            <Card size="small" title="最近订单（最多 20 笔）">
+              <Table
+                rowKey="id"
+                size="small"
+                pagination={false}
+                dataSource={overview.recentOrders ?? []}
+                columns={[
+                  {
+                    title: "标的",
+                    render: (_, row) =>
+                      row.instrument
+                        ? `${row.instrument.symbol} · ${row.instrument.name}`
+                        : "-",
+                  },
+                  { title: "方向", dataIndex: "side", width: 80 },
+                  { title: "状态", dataIndex: "status", render: statusTag, width: 110 },
+                  {
+                    title: "数量",
+                    width: 110,
+                    render: (_, row) => `${row.filledQuantity}/${row.quantity}`,
+                  },
+                  { title: "时间", dataIndex: "placedAt", render: formatDate, width: 170 },
+                ]}
+                locale={{ emptyText: "暂无订单记录" }}
+              />
+            </Card>
+          </Space>
+        )}
+      </Drawer>
 
       <Modal title="修改会员等级" open={tierCustomer !== null}
         closable={tierSaving === null} maskClosable={tierSaving === null} keyboard={tierSaving === null}

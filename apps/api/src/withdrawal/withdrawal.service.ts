@@ -148,6 +148,38 @@ export class WithdrawalService {
     });
   }
 
+  async listWithdrawalHistory(role?: string, status?: string) {
+    const normalized = String(status ?? 'ALL').trim().toUpperCase();
+    const allowed = new Set(['ALL', 'PENDING', 'APPROVED', 'REJECTED']);
+    if (!allowed.has(normalized)) {
+      throw new BadRequestException('Invalid withdrawal status filter');
+    }
+
+    const fixedCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim().toUpperCase() || 'ADMINFIXED2026';
+    return this.prisma.withdrawalRequest.findMany({
+      where: {
+        ...(normalized === 'ALL' ? {} : { status: normalized as 'PENDING' | 'APPROVED' | 'REJECTED' }),
+        ...(role === 'FINANCE' ? { account: { user: { usedInviteCode: { code: { not: fixedCode } } } } } : {}),
+      },
+      include: {
+        account: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                customerNo: true,
+                fullName: true,
+                phone: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+  }
+
   async approveWithdrawal(withdrawalId: string, actorId?: string, role?: string) {
     const result = await this.prisma.$transaction(async (tx) => {
       const withdrawal = await tx.withdrawalRequest.findUnique({

@@ -115,6 +115,142 @@ export class AdminService {
     });
   }
 
+  async customerOverview(customerId: string, role: UserRole) {
+    const customer = await this.prisma.user.findFirst({
+      where: {
+        ...this.customerScope(role),
+        id: customerId,
+      },
+      select: {
+        id: true,
+        customerNo: true,
+        clientTier: true,
+        fullName: true,
+        phone: true,
+        email: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        account: {
+          select: {
+            id: true,
+            accountNumber: true,
+            cashBalance: true,
+            buyingPower: true,
+            frozenBalance: true,
+            currency: true,
+            isLive: true,
+          },
+        },
+        assignedBusiness: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            businessProfile: {
+              select: {
+                employeeNo: true,
+                department: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!customer) {
+      throw new NotFoundException('未找到客户');
+    }
+
+    const accountId = customer.account?.id;
+    const [kycRows, deposits, withdrawals, orders] = await Promise.all([
+      this.prisma.$queryRaw<
+        {
+          id: string;
+          status: string;
+          documentType: string;
+          reviewNote: string | null;
+          createdAt: Date;
+          updatedAt: Date;
+        }[]
+      >`
+        SELECT k."id", k."status", k."documentType", k."reviewNote", k."createdAt", k."updatedAt"
+        FROM "kyc_submissions" k
+        WHERE k."userId" = ${customerId}
+        ORDER BY k."createdAt" DESC
+        LIMIT 1
+      `,
+      accountId
+        ? this.prisma.depositRequest.findMany({
+            where: { accountId },
+            select: {
+              id: true,
+              amount: true,
+              paymentMethod: true,
+              referenceId: true,
+              status: true,
+              note: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          })
+        : Promise.resolve([]),
+      accountId
+        ? this.prisma.withdrawalRequest.findMany({
+            where: { accountId },
+            select: {
+              id: true,
+              orderNo: true,
+              amount: true,
+              status: true,
+              note: true,
+              createdAt: true,
+              updatedAt: true,
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+          })
+        : Promise.resolve([]),
+      accountId
+        ? this.prisma.order.findMany({
+            where: { accountId },
+            select: {
+              id: true,
+              clientOrderId: true,
+              side: true,
+              type: true,
+              status: true,
+              quantity: true,
+              filledQuantity: true,
+              limitPrice: true,
+              averageFillPrice: true,
+              placedAt: true,
+              completedAt: true,
+              instrument: {
+                select: {
+                  symbol: true,
+                  name: true,
+                  exchange: true,
+                },
+              },
+            },
+            orderBy: { placedAt: 'desc' },
+            take: 20,
+          })
+        : Promise.resolve([]),
+    ]);
+
+    return {
+      customer,
+      kyc: kycRows[0] ?? { status: 'NOT_SUBMITTED' },
+      recentDeposits: deposits,
+      recentWithdrawals: withdrawals,
+      recentOrders: orders,
+    };
+  }
+
   async customerLastLogin(customerId: string, role: UserRole) {
     const customer = await this.prisma.user.findFirst({
       where: {

@@ -18,6 +18,12 @@ export class AdminController {
     return this.adminService.customers(req.user.role);
   }
 
+  @Get('customers/:customerId/overview')
+  @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
+  customerOverview(@Param('customerId') customerId: string, @Req() req: any) {
+    return this.adminService.customerOverview(customerId, req.user.role);
+  }
+
   @Get('customers/:customerId/login')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
   customerLastLogin(@Param('customerId') customerId: string, @Req() req: any) {

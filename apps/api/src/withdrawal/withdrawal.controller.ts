@@ -5,6 +5,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -49,6 +50,12 @@ export class WithdrawalController {
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
   listPending(@Req() req: any) {
     return this.withdrawalService.listPendingWithdrawals(req.user.role);
+  }
+
+  @Get('history')
+  @Roles(UserRole.ADMIN, UserRole.FINANCE)
+  listHistory(@Req() req: any, @Query('status') status?: string) {
+    return this.withdrawalService.listWithdrawalHistory(req.user.role, status);
   }
 
   @Patch(':id/approve')

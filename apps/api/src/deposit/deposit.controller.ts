@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -49,6 +50,12 @@ export class DepositController {
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
   listPending(@Req() req: any) {
     return this.depositService.listPendingDeposits(req.user.role, req.user.userId);
+  }
+
+  @Get('history')
+  @Roles(UserRole.FINANCE, UserRole.SUPPORT)
+  listHistory(@Req() req: any, @Query('status') status?: string) {
+    return this.depositService.listDepositHistory(req.user.role, req.user.userId, status);
   }
 
   @Patch(':id/approve')

@@ -8,6 +8,7 @@ import {
   Input,
   Modal,
   Popconfirm,
+  Select,
   Space,
   Table,
   Tag,
@@ -44,6 +45,8 @@ type WithdrawalRecord = {
   };
 };
 
+type StatusFilter = "PENDING" | "APPROVED" | "REJECTED" | "ALL";
+
 function formatMoney(value?: string | number | null) {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",
@@ -62,9 +65,17 @@ function payoutMethod(record: WithdrawalRecord) {
   return parts.length > 0 ? parts.join(" / ") : "-";
 }
 
+function statusTag(status: string) {
+  if (status === "PENDING") return <Tag color="orange">待审核</Tag>;
+  if (status === "APPROVED") return <Tag color="green">已通过</Tag>;
+  if (status === "REJECTED") return <Tag color="red">已拒绝</Tag>;
+  return <Tag>{status}</Tag>;
+}
+
 export default function WithdrawalsPage() {
   const [records, setRecords] = useState<WithdrawalRecord[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("PENDING");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [rejecting, setRejecting] = useState<WithdrawalRecord | null>(null);
@@ -77,7 +88,12 @@ export default function WithdrawalsPage() {
     setError("");
 
     try {
-      const response = await api.get<WithdrawalRecord[]>("/withdrawal/pending");
+      const response =
+        statusFilter === "PENDING"
+          ? await api.get<WithdrawalRecord[]>("/withdrawal/pending")
+          : await api.get<WithdrawalRecord[]>("/withdrawal/history", {
+              params: { status: statusFilter },
+            });
       setRecords(Array.isArray(response.data) ? response.data : []);
     } catch (requestError: any) {
       const responseMessage = requestError.response?.data?.message;
@@ -93,7 +109,7 @@ export default function WithdrawalsPage() {
 
   useEffect(() => {
     loadRecords();
-  }, []);
+  }, [statusFilter]);
 
   const filteredRecords = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -110,6 +126,7 @@ export default function WithdrawalsPage() {
         record.bankName,
         record.accountNumber,
         record.ifscCode,
+        record.status,
       ];
 
       return values.some((value) =>
@@ -170,6 +187,8 @@ export default function WithdrawalsPage() {
     }
   }
 
+  const showActions = statusFilter === "PENDING";
+
   const columns: ColumnsType<WithdrawalRecord> = [
     {
       title: "订单号",
@@ -203,33 +222,41 @@ export default function WithdrawalsPage() {
       title: "状态",
       dataIndex: "status",
       width: 110,
-      render: (value) => <Tag color="orange">{value === "PENDING" ? "待审核" : value}</Tag>,
+      render: (value) => statusTag(value),
     },
     { title: "申请时间", dataIndex: "createdAt", width: 180, render: formatDate },
-    {
-      title: "操作",
-      fixed: "right",
-      width: 180,
-      render: (_, record) => (
-        <Space>
-          <Popconfirm title="确认通过提现申请？" description={`${record.account.user.fullName} · ${formatMoney(record.amount)} · ${payoutMethod(record)}`}
-            okText="确认通过" cancelText="取消" onConfirm={() => approve(record)} disabled={!!submittingId}>
-          <Button
-            type="primary"
-            size="small"
-            icon={<CheckOutlined />}
-            loading={submittingId === record.id}
-            disabled={!!submittingId && submittingId !== record.id}
-          >
-            通过
-          </Button>
-          </Popconfirm>
-          <Button danger size="small" icon={<CloseOutlined />} disabled={!!submittingId} onClick={() => setRejecting(record)}>
-            拒绝
-          </Button>
-        </Space>
-      ),
-    },
+    ...(showActions
+      ? [{
+          title: "操作",
+          fixed: "right" as const,
+          width: 180,
+          render: (_: unknown, record: WithdrawalRecord) => (
+            <Space>
+              <Popconfirm
+                title="确认通过提现申请？"
+                description={`${record.account.user.fullName} · ${formatMoney(record.amount)} · ${payoutMethod(record)}`}
+                okText="确认通过"
+                cancelText="取消"
+                onConfirm={() => approve(record)}
+                disabled={!!submittingId}
+              >
+                <Button
+                  type="primary"
+                  size="small"
+                  icon={<CheckOutlined />}
+                  loading={submittingId === record.id}
+                  disabled={!!submittingId && submittingId !== record.id}
+                >
+                  通过
+                </Button>
+              </Popconfirm>
+              <Button danger size="small" icon={<CloseOutlined />} disabled={!!submittingId} onClick={() => setRejecting(record)}>
+                拒绝
+              </Button>
+            </Space>
+          ),
+        }]
+      : []),
   ];
 
   return (
@@ -238,7 +265,7 @@ export default function WithdrawalsPage() {
         <div>
           <Title level={2}>提现审核</Title>
           <Paragraph type="secondary">
-            财务确认客户收款信息后，通过或拒绝提现申请。可通过订单号、客户编号、手机号或交易账号查找。
+            财务确认客户收款信息后，通过或拒绝提现申请。可通过状态筛选查看历史记录；待审列表仍使用原有审核接口。
           </Paragraph>
         </div>
 
@@ -246,14 +273,27 @@ export default function WithdrawalsPage() {
 
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索订单号、客户编号、手机号、交易账号或收款信息"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              style={{ width: 460 }}
-            />
+            <Space wrap>
+              <Input
+                allowClear
+                prefix={<SearchOutlined />}
+                placeholder="搜索订单号、客户编号、手机号、交易账号或收款信息"
+                value={keyword}
+                onChange={(event) => setKeyword(event.target.value)}
+                style={{ width: 420 }}
+              />
+              <Select
+                value={statusFilter}
+                style={{ width: 160 }}
+                onChange={(value: StatusFilter) => setStatusFilter(value)}
+                options={[
+                  { value: "PENDING", label: "待审核" },
+                  { value: "APPROVED", label: "已通过" },
+                  { value: "REJECTED", label: "已拒绝" },
+                  { value: "ALL", label: "全部" },
+                ]}
+              />
+            </Space>
             <Button icon={<ReloadOutlined />} loading={loading} onClick={loadRecords}>
               刷新
             </Button>
@@ -264,7 +304,7 @@ export default function WithdrawalsPage() {
             columns={columns}
             dataSource={filteredRecords}
             loading={loading}
-            scroll={{ x: 1540 }}
+            scroll={{ x: showActions ? 1540 : 1360 }}
           />
         </Card>
       </Space>

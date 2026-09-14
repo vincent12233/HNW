@@ -81,6 +81,7 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/app-content", icon: <SettingOutlined />, label: "客户端运营配置" },
     { key: "/company-showcase", icon: <ShopOutlined />, label: "平台公司信息" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
+    { key: "/approvals", icon: <AuditOutlined />, label: "余额调整复核", badge: "approvals" },
   ],
   MANAGER: [
     { key: "/team?view=customers", icon: <TeamOutlined />, label: "客户资料" },
@@ -142,7 +143,7 @@ const menus: Record<Role, MenuItemDef[]> = {
 /** Visual grouping only — keys must stay within the role allowlist above. */
 const menuGroups: Record<Role, MenuGroupDef[]> = {
   ADMIN: [
-    { title: "治理与人员", keys: ["/team", "/dashboard", "/business-users", "/customers", "/audit-logs"] },
+    { title: "治理与人员", keys: ["/team", "/dashboard", "/business-users", "/customers", "/audit-logs", "/approvals"] },
     {
       title: "市场与产品",
       keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],

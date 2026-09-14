@@ -1366,6 +1366,50 @@ class _MarketHomePageState extends State<MarketHomePage>
                 Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [AppText(company.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)), const SizedBox(height: 4), AppText(company.tagline, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFD5E6FF), fontSize: 12, height: 1.3))])),
                 const Icon(Icons.verified_rounded, color: Color(0xFF8DE7D3), size: 22),
               ]),
+              if (company.videoUrl?.isNotEmpty == true) ...[
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
+                  borderRadius: BorderRadius.circular(16),
+                  child: Container(
+                    height: 150,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF07152F),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 52,
+                            height: 52,
+                            decoration: const BoxDecoration(
+                              color: Colors.white,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.play_arrow_rounded,
+                              color: Color(0xFF123B72),
+                              size: 34,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const AppText(
+                            'Watch our company introduction',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 16),
               AppText(company.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE7F0FF), fontSize: 13, height: 1.55)),
               const SizedBox(height: 16),

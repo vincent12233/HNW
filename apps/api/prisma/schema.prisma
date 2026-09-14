@@ -870,6 +870,7 @@ model CompanyShowcase {
   tagline     String
   description String
   logoUrl     String?
+  videoUrl    String?
   websiteUrl  String?
   sector      String?
   status      String   @default("ACTIVE")

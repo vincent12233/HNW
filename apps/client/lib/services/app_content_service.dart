@@ -26,44 +26,6 @@ class AppContentBlock {
   }
 }
 
-class DepositReceivingAccountInfo {
-  const DepositReceivingAccountInfo({
-    required this.id,
-    required this.label,
-    required this.method,
-    this.accountName,
-    this.bankName,
-    this.accountNumber,
-    this.ifsc,
-    this.upiId,
-    this.notes,
-  });
-
-  final String id;
-  final String label;
-  final String method;
-  final String? accountName;
-  final String? bankName;
-  final String? accountNumber;
-  final String? ifsc;
-  final String? upiId;
-  final String? notes;
-
-  factory DepositReceivingAccountInfo.fromJson(Map<String, dynamic> json) {
-    return DepositReceivingAccountInfo(
-      id: '${json['id'] ?? ''}',
-      label: '${json['label'] ?? ''}',
-      method: '${json['method'] ?? ''}',
-      accountName: json['accountName']?.toString(),
-      bankName: json['bankName']?.toString(),
-      accountNumber: json['accountNumber']?.toString(),
-      ifsc: json['ifsc']?.toString(),
-      upiId: json['upiId']?.toString(),
-      notes: json['notes']?.toString(),
-    );
-  }
-}
-
 class LegalDocumentContent {
   const LegalDocumentContent({
     required this.effective,
@@ -118,7 +80,6 @@ class AppContentBundle {
     required this.legal,
     required this.about,
     required this.insights,
-    this.receivingAccounts = const [],
     this.updatedAt,
   });
 
@@ -129,7 +90,6 @@ class AppContentBundle {
   final Map<String, AppContentBlock> legal;
   final Map<String, AppContentBlock> about;
   final Map<String, AppContentBlock> insights;
-  final List<DepositReceivingAccountInfo> receivingAccounts;
   final DateTime? updatedAt;
 
   static const empty = AppContentBundle(
@@ -206,7 +166,7 @@ class AppContentBundle {
     final depositMap = deposit is Map
         ? Map<String, dynamic>.from(deposit)
         : <String, dynamic>{};
-    final accountsRaw = depositMap['receivingAccounts'];
+    // Legacy residual field from removed self-serve receiving accounts.
     depositMap.remove('receivingAccounts');
     final updatedAtRaw = json['updatedAt']?.toString();
 
@@ -218,16 +178,6 @@ class AppContentBundle {
       legal: parseModule(json['legal']),
       about: parseModule(json['about']),
       insights: parseModule(json['insights']),
-      receivingAccounts: accountsRaw is List
-          ? accountsRaw
-                .whereType<Map>()
-                .map(
-                  (row) => DepositReceivingAccountInfo.fromJson(
-                    Map<String, dynamic>.from(row),
-                  ),
-                )
-                .toList()
-          : const [],
       updatedAt: updatedAtRaw == null ? null : DateTime.tryParse(updatedAtRaw),
     );
   }

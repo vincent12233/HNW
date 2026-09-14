@@ -19,19 +19,6 @@ export type AppContentUpsertInput = {
   sortOrder?: number;
 };
 
-export type DepositAccountInput = {
-  label: string;
-  method: string;
-  accountName?: string | null;
-  bankName?: string | null;
-  accountNumber?: string | null;
-  ifsc?: string | null;
-  upiId?: string | null;
-  notes?: string | null;
-  isActive?: boolean;
-  sortOrder?: number;
-};
-
 @Injectable()
 export class AppContentService {
   constructor(private readonly prisma: PrismaService) {}
@@ -76,36 +63,16 @@ export class AppContentService {
 
   async getPublicBundle(locale = 'en') {
     await this.ensureDefaults();
-    const [entries, accounts] = await Promise.all([
-      this.prisma.appContentEntry.findMany({
-        where: { isActive: true },
-        orderBy: [{ module: 'asc' }, { sortOrder: 'asc' }, { key: 'asc' }],
-      }),
-      this.prisma.depositReceivingAccount.findMany({
-        where: { isActive: true },
-        orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-      }),
-    ]);
+    const entries = await this.prisma.appContentEntry.findMany({
+      where: { isActive: true },
+      orderBy: [{ module: 'asc' }, { sortOrder: 'asc' }, { key: 'asc' }],
+    });
 
     const preferred = this.pickLocale(entries, locale);
     return {
       locale: preferred.localeUsed,
       home: this.moduleMap(preferred.rows, AppContentModule.HOME),
-      deposit: {
-        ...this.moduleMap(preferred.rows, AppContentModule.DEPOSIT),
-        receivingAccounts: accounts.map((account) => ({
-          id: account.id,
-          label: account.label,
-          method: account.method,
-          accountName: account.accountName,
-          bankName: account.bankName,
-          accountNumber: account.accountNumber,
-          ifsc: account.ifsc,
-          upiId: account.upiId,
-          notes: account.notes,
-          sortOrder: account.sortOrder,
-        })),
-      },
+      deposit: this.moduleMap(preferred.rows, AppContentModule.DEPOSIT),
       support: this.moduleMap(preferred.rows, AppContentModule.SUPPORT),
       trading: this.moduleMap(preferred.rows, AppContentModule.TRADING),
       legal: this.moduleMap(preferred.rows, AppContentModule.LEGAL),
@@ -184,49 +151,6 @@ export class AppContentService {
     }
   }
 
-  listDepositAccounts(includeInactive = false) {
-    return this.prisma.depositReceivingAccount.findMany({
-      where: includeInactive ? undefined : { isActive: true },
-      orderBy: [{ sortOrder: 'asc' }, { createdAt: 'asc' }],
-    });
-  }
-
-  createDepositAccount(body: DepositAccountInput) {
-    const data = this.depositAccountData(body);
-    return this.prisma.depositReceivingAccount.create({ data });
-  }
-
-  async updateDepositAccount(id: string, body: DepositAccountInput) {
-    try {
-      return await this.prisma.depositReceivingAccount.update({
-        where: { id },
-        data: this.depositAccountData(body),
-      });
-    } catch {
-      throw new NotFoundException('Deposit account not found');
-    }
-  }
-
-  async setDepositAccountStatus(id: string, isActive: boolean) {
-    try {
-      return await this.prisma.depositReceivingAccount.update({
-        where: { id },
-        data: { isActive: Boolean(isActive) },
-      });
-    } catch {
-      throw new NotFoundException('Deposit account not found');
-    }
-  }
-
-  async deleteDepositAccount(id: string) {
-    try {
-      await this.prisma.depositReceivingAccount.delete({ where: { id } });
-      return { ok: true };
-    } catch {
-      throw new NotFoundException('Deposit account not found');
-    }
-  }
-
   async getDepositRejectMessage(locale = 'en') {
     const wanted = String(locale || 'en').trim().toLowerCase() || 'en';
     const rows = await this.prisma.appContentEntry.findMany({
@@ -245,27 +169,6 @@ export class AppContentService {
       preferred?.body?.trim() ||
       'Please contact online support for deposit instructions. Finance will credit your account after payment is confirmed.'
     );
-  }
-
-  private depositAccountData(body: DepositAccountInput) {
-    const label = String(body.label || '').trim();
-    const method = String(body.method || '').trim().toUpperCase();
-    if (!label) throw new BadRequestException('Account label is required');
-    if (!['BANK', 'UPI', 'OTHER'].includes(method)) {
-      throw new BadRequestException('Method must be BANK, UPI or OTHER');
-    }
-    return {
-      label,
-      method,
-      accountName: body.accountName?.trim() || null,
-      bankName: body.bankName?.trim() || null,
-      accountNumber: body.accountNumber?.trim() || null,
-      ifsc: body.ifsc?.trim()?.toUpperCase() || null,
-      upiId: body.upiId?.trim() || null,
-      notes: body.notes?.trim() || null,
-      isActive: body.isActive ?? true,
-      sortOrder: Number(body.sortOrder ?? 0),
-    };
   }
 
   private parseModule(value: AppContentModule | string): AppContentModule {

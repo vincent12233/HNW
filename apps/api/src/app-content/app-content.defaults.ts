@@ -319,7 +319,6 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     sortOrder: 10,
   },
   {
-  {
     module: AppContentModule.SUPPORT,
     key: 'hours',
     body:
@@ -327,7 +326,6 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'en',
     sortOrder: 20,
   },
-  {
   {
     module: AppContentModule.SUPPORT,
     key: 'hours',

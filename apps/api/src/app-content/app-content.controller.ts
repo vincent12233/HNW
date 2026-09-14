@@ -4,7 +4,6 @@ import {
   Delete,
   Get,
   Param,
-  Patch,
   Post,
   Put,
   Query,
@@ -44,44 +43,6 @@ export class AppContentController {
   @Roles(UserRole.ADMIN)
   bulk(@Body() body: { entries?: any[] }) {
     return this.service.bulkUpsert(body.entries ?? []);
-  }
-
-  @Get('admin/app-content/deposit-accounts')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  listAccounts() {
-    return this.service.listDepositAccounts(true);
-  }
-
-  @Post('admin/app-content/deposit-accounts')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  createAccount(@Body() body: any) {
-    return this.service.createDepositAccount(body);
-  }
-
-  @Patch('admin/app-content/deposit-accounts/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  updateAccount(@Param('id') id: string, @Body() body: any) {
-    return this.service.updateDepositAccount(id, body);
-  }
-
-  @Patch('admin/app-content/deposit-accounts/:id/status')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  setAccountStatus(
-    @Param('id') id: string,
-    @Body() body: { isActive: boolean },
-  ) {
-    return this.service.setDepositAccountStatus(id, body.isActive);
-  }
-
-  @Delete('admin/app-content/deposit-accounts/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.ADMIN)
-  deleteAccount(@Param('id') id: string) {
-    return this.service.deleteDepositAccount(id);
   }
 
   @Delete('admin/app-content/:id')

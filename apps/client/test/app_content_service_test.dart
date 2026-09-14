@@ -10,17 +10,13 @@ void main() {
       },
       'deposit': {
         'instructions': {'body': 'Contact support', 'locale': 'en'},
-        'receivingAccounts': [
-          {
-            'id': '1',
-            'label': 'HDFC',
-            'method': 'BANK',
-            'accountNumber': '123',
-          },
-        ],
       },
       'support': {
         'greeting': {'body': 'Hello', 'locale': 'en'},
+        'hours': {
+          'body': 'Online customer service hours: Mon-Sun 09:00-22:00 (IST).',
+          'locale': 'en',
+        },
       },
       'trading': {
         'guide.ipo': {
@@ -48,7 +44,11 @@ void main() {
     });
 
     expect(bundle.text('home', 'banner.title'), 'Live markets');
-    expect(bundle.receivingAccounts.single.label, 'HDFC');
+    expect(bundle.text('deposit', 'instructions'), 'Contact support');
+    expect(
+      bundle.text('support', 'hours'),
+      'Online customer service hours: Mon-Sun 09:00-22:00 (IST).',
+    );
     expect(bundle.privacyDocument().sections.single.heading, '1');
     expect(bundle.text('about', 'company_name'), 'India Trading App');
     expect(bundle.insightArticles().single.title, 'Account and KYC');

@@ -921,23 +921,4 @@ model AppContentEntry {
   @@map("app_content_entries")
 }
 
-model DepositReceivingAccount {
-  id            String   @id @default(uuid())
-  label         String
-  method        String
-  accountName   String?
-  bankName      String?
-  accountNumber String?
-  ifsc          String?
-  upiId         String?
-  notes         String?
-  isActive      Boolean  @default(true)
-  sortOrder     Int      @default(0)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-
-  @@index([isActive, sortOrder])
-  @@map("deposit_receiving_accounts")
-}
-
 

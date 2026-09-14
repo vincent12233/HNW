@@ -48,6 +48,7 @@ import 'legal_page.dart';
 import 'stock_detail_page.dart';
 import 'stock_search_page.dart';
 import 'support_chat_page.dart';
+import 'deposit_page.dart';
 import 'trading_center_page.dart';
 
 final marketSocket = MarketSocketService();
@@ -1352,7 +1353,7 @@ class _MarketHomePageState extends State<MarketHomePage>
         Expanded(
           child: _HomeActionButton(
             label: 'Add Funds',
-            subtitle: 'Contact Support',
+            subtitle: 'Funding Assistance',
             icon: Icons.account_balance_wallet_outlined,
             color: AppConfig.primaryColor,
             onTap: _openDepositSupport,
@@ -1745,14 +1746,9 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
-    // Match ops console guidance: funding is handled in online SaleSmartly chat.
-    // Same entry pattern as the side Support button, with the deposit chat preset.
-    _openSupportChat(
-      initialMessage: _appContent.text(
-        'support',
-        'chat_preset.deposit',
-        fallback: 'Hello, I would like to add money to my account.',
-      ),
+    // APP Add Funds opens the in-app Deposit page (not the side Support button).
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const DepositPage()),
     );
   }
 

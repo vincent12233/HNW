@@ -39,6 +39,7 @@ import 'appearance_page.dart';
 import '../theme/appearance_settings.dart';
 import '../widgets/market_header.dart';
 import '../widgets/stock_logo.dart';
+import '../widgets/floating_support_button.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
 import 'market_news_page.dart';
@@ -911,7 +912,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 Positioned(
                   right: 0,
                   bottom: 86,
-                  child: SafeArea(child: _floatingCustomerServiceButton()),
+                  child: SafeArea(
+                    child: FloatingSupportButton(
+                      onTap: () => _openSupportChat(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1845,66 +1850,51 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openSupportChat({String? initialMessage}) {
-    showDialog<void>(
+    showGeneralDialog<void>(
       context: context,
-      barrierColor: const Color(0x66071326),
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.fromLTRB(14, 36, 14, 86),
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
-          child: SupportChatPage(initialMessage: initialMessage),
-        ),
-      ),
-    );
-  }
-
-  Widget _floatingCustomerServiceButton() {
-    return Semantics(
-      button: true,
-      label: 'Customer Support',
-      child: Material(
-        color: Colors.transparent,
-        elevation: 10,
-        shadowColor: const Color(0x66000000),
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-        child: InkWell(
-          borderRadius: const BorderRadius.horizontal(
-            left: Radius.circular(12),
-          ),
-          onTap: () => _openSupportChat(),
-          child: Ink(
-            width: 42,
-            height: 174,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF2F6BFF), Color(0xFF0B47D1)],
-              ),
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                RotatedBox(
-                  quarterTurns: 3,
-                  child: Text(
-                    'Customer Service',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
+      barrierDismissible: true,
+      barrierLabel: 'Close support',
+      barrierColor: const Color(0x73071326),
+      transitionDuration: const Duration(milliseconds: 280),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return SafeArea(
+          child: Align(
+            alignment: Alignment.center,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 28, 14, 72),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440, maxHeight: 720),
+                child: Material(
+                  color: Colors.transparent,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(24),
+                    child: SupportChatPage(initialMessage: initialMessage),
                   ),
                 ),
-                Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 19),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
+            child: SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.04, 0.06),
+                end: Offset.zero,
+              ).animate(curved),
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 

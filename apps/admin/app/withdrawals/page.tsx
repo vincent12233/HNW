@@ -19,9 +19,10 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type WithdrawalRecord = {
   id: string;
@@ -262,12 +263,11 @@ export default function WithdrawalsPage() {
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>提现审核</Title>
-          <Paragraph type="secondary">
-            财务确认客户收款信息后，通过或拒绝提现申请。可通过状态筛选查看历史记录；待审列表仍使用原有审核接口。
-          </Paragraph>
-        </div>
+        <OpsPageHeader
+          eyebrow="FUNDS"
+          title="提现审核"
+          description="财务确认客户收款信息后，通过或拒绝提现申请。可通过状态筛选查看历史记录；待审列表仍使用原有审核接口。"
+        />
 
         {error && <Alert type="error" showIcon title={error} />}
 

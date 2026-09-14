@@ -520,3 +520,58 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px #102a4314;
 }
+
+/* Shared ops page header */
+.ops-page-header{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:16px;
+  flex-wrap:wrap;
+  margin-bottom:4px;
+}
+.ops-page-eyebrow{
+  display:inline-block;
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1.4px;
+  color:var(--role-accent,#1677ff);
+  margin-bottom:6px;
+}
+.ops-page-title{
+  margin:0 !important;
+  letter-spacing:-0.02em;
+}
+.ops-page-desc{
+  margin:6px 0 0 !important;
+  max-width:720px;
+}
+.ops-page-extra{margin-top:4px}
+.ops-toolbar,
+.ops-toolbar{
+  display:flex;
+  flex-wrap:wrap;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:16px;
+}
+.ops-stat-strip,
+.ops-stat-strip{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+  gap:12px;
+  margin-bottom:16px;
+}
+.ops-stat-pill,
+.ops-stat-pill{
+  background:#fff;
+  border:1px solid #e5edf5;
+  border-radius:12px;
+  padding:14px 16px;
+  box-shadow:0 6px 16px #102a4308;
+}
+.ops-stat-pill .label,
+.ops-stat-pill .label{display:block;color:#8492a6;font-size:12px;margin-bottom:4px}
+.ops-stat-pill .value,
+.ops-stat-pill .value{font-size:22px;font-weight:700;color:#102033;letter-spacing:-0.02em}

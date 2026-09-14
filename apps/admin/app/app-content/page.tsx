@@ -2,8 +2,11 @@
 
 import {
   BankOutlined,
+  BookOutlined,
   CustomerServiceOutlined,
+  FileProtectOutlined,
   HomeOutlined,
+  InfoCircleOutlined,
   PlusOutlined,
   ReloadOutlined,
   SaveOutlined,
@@ -38,7 +41,7 @@ const { TextArea } = Input;
 
 type ContentEntry = {
   id: string;
-  module: "HOME" | "DEPOSIT" | "SUPPORT" | "TRADING";
+  module: "HOME" | "DEPOSIT" | "SUPPORT" | "TRADING" | "LEGAL" | "ABOUT" | "INSIGHTS";
   key: string;
   title?: string | null;
   body: string;
@@ -79,6 +82,38 @@ const supportFields = [
   { key: "hours", label: "服务时间说明", rows: 2 },
   { key: "chat_preset.help", label: "帮助入口预填消息", rows: 2 },
   { key: "salesmartly_script_url", label: "SaleSmartly Script URL", rows: 2 },
+] as const;
+
+const supportTagField = {
+  key: "tags",
+  label: "客服标签（逗号分隔）",
+  locale: "zh",
+  rows: 2,
+} as const;
+
+const aboutFields = [
+  { key: "company_name", label: "显示名称", rows: 1 },
+  { key: "legal_name", label: "法律主体名称", rows: 2 },
+  { key: "registered_address", label: "注册地址", rows: 3 },
+  { key: "grievance_contact", label: "投诉/申诉联系方式", rows: 3 },
+  { key: "app_version", label: "版本文案", rows: 1 },
+  { key: "summary", label: "About 简介", rows: 4 },
+] as const;
+
+const insightIntroFields = [
+  { key: "intro.title", label: "Insights 标题", rows: 2 },
+  { key: "intro.body", label: "Insights 介绍", rows: 4 },
+] as const;
+
+const insightArticleKeys = [
+  "article.01",
+  "article.02",
+  "article.03",
+  "article.04",
+  "article.05",
+  "article.06",
+  "article.07",
+  "article.08",
 ] as const;
 
 const supportQuickReplies = [
@@ -144,6 +179,10 @@ export default function AppOpsContentPage() {
   const [depositForm] = Form.useForm();
   const [supportForm] = Form.useForm();
   const [tradingForm] = Form.useForm();
+  const [aboutForm] = Form.useForm();
+  const [legalForm] = Form.useForm();
+  const [insightsForm] = Form.useForm();
+  const [insightsLocale, setInsightsLocale] = useState<"en" | "hi">("en");
   const [accountOpen, setAccountOpen] = useState(false);
   const [editingAccount, setEditingAccount] = useState<DepositAccount | null>(
     null,
@@ -189,6 +228,12 @@ export default function AppOpsContentPage() {
             entryValue(nextEntries, "SUPPORT", field.key),
           ]),
         ),
+        [supportTagField.key]: entryValue(
+          nextEntries,
+          "SUPPORT",
+          supportTagField.key,
+          supportTagField.locale,
+        ),
         ...Object.fromEntries(
           supportQuickReplies.map((field) => [
             field.key,
@@ -212,6 +257,45 @@ export default function AppOpsContentPage() {
             ]),
         ),
       });
+      aboutForm.setFieldsValue(
+        Object.fromEntries(
+          aboutFields.map((field) => [
+            field.key,
+            entryValue(nextEntries, "ABOUT", field.key),
+          ]),
+        ),
+      );
+      legalForm.setFieldsValue({
+        "privacy.document": entryValue(nextEntries, "LEGAL", "privacy.document"),
+        "terms.document": entryValue(nextEntries, "LEGAL", "terms.document"),
+        "privacy.document__title": entryTitle(
+          nextEntries,
+          "LEGAL",
+          "privacy.document",
+        ),
+        "terms.document__title": entryTitle(
+          nextEntries,
+          "LEGAL",
+          "terms.document",
+        ),
+      });
+      insightsForm.setFieldsValue({
+        ...Object.fromEntries(
+          insightIntroFields.map((field) => [
+            field.key,
+            entryValue(nextEntries, "INSIGHTS", field.key, insightsLocale),
+          ]),
+        ),
+        ...Object.fromEntries(
+          insightArticleKeys.flatMap((key) => [
+            [key, entryValue(nextEntries, "INSIGHTS", key, insightsLocale)],
+            [
+              `${key}__title`,
+              entryTitle(nextEntries, "INSIGHTS", key, insightsLocale),
+            ],
+          ]),
+        ),
+      });
     } catch (requestError: unknown) {
       setError(apiError(requestError, "运营配置加载失败"));
     } finally {
@@ -223,6 +307,28 @@ export default function AppOpsContentPage() {
     void loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!entries.length) return;
+    insightsForm.setFieldsValue({
+      ...Object.fromEntries(
+        insightIntroFields.map((field) => [
+          field.key,
+          entryValue(entries, "INSIGHTS", field.key, insightsLocale),
+        ]),
+      ),
+      ...Object.fromEntries(
+        insightArticleKeys.flatMap((key) => [
+          [key, entryValue(entries, "INSIGHTS", key, insightsLocale)],
+          [
+            `${key}__title`,
+            entryTitle(entries, "INSIGHTS", key, insightsLocale),
+          ],
+        ]),
+      ),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [insightsLocale, entries]);
 
   async function saveModule(
     module: ContentEntry["module"],
@@ -370,7 +476,7 @@ export default function AppOpsContentPage() {
         <div>
           <Title level={2}>客户端运营配置</Title>
           <Paragraph type="secondary">
-            维护 APP 首页横幅、充值说明与收款账户、客服文案/SaleSmartly，以及交易页空状态与产品说明。修改后客户端下次拉取配置即生效，无需发版。
+            维护 APP 首页、充值、客服、交易说明、About、法律文本与 Wealth Insights。修改后客户端下次拉取配置即生效，无需发版。
           </Paragraph>
         </div>
 
@@ -502,6 +608,13 @@ export default function AppOpsContentPage() {
                         <TextArea rows={field.rows} />
                       </Form.Item>
                     ))}
+                    <Form.Item
+                      name={supportTagField.key}
+                      label={supportTagField.label}
+                      rules={[{ required: true, message: "请填写标签" }]}
+                    >
+                      <TextArea rows={supportTagField.rows} />
+                    </Form.Item>
                     {supportQuickReplies.map((field) => (
                       <Form.Item
                         key={field.key}
@@ -520,6 +633,7 @@ export default function AppOpsContentPage() {
                         supportForm.validateFields().then((values) =>
                           saveModule("SUPPORT", values, [
                             ...supportFields,
+                            supportTagField,
                             ...supportQuickReplies,
                           ]),
                         )
@@ -575,6 +689,163 @@ export default function AppOpsContentPage() {
                       }
                     >
                       保存交易说明
+                    </Button>
+                  </Form>
+                ),
+              },
+              {
+                key: "about",
+                label: (
+                  <span>
+                    <InfoCircleOutlined /> About
+                  </span>
+                ),
+                children: (
+                  <Form form={aboutForm} layout="vertical">
+                    <Paragraph type="secondary">
+                      上线前请补齐法律主体、注册地址与申诉联系方式；客户端 About 页会直接展示这些字段。
+                    </Paragraph>
+                    {aboutFields.map((field) => (
+                      <Form.Item key={field.key} name={field.key} label={field.label}>
+                        <TextArea rows={field.rows} />
+                      </Form.Item>
+                    ))}
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      loading={saving}
+                      onClick={() =>
+                        aboutForm
+                          .validateFields()
+                          .then((values) =>
+                            saveModule("ABOUT", values, [...aboutFields]),
+                          )
+                      }
+                    >
+                      保存 About
+                    </Button>
+                  </Form>
+                ),
+              },
+              {
+                key: "legal",
+                label: (
+                  <span>
+                    <FileProtectOutlined /> 法律文本
+                  </span>
+                ),
+                children: (
+                  <Form form={legalForm} layout="vertical">
+                    <Paragraph type="secondary">
+                      正文请使用 JSON：{`{"effective":"...","sections":[{"heading":"...","body":"..."}]}`}
+                    </Paragraph>
+                    <Form.Item name="privacy.document__title" label="隐私政策标题">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item
+                      name="privacy.document"
+                      label="隐私政策 JSON"
+                      rules={[{ required: true, message: "请填写隐私政策" }]}
+                    >
+                      <TextArea rows={12} />
+                    </Form.Item>
+                    <Form.Item name="terms.document__title" label="服务条款标题">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item
+                      name="terms.document"
+                      label="服务条款 JSON"
+                      rules={[{ required: true, message: "请填写服务条款" }]}
+                    >
+                      <TextArea rows={12} />
+                    </Form.Item>
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      loading={saving}
+                      onClick={() =>
+                        legalForm.validateFields().then((values) =>
+                          saveModule("LEGAL", values, [
+                            { key: "privacy.document", title: true },
+                            { key: "terms.document", title: true },
+                          ]),
+                        )
+                      }
+                    >
+                      保存法律文本
+                    </Button>
+                  </Form>
+                ),
+              },
+              {
+                key: "insights",
+                label: (
+                  <span>
+                    <BookOutlined /> Wealth Insights
+                  </span>
+                ),
+                children: (
+                  <Form form={insightsForm} layout="vertical">
+                    <Space style={{ marginBottom: 16 }}>
+                      <Text>编辑语言</Text>
+                      <Select
+                        value={insightsLocale}
+                        style={{ width: 160 }}
+                        options={[
+                          { value: "en", label: "English" },
+                          { value: "hi", label: "Hindi" },
+                        ]}
+                        onChange={(value) => setInsightsLocale(value)}
+                      />
+                    </Space>
+                    {insightIntroFields.map((field) => (
+                      <Form.Item key={field.key} name={field.key} label={field.label}>
+                        <TextArea rows={field.rows} />
+                      </Form.Item>
+                    ))}
+                    {insightArticleKeys.map((key, index) => (
+                      <div key={key}>
+                        <Form.Item
+                          name={`${key}__title`}
+                          label={`文章 ${index + 1} 标题`}
+                          rules={[{ required: true, message: "请填写标题" }]}
+                        >
+                          <Input />
+                        </Form.Item>
+                        <Form.Item
+                          name={key}
+                          label={`文章 ${index + 1} 正文`}
+                          rules={[{ required: true, message: "请填写正文" }]}
+                        >
+                          <TextArea rows={5} />
+                        </Form.Item>
+                      </div>
+                    ))}
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      loading={saving}
+                      onClick={() =>
+                        insightsForm.validateFields().then((values) =>
+                          saveModule(
+                            "INSIGHTS",
+                            values,
+                            [
+                              ...insightIntroFields.map((field) => ({
+                                key: field.key,
+                                locale: insightsLocale,
+                              })),
+                              ...insightArticleKeys.map((key) => ({
+                                key,
+                                locale: insightsLocale,
+                                title: true,
+                              })),
+                            ],
+                          ),
+                        )
+                      }
+                    >
+                      保存 Insights（{insightsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),

@@ -78,6 +78,7 @@ export default function SupportConsolePage() {
   const [messageLoading, setMessageLoading] = useState(false);
   const [error, setError] = useState("");
   const [quickReplies, setQuickReplies] = useState<string[]>(defaultQuickReplies);
+  const [supportTagsState, setSupportTagsState] = useState<string[]>(supportTags);
 
   const selectedTags = useMemo(() => selected?.tags || [], [selected?.tags]);
 
@@ -96,6 +97,11 @@ export default function SupportConsolePage() {
         .map((value) => String(value ?? "").trim())
         .filter(Boolean);
       if (ordered.length > 0) setQuickReplies(ordered);
+      const tags = String(support.tags?.body ?? "")
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (tags.length > 0) setSupportTagsState(tags);
     } catch {
       // Keep built-in fallbacks when ops content is unavailable.
     }
@@ -295,7 +301,7 @@ export default function SupportConsolePage() {
                   onChange={updateTags}
                   placeholder="选择或输入自定义备注标签"
                   style={{ width: "100%" }}
-                  options={supportTags.map((tag) => ({ value: tag, label: tag }))}
+                  options={supportTagsState.map((tag) => ({ value: tag, label: tag }))}
                 />
 
                 <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>

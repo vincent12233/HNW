@@ -63,55 +63,127 @@ class DepositReceivingAccountInfo {
   }
 }
 
+class LegalDocumentContent {
+  const LegalDocumentContent({
+    required this.effective,
+    required this.sections,
+    this.title,
+  });
+
+  final String effective;
+  final String? title;
+  final List<({String heading, String body})> sections;
+
+  factory LegalDocumentContent.fromBlock(AppContentBlock? block) {
+    if (block == null || block.body.trim().isEmpty) {
+      return const LegalDocumentContent(effective: '', sections: []);
+    }
+    try {
+      final decoded = jsonDecode(block.body);
+      if (decoded is! Map) {
+        return LegalDocumentContent(effective: '', sections: [], title: block.title);
+      }
+      final sections = (decoded['sections'] is List ? decoded['sections'] as List : const [])
+          .whereType<Map>()
+          .map(
+            (row) => (
+              heading: '${row['heading'] ?? ''}',
+              body: '${row['body'] ?? ''}',
+            ),
+          )
+          .where((row) => row.heading.isNotEmpty || row.body.isNotEmpty)
+          .toList();
+      return LegalDocumentContent(
+        effective: '${decoded['effective'] ?? ''}',
+        sections: sections,
+        title: block.title,
+      );
+    } catch (_) {
+      return LegalDocumentContent(
+        effective: '',
+        sections: [(heading: block.title ?? '', body: block.body)],
+        title: block.title,
+      );
+    }
+  }
+}
+
 class AppContentBundle {
   const AppContentBundle({
     required this.home,
     required this.deposit,
     required this.support,
     required this.trading,
+    required this.legal,
+    required this.about,
+    required this.insights,
     this.receivingAccounts = const [],
+    this.updatedAt,
   });
 
   final Map<String, AppContentBlock> home;
   final Map<String, AppContentBlock> deposit;
   final Map<String, AppContentBlock> support;
   final Map<String, AppContentBlock> trading;
+  final Map<String, AppContentBlock> legal;
+  final Map<String, AppContentBlock> about;
+  final Map<String, AppContentBlock> insights;
   final List<DepositReceivingAccountInfo> receivingAccounts;
+  final DateTime? updatedAt;
 
   static const empty = AppContentBundle(
     home: {},
     deposit: {},
     support: {},
     trading: {},
+    legal: {},
+    about: {},
+    insights: {},
   );
 
-  String text(
-    String module,
-    String key, {
-    String fallback = '',
-  }) {
-    final map = switch (module) {
-      'home' => home,
-      'deposit' => deposit,
-      'support' => support,
-      'trading' => trading,
-      _ => const <String, AppContentBlock>{},
-    };
-    final value = map[key]?.body.trim();
+  bool get hasContent =>
+      home.isNotEmpty ||
+      deposit.isNotEmpty ||
+      support.isNotEmpty ||
+      trading.isNotEmpty ||
+      legal.isNotEmpty ||
+      about.isNotEmpty ||
+      insights.isNotEmpty;
+
+  Map<String, AppContentBlock> _module(String module) => switch (module) {
+        'home' => home,
+        'deposit' => deposit,
+        'support' => support,
+        'trading' => trading,
+        'legal' => legal,
+        'about' => about,
+        'insights' => insights,
+        _ => const <String, AppContentBlock>{},
+      };
+
+  String text(String module, String key, {String fallback = ''}) {
+    final value = _module(module)[key]?.body.trim();
     if (value == null || value.isEmpty) return fallback;
     return value;
   }
 
   String? title(String module, String key) {
-    final map = switch (module) {
-      'trading' => trading,
-      'home' => home,
-      'deposit' => deposit,
-      'support' => support,
-      _ => const <String, AppContentBlock>{},
-    };
-    final value = map[key]?.title?.trim();
+    final value = _module(module)[key]?.title?.trim();
     return (value == null || value.isEmpty) ? null : value;
+  }
+
+  LegalDocumentContent privacyDocument() =>
+      LegalDocumentContent.fromBlock(legal['privacy.document']);
+
+  LegalDocumentContent termsDocument() =>
+      LegalDocumentContent.fromBlock(legal['terms.document']);
+
+  List<AppContentBlock> insightArticles() {
+    final articles = insights.entries
+        .where((entry) => entry.key.startsWith('article.'))
+        .toList()
+      ..sort((a, b) => a.key.compareTo(b.key));
+    return articles.map((entry) => entry.value).toList();
   }
 
   factory AppContentBundle.fromJson(Map<String, dynamic> json) {
@@ -135,12 +207,16 @@ class AppContentBundle {
         : <String, dynamic>{};
     final accountsRaw = depositMap['receivingAccounts'];
     depositMap.remove('receivingAccounts');
+    final updatedAtRaw = json['updatedAt']?.toString();
 
     return AppContentBundle(
       home: parseModule(json['home']),
       deposit: parseModule(depositMap),
       support: parseModule(json['support']),
       trading: parseModule(json['trading']),
+      legal: parseModule(json['legal']),
+      about: parseModule(json['about']),
+      insights: parseModule(json['insights']),
       receivingAccounts: accountsRaw is List
           ? accountsRaw
                 .whereType<Map>()
@@ -151,6 +227,7 @@ class AppContentBundle {
                 )
                 .toList()
           : const [],
+      updatedAt: updatedAtRaw == null ? null : DateTime.tryParse(updatedAtRaw),
     );
   }
 }
@@ -170,7 +247,7 @@ class AppContentService {
     if (!force &&
         _loadedAt != null &&
         DateTime.now().difference(_loadedAt!) < const Duration(minutes: 5) &&
-        _bundle.home.isNotEmpty) {
+        _bundle.hasContent) {
       return _bundle;
     }
     final existing = _inFlight;

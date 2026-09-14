@@ -879,6 +879,9 @@ enum AppContentModule {
   DEPOSIT
   SUPPORT
   TRADING
+  LEGAL
+  ABOUT
+  INSIGHTS
 }
 
 model AppContentEntry {

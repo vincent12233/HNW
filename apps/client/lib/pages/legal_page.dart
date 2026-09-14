@@ -1,61 +1,100 @@
 import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
+import '../services/app_content_service.dart';
 import 'package:flutter/material.dart';
 
-class LegalPage extends StatelessWidget {
+class LegalPage extends StatefulWidget {
   const LegalPage({super.key, required this.title});
 
   final String title;
 
-  bool get _isPrivacy => title.toLowerCase().contains('privacy');
+  @override
+  State<LegalPage> createState() => _LegalPageState();
+}
+
+class _LegalPageState extends State<LegalPage> {
+  bool get _isPrivacy => widget.title.toLowerCase().contains('privacy');
+  AppContentBundle _content = AppContentBundle.empty;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final content = await AppContentService.instance.load();
+    if (!mounted) return;
+    setState(() {
+      _content = content;
+      _loading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    final sections = _isPrivacy ? _privacySections : _termsSections;
+    final remote = _isPrivacy
+        ? _content.privacyDocument()
+        : _content.termsDocument();
+    final useRemote = remote.sections.isNotEmpty;
+    final heading = useRemote
+        ? (remote.title?.isNotEmpty == true
+              ? remote.title!
+              : (_isPrivacy ? 'Privacy Policy' : 'Terms of Service'))
+        : (_isPrivacy ? 'Privacy Policy' : 'Terms of Service');
+    final effective = useRemote && remote.effective.isNotEmpty
+        ? remote.effective
+        : 'Effective 13 August 2026  •  Version 1.0';
+    final sections = useRemote
+        ? remote.sections
+              .map((section) => _LegalSection(section.heading, section.body))
+              .toList()
+        : (_isPrivacy ? _privacySections : _termsSections);
+
     return AppPageScaffold(
-      appBar: AppBar(
-        title: AppText(_isPrivacy ? 'Privacy Policy' : 'Terms of Service'),
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
-        children: [
-          AppText(
-            _isPrivacy ? 'Privacy Policy' : 'Terms of Service',
-            style: Theme.of(
-              context,
-            ).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 6),
-          AppText(
-            'Effective 13 August 2026  •  Version 1.0',
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-          const SizedBox(height: 20),
-          ...sections.map(
-            (section) => Padding(
-              padding: const EdgeInsets.only(bottom: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    section.heading,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+      appBar: AppBar(title: AppText(heading)),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
+              children: [
+                AppText(
+                  heading,
+                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                AppText(
+                  effective,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: 20),
+                ...sections.map(
+                  (section) => Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          section.heading,
+                          style: Theme.of(context).textTheme.titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                        const SizedBox(height: 7),
+                        AppText(
+                          section.body,
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(height: 1.55),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 7),
-                  AppText(
-                    section.body,
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(height: 1.55),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-        ],
-      ),
     );
   }
 }

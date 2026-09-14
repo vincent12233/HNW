@@ -3837,54 +3837,100 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openAbout() {
+    final company = _appContent.text(
+      'about',
+      'company_name',
+      fallback: AppConfig.appName,
+    );
+    final version = _appContent.text(
+      'about',
+      'app_version',
+      fallback: 'Version 1.0.0',
+    );
+    final legalName = _appContent.text('about', 'legal_name');
+    final address = _appContent.text('about', 'registered_address');
+    final grievance = _appContent.text('about', 'grievance_contact');
+    final summary = _appContent.text('about', 'summary');
+
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                AppConfig.appName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  company,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              const AppText('Version 1.0.0'),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.description_outlined),
-                title: const AppText('Terms of Service'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LegalPage(title: 'Terms'),
+                const SizedBox(height: 6),
+                AppText(version),
+                if (summary.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  AppText(
+                    summary,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      height: 1.45,
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: const AppText('Privacy Policy'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LegalPage(title: 'Privacy'),
+                  ),
+                ],
+                if (legalName.isNotEmpty ||
+                    address.isNotEmpty ||
+                    grievance.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  if (legalName.isNotEmpty)
+                    AppText(
+                      legalName,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                  );
-                },
-              ),
-            ],
+                  if (address.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    AppText(address),
+                  ],
+                  if (grievance.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    AppText(grievance),
+                  ],
+                ],
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.description_outlined),
+                  title: const AppText('Terms of Service'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LegalPage(title: 'Terms'),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const AppText('Privacy Policy'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LegalPage(title: 'Privacy'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

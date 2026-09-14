@@ -6,6 +6,7 @@ import {
 import { Prisma } from '../generated/prisma/client';
 import { AppContentModule } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
 
 export type AppContentUpsertInput = {
   module: AppContentModule | string;
@@ -35,7 +36,46 @@ export type DepositAccountInput = {
 export class AppContentService {
   constructor(private readonly prisma: PrismaService) {}
 
+  private ensureDefaultsPromise: Promise<void> | null = null;
+
+  async ensureDefaults() {
+    if (!this.ensureDefaultsPromise) {
+      this.ensureDefaultsPromise = this.seedMissingDefaults().finally(() => {
+        this.ensureDefaultsPromise = null;
+      });
+    }
+    await this.ensureDefaultsPromise;
+  }
+
+  private async seedMissingDefaults() {
+    for (const entry of APP_CONTENT_DEFAULTS) {
+      const locale = entry.locale || 'en';
+      const existing = await this.prisma.appContentEntry.findUnique({
+        where: {
+          module_key_locale: {
+            module: entry.module,
+            key: entry.key,
+            locale,
+          },
+        },
+      });
+      if (existing) continue;
+      await this.prisma.appContentEntry.create({
+        data: {
+          module: entry.module,
+          key: entry.key,
+          title: entry.title ?? null,
+          body: entry.body,
+          locale,
+          isActive: entry.isActive ?? true,
+          sortOrder: entry.sortOrder ?? 0,
+        },
+      });
+    }
+  }
+
   async getPublicBundle(locale = 'en') {
+    await this.ensureDefaults();
     const [entries, accounts] = await Promise.all([
       this.prisma.appContentEntry.findMany({
         where: { isActive: true },
@@ -68,6 +108,9 @@ export class AppContentService {
       },
       support: this.moduleMap(preferred.rows, AppContentModule.SUPPORT),
       trading: this.moduleMap(preferred.rows, AppContentModule.TRADING),
+      legal: this.moduleMap(preferred.rows, AppContentModule.LEGAL),
+      about: this.moduleMap(preferred.rows, AppContentModule.ABOUT),
+      insights: this.moduleMap(preferred.rows, AppContentModule.INSIGHTS),
       updatedAt: preferred.rows.reduce(
         (latest, row) =>
           row.updatedAt > latest ? row.updatedAt : latest,
@@ -77,6 +120,7 @@ export class AppContentService {
   }
 
   async listAdmin(module?: string) {
+    await this.ensureDefaults();
     return this.prisma.appContentEntry.findMany({
       where: module
         ? { module: this.parseModule(module) }

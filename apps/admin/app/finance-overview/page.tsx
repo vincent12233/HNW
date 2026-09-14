@@ -108,8 +108,12 @@ export default function FinanceOverviewPage() {
     if (!adjustment) return;
     setSubmitting(true);
     try {
-      await api.post(`/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`, values);
-        message.success("资金调整已执行并写入流水");
+      await api.post(`/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`, {
+        amount: Number(values.amount).toFixed(2),
+        referenceId: values.referenceId.trim(),
+        note: values.note?.trim(),
+      });
+      message.success(adjustment.direction === "credit" ? "上分订单已创建并入账" : "下分已执行并写入流水");
       setAdjustment(null);
       form.resetFields();
       await loadData();
@@ -183,10 +187,10 @@ export default function FinanceOverviewPage() {
           <Table<IpoDebt | LoanRecord> rowKey="id" columns={debtColumns} dataSource={[...ipoDebts.filter((item) => item.status !== "PAID"), ...loans.filter((item) => !["REPAID", "REJECTED"].includes(item.status))]} loading={loading} scroll={{ x: 900 }} pagination={{ pageSize: 10 }} />
         </Card>
       </Space>
-      <Modal title={`${adjustment?.direction === "credit" ? "账户上分" : "账户扣款"} · ${adjustment?.accountNumber || ""}`} open={Boolean(adjustment)} onCancel={() => { setAdjustment(null); form.resetFields(); }} onOk={() => form.submit()} confirmLoading={submitting} okText="确认执行" destroyOnHidden>
+      <Modal title={`${adjustment?.direction === "credit" ? "创建上分订单" : "账户下分"} · ${adjustment?.accountNumber || ""}`} open={Boolean(adjustment)} onCancel={() => { setAdjustment(null); form.resetFields(); }} onOk={() => form.submit()} confirmLoading={submitting} okText={adjustment?.direction === "credit" ? "确认创建并上分" : "确认下分"} destroyOnHidden>
         <Form form={form} layout="vertical" onFinish={submitAdjustment}>
           <Form.Item name="amount" label="调整金额" rules={[{ required: true, message: "请输入金额" }]}><InputNumber min={0.01} precision={2} style={{ width: "100%" }} prefix="₹" /></Form.Item>
-          <Form.Item name="referenceId" label="外部流水号" rules={[{ required: true, message: "请输入唯一流水号" }, { min: 6, message: "流水号至少 6 个字符" }]}><Input placeholder="银行流水或内部工单号" /></Form.Item>
+          <Form.Item name="referenceId" label="付款流水号" rules={[{ required: true, message: "请输入唯一流水号" }, { min: 8, message: "流水号至少 8 个字符" }]}><Input placeholder="银行流水或内部工单号" /></Form.Item>
           <Form.Item name="note" label="调整说明" rules={[{ required: true, message: "请输入调整原因" }]}><Input.TextArea rows={3} placeholder="说明资金来源或扣款原因" /></Form.Item>
         </Form>
       </Modal>

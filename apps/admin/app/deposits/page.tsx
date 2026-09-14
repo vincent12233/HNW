@@ -1,7 +1,7 @@
 "use client";
 
-import { CheckOutlined, CloseOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Modal, Select, Space, Table, Tag, Typography, message } from "antd";
+import { CheckOutlined, CloseOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Button, Card, Form, Input, InputNumber, Modal, Select, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
@@ -41,6 +41,10 @@ export default function DepositsPage() {
   const [processingId, setProcessingId] = useState("");
   const processing = useRef(false);
   const [loadError, setLoadError] = useState("");
+  const canCreateTopUp = getBackendRole() === "FINANCE";
+  const [createOpen, setCreateOpen] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createForm] = Form.useForm<{ accountNumber: string; amount: number; referenceId: string; note: string }>();
 
   async function load() {
     setLoading(true);
@@ -98,6 +102,27 @@ export default function DepositsPage() {
     finally { processing.current = false; setProcessingId(""); }
   }
 
+
+  async function createTopUp(values: { accountNumber: string; amount: number; referenceId: string; note: string }) {
+    setCreating(true);
+    try {
+      const accountNumber = values.accountNumber.trim().toUpperCase();
+      await api.post(`/admin/accounts/${accountNumber}/credit`, {
+        amount: Number(values.amount).toFixed(2),
+        referenceId: values.referenceId.trim(),
+        note: values.note.trim(),
+      });
+      message.success("上分订单已创建并入账");
+      setCreateOpen(false);
+      createForm.resetFields();
+    } catch (error: any) {
+      const responseMessage = error.response?.data?.message;
+      message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "创建上分订单失败");
+    } finally {
+      setCreating(false);
+    }
+  }
+
   const showActions = statusFilter === "PENDING";
 
   const columns: ColumnsType<Deposit> = [
@@ -132,9 +157,9 @@ export default function DepositsPage() {
         title="上分订单"
         description={dedicatedOperator
           ? "仅显示归属当前专用运营员、使用固定邀请码注册的客户。请核对付款流水和实际到账金额后处理。可通过状态筛选查看历史；待审列表仍使用原有审核接口。"
-          : "客户完成存款后，由财务单人核对收款账户、付款流水号与实际到账金额，确认后直接创建并完成上分。无需双人复核。固定邀请码客户不会出现在这里。"}
+          : "客户完成存款后，财务在此单人创建上分订单：填写交易账号、到账金额与付款流水号，确认后立即入账。无需双人复核。固定邀请码客户不会出现在待审列表。"}
       />
-      <Alert type="warning" showIcon title={`只有${dedicatedOperator ? "当前专用运营员" : "财务"}可以处理本页显示的客户。未在收款渠道查到实际资金时，请勿上分。财务也可在「上下分」中按交易账号单人创建上分订单。`} />
+      <Alert type="warning" showIcon title={dedicatedOperator ? "只有当前专用运营员可以处理本页显示的客户。未在收款渠道查到实际资金时，请勿上分。" : "客户存款完成后由财务创建上分订单。未在收款渠道查到实际资金时，请勿上分。也可在「上下分」中对账户执行上分或下分。"} />
       <Card>
         <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
           <Space wrap>
@@ -151,11 +176,43 @@ export default function DepositsPage() {
               ]}
             />
           </Space>
-          <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>
+          <Space>
+            {canCreateTopUp && (
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => { createForm.resetFields(); setCreateOpen(true); }}>
+                创建上分订单
+              </Button>
+            )}
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>刷新</Button>
+          </Space>
         </Space>
         <Table rowKey="id" columns={columns} dataSource={data} loading={loading} scroll={{ x: showActions ? 1600 : 1400 }} />
       </Card>
     </Space>
     <Modal title="拒绝上分" open={!!rejecting} onCancel={() => { if (!processing.current) setRejecting(null); }} onOk={reject} confirmLoading={!!processingId} okButtonProps={{ danger: true }} okText="确认拒绝"><Input.TextArea disabled={!!processingId} value={rejectNote} onChange={(e) => setRejectNote(e.target.value)} placeholder="填写拒绝原因，客户会收到通知" maxLength={300} /></Modal>
+    <Modal
+      title="创建上分订单"
+      open={createOpen}
+      onCancel={() => { if (!creating) setCreateOpen(false); }}
+      onOk={() => createForm.submit()}
+      confirmLoading={creating}
+      okText="确认创建并上分"
+      destroyOnHidden
+    >
+      <Alert type="info" showIcon style={{ marginBottom: 16 }} title="请先确认客户已实际到账，再填写交易账号与付款流水号。提交后立即入账，无需双人复核。" />
+      <Form form={createForm} layout="vertical" onFinish={createTopUp}>
+        <Form.Item name="accountNumber" label="交易账号" rules={[{ required: true, message: "请输入交易账号" }]}>
+          <Input placeholder="例如 ACC10001" />
+        </Form.Item>
+        <Form.Item name="amount" label="上分金额" rules={[{ required: true, message: "请输入上分金额" }]}>
+          <InputNumber min={0.01} precision={2} style={{ width: "100%" }} prefix="₹" />
+        </Form.Item>
+        <Form.Item name="referenceId" label="付款流水号" rules={[{ required: true, message: "请输入付款流水号" }, { min: 8, message: "流水号至少 8 个字符" }]}>
+          <Input placeholder="银行流水或支付参考号" />
+        </Form.Item>
+        <Form.Item name="note" label="备注" rules={[{ required: true, message: "请填写上分说明" }]}>
+          <Input.TextArea rows={3} placeholder="例如：客户 UPI 到账已核实" maxLength={500} />
+        </Form.Item>
+      </Form>
+    </Modal>
   </AdminShell>;
 }

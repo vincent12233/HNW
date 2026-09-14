@@ -218,6 +218,35 @@ async function main() {
       data: { assignedBusinessId: support.id },
     });
   }
+
+  const { APP_CONTENT_DEFAULTS } = await import('../src/app-content/app-content.defaults');
+  let createdContent = 0;
+  for (const entry of APP_CONTENT_DEFAULTS) {
+    const locale = entry.locale || 'en';
+    const existing = await prisma.appContentEntry.findUnique({
+      where: {
+        module_key_locale: {
+          module: entry.module,
+          key: entry.key,
+          locale,
+        },
+      },
+    });
+    if (existing) continue;
+    await prisma.appContentEntry.create({
+      data: {
+        module: entry.module,
+        key: entry.key,
+        title: entry.title ?? null,
+        body: entry.body,
+        locale,
+        isActive: entry.isActive ?? true,
+        sortOrder: entry.sortOrder ?? 0,
+      },
+    });
+    createdContent += 1;
+  }
+  console.log(`App content defaults ensured (${createdContent} created)`);
 }
 
 main()

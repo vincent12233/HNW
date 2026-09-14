@@ -19,6 +19,7 @@ import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../models/withdrawal_request.dart';
+import '../services/app_content_service.dart';
 import '../services/auth_service.dart';
 import '../services/client_account_service.dart';
 import '../services/ipo_service.dart';
@@ -38,6 +39,8 @@ import 'appearance_page.dart';
 import '../theme/appearance_settings.dart';
 import '../widgets/market_header.dart';
 import '../widgets/stock_logo.dart';
+import '../widgets/floating_support_button.dart';
+import '../widgets/support_ui_metrics.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
 import 'market_news_page.dart';
@@ -135,6 +138,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   final List<CompanyShowcase> companyShowcases = <CompanyShowcase>[];
   final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
+  AppContentBundle _appContent = AppContentBundle.empty;
 
   Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
@@ -397,6 +401,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AppContentService.instance.addListener(_onAppContentChanged);
 
     marketConnected = marketSocket.isConnected;
     unawaited(_reloadNews());
@@ -472,6 +477,13 @@ class _MarketHomePageState extends State<MarketHomePage>
 
     _loadAppData();
     unawaited(_loadHomeIndexHistory());
+    unawaited(_loadAppContent());
+  }
+
+  Future<void> _loadAppContent({bool force = false}) async {
+    final content = await AppContentService.instance.load(force: force);
+    if (!mounted) return;
+    setState(() => _appContent = content);
   }
 
   Future<void> _loadHomeIndexHistory() async {
@@ -573,6 +585,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Future<void> _performMarketRefresh() async {
+    unawaited(_loadAppContent(force: true));
     final results = await Future.wait<dynamic>([
       marketDataService.fetchSnapshot(),
       marketDataService.fetchIndexSnapshot(),
@@ -638,12 +651,18 @@ class _MarketHomePageState extends State<MarketHomePage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AppContentService.instance.removeListener(_onAppContentChanged);
     _marketSessionTimer?.cancel();
     _marketNewsTimer?.cancel();
     _notificationTimer?.cancel();
     marketSocket.removeConnectionListener(_handleMarketConnection);
     marketSocket.dispose();
     super.dispose();
+  }
+
+  void _onAppContentChanged() {
+    if (!mounted) return;
+    setState(() => _appContent = AppContentService.instance.current);
   }
 
   @override
@@ -793,6 +812,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       await AppLanguage.instance.select(
         settings['language']?.toString() ?? 'en',
       );
+      await _loadAppContent(force: true);
       await AppearanceSettings.instance.select(
         settings['theme']?.toString() ?? 'light',
       );
@@ -892,8 +912,12 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
                 Positioned(
                   right: 0,
-                  bottom: 86,
-                  child: SafeArea(child: _floatingCustomerServiceButton()),
+                  bottom: SupportUiMetrics.of(context).fabBottom,
+                  child: SafeArea(
+                    child: FloatingSupportButton(
+                      onTap: () => _openSupportChat(),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -1820,72 +1844,67 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openDepositSupport() {
-    Navigator.of(
-      context,
-    ).push(MaterialPageRoute<void>(builder: (_) => const DepositPage()));
-  }
-
-  void _openSupportChat({String? initialMessage}) {
-    showDialog<void>(
-      context: context,
-      barrierColor: const Color(0x66071326),
-      builder: (dialogContext) => Dialog(
-        insetPadding: const EdgeInsets.fromLTRB(14, 36, 14, 86),
-        clipBehavior: Clip.antiAlias,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520, maxHeight: 720),
-          child: SupportChatPage(initialMessage: initialMessage),
-        ),
-      ),
+    // APP Add Funds opens the in-app Deposit page (not the side Support button).
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const DepositPage()),
     );
   }
 
-  Widget _floatingCustomerServiceButton() {
-    return Semantics(
-      button: true,
-      label: 'Customer Support',
-      child: Material(
-        color: Colors.transparent,
-        elevation: 10,
-        shadowColor: const Color(0x66000000),
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
-        child: InkWell(
-          borderRadius: const BorderRadius.horizontal(
-            left: Radius.circular(12),
-          ),
-          onTap: () => _openSupportChat(),
-          child: Ink(
-            width: 42,
-            height: 174,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF2F6BFF), Color(0xFF0B47D1)],
-              ),
-              borderRadius: BorderRadius.horizontal(left: Radius.circular(12)),
-            ),
-            child: const Column(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                RotatedBox(
-                  quarterTurns: 3,
-                  child: Text(
-                    'Customer Service',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
+  void _openSupportChat({String? initialMessage}) {
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: 'Close support',
+      barrierColor: const Color(0x73071326),
+      transitionDuration: const Duration(milliseconds: 260),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final m = SupportUiMetrics.of(context);
+              return Align(
+                alignment: Alignment.bottomCenter,
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(
+                    m.panelHorizontalInset,
+                    12,
+                    m.panelHorizontalInset,
+                    m.panelBottomInset,
+                  ),
+                  child: SizedBox(
+                    width: m.panelWidth,
+                    height: m.panelMaxHeight,
+                    child: Material(
+                      color: Colors.transparent,
+                      elevation: 16,
+                      shadowColor: const Color(0x66071326),
+                      borderRadius: BorderRadius.circular(m.panelRadius),
+                      clipBehavior: Clip.antiAlias,
+                      child: SupportChatPage(initialMessage: initialMessage),
                     ),
                   ),
                 ),
-                Icon(Icons.chat_bubble_rounded, color: Colors.white, size: 19),
-              ],
-            ),
+              );
+            },
           ),
-        ),
-      ),
+        );
+      },
+      transitionBuilder: (context, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutCubic,
+        );
+        return FadeTransition(
+          opacity: curved,
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.08),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
+          ),
+        );
+      },
     );
   }
 
@@ -2425,6 +2444,12 @@ class _MarketHomePageState extends State<MarketHomePage>
     required IconData icon,
   }) {
     final messageController = TextEditingController(text: initialMessage);
+    final greeting = _appContent.text(
+      'support',
+      'greeting',
+      fallback: 'You are contacting online customer service inside the app.',
+    );
+    final hours = _appContent.text('support', 'hours');
 
     showDialog<void>(
       context: context,
@@ -2466,27 +2491,41 @@ class _MarketHomePageState extends State<MarketHomePage>
                     color: const Color(0xFFF5F7FB),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: const Row(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.support_agent,
                         size: 22,
                         color: AppConfig.primaryColor,
                       ),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Expanded(
-                        child: AppText(
-                          'You are contacting online customer service inside the app.',
-                          style: TextStyle(height: 1.4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              greeting,
+                              style: const TextStyle(height: 1.4),
+                            ),
+                            if (hours.isNotEmpty) ...[
+                              const SizedBox(height: 6),
+                              AppText(
+                                hours,
+                                style: const TextStyle(
+                                  color: Color(0xFF64748B),
+                                  fontSize: 12,
+                                  height: 1.35,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 18),
-
                 TextField(
                   controller: messageController,
                   minLines: 3,
@@ -2497,9 +2536,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     border: OutlineInputBorder(),
                   ),
                 ),
-
                 const SizedBox(height: 10),
-
                 const AppText(
                   'Send a message directly to online customer service. '
                   'Customer service will assist you in this conversation.',
@@ -2807,6 +2844,16 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _homeTradingBanner() {
+    final title = _appContent.text(
+      'home',
+      'banner.title',
+      fallback: 'Track live markets & place orders on the go',
+    );
+    final subtitle = _appContent.text(
+      'home',
+      'banner.subtitle',
+      fallback: 'Explore equities, institutional offers, OTC and IPOs',
+    );
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
@@ -2815,24 +2862,24 @@ class _MarketHomePageState extends State<MarketHomePage>
       ),
       child: Row(
         children: [
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 AppText(
-                  'Track live markets & place orders on the go',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+                  title,
+                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 AppText(
-                  'Explore equities, institutional offers, OTC and IPOs',
-                  style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+                  subtitle,
+                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
                 ),
               ],
             ),
           ),
-          SizedBox(width: 12),
-          Icon(
+          const SizedBox(width: 12),
+          const Icon(
             Icons.candlestick_chart_rounded,
             size: 52,
             color: AppConfig.gainColor,
@@ -3660,7 +3707,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 subtitle: 'FAQs, contact support and raise a ticket',
                 onTap: () => _openCustomerService(
                   title: 'Help & support',
-                  initialMessage: 'Hello, I need help with my account.',
+                  initialMessage: _appContent.text(
+                    'support',
+                    'chat_preset.help',
+                    fallback: 'Hello, I need help with my account.',
+                  ),
                   icon: Icons.help_outline,
                 ),
                 color: const Color(0xFF2563EB),
@@ -3835,54 +3886,100 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openAbout() {
+    final company = _appContent.text(
+      'about',
+      'company_name',
+      fallback: AppConfig.appName,
+    );
+    final version = _appContent.text(
+      'about',
+      'app_version',
+      fallback: 'Version 1.0.0',
+    );
+    final legalName = _appContent.text('about', 'legal_name');
+    final address = _appContent.text('about', 'registered_address');
+    final grievance = _appContent.text('about', 'grievance_contact');
+    final summary = _appContent.text('about', 'summary');
+
     showModalBottomSheet<void>(
       context: context,
       showDragHandle: true,
+      isScrollControlled: true,
       builder: (sheetContext) => SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                AppConfig.appName,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.w800,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  company,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              const AppText('Version 1.0.0'),
-              const SizedBox(height: 16),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.description_outlined),
-                title: const AppText('Terms of Service'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LegalPage(title: 'Terms'),
+                const SizedBox(height: 6),
+                AppText(version),
+                if (summary.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  AppText(
+                    summary,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      height: 1.45,
                     ),
-                  );
-                },
-              ),
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.privacy_tip_outlined),
-                title: const AppText('Privacy Policy'),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.of(context).push(
-                    MaterialPageRoute<void>(
-                      builder: (_) => const LegalPage(title: 'Privacy'),
+                  ),
+                ],
+                if (legalName.isNotEmpty ||
+                    address.isNotEmpty ||
+                    grievance.isNotEmpty) ...[
+                  const SizedBox(height: 14),
+                  if (legalName.isNotEmpty)
+                    AppText(
+                      legalName,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
                     ),
-                  );
-                },
-              ),
-            ],
+                  if (address.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    AppText(address),
+                  ],
+                  if (grievance.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    AppText(grievance),
+                  ],
+                ],
+                const SizedBox(height: 16),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.description_outlined),
+                  title: const AppText('Terms of Service'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LegalPage(title: 'Terms'),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.privacy_tip_outlined),
+                  title: const AppText('Privacy Policy'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const LegalPage(title: 'Privacy'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

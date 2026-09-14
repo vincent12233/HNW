@@ -892,4 +892,33 @@ enum LoanStatus {
   OVERDUE
 }
 
+enum AppContentModule {
+  HOME
+  DEPOSIT
+  SUPPORT
+  TRADING
+  LEGAL
+  ABOUT
+  INSIGHTS
+}
+
+model AppContentEntry {
+  id        String           @id @default(uuid())
+  module    AppContentModule
+  key       String
+  title     String?
+  body      String           @db.Text
+  locale    String           @default("en")
+  metadata  Json?
+  isActive  Boolean          @default(true)
+  sortOrder Int              @default(0)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  @@unique([module, key, locale])
+  @@index([module, isActive])
+  @@index([module, sortOrder])
+  @@map("app_content_entries")
+}
+
 

@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 
 import '../../models/institutional_opportunity.dart';
 import '../../models/stock_quote.dart';
+import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
-import 'product_offer_card.dart';
 import '../responsive_empty_state.dart';
+import 'product_offer_card.dart';
+import 'trading_guide_card.dart';
 
 class InstitutionalTab extends StatelessWidget {
   const InstitutionalTab({
@@ -21,57 +23,101 @@ class InstitutionalTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (stocks.isEmpty) {
-      return const ResponsiveEmptyState(
-        icon: Icons.business_center_outlined,
-        title: 'No institutional offers available',
-        subtitle: 'Stocks will appear here when live market data is available.',
-      );
-    }
+    return ListenableBuilder(
+      listenable: AppContentService.instance,
+      builder: (context, _) {
+        final content = AppContentService.instance.current;
+        final guideTitle = content.title('trading', 'guide.institutional');
+        final guideBody = content.text('trading', 'guide.institutional');
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: stocks.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final stock = stocks[index];
-        StockQuote? quote;
-        for (final item in marketStocks) {
-          if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
-              item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
-            quote = item;
-            break;
-          }
+        if (stocks.isEmpty) {
+          return Column(
+            children: [
+              if (guideBody.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: TradingGuideCard(title: guideTitle, body: guideBody),
+                ),
+              Expanded(
+                child: ResponsiveEmptyState(
+                  icon: Icons.business_center_outlined,
+                  title: content.text(
+                    'trading',
+                    'institutional.empty_title',
+                    fallback: 'No institutional offers available',
+                  ),
+                  subtitle: content.text(
+                    'trading',
+                    'institutional.empty_subtitle',
+                    fallback:
+                        'Stocks will appear here when live market data is available.',
+                  ),
+                ),
+              ),
+            ],
+          );
         }
 
-        final live = quote != null && quote.quoteFresh;
-        return ProductOfferCard(
-          name: stock.companyName,
-          symbol: stock.symbol,
-          type: 'Ins. Stock',
-          marketPrice: stock.marketPrice > 0 ? stock.marketPrice : (live ? quote.price : 0),
-          offerPrice: stock.price,
-          actionLabel: onOpen == null ? 'View details' : 'Trade Now',
-          onTrade: () {
-            if (onOpen != null && live) {
-              onOpen!(stock);
-              return;
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: stocks.length + (guideBody.isNotEmpty ? 1 : 0),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (guideBody.isNotEmpty && index == 0) {
+              return TradingGuideCard(title: guideTitle, body: guideBody);
             }
-            showDialog<void>(context: context, builder: (context) => AlertDialog(
-              title: AppText(stock.companyName),
-              content: Column(mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start, children: [
-                AppText('${stock.symbol} · ${stock.exchange}'),
-                const SizedBox(height: 16),
-                AppText('Offer Price: ${formatPrice(stock.price)}'),
-                if (!live) const AppText('Live quote unavailable'),
-              ]),
-              actions: [TextButton(onPressed: () => Navigator.pop(context), child: const AppText('Close'))],
-            ));
+            final stock = stocks[guideBody.isNotEmpty ? index - 1 : index];
+            StockQuote? quote;
+            for (final item in marketStocks) {
+              if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
+                  item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
+                quote = item;
+                break;
+              }
+            }
+
+            final live = quote != null && quote.quoteFresh;
+            return ProductOfferCard(
+              name: stock.companyName,
+              symbol: stock.symbol,
+              type: 'Ins. Stock',
+              marketPrice: stock.marketPrice > 0
+                  ? stock.marketPrice
+                  : (live ? quote.price : 0),
+              offerPrice: stock.price,
+              actionLabel: onOpen == null ? 'View details' : 'Trade Now',
+              onTrade: () {
+                if (onOpen != null && live) {
+                  onOpen!(stock);
+                  return;
+                }
+                showDialog<void>(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: AppText(stock.companyName),
+                    content: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText('${stock.symbol} · ${stock.exchange}'),
+                        const SizedBox(height: 16),
+                        AppText('Offer Price: ${formatPrice(stock.price)}'),
+                        if (!live) const AppText('Live quote unavailable'),
+                      ],
+                    ),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const AppText('Close'),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
           },
-        );      },
+        );
+      },
     );
   }
 }
-
-

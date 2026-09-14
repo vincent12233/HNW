@@ -29,7 +29,7 @@ const { Title, Paragraph, Text } = Typography;
 
 const supportTags = ["入金咨询", "提现问题", "KYC", "交易问题", "账户问题", "紧急", "已跟进"];
 
-const quickReplies = [
+const defaultQuickReplies = [
   "您好，请按客服提供的存款方式付款并发送付款凭证。客服会转交信息，财务核实实际到账后为账户上分。",
   "您的提现申请已收到，财务会根据订单号核对并处理。",
   "请上传清晰的 Aadhaar 或 PAN 文件，业务员会尽快审核 KYC。",
@@ -77,8 +77,40 @@ export default function SupportConsolePage() {
   const [loading, setLoading] = useState(false);
   const [messageLoading, setMessageLoading] = useState(false);
   const [error, setError] = useState("");
+  const [quickReplies, setQuickReplies] = useState<string[]>(defaultQuickReplies);
+  const [supportTagsState, setSupportTagsState] = useState<string[]>(supportTags);
 
   const selectedTags = useMemo(() => selected?.tags || [], [selected?.tags]);
+
+  async function loadQuickReplies() {
+    try {
+      const response = await api.get<{
+        support?: Record<string, { body?: string }>;
+      }>("/app-content", { params: { locale: "zh" } });
+      const support = response.data?.support ?? {};
+      const keys = [
+        "quick_reply.deposit",
+        "quick_reply.withdrawal",
+        "quick_reply.kyc",
+        "quick_reply.general",
+      ] as const;
+      // Merge by key so a missing CMS entry keeps the built-in default
+      // instead of dropping that slot from the console toolbar.
+      setQuickReplies(
+        keys.map((key, index) => {
+          const body = String(support[key]?.body ?? "").trim();
+          return body || defaultQuickReplies[index];
+        }),
+      );
+      const tags = String(support.tags?.body ?? "")
+        .split(/[,，]/)
+        .map((item) => item.trim())
+        .filter(Boolean);
+      if (tags.length > 0) setSupportTagsState(tags);
+    } catch {
+      // Keep built-in fallbacks when ops content is unavailable.
+    }
+  }
 
   async function loadConversations() {
     setLoading(true);
@@ -180,7 +212,8 @@ export default function SupportConsolePage() {
   }
 
   useEffect(() => {
-    loadConversations();
+    void loadConversations();
+    void loadQuickReplies();
   }, []);
 
   return (
@@ -273,7 +306,7 @@ export default function SupportConsolePage() {
                   onChange={updateTags}
                   placeholder="选择或输入自定义备注标签"
                   style={{ width: "100%" }}
-                  options={supportTags.map((tag) => ({ value: tag, label: tag }))}
+                  options={supportTagsState.map((tag) => ({ value: tag, label: tag }))}
                 />
 
                 <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>

@@ -1,6 +1,7 @@
 import '../widgets/app_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
+import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 
 class LanguagePage extends StatefulWidget {
@@ -24,6 +25,7 @@ class _LanguagePageState extends State<LanguagePage> {
         {'language': value},
       );
       await AppLanguage.instance.select(value);
+      await AppContentService.instance.load(force: true);
     } catch (_) {
       if (mounted) setState(() => _error = 'Unable to save language');
     } finally {

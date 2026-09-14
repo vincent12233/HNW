@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../models/stock_quote.dart';
+import '../services/app_content_service.dart';
 import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/market_socket_service.dart';
@@ -101,6 +102,7 @@ class _MarketsPageState extends State<MarketsPage> {
     unawaited(_loadIndexHistory());
     unawaited(_loadFeaturedStockHistory());
     unawaited(_searchStocks(reset: true));
+    unawaited(AppContentService.instance.load());
   }
 
   Future<void> _loadFeaturedStockHistory() async {
@@ -1223,39 +1225,63 @@ class _MarketsPageState extends State<MarketsPage> {
     );
   }
 
-  Widget _marketBanner() => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(
-      color: const Color(0xFFEEF5FF),
-      borderRadius: BorderRadius.circular(8),
-    ),
-    child: const Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _marketBanner() {
+    return ListenableBuilder(
+      listenable: AppContentService.instance,
+      builder: (context, _) {
+        final content = AppContentService.instance.current;
+        final title = content.text(
+          'home',
+          'markets.banner.title',
+          fallback: 'Track live markets & place orders on the go',
+        );
+        final subtitle = content.text(
+          'home',
+          'markets.banner.subtitle',
+          fallback: 'Live prices, company logos and secure execution',
+        );
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF5FF),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
             children: [
-              AppText(
-                'Track live markets & place orders on the go',
-                style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    AppText(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              SizedBox(height: 4),
-              AppText(
-                'Live prices, company logos and secure execution',
-                style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.candlestick_chart_rounded,
+                color: AppConfig.gainColor,
+                size: 50,
               ),
             ],
           ),
-        ),
-        SizedBox(width: 12),
-        Icon(
-          Icons.candlestick_chart_rounded,
-          color: AppConfig.gainColor,
-          size: 50,
-        ),
-      ],
-    ),
-  );
+        );
+      },
+    );
+  }
 
   Widget _stockList(
     List<StockQuote> stocks, {

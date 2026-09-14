@@ -1,6 +1,151 @@
 import '../widgets/app_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
+import '../services/app_content_service.dart';
+
+class WealthInsightsPage extends StatefulWidget {
+  const WealthInsightsPage({super.key});
+
+  @override
+  State<WealthInsightsPage> createState() => _WealthInsightsPageState();
+}
+
+class _WealthInsightsPageState extends State<WealthInsightsPage> {
+  AppContentBundle _content = AppContentBundle.empty;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final content = await AppContentService.instance.load();
+    if (!mounted) return;
+    setState(() {
+      _content = content;
+      _loading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final introTitle = _content.text(
+      'insights',
+      'intro.title',
+      fallback: 'Knowledge for informed investment decisions',
+    );
+    final introBody = _content.text(
+      'insights',
+      'intro.body',
+      fallback:
+          'Explore essential investment concepts, portfolio strategies, market perspectives and wealth-management principles designed to help investors make more informed financial decisions.',
+    );
+    final articles = _content.insightArticles();
+    final fallbackArticles = wealthInsightArticles;
+    final count = articles.isNotEmpty ? articles.length : fallbackArticles.length;
+
+    return AppPageScaffold(
+      appBar: AppBar(title: const AppText('Wealth Insights')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.only(bottom: 24),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        introTitle,
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      AppText(
+                        introBody,
+                        style: const TextStyle(
+                          color: Color(0xFF667085),
+                          height: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                for (var index = 0; index < count; index++)
+                  ListTile(
+                    leading: const Icon(Icons.menu_book_outlined),
+                    title: AppText(
+                      articles.isNotEmpty
+                          ? (articles[index].title?.trim().isNotEmpty == true
+                                ? articles[index].title!
+                                : 'Article ${index + 1}')
+                          : fallbackArticles[index].$1,
+                    ),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => WealthInsightArticlePage(
+                          index: index,
+                          article: articles.isNotEmpty
+                              ? articles[index]
+                              : null,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+    );
+  }
+}
+
+class WealthInsightArticlePage extends StatelessWidget {
+  const WealthInsightArticlePage({
+    super.key,
+    required this.index,
+    this.article,
+  });
+
+  final int index;
+  final AppContentBlock? article;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = wealthInsightArticles[index.clamp(
+      0,
+      wealthInsightArticles.length - 1,
+    )];
+    final hindi = Localizations.localeOf(context).languageCode == 'hi';
+    final title =
+        article?.title?.trim().isNotEmpty == true
+        ? article!.title!
+        : fallback.$1;
+    final body = article?.body.trim().isNotEmpty == true
+        ? article!.body
+        : (hindi ? fallback.$3 : fallback.$2);
+    return AppPageScaffold(
+      appBar: AppBar(title: AppText(title)),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Align(
+          alignment: Alignment.topCenter,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 680),
+            child: SelectableText(
+              body,
+              style: const TextStyle(fontSize: 16, height: 1.7),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 const wealthInsightArticles = <(String, String, String)>[
   (
@@ -44,80 +189,3 @@ const wealthInsightArticles = <(String, String, String)>[
     'निवेश का मूल्य घट सकता है। एक ही निवेश में अधिक राशि, कम तरलता, कीमत में अंतर और परिचालन देरी से नुकसान बढ़ सकता है। उधार की राशि चुकाने की ज़िम्मेदारी होती है। उत्पाद की शर्तें पढ़ें और पिछले प्रदर्शन को गारंटी न मानें।\n\nपासवर्ड या निकासी पिन किसी से साझा न करें, सहायता कर्मचारी होने का दावा करने वाले से भी नहीं। लॉगिन पासवर्ड और निकासी पिन अलग पृष्ठों से बदलें। पाँच गलत पिन प्रयासों के बाद सत्यापन अस्थायी रूप से बंद हो जाता है। दुरुपयोग की आशंका पर ऐप सहायता से संपर्क करें। यह सामान्य शिक्षा है, व्यक्तिगत निवेश सलाह नहीं।',
   ),
 ];
-
-class WealthInsightsPage extends StatelessWidget {
-  const WealthInsightsPage({super.key});
-  @override
-  Widget build(BuildContext context) => AppPageScaffold(
-    appBar: AppBar(title: const AppText('Wealth Insights')),
-    body: ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, 14),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                'Knowledge for informed investment decisions',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-              SizedBox(height: 8),
-              AppText(
-                'Explore essential investment concepts, portfolio strategies, market perspectives and wealth-management principles designed to help investors make more informed financial decisions.',
-                style: TextStyle(color: Color(0xFF667085), height: 1.5),
-              ),
-            ],
-          ),
-        ),
-        ...[
-          'Investment Essentials',
-          'Portfolio Strategy',
-          'Market Perspectives',
-          'Understanding Companies',
-          'Risk Management',
-          'Wealth Planning',
-          'Trading & Orders',
-          'Investor Discipline & Important Information',
-        ].asMap().entries.map(
-          (entry) => ListTile(
-            leading: const Icon(Icons.menu_book_outlined),
-            title: AppText(entry.value),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(
-                builder: (_) => WealthInsightArticlePage(index: entry.key),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-class WealthInsightArticlePage extends StatelessWidget {
-  const WealthInsightArticlePage({super.key, required this.index});
-  final int index;
-  @override
-  Widget build(BuildContext context) {
-    final article = wealthInsightArticles[index];
-    final hindi = Localizations.localeOf(context).languageCode == 'hi';
-    return AppPageScaffold(
-      appBar: AppBar(title: AppText(article.$1)),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 680),
-            child: SelectableText(
-              hindi ? article.$3 : article.$2,
-              style: const TextStyle(fontSize: 16, height: 1.7),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}

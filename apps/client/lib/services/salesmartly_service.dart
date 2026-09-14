@@ -12,6 +12,7 @@ class SaleSmartlyService {
   Future<void> openChat({
     required AuthSession session,
     String? initialMessage,
+    String? scriptUrlOverride,
   }) async {
     if (kIsWeb ||
         (defaultTargetPlatform != TargetPlatform.android &&
@@ -21,10 +22,13 @@ class SaleSmartlyService {
       );
     }
 
-    final scriptUrl = AppConfig.saleSmartlyScriptUrl.trim();
+    final configured = scriptUrlOverride?.trim().isNotEmpty == true
+        ? scriptUrlOverride!.trim()
+        : AppConfig.saleSmartlyScriptUrl.trim();
+    final scriptUrl = configured;
     if (scriptUrl.isEmpty) {
       throw const SaleSmartlyException(
-        'Customer service is not configured. Set SALESMARTLY_SCRIPT_URL when building the app.',
+        'Customer service is not configured. Ask an administrator to set the SaleSmartly script URL.',
       );
     }
 

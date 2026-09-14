@@ -96,10 +96,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         children: [
           Row(
             children: [
-              const Expanded(
+              Expanded(
                 child: AppText(
-                  'Portfolio',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                  AppContentService.instance.current.text(
+                    'trading',
+                    'portfolio.page_title',
+                    fallback: 'Portfolio',
+                  ),
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
                 ),
               ),
               IconButton(
@@ -258,7 +262,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         ),
       ),
       const SizedBox(height: 18),
-      _heading('Investment Summary'),
+      _heading(
+        AppContentService.instance.current.text(
+          'trading',
+          'portfolio.summary_heading',
+          fallback: 'Investment Summary',
+        ),
+      ),
       AppText(
         '${tr('As of')} ${_date(data['asOf'])}',
         style: const TextStyle(
@@ -274,7 +284,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ]),
       const Divider(height: 20),
       _heading(
-        'Asset Allocation',
+        AppContentService.instance.current.text(
+          'trading',
+          'portfolio.allocation_heading',
+          fallback: 'Asset Allocation',
+        ),
         action: empty ? null : () => _showHoldings(categories),
       ),
       if (empty)

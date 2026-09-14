@@ -915,6 +915,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                   bottom: SupportUiMetrics.of(context).fabBottom,
                   child: SafeArea(
                     child: FloatingSupportButton(
+                      label: _appContent.text(
+                        'support',
+                        'fab_label',
+                        fallback: 'Customer Service',
+                      ),
                       onTap: () => _openSupportChat(),
                     ),
                   ),
@@ -1158,7 +1163,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 children: [
                   Expanded(
                     child: AppText(
-                      'Total Asset Value',
+                      _appContent.text(
+                        'home',
+                        'funds.total_asset_label',
+                        fallback: 'Total Asset Value',
+                      ),
                       style: const TextStyle(
                         color: Colors.white70,
                         fontSize: 13,
@@ -1478,8 +1487,16 @@ class _MarketHomePageState extends State<MarketHomePage>
         const SizedBox(width: 10),
         Expanded(
           child: _HomeActionButton(
-            label: 'Withdraw Funds',
-            subtitle: 'Transfer to Bank',
+            label: _appContent.text(
+              'home',
+              'funds.withdraw_cta_label',
+              fallback: 'Withdraw Funds',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'funds.withdraw_cta_subtitle',
+              fallback: 'Transfer to Bank',
+            ),
             icon: Icons.call_made_rounded,
             color: const Color(0xFF0F766E),
             onTap: _openWithdrawalRequest,
@@ -1509,7 +1526,13 @@ class _MarketHomePageState extends State<MarketHomePage>
               ),
             ),
             onPressed: onViewAll,
-            child: const AppText('View All'),
+            child: AppText(
+              _appContent.text(
+                'home',
+                'view_all_cta',
+                fallback: 'View All',
+              ),
+            ),
           ),
       ],
     );
@@ -2622,7 +2645,11 @@ class _MarketHomePageState extends State<MarketHomePage>
           _homeFundsCard(),
           const SizedBox(height: 18),
           _sectionTitle(
-            'Market Indices',
+            _appContent.text(
+              'home',
+              'indices.section_title',
+              fallback: 'Market Indices',
+            ),
             onViewAll: () => setState(() => selectedIndex = 1),
           ),
           const SizedBox(height: 10),
@@ -3524,10 +3551,14 @@ class _MarketHomePageState extends State<MarketHomePage>
       children: [
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: AppText(
-                'Profile',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                _appContent.text(
+                  'home',
+                  'profile.page_title',
+                  fallback: 'Profile',
+                ),
+                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
               ),
             ),
             IconButton(
@@ -3541,9 +3572,13 @@ class _MarketHomePageState extends State<MarketHomePage>
         const SizedBox(height: 14),
         _profileHeader(),
         const SizedBox(height: 18),
-        const AppText(
-          'Account Overview',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.overview',
+            fallback: 'Account Overview',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 14),
         Container(
@@ -3553,7 +3588,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               children: [
                 Expanded(
                   child: _homeBalanceValue(
-                    'Available Balance',
+                    _appContent.text(
+                      'home',
+                      'profile.metric.available',
+                      fallback: 'Available Balance',
+                    ),
                     availableBalance,
                     AppConfig.textPrimaryColor,
                   ),
@@ -3561,7 +3600,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: _homeBalanceValue(
-                    'Total Portfolio',
+                    _appContent.text(
+                      'home',
+                      'profile.metric.portfolio',
+                      fallback: 'Total Portfolio',
+                    ),
                     productValue,
                     AppConfig.textPrimaryColor,
                   ),
@@ -3569,7 +3612,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 const VerticalDivider(width: 1),
                 Expanded(
                   child: _homeBalanceValue(
-                    'Total Returns',
+                    _appContent.text(
+                      'home',
+                      'profile.metric.returns',
+                      fallback: 'Total Returns',
+                    ),
                     totalReturns,
                     totalReturns >= 0
                         ? AppConfig.gainColor
@@ -3581,9 +3628,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
         ),
         const SizedBox(height: 18),
-        const AppText(
-          'Account & Security',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.security',
+            fallback: 'Account & Security',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Card(
@@ -3670,9 +3721,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
         ),
         const SizedBox(height: 18),
-        const AppText(
-          'Preferences',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.preferences',
+            fallback: 'Preferences',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Card(
@@ -3718,9 +3773,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
         ),
         const SizedBox(height: 18),
-        const AppText(
-          'Support & More',
-          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.support',
+            fallback: 'Support & More',
+          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 10),
         Card(
@@ -3730,8 +3789,16 @@ class _MarketHomePageState extends State<MarketHomePage>
             children: [
               _accountTile(
                 icon: Icons.help_outline,
-                title: 'Help & Support',
-                subtitle: 'FAQs, contact support and raise a ticket',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.help.title',
+                  fallback: 'Help & Support',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.help.subtitle',
+                  fallback: 'FAQs, contact support and raise a ticket',
+                ),
                 onTap: () => _openCustomerService(
                   title: 'Help & support',
                   initialMessage: _appContent.text(
@@ -3746,8 +3813,16 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.menu_book_outlined,
-                title: 'Wealth Insights',
-                subtitle: 'Knowledge for informed investment decisions',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.insights.title',
+                  fallback: 'Wealth Insights',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.insights.subtitle',
+                  fallback: 'Knowledge for informed investment decisions',
+                ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const WealthInsightsPage(),
@@ -3758,15 +3833,27 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.info_outline_rounded,
-                title: 'About Us',
-                subtitle: 'About our app, terms and policies',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.about.title',
+                  fallback: 'About Us',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.about.subtitle',
+                  fallback: 'About our app, terms and policies',
+                ),
                 onTap: _openAbout,
                 color: const Color(0xFF8B5CF6),
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.description_outlined,
-                title: 'Terms & Conditions',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.terms.title',
+                  fallback: 'Terms & Conditions',
+                ),
                 subtitle: '',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -3777,7 +3864,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.privacy_tip_outlined,
-                title: 'Privacy Policy',
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.privacy.title',
+                  fallback: 'Privacy Policy',
+                ),
                 subtitle: '',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
@@ -3788,8 +3879,16 @@ class _MarketHomePageState extends State<MarketHomePage>
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.logout_rounded,
-                title: 'Logout',
-                subtitle: 'Securely logout from your account',
+                title: _appContent.text(
+                  'home',
+                  'profile.logout_label',
+                  fallback: 'Logout',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.logout_subtitle',
+                  fallback: 'Securely logout from your account',
+                ),
                 onTap: _confirmSignOut,
                 color: AppConfig.lossColor,
               ),

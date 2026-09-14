@@ -105,7 +105,13 @@ class _DepositPageState extends State<DepositPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const AppText('Deposit'),
+        title: AppText(
+          content.text(
+            'deposit',
+            'page_title',
+            fallback: 'Deposit',
+          ),
+        ),
         leading: const BackButton(),
       ),
       body: RefreshIndicator(
@@ -191,9 +197,13 @@ class _DepositPageState extends State<DepositPage> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const AppText(
-                          'DEPOSIT HISTORY',
-                          style: TextStyle(
+                        AppText(
+                          content.text(
+                            'deposit',
+                            'history_section_title',
+                            fallback: 'DEPOSIT HISTORY',
+                          ),
+                          style: const TextStyle(
                             fontWeight: FontWeight.w800,
                             letterSpacing: .5,
                           ),
@@ -248,9 +258,13 @@ class _DepositPageState extends State<DepositPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const AppText(
-                      'TERMS',
-                      style: TextStyle(
+                    AppText(
+                      content.text(
+                        'deposit',
+                        'terms_section_title',
+                        fallback: 'TERMS',
+                      ),
+                      style: const TextStyle(
                         fontWeight: FontWeight.w800,
                         letterSpacing: .8,
                         color: AppConfig.primaryDarkColor,

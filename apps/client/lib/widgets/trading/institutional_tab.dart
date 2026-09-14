@@ -23,61 +23,64 @@ class InstitutionalTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final content = AppContentService.instance.current;
-    final guideTitle = content.title('trading', 'guide.institutional');
-    final guideBody = content.text('trading', 'guide.institutional');
+    return ListenableBuilder(
+      listenable: AppContentService.instance,
+      builder: (context, _) {
+        final content = AppContentService.instance.current;
+        final guideTitle = content.title('trading', 'guide.institutional');
+        final guideBody = content.text('trading', 'guide.institutional');
 
-    if (stocks.isEmpty) {
-      return Column(
-        children: [
-          if (guideBody.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              child: TradingGuideCard(title: guideTitle, body: guideBody),
-            ),
-          Expanded(
-            child: ResponsiveEmptyState(
-              icon: Icons.business_center_outlined,
-              title: content.text(
-                'trading',
-                'institutional.empty_title',
-                fallback: 'No institutional offers available',
+        if (stocks.isEmpty) {
+          return Column(
+            children: [
+              if (guideBody.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: TradingGuideCard(title: guideTitle, body: guideBody),
+                ),
+              Expanded(
+                child: ResponsiveEmptyState(
+                  icon: Icons.business_center_outlined,
+                  title: content.text(
+                    'trading',
+                    'institutional.empty_title',
+                    fallback: 'No institutional offers available',
+                  ),
+                  subtitle: content.text(
+                    'trading',
+                    'institutional.empty_subtitle',
+                    fallback:
+                        'Stocks will appear here when live market data is available.',
+                  ),
+                ),
               ),
-              subtitle: content.text(
-                'trading',
-                'institutional.empty_subtitle',
-                fallback:
-                    'Stocks will appear here when live market data is available.',
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: stocks.length + (guideBody.isNotEmpty ? 1 : 0),
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        if (guideBody.isNotEmpty && index == 0) {
-          return TradingGuideCard(title: guideTitle, body: guideBody);
-        }
-        final stock = stocks[guideBody.isNotEmpty ? index - 1 : index];
-        StockQuote? quote;
-        for (final item in marketStocks) {
-          if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
-              item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
-            quote = item;
-            break;
-          }
+            ],
+          );
         }
 
-        final live = quote != null && quote.quoteFresh;
-        final positive = (quote?.change ?? 0) >= 0;
-        final changeColor = positive
-            ? const Color(0xFF16A364)
-            : const Color(0xFFDC3545);
+        return ListView.separated(
+          padding: const EdgeInsets.all(16),
+          itemCount: stocks.length + (guideBody.isNotEmpty ? 1 : 0),
+          separatorBuilder: (_, _) => const SizedBox(height: 12),
+          itemBuilder: (context, index) {
+            if (guideBody.isNotEmpty && index == 0) {
+              return TradingGuideCard(title: guideTitle, body: guideBody);
+            }
+            final stock = stocks[guideBody.isNotEmpty ? index - 1 : index];
+            StockQuote? quote;
+            for (final item in marketStocks) {
+              if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
+                  item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
+                quote = item;
+                break;
+              }
+            }
+
+            final live = quote != null && quote.quoteFresh;
+            final positive = (quote?.change ?? 0) >= 0;
+            final changeColor = positive
+                ? const Color(0xFF16A364)
+                : const Color(0xFFDC3545);
         return Material(
           color: Colors.white,
           shape: RoundedRectangleBorder(
@@ -168,6 +171,8 @@ class InstitutionalTab extends StatelessWidget {
             ),
           ),
         );
+      },
+    );
       },
     );
   }

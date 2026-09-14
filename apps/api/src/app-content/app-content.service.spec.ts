@@ -8,9 +8,9 @@ describe('AppContentService locale selection', () => {
   it('prefers requested locale then falls back to English', () => {
     const pick = (service as any).pickLocale(
       [
-        { module: 'HOME', key: 'banner.title', locale: 'en' },
-        { module: 'HOME', key: 'banner.title', locale: 'hi' },
-        { module: 'HOME', key: 'banner.subtitle', locale: 'en' },
+        { module: 'HOME', key: 'banner.title', locale: 'en', body: 'Live markets' },
+        { module: 'HOME', key: 'banner.title', locale: 'hi', body: 'लाइव मार्केट' },
+        { module: 'HOME', key: 'banner.subtitle', locale: 'en', body: 'Explore equities' },
       ],
       'hi',
     );
@@ -21,6 +21,33 @@ describe('AppContentService locale selection', () => {
         expect.objectContaining({ key: 'banner.subtitle', locale: 'en' }),
       ]),
     );
+  });
+
+  it('skips empty preferred-locale bodies and keeps filled English', () => {
+    const pick = (service as any).pickLocale(
+      [
+        {
+          module: 'SUPPORT',
+          key: 'salesmartly_script_url',
+          locale: 'en',
+          body: 'https://example.com/script.js',
+        },
+        {
+          module: 'SUPPORT',
+          key: 'salesmartly_script_url',
+          locale: 'hi',
+          body: '',
+        },
+      ],
+      'hi',
+    );
+    expect(pick.rows).toEqual([
+      expect.objectContaining({
+        key: 'salesmartly_script_url',
+        locale: 'en',
+        body: 'https://example.com/script.js',
+      }),
+    ]);
   });
 
   it('maps module rows into a key-keyed object', () => {

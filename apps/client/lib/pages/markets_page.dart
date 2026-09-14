@@ -102,6 +102,7 @@ class _MarketsPageState extends State<MarketsPage> {
     unawaited(_loadIndexHistory());
     unawaited(_loadFeaturedStockHistory());
     unawaited(_searchStocks(reset: true));
+    unawaited(AppContentService.instance.load());
   }
 
   Future<void> _loadFeaturedStockHistory() async {
@@ -1225,49 +1226,60 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Widget _marketBanner() {
-    final content = AppContentService.instance.current;
-    final title = content.text(
-      'home',
-      'markets.banner.title',
-      fallback: 'Track live markets & place orders on the go',
-    );
-    final subtitle = content.text(
-      'home',
-      'markets.banner.subtitle',
-      fallback: 'Live prices, company logos and secure execution',
-    );
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF5FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  title,
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                AppText(
-                  subtitle,
-                  style: const TextStyle(fontSize: 10, color: Color(0xFF64748B)),
-                ),
-              ],
-            ),
+    return ListenableBuilder(
+      listenable: AppContentService.instance,
+      builder: (context, _) {
+        final content = AppContentService.instance.current;
+        final title = content.text(
+          'home',
+          'markets.banner.title',
+          fallback: 'Track live markets & place orders on the go',
+        );
+        final subtitle = content.text(
+          'home',
+          'markets.banner.subtitle',
+          fallback: 'Live prices, company logos and secure execution',
+        );
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: const Color(0xFFEEF5FF),
+            borderRadius: BorderRadius.circular(8),
           ),
-          const SizedBox(width: 12),
-          const Icon(
-            Icons.candlestick_chart_rounded,
-            color: AppConfig.gainColor,
-            size: 50,
+          child: Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    AppText(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: 10,
+                        color: Color(0xFF64748B),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Icon(
+                Icons.candlestick_chart_rounded,
+                color: AppConfig.gainColor,
+                size: 50,
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 

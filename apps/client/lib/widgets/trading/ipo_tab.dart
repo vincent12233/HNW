@@ -1,4 +1,6 @@
 import '../../l10n/app_language.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -29,6 +31,23 @@ class _IpoTabState extends State<IpoTab> {
   int selectedSection = 0;
 
   final List<String> sections = const ['Upcoming', 'Open', 'Closed', 'All'];
+
+  @override
+  void initState() {
+    super.initState();
+    AppContentService.instance.addListener(_onAppContentChanged);
+    unawaited(AppContentService.instance.load());
+  }
+
+  void _onAppContentChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onAppContentChanged);
+    super.dispose();
+  }
 
   int _applicationCount(String ipoId) {
     return widget.applications

@@ -396,6 +396,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    AppContentService.instance.addListener(_onAppContentChanged);
 
     marketConnected = marketSocket.isConnected;
     unawaited(_reloadNews());
@@ -640,12 +641,18 @@ class _MarketHomePageState extends State<MarketHomePage>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    AppContentService.instance.removeListener(_onAppContentChanged);
     _marketSessionTimer?.cancel();
     _marketNewsTimer?.cancel();
     _notificationTimer?.cancel();
     marketSocket.removeConnectionListener(_handleMarketConnection);
     marketSocket.dispose();
     super.dispose();
+  }
+
+  void _onAppContentChanged() {
+    if (!mounted) return;
+    setState(() => _appContent = AppContentService.instance.current);
   }
 
   @override
@@ -795,7 +802,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       await AppLanguage.instance.select(
         settings['language']?.toString() ?? 'en',
       );
-      await AppContentService.instance.load(force: true);
+      await _loadAppContent(force: true);
       await AppearanceSettings.instance.select(
         settings['theme']?.toString() ?? 'light',
       );

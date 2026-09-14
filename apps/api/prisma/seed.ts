@@ -247,6 +247,26 @@ async function main() {
     createdContent += 1;
   }
   console.log(`App content defaults ensured (${createdContent} created)`);
+
+  const existingDepositAccount = await prisma.depositReceivingAccount.findFirst({
+    where: { isActive: true },
+  });
+  if (!existingDepositAccount) {
+    await prisma.depositReceivingAccount.create({
+      data: {
+        label: 'Demo HDFC Collection',
+        method: 'BANK',
+        accountName: 'India Trading Collections',
+        bankName: 'HDFC Bank',
+        accountNumber: '50100123456789',
+        ifsc: 'HDFC0001234',
+        notes: 'Local seed account for ops/client deposit testing. Replace before production.',
+        isActive: true,
+        sortOrder: 0,
+      },
+    });
+    console.log('Seeded demo deposit receiving account');
+  }
 }
 
 main()

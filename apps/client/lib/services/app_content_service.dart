@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
@@ -232,7 +233,7 @@ class AppContentBundle {
   }
 }
 
-class AppContentService {
+class AppContentService extends ChangeNotifier {
   AppContentService._();
 
   static final AppContentService instance = AppContentService._();
@@ -240,6 +241,7 @@ class AppContentService {
   AppContentBundle _bundle = AppContentBundle.empty;
   DateTime? _loadedAt;
   Future<AppContentBundle>? _inFlight;
+  int _fetchGeneration = 0;
 
   AppContentBundle get current => _bundle;
 
@@ -268,12 +270,14 @@ class AppContentService {
 
   Future<AppContentBundle> _fetch() async {
     final locale = AppLanguage.instance.code == 'hi' ? 'hi' : 'en';
+    final generation = ++_fetchGeneration;
     try {
       final response = await http
           .get(
             Uri.parse('${AppConfig.apiBaseUrl}/app-content?locale=$locale'),
           )
           .timeout(const Duration(seconds: 12));
+      if (generation != _fetchGeneration) return _bundle;
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return _bundle;
       }
@@ -281,6 +285,7 @@ class AppContentService {
       if (decoded is! Map) return _bundle;
       _bundle = AppContentBundle.fromJson(Map<String, dynamic>.from(decoded));
       _loadedAt = DateTime.now();
+      notifyListeners();
       return _bundle;
     } catch (_) {
       return _bundle;

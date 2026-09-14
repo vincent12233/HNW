@@ -28,8 +28,15 @@ export class DepositController {
 
   @Post('request')
   @Roles(UserRole.CLIENT)
-  async createRequest() {
-    throw new BadRequestException(await this.appContent.getDepositRejectMessage());
+  async createRequest(@Req() req: any) {
+    const header = String(req.headers['accept-language'] || 'en')
+      .split(',')[0]
+      .trim()
+      .toLowerCase();
+    const locale = header.startsWith('hi') ? 'hi' : 'en';
+    throw new BadRequestException(
+      await this.appContent.getDepositRejectMessage(locale),
+    );
   }
 
   @Get('me')

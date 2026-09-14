@@ -607,6 +607,15 @@ export default function AppOpsContentPage() {
                       <Paragraph type="secondary">
                         这些账户会随充值配置下发给客户端，供客服或充值说明引用；不会自动完成上分。
                       </Paragraph>
+                      {accounts.length === 0 ? (
+                        <Alert
+                          type="warning"
+                          showIcon
+                          style={{ marginBottom: 12 }}
+                          title="尚未配置收款账户"
+                          description="客户端充值弹窗将只显示文案说明。请至少新增一个启用中的 BANK/UPI 账户，方便客服与客户核对付款信息。"
+                        />
+                      ) : null}
                       <Table
                         rowKey="id"
                         columns={accountColumns}

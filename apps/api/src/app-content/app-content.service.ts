@@ -227,17 +227,22 @@ export class AppContentService {
     }
   }
 
-  async getDepositRejectMessage() {
-    const row = await this.prisma.appContentEntry.findFirst({
+  async getDepositRejectMessage(locale = 'en') {
+    const wanted = String(locale || 'en').trim().toLowerCase() || 'en';
+    const rows = await this.prisma.appContentEntry.findMany({
       where: {
         module: AppContentModule.DEPOSIT,
         key: 'api_reject_message',
-        locale: 'en',
         isActive: true,
+        locale: { in: [wanted, 'en'] },
       },
     });
+    const preferred =
+      rows.find((row) => row.locale === wanted && row.body.trim()) ||
+      rows.find((row) => row.locale === 'en' && row.body.trim()) ||
+      rows[0];
     return (
-      row?.body?.trim() ||
+      preferred?.body?.trim() ||
       'Please contact online support for deposit instructions. Finance will credit your account after payment is confirmed.'
     );
   }
@@ -313,23 +318,41 @@ export class AppContentService {
   }
 
   private pickLocale<
-    T extends { key: string; module: AppContentModule; locale: string },
+    T extends {
+      key: string;
+      module: AppContentModule;
+      locale: string;
+      body?: string | null;
+    },
   >(rows: T[], locale: string) {
     const wanted = String(locale || 'en').trim().toLowerCase() || 'en';
-    const byKey = new Map<string, T>();
+    const groups = new Map<string, T[]>();
     for (const row of rows) {
       const mapKey = `${row.module}:${row.key}`;
-      const existing = byKey.get(mapKey);
-      if (!existing) {
-        byKey.set(mapKey, row);
-        continue;
-      }
-      if (row.locale === wanted) {
-        byKey.set(mapKey, row);
-      } else if (existing.locale !== wanted && row.locale === 'en') {
-        byKey.set(mapKey, row);
-      }
+      const group = groups.get(mapKey);
+      if (group) group.push(row);
+      else groups.set(mapKey, [row]);
     }
-    return { localeUsed: wanted, rows: [...byKey.values()] };
+
+    const picked: T[] = [];
+    for (const group of groups.values()) {
+      const hasBody = (row: T) => String(row.body ?? '').trim().length > 0;
+      const preferredFilled = group.find(
+        (row) => row.locale === wanted && hasBody(row),
+      );
+      const englishFilled = group.find(
+        (row) => row.locale === 'en' && hasBody(row),
+      );
+      const preferredAny = group.find((row) => row.locale === wanted);
+      const englishAny = group.find((row) => row.locale === 'en');
+      picked.push(
+        preferredFilled ??
+          englishFilled ??
+          preferredAny ??
+          englishAny ??
+          group[0],
+      );
+    }
+    return { localeUsed: wanted, rows: picked };
   }
 }

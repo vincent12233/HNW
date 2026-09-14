@@ -1,4 +1,6 @@
 import '../../l10n/app_language.dart';
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
@@ -26,7 +28,19 @@ class _OtcTabState extends State<OtcTab> {
   @override
   void initState() {
     super.initState();
+    AppContentService.instance.addListener(_onAppContentChanged);
+    unawaited(AppContentService.instance.load());
     _refresh();
+  }
+
+  void _onAppContentChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onAppContentChanged);
+    super.dispose();
   }
 
   Future<void> _refresh() async {

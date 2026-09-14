@@ -47,7 +47,7 @@ export class AuthService {
       : AuthService.CLIENT_TOKEN_SECONDS;
   }
 
-  private issueAccessToken(user: {
+private async issueAccessToken(user: {
     id: string;
     phone: string | null;
     role: UserRole;
@@ -63,7 +63,6 @@ export class AuthService {
       { expiresIn: this.isStaffRole(user.role) ? '7d' : '1h' },
     );
   }
-
 
   async register(dto: RegisterDto) {
     const phone = normalizePhone(dto.phone);
@@ -341,7 +340,20 @@ export class AuthService {
     if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
     if (!user.googleSubject) await this.prisma.user.update({ where: { id: user.id }, data: { googleSubject: subject } });
     const accessToken = await this.issueAccessToken(user);
-    return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: this.accessTokenExpiresIn(user.role), user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
+    return {
+      message: 'Login successful',
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: this.accessTokenExpiresIn(user.role),
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+      account: user.account,
+    };
   }
 
   async linkGoogle(userId: string, idToken: string) {
@@ -384,7 +396,20 @@ export class AuthService {
     if (!user || user.status !== UserStatus.ACTIVE || payload.version !== user.authVersion) throw new UnauthorizedException('Biometric quick login must be enabled again');
     if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
     const accessToken = await this.issueAccessToken(user);
-    return { message: 'Login successful', accessToken, tokenType: 'Bearer', expiresIn: this.accessTokenExpiresIn(user.role), user: { id: user.id, fullName: user.fullName, phone: user.phone, role: user.role, status: user.status }, account: user.account };
+    return {
+      message: 'Login successful',
+      accessToken,
+      tokenType: 'Bearer',
+      expiresIn: this.accessTokenExpiresIn(user.role),
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+      account: user.account,
+    };
   }
 
   private generateAccountNumber(): string {

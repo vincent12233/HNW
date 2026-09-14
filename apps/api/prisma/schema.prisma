@@ -446,6 +446,7 @@ model BankAccount {
   updatedAt     DateTime          @updatedAt
   user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@unique([userId, accountNumber, ifscCode])
   @@index([userId, status])
   @@map("bank_accounts")
 }

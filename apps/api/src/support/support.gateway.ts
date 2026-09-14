@@ -26,7 +26,8 @@ export class SupportGateway implements OnGatewayInit {
   private async authenticate(socket: Socket, next: (error?: Error) => void) {
     try {
       const token = String(socket.handshake.auth?.token || '').replace(/^Bearer\s+/i, '');
-      const payload = await this.jwt.verifyAsync<{ sub: string; version?: number }>(token);
+      const payload = await this.jwt.verifyAsync<{ sub: string; version?: number; purpose?: string }>(token);
+      if (!payload.sub || payload.purpose) throw new Error('Unauthorized');
       const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, select: { status: true, authVersion: true } });
       if (!user || user.status !== 'ACTIVE' || payload.version !== user.authVersion) throw new Error('Unauthorized');
       const count = this.connections.get(payload.sub) ?? 0;

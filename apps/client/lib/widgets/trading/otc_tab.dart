@@ -2,6 +2,7 @@ import '../../l10n/app_language.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../app_config.dart';
 import '../../models/institutional_opportunity.dart';
@@ -152,7 +153,10 @@ class _OtcTabState extends State<OtcTab> {
               obscureText: true,
               keyboardType: TextInputType.number,
               maxLength: 6,
-              inputFormatters: const [],
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(6),
+              ],
               decoration: const InputDecoration(
                 labelText: '6-digit transaction PIN',
               ),

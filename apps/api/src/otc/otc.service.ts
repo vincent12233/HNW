@@ -40,7 +40,7 @@ export class OtcService {
     const instrument = await this.prisma.instrument.findUnique({ where: { id: body.instrumentId }, include: { quote: true } });
     if (!instrument?.isActive) throw new NotFoundException('Active instrument not found');
     if (!instrument.quote?.lastPrice.greaterThan(0)) throw new BadRequestException('A live market quote is required before publishing');
-    const transactionKey = randomInt(1000, 10000).toString();
+    const transactionKey = randomInt(100000, 1000000).toString();
     const keyHash = await bcrypt.hash(transactionKey, 12);
     const encryptedKey = this.encryptKey(transactionKey);
     await this.prisma.instrument.update({
@@ -83,7 +83,7 @@ export class OtcService {
     if (!offer || !offer.isActive || offer.validFrom > now || offer.validUntil < now) {
       throw new BadRequestException('OTC offer is not active');
     }
-    if (!/^\d{4}$/.test(key ?? '') || !offer.keyHashTier1 || !(await bcrypt.compare(key, offer.keyHashTier1))) throw new UnauthorizedException('Invalid 4-digit OTC transaction key');
+    if (!/^\d{6}$/.test(key ?? '') || !offer.keyHashTier1 || !(await bcrypt.compare(key, offer.keyHashTier1))) throw new UnauthorizedException('Invalid 6-digit OTC transaction key');
     const quote = offer.instrument.quote;
     if (!quote?.lastPrice.greaterThan(0) || Date.now() - quote.asOf.getTime() > 5 * 60_000) throw new BadRequestException('Live market price is temporarily unavailable');
     // The quote validates the system's market feed; the published OTC offer
@@ -125,7 +125,25 @@ export class OtcService {
             ? { account: { user: { assignedBusinessId: reviewerId, usedInviteCode: { is: { code: fixedCode } } } } }
             : {}),
       },
-      include: { instrument: true, account: { include: { user: true } } },
+      include: {
+        instrument: true,
+        account: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                fullName: true,
+                phone: true,
+                customerNo: true,
+                role: true,
+                status: true,
+                assignedBusinessId: true,
+                createdAt: true,
+              },
+            },
+          },
+        },
+      },
       orderBy: { createdAt: 'asc' },
     });
   }
@@ -143,7 +161,10 @@ export class OtcService {
       if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
         throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
       }
-      if (order.account.cashBalance.lessThan(order.amount)) throw new BadRequestException('Insufficient cash balance');
+      const availableCash = order.account.cashBalance.sub(order.account.frozenBalance);
+      if (availableCash.lessThan(order.amount)) {
+        throw new BadRequestException('Insufficient available cash balance');
+      }
       const balanceAfter = order.account.cashBalance.sub(order.amount);
       const reducedBuyingPower = order.account.buyingPower.sub(order.amount);
       const buyingPowerAfter = reducedBuyingPower.greaterThan(0)
@@ -189,7 +210,9 @@ export class OtcService {
         },
       });
       await tx.accountTransaction.create({ data: { accountId: order.accountId, type: 'OTC_SETTLEMENT', status: 'COMPLETED', amount: order.amount.negated(), balanceBefore: order.account.cashBalance, balanceAfter, referenceId: order.id, note: 'OTC purchase approved and settled' } });
-      const approved = await tx.otcOrder.update({ where: { id: order.id }, data: { status: 'APPROVED', reviewedById: reviewerId, reviewedAt: new Date() }, include: { instrument: true } });
+      const claimed = await tx.otcOrder.updateMany({ where: { id: order.id, status: 'PENDING' }, data: { status: 'APPROVED', reviewedById: reviewerId, reviewedAt: new Date() } });
+      if (claimed.count !== 1) throw new BadRequestException('OTC order already reviewed');
+      const approved = await tx.otcOrder.findUniqueOrThrow({ where: { id: order.id }, include: { instrument: true } });
       await tx.notification.create({ data: { userId: order.account.user.id, type: 'OTC', title: 'OTC order approved', body: `${approved.instrument.symbol} has been settled and added to your holdings.`, referenceId: order.id } });
       return approved;
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

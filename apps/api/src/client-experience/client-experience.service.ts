@@ -1,3 +1,4 @@
+import { fixedInviteCode } from '../common/fixed-invite';
 import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import sharp from 'sharp';
@@ -207,5 +208,17 @@ export class ClientExperienceService {
     }, { isolationLevel: 'RepeatableRead' });
   }
 
-  adminBanks() { return this.prisma.bankAccount.findMany({ include: { user: { select: { id: true, fullName: true, phone: true, customerNo: true } } }, orderBy: { createdAt: 'desc' } }); }
+  adminBanks(role?: string) {
+    const fixedCode = fixedInviteCode();
+    return this.prisma.bankAccount.findMany({
+      where: role === 'FINANCE'
+        ? { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } }
+        : role === 'SUPPORT'
+          ? { user: { usedInviteCode: { is: { code: fixedCode } } } }
+          : undefined,
+      include: { user: { select: { id: true, fullName: true, phone: true, customerNo: true } } },
+      orderBy: { createdAt: 'desc' },
+      take: 500,
+    });
+  }
 }

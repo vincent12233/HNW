@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomBytes } from 'crypto';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
@@ -203,25 +204,25 @@ export class WithdrawalService {
       }
       if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
 
-      const amount = Number(withdrawal.amount);
-      const withdrawalFrozenAmount = Number(withdrawal.frozenAmount);
-      const hasDedicatedFreeze = withdrawalFrozenAmount >= amount;
-      const cashBalance = Number(account.cashBalance);
-      const frozenBalance = Number(account.frozenBalance);
-      const buyingPower = Number(account.buyingPower);
+      const amount = new Prisma.Decimal(withdrawal.amount).toDecimalPlaces(2);
+      const withdrawalFrozenAmount = new Prisma.Decimal(withdrawal.frozenAmount ?? 0);
+      const hasDedicatedFreeze = withdrawalFrozenAmount.gte(amount);
+      const cashBalance = new Prisma.Decimal(account.cashBalance);
+      const frozenBalance = new Prisma.Decimal(account.frozenBalance);
+      const buyingPower = new Prisma.Decimal(account.buyingPower);
 
-      if (cashBalance < amount) {
+      if (cashBalance.lt(amount)) {
         throw new BadRequestException('Insufficient cash balance');
       }
-      if (hasDedicatedFreeze && frozenBalance < amount) {
+      if (hasDedicatedFreeze && frozenBalance.lt(amount)) {
         throw new BadRequestException(
           'Frozen balance is inconsistent with withdrawal request',
         );
       }
 
-      const balanceAfter = cashBalance - amount;
+      const balanceAfter = cashBalance.sub(amount);
       const frozenBalanceAfter = hasDedicatedFreeze
-        ? frozenBalance - amount
+        ? frozenBalance.sub(amount)
         : frozenBalance;
 
       const claimed = await tx.withdrawalRequest.updateMany({
@@ -238,7 +239,7 @@ export class WithdrawalService {
           cashBalance: balanceAfter,
           ...(hasDedicatedFreeze
             ? { frozenBalance: { decrement: amount } }
-            : { buyingPower: Math.max(0, buyingPower - amount) }),
+            : { buyingPower: Prisma.Decimal.max(0, buyingPower.sub(amount)) }),
         },
       });
 
@@ -272,7 +273,7 @@ export class WithdrawalService {
         balanceAfter,
         frozenBalanceAfter,
       };
-    });
+    }, { isolationLevel: 'Serializable' });
     if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_APPROVED', resource: 'withdrawal', resourceId: withdrawalId, description: 'Withdrawal approved by finance operator', metadata: { amount: String(result.amount) } });
     return result;
   }
@@ -296,9 +297,9 @@ export class WithdrawalService {
         throw new NotFoundException('Account not found');
       }
       if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
-      const amount = Number(withdrawal.amount);
-      const hasDedicatedFreeze = Number(withdrawal.frozenAmount) >= amount;
-      if (hasDedicatedFreeze && Number(account.frozenBalance) < amount) {
+      const amount = new Prisma.Decimal(withdrawal.amount).toDecimalPlaces(2);
+      const hasDedicatedFreeze = new Prisma.Decimal(withdrawal.frozenAmount ?? 0).gte(amount);
+      if (hasDedicatedFreeze && new Prisma.Decimal(account.frozenBalance).lt(amount)) {
         throw new BadRequestException(
           'Frozen balance is inconsistent with withdrawal request',
         );
@@ -336,7 +337,7 @@ export class WithdrawalService {
       return tx.withdrawalRequest.findUnique({
         where: { id: withdrawalId },
       });
-    });
+    }, { isolationLevel: 'Serializable' });
     if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_REJECTED', resource: 'withdrawal', resourceId: withdrawalId, description: note?.trim() || 'Withdrawal rejected by finance operator' });
     return rejected;
   }

@@ -3,6 +3,7 @@
 import {
   BookOutlined,
   CustomerServiceOutlined,
+  DollarOutlined,
   FileProtectOutlined,
   HomeOutlined,
   InfoCircleOutlined,
@@ -47,18 +48,44 @@ const homeFields = [
   { key: "banner.subtitle", label: "首页横幅副标题", rows: 2 },
   { key: "markets.banner.title", label: "行情页横幅标题", rows: 2 },
   { key: "markets.banner.subtitle", label: "行情页横幅副标题", rows: 2 },
+  { key: "company.section_title", label: "公司展示区标题", rows: 1 },
+  { key: "company.video_cta", label: "公司视频按钮文案", rows: 1 },
+  { key: "company.website_cta", label: "公司官网按钮文案", rows: 1 },
+  { key: "funds.cta_label", label: "Add Funds 按钮标题", rows: 1 },
+  { key: "funds.cta_subtitle", label: "Add Funds 按钮副标题", rows: 1 },
+  { key: "news.section_title", label: "市场新闻区标题", rows: 1 },
+  { key: "news.empty", label: "市场新闻空状态", rows: 2 },
 ] as const;
 
+const depositFields = [
+  { key: "hero_title", label: "充值页主标题", rows: 1 },
+  { key: "instructions", label: "充值说明正文", rows: 4 },
+  { key: "cta_label", label: "联系客服按钮文案", rows: 1 },
+  { key: "chat_preset", label: "充值页打开客服时的预填消息", rows: 2 },
+  {
+    key: "api_reject_message",
+    label: "接口拒绝自助充值时的提示文案",
+    rows: 3,
+  },
+  { key: "history_empty", label: "入金历史空状态", rows: 1 },
+  { key: "terms", label: "充值条款说明", rows: 5 },
+] as const;
 
 const supportFields = [
+  { key: "header_title", label: "客服面板标题", rows: 1 },
   { key: "greeting", label: "客服欢迎语", rows: 3 },
   {
     key: "hours",
     label: "服务时间滚动提示（客服面板顶部公告，可横向滚动）",
     rows: 2,
   },
+  { key: "quick_topics_label", label: "快捷主题区标题", rows: 1 },
+  { key: "topic.deposit", label: "快捷主题 · 入金", rows: 1 },
+  { key: "topic.trading", label: "快捷主题 · 交易", rows: 1 },
+  { key: "topic.account", label: "快捷主题 · 账户", rows: 1 },
+  { key: "composer_hint", label: "输入框提示文案（Web/桌面）", rows: 1 },
   { key: "chat_preset.help", label: "帮助入口预填消息", rows: 2 },
-  { key: "chat_preset.deposit", label: "点击充值时预填客服消息", rows: 2 },
+  { key: "chat_preset.deposit", label: "快捷主题「入金」预填消息", rows: 2 },
   { key: "salesmartly_script_url", label: "SaleSmartly Script URL", rows: 2 },
 ] as const;
 
@@ -107,6 +134,15 @@ const tradingFields = [
   { key: "otc.empty_title", label: "OTC 空状态标题", rows: 2 },
   { key: "otc.empty_subtitle", label: "OTC 空状态说明", rows: 3 },
   { key: "ipo.confirm_template", label: "IPO 提交确认文案（可用 {current}/{max}）", rows: 4 },
+  { key: "ipo.empty_open_title", label: "IPO 开放列表空状态标题", rows: 2 },
+  { key: "ipo.empty_open_subtitle", label: "IPO 开放列表空状态说明", rows: 2 },
+  { key: "ipo.empty_title", label: "IPO 其他列表空状态标题", rows: 2 },
+  { key: "ipo.empty_subtitle", label: "IPO 其他列表空状态说明", rows: 2 },
+  { key: "portfolio.empty_title", label: "组合空状态标题", rows: 2 },
+  { key: "portfolio.empty_subtitle", label: "组合空状态说明", rows: 2 },
+  { key: "portfolio.explore_cta", label: "组合空状态按钮文案", rows: 1 },
+  { key: "holdings.empty_title", label: "持仓空状态标题", rows: 2 },
+  { key: "holdings.empty_subtitle", label: "持仓空状态说明", rows: 2 },
   { key: "guide.institutional", label: "交易说明 · 机构", rows: 4, title: true },
   { key: "guide.otc", label: "交易说明 · OTC", rows: 4, title: true },
   { key: "guide.ipo", label: "交易说明 · IPO", rows: 4, title: true },
@@ -153,6 +189,7 @@ export default function AppOpsContentPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [homeForm] = Form.useForm();
+  const [depositForm] = Form.useForm();
   const [supportForm] = Form.useForm();
   const [tradingForm] = Form.useForm();
   const [aboutForm] = Form.useForm();
@@ -207,6 +244,14 @@ export default function AppOpsContentPage() {
         homeFields.map((field) => [
           field.key,
           entryValue(nextEntries, "HOME", field.key, locale),
+        ]),
+      ),
+    );
+    depositForm.setFieldsValue(
+      Object.fromEntries(
+        depositFields.map((field) => [
+          field.key,
+          entryValue(nextEntries, "DEPOSIT", field.key, locale),
         ]),
       ),
     );
@@ -324,8 +369,8 @@ export default function AppOpsContentPage() {
         <div>
           <Title level={2}>客户端运营配置</Title>
           <Paragraph type="secondary">
-            维护 APP 首页、客服、交易说明、About、法律文本与 Wealth Insights。首页/客服客户端文案/交易说明支持
-            English 与 Hindi；客服标签与快捷回复仍为中文（后台客服台）。客户充值仍通过在线客服完成，本页不配置存款/收款账户。修改后客户端下次拉取配置即生效，无需发版。
+            维护 APP 可运营文案：首页、充值页、客服、交易说明、About、法律文本与 Wealth Insights。首页/充值/客服客户端文案/交易说明支持
+            English 与 Hindi；客服标签与快捷回复仍为中文（后台客服台）。客户充值仍通过在线客服完成——本页可改充值说明与预填消息，不配置平台收款/银行账户。修改后客户端下次拉取配置即生效，无需发版。
           </Paragraph>
         </div>
 
@@ -397,6 +442,52 @@ export default function AppOpsContentPage() {
                 ),
               },
               {
+                key: "deposit",
+                label: (
+                  <span>
+                    <DollarOutlined /> 充值页
+                  </span>
+                ),
+                children: (
+                  <Form form={depositForm} layout="vertical">
+                    <Paragraph type="secondary">
+                      维护 Deposit 页展示文案与打开客服时的预填消息（当前{" "}
+                      {opsLocale === "hi" ? "Hindi" : "English"}
+                      ）。不配置收款账户；入金方式由客服线下提供，财务后台手动上分。
+                    </Paragraph>
+                    {depositFields.map((field) => (
+                      <Form.Item
+                        key={field.key}
+                        name={field.key}
+                        label={field.label}
+                        rules={[{ required: true, message: "请填写内容" }]}
+                      >
+                        <TextArea rows={field.rows} />
+                      </Form.Item>
+                    ))}
+                    <Button
+                      type="primary"
+                      icon={<SaveOutlined />}
+                      loading={saving}
+                      onClick={() =>
+                        depositForm.validateFields().then((values) =>
+                          saveModule(
+                            "DEPOSIT",
+                            values,
+                            depositFields.map((field) => ({
+                              key: field.key,
+                              locale: opsLocale,
+                            })),
+                          ),
+                        )
+                      }
+                    >
+                      保存充值页配置（{opsLocale.toUpperCase()}）
+                    </Button>
+                  </Form>
+                ),
+              },
+              {
                 key: "support",
                 label: (
                   <span>
@@ -406,7 +497,7 @@ export default function AppOpsContentPage() {
                 children: (
                   <Form form={supportForm} layout="vertical">
                     <Paragraph type="secondary">
-                      欢迎语/服务时间滚动公告/预填消息/SaleSmartly URL 按运营文案语言编辑（当前{" "}
+                      面板标题/欢迎语/服务时间滚动公告/快捷主题/预填消息/SaleSmartly URL 按运营文案语言编辑（当前{" "}
                       {opsLocale === "hi" ? "Hindi" : "English"}）；标签与快捷回复固定为中文，供后台客服台使用。
                     </Paragraph>
                     {supportFields.map((field) => (

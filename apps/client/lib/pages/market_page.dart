@@ -1288,7 +1288,13 @@ class _MarketHomePageState extends State<MarketHomePage>
         _homeQuickActions(),
         if (companyShowcases.isNotEmpty) ...[
           const SizedBox(height: 18),
-          _sectionTitle('Our Company'),
+          _sectionTitle(
+            _appContent.text(
+              'home',
+              'company.section_title',
+              fallback: 'Our Company',
+            ),
+          ),
           const SizedBox(height: 10),
           _companyShowcaseCard(companyShowcases.first),
         ],
@@ -1420,9 +1426,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                             ),
                           ),
                           const SizedBox(height: 10),
-                          const AppText(
-                            'Watch our company introduction',
-                            style: TextStyle(
+                          AppText(
+                            _appContent.text(
+                              'home',
+                              'company.video_cta',
+                              fallback: 'Watch our company introduction',
+                            ),
+                            style: const TextStyle(
                               color: Colors.white,
                               fontSize: 12,
                               fontWeight: FontWeight.w700,
@@ -1437,7 +1447,7 @@ class _MarketHomePageState extends State<MarketHomePage>
               const SizedBox(height: 16),
               AppText(company.description, maxLines: 4, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Color(0xFFE7F0FF), fontSize: 13, height: 1.55)),
               const SizedBox(height: 16),
-              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: const Text('Visit website', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
+              Row(children: [if (company.sector?.isNotEmpty == true) Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6), decoration: BoxDecoration(color: Colors.white.withValues(alpha: .12), borderRadius: BorderRadius.circular(20)), child: AppText(company.sector!, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w700))), const Spacer(), if (company.websiteUrl?.isNotEmpty == true) TextButton.icon(onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)), icon: const Icon(Icons.open_in_new_rounded, size: 15, color: Colors.white), label: Text(_appContent.text('home', 'company.website_cta', fallback: 'Visit website'), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)))]),
             ]),
           ),
         ],
@@ -1450,8 +1460,16 @@ class _MarketHomePageState extends State<MarketHomePage>
       children: [
         Expanded(
           child: _HomeActionButton(
-            label: 'Add Funds',
-            subtitle: 'Funding Assistance',
+            label: _appContent.text(
+              'home',
+              'funds.cta_label',
+              fallback: 'Add Funds',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'funds.cta_subtitle',
+              fallback: 'Funding Assistance',
+            ),
             icon: Icons.account_balance_wallet_outlined,
             color: AppConfig.primaryColor,
             onTap: _openDepositSupport,
@@ -2613,7 +2631,11 @@ class _MarketHomePageState extends State<MarketHomePage>
           _compactMovers(),
           const SizedBox(height: 18),
           _sectionTitle(
-            'Market News',
+            _appContent.text(
+              'home',
+              'news.section_title',
+              fallback: 'Market News',
+            ),
             onViewAll: marketNews.isEmpty
                 ? null
                 : () => unawaited(_openAllMarketNews()),
@@ -2671,10 +2693,15 @@ class _MarketHomePageState extends State<MarketHomePage>
             children: [
               const Icon(Icons.newspaper_outlined, color: Color(0xFF64748B)),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: AppText(
-                  'Live market news is temporarily unavailable.',
-                  style: TextStyle(color: Color(0xFF64748B)),
+                  _appContent.text(
+                    'home',
+                    'news.empty',
+                    fallback:
+                        'Live market news is temporarily unavailable.',
+                  ),
+                  style: const TextStyle(color: Color(0xFF64748B)),
                 ),
               ),
               IconButton(

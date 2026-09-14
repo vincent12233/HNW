@@ -108,14 +108,34 @@ class _IpoTabState extends State<IpoTab> {
     }).toList();
 
     if (filtered.isEmpty) {
+      final content = AppContentService.instance.current;
+      final isOpen = selectedSection == 1;
       return ResponsiveEmptyState(
         icon: Icons.campaign_outlined,
-        title: selectedSection == 1
-            ? 'No IPOs open for application'
-            : 'No IPO records',
-        subtitle: selectedSection == 1
-            ? 'New IPO opportunities will appear here when applications open.'
-            : 'Your IPO applications and available offers will appear here.',
+        title: isOpen
+            ? content.text(
+                'trading',
+                'ipo.empty_open_title',
+                fallback: 'No IPOs open for application',
+              )
+            : content.text(
+                'trading',
+                'ipo.empty_title',
+                fallback: 'No IPO records',
+              ),
+        subtitle: isOpen
+            ? content.text(
+                'trading',
+                'ipo.empty_open_subtitle',
+                fallback:
+                    'New IPO opportunities will appear here when applications open.',
+              )
+            : content.text(
+                'trading',
+                'ipo.empty_subtitle',
+                fallback:
+                    'Your IPO applications and available offers will appear here.',
+              ),
       );
     }
 

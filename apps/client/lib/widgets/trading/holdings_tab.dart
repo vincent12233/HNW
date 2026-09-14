@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../app_config.dart';
 import '../../models/portfolio_position.dart';
 import '../../models/stock_quote.dart';
+import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/product_category.dart';
 import '../stock_logo.dart';
@@ -59,9 +60,19 @@ class _HoldingsTabState extends State<HoldingsTab> {
     }).toList();
 
     if (allPositions.isEmpty) {
+      final content = AppContentService.instance.current;
       return _emptyState(
-        'No holdings',
-        'Your holdings will appear here after settled positions are added.',
+        content.text(
+          'trading',
+          'holdings.empty_title',
+          fallback: 'No holdings',
+        ),
+        content.text(
+          'trading',
+          'holdings.empty_subtitle',
+          fallback:
+              'Your holdings will appear here after settled positions are added.',
+        ),
       );
     }
 

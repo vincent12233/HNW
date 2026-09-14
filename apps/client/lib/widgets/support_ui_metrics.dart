@@ -107,8 +107,8 @@ class SupportUiMetrics {
       height - padding.top - bottomInset,
     );
     final heightFraction = shortHeight
-        ? 0.78
-        : (largePhone ? 0.52 : (tablet ? 0.48 : 0.58));
+        ? 0.84
+        : (largePhone ? 0.64 : (tablet ? 0.58 : 0.70));
 
     final availableWidth = math.max(0.0, width - hInset * 2);
     final preferredMaxWidth = tablet
@@ -117,7 +117,7 @@ class SupportUiMetrics {
     final panelWidth = math.min(availableWidth, preferredMaxWidth);
     final panelMaxHeight = (usableHeight * heightFraction)
         .clamp(
-          math.min(shortHeight ? 260.0 : 300.0, usableHeight),
+          math.min(shortHeight ? 300.0 : 360.0, usableHeight),
           usableHeight,
         )
         .toDouble();

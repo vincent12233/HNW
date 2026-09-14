@@ -218,12 +218,10 @@ class _SupportChatPageState extends State<SupportChatPage>
                 ),
               );
 
-              final shortPhone = MediaQuery.sizeOf(context).height < 700;
               final columnChildren = <Widget>[
                 _buildHeader(m),
                 if (showNotice) _buildNotice(m),
-                if (shortPhone &&
-                    constraints.hasBoundedHeight &&
+                if (constraints.hasBoundedHeight &&
                     constraints.maxHeight < double.infinity)
                   Flexible(child: SingleChildScrollView(child: body))
                 else
@@ -232,8 +230,7 @@ class _SupportChatPageState extends State<SupportChatPage>
               ];
 
               return Column(
-                mainAxisSize:
-                    shortPhone ? MainAxisSize.max : MainAxisSize.min,
+                mainAxisSize: MainAxisSize.max,
                 children: columnChildren,
               );
             },

@@ -1871,23 +1871,16 @@ class _MarketHomePageState extends State<MarketHomePage>
                     m.panelHorizontalInset,
                     m.panelBottomInset,
                   ),
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    widthFactor: 1,
-                    heightFactor: 1,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: m.panelWidth,
-                        maxHeight: m.panelMaxHeight,
-                      ),
-                      child: Material(
-                        color: Colors.transparent,
-                        elevation: 16,
-                        shadowColor: const Color(0x66071326),
-                        borderRadius: BorderRadius.circular(m.panelRadius),
-                        clipBehavior: Clip.antiAlias,
-                        child: SupportChatPage(initialMessage: initialMessage),
-                      ),
+                  child: SizedBox(
+                    width: m.panelWidth,
+                    height: m.panelMaxHeight,
+                    child: Material(
+                      color: Colors.transparent,
+                      elevation: 16,
+                      shadowColor: const Color(0x66071326),
+                      borderRadius: BorderRadius.circular(m.panelRadius),
+                      clipBehavior: Clip.antiAlias,
+                      child: SupportChatPage(initialMessage: initialMessage),
                     ),
                   ),
                 ),

@@ -40,7 +40,7 @@ class _SupportChatPageState extends State<SupportChatPage>
     _selectedMessage = widget.initialMessage;
     _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 420),
+      duration: const Duration(milliseconds: 360),
     )..forward();
     _appContent.addListener(_onContentChanged);
     unawaited(_appContent.load());
@@ -135,9 +135,11 @@ class _SupportChatPageState extends State<SupportChatPage>
           ),
         ),
         child: SafeArea(
+          top: false,
+          bottom: false,
           child: Column(
             children: [
-              _buildHeader(hours),
+              _buildHeader(),
               if (_noticeVisible) _buildNotice(),
               Expanded(
                 child: FadeTransition(
@@ -146,29 +148,29 @@ class _SupportChatPageState extends State<SupportChatPage>
                     curve: Curves.easeOut,
                   ),
                   child: ListView(
-                    padding: const EdgeInsets.fromLTRB(18, 14, 18, 12),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 8),
                     children: [
                       const Center(child: _DayChip()),
-                      const SizedBox(height: 16),
+                      const SizedBox(height: 12),
                       _AgentBubble(
                         text: bubbleText,
                         isError: _error != null,
                         isConnecting: _opening,
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 14),
                       AppText(
                         'Quick topics',
                         style: TextStyle(
-                          fontSize: 12,
+                          fontSize: 11,
                           fontWeight: FontWeight.w800,
-                          letterSpacing: 0.3,
+                          letterSpacing: 0.25,
                           color: Colors.blueGrey.shade600,
                         ),
                       ),
-                      const SizedBox(height: 10),
+                      const SizedBox(height: 8),
                       Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
+                        spacing: 6,
+                        runSpacing: 6,
                         children: [
                           _SupportTopic(
                             label: 'Deposit',
@@ -214,21 +216,21 @@ class _SupportChatPageState extends State<SupportChatPage>
     );
   }
 
-  Widget _buildHeader(String hours) {
+  Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+      padding: const EdgeInsets.fromLTRB(10, 8, 10, 6),
       child: Container(
-        padding: const EdgeInsets.fromLTRB(10, 10, 8, 10),
+        padding: const EdgeInsets.fromLTRB(6, 6, 6, 6),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
             colors: [AppConfig.primaryDarkColor, AppConfig.primaryColor],
           ),
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(14),
           boxShadow: const [
             BoxShadow(
-              color: Color(0x33165DFF),
-              blurRadius: 18,
-              offset: Offset(0, 8),
+              color: Color(0x28165DFF),
+              blurRadius: 10,
+              offset: Offset(0, 4),
             ),
           ],
         ),
@@ -236,20 +238,23 @@ class _SupportChatPageState extends State<SupportChatPage>
           children: [
             IconButton(
               onPressed: () => Navigator.pop(context),
+              visualDensity: VisualDensity.compact,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints.tightFor(width: 34, height: 34),
               style: IconButton.styleFrom(
                 foregroundColor: Colors.white,
                 backgroundColor: Colors.white.withValues(alpha: 0.12),
               ),
-              icon: const Icon(Icons.close_rounded),
+              icon: const Icon(Icons.close_rounded, size: 18),
               tooltip: 'Close',
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Stack(
               clipBehavior: Clip.none,
               children: [
                 Container(
-                  width: 42,
-                  height: 42,
+                  width: 32,
+                  height: 32,
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.16),
                     shape: BoxShape.circle,
@@ -257,39 +262,42 @@ class _SupportChatPageState extends State<SupportChatPage>
                   child: const Icon(
                     Icons.support_agent_rounded,
                     color: Colors.white,
+                    size: 18,
                   ),
                 ),
                 Positioned(
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    width: 11,
-                    height: 11,
+                    width: 9,
+                    height: 9,
                     decoration: BoxDecoration(
                       color: _opening
                           ? const Color(0xFFFBBF24)
                           : const Color(0xFF22C55E),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
+                      border: Border.all(color: Colors.white, width: 1.5),
                     ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 8),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const AppText(
                     'Online Customer Service',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: FontWeight.w800,
                       color: Colors.white,
-                      fontSize: 15,
+                      fontSize: 13,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: 1),
                   AppText(
                     _opening
                         ? 'Connecting…'
@@ -299,7 +307,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
-                      fontSize: 11,
+                      fontSize: 10,
                       color: Color(0xCCDDE8FF),
                     ),
                   ),
@@ -308,12 +316,12 @@ class _SupportChatPageState extends State<SupportChatPage>
             ),
             if (_opening)
               const Padding(
-                padding: EdgeInsets.only(right: 8),
+                padding: EdgeInsets.only(right: 6),
                 child: SizedBox(
-                  width: 18,
-                  height: 18,
+                  width: 14,
+                  height: 14,
                   child: CircularProgressIndicator(
-                    strokeWidth: 2.2,
+                    strokeWidth: 2,
                     color: Colors.white,
                   ),
                 ),
@@ -326,34 +334,36 @@ class _SupportChatPageState extends State<SupportChatPage>
 
   Widget _buildNotice() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 2),
       child: Material(
         color: const Color(0xFFDCE9FF),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 8, 4, 8),
+          padding: const EdgeInsets.fromLTRB(10, 6, 2, 6),
           child: Row(
             children: [
               const Icon(
                 Icons.verified_user_outlined,
-                size: 17,
+                size: 15,
                 color: AppConfig.primaryColor,
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
               const Expanded(
                 child: AppText(
                   'Dedicated help for deposits, account security and trading.',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 11, color: Color(0xFF35558A)),
+                  style: TextStyle(fontSize: 10, color: Color(0xFF35558A)),
                 ),
               ),
               IconButton(
                 visualDensity: VisualDensity.compact,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints.tightFor(width: 28, height: 28),
                 onPressed: () => setState(() => _noticeVisible = false),
                 icon: const Icon(
                   Icons.close_rounded,
-                  size: 16,
+                  size: 14,
                   color: Color(0xFF6B86B2),
                 ),
               ),
@@ -366,18 +376,18 @@ class _SupportChatPageState extends State<SupportChatPage>
 
   Widget _buildComposer() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 14),
+      padding: const EdgeInsets.fromLTRB(12, 4, 12, 10),
       child: Row(
         children: [
           Expanded(
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(14),
                 border: Border.all(color: const Color(0xFFE2E8F3)),
                 boxShadow: const [
-                  BoxShadow(color: Color(0x12000000), blurRadius: 10),
+                  BoxShadow(color: Color(0x10000000), blurRadius: 8),
                 ],
               ),
               child: Row(
@@ -385,13 +395,15 @@ class _SupportChatPageState extends State<SupportChatPage>
                   Icon(
                     Icons.lock_outline_rounded,
                     color: Colors.blueGrey.shade300,
-                    size: 18,
+                    size: 16,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Expanded(
                     child: TextField(
                       enabled: false,
+                      style: const TextStyle(fontSize: 12),
                       decoration: InputDecoration(
+                        isDense: true,
                         hintText: _opening
                             ? 'Connecting…'
                             : (_nativeChatAvailable
@@ -399,7 +411,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                                 : 'Use a topic or open on mobile'),
                         hintStyle: TextStyle(
                           color: Colors.blueGrey.shade400,
-                          fontSize: 13,
+                          fontSize: 12,
                         ),
                         border: InputBorder.none,
                       ),
@@ -409,25 +421,26 @@ class _SupportChatPageState extends State<SupportChatPage>
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 8),
           Material(
             color: _opening
                 ? AppConfig.primaryColor.withValues(alpha: 0.55)
                 : AppConfig.primaryColor,
             shape: const CircleBorder(),
-            elevation: 2,
+            elevation: 1.5,
             shadowColor: const Color(0x33165DFF),
             child: InkWell(
               onTap: _opening ? null : () => _open(),
               customBorder: const CircleBorder(),
               child: SizedBox(
-                width: 48,
-                height: 48,
+                width: 40,
+                height: 40,
                 child: Icon(
                   _nativeChatAvailable
                       ? Icons.send_rounded
                       : Icons.refresh_rounded,
                   color: Colors.white,
+                  size: 18,
                 ),
               ),
             ),
@@ -444,16 +457,16 @@ class _DayChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: const Color(0xFFE7EDF8),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: const AppText(
         'TODAY',
         style: TextStyle(
-          fontSize: 10,
-          letterSpacing: 1.1,
+          fontSize: 9,
+          letterSpacing: 1,
           fontWeight: FontWeight.w800,
           color: Color(0xFF667085),
         ),
@@ -478,16 +491,16 @@ class _AgentBubble extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 320),
+        constraints: const BoxConstraints(maxWidth: 280),
         child: Container(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+          padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
           decoration: BoxDecoration(
             color: isError ? const Color(0xFFFFF1F2) : Colors.white,
             borderRadius: const BorderRadius.only(
-              topLeft: Radius.circular(6),
-              topRight: Radius.circular(18),
-              bottomLeft: Radius.circular(18),
-              bottomRight: Radius.circular(18),
+              topLeft: Radius.circular(5),
+              topRight: Radius.circular(14),
+              bottomLeft: Radius.circular(14),
+              bottomRight: Radius.circular(14),
             ),
             border: Border.all(
               color: isError
@@ -496,9 +509,9 @@ class _AgentBubble extends StatelessWidget {
             ),
             boxShadow: const [
               BoxShadow(
-                color: Color(0x0D0B1F44),
-                blurRadius: 14,
-                offset: Offset(0, 5),
+                color: Color(0x0A0B1F44),
+                blurRadius: 10,
+                offset: Offset(0, 3),
               ),
             ],
           ),
@@ -507,20 +520,20 @@ class _AgentBubble extends StatelessWidget {
             children: [
               if (isConnecting)
                 const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
+                  padding: EdgeInsets.only(bottom: 6),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 1.8),
+                        width: 11,
+                        height: 11,
+                        child: CircularProgressIndicator(strokeWidth: 1.6),
                       ),
-                      SizedBox(width: 8),
+                      SizedBox(width: 6),
                       AppText(
                         'Connecting',
                         style: TextStyle(
-                          fontSize: 11,
+                          fontSize: 10,
                           fontWeight: FontWeight.w700,
                           color: AppConfig.primaryColor,
                         ),
@@ -531,7 +544,8 @@ class _AgentBubble extends StatelessWidget {
               AppText(
                 text,
                 style: TextStyle(
-                  height: 1.45,
+                  height: 1.4,
+                  fontSize: 13,
                   color: isError
                       ? const Color(0xFF9F1239)
                       : const Color(0xFF344054),
@@ -560,25 +574,25 @@ class _SupportTopic extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: const Color(0xFFD8E2F1)),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, size: 16, color: AppConfig.primaryColor),
-              const SizedBox(width: 6),
+              Icon(icon, size: 14, color: AppConfig.primaryColor),
+              const SizedBox(width: 5),
               AppText(
                 label,
                 style: const TextStyle(
-                  fontSize: 12,
+                  fontSize: 11,
                   fontWeight: FontWeight.w700,
                   color: Color(0xFF344054),
                 ),

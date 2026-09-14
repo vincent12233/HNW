@@ -1850,24 +1850,32 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openSupportChat({String? initialMessage}) {
+    final media = MediaQuery.of(context);
+    final panelWidth = (media.size.width - 48).clamp(280.0, 360.0);
+    final panelHeight = (media.size.height * 0.62).clamp(420.0, 560.0);
+
     showGeneralDialog<void>(
       context: context,
       barrierDismissible: true,
       barrierLabel: 'Close support',
       barrierColor: const Color(0x73071326),
-      transitionDuration: const Duration(milliseconds: 280),
+      transitionDuration: const Duration(milliseconds: 260),
       pageBuilder: (dialogContext, animation, secondaryAnimation) {
         return SafeArea(
           child: Align(
-            alignment: Alignment.center,
+            alignment: Alignment.bottomCenter,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(14, 28, 14, 72),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440, maxHeight: 720),
+              padding: const EdgeInsets.fromLTRB(18, 12, 18, 78),
+              child: SizedBox(
+                width: panelWidth,
+                height: panelHeight,
                 child: Material(
                   color: Colors.transparent,
+                  elevation: 18,
+                  shadowColor: const Color(0x66071326),
+                  borderRadius: BorderRadius.circular(18),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
+                    borderRadius: BorderRadius.circular(18),
                     child: SupportChatPage(initialMessage: initialMessage),
                   ),
                 ),
@@ -1883,15 +1891,12 @@ class _MarketHomePageState extends State<MarketHomePage>
         );
         return FadeTransition(
           opacity: curved,
-          child: ScaleTransition(
-            scale: Tween<double>(begin: 0.96, end: 1).animate(curved),
-            child: SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.04, 0.06),
-                end: Offset.zero,
-              ).animate(curved),
-              child: child,
-            ),
+          child: SlideTransition(
+            position: Tween<Offset>(
+              begin: const Offset(0, 0.08),
+              end: Offset.zero,
+            ).animate(curved),
+            child: child,
           ),
         );
       },

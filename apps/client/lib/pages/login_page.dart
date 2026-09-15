@@ -152,23 +152,28 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
       }
       final verified = await LocalAuthentication().authenticate(
         localizedReason: 'Sign in to your account',
-        options: const AuthenticationOptions(
-          biometricOnly: true,
-          stickyAuth: true,
-        ),
+        biometricOnly: true,
+        persistAcrossBackgrounding: true,
       );
       if (!verified) throw const AuthException('Authentication cancelled');
       return authService.biometricLogin(token);
     });
   }
 
-  Future<void> _google() => _run(() async {
-    final google = GoogleSignIn(
-      scopes: const ['email'],
+  static Future<void>? _googleSignInReady;
+
+  Future<void> _ensureGoogleSignIn() {
+    return _googleSignInReady ??= GoogleSignIn.instance.initialize(
       serverClientId: AppConfig.googleClientId,
     );
-    final account = await google.signIn();
-    final token = (await account?.authentication)?.idToken;
+  }
+
+  Future<void> _google() => _run(() async {
+    await _ensureGoogleSignIn();
+    final account = await GoogleSignIn.instance.authenticate(
+      scopeHint: const ['email'],
+    );
+    final token = account.authentication.idToken;
     if (token == null) throw const AuthException('Google sign in cancelled');
     return authService.googleLogin(token);
   });

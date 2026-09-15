@@ -5,7 +5,7 @@ import { LoansController } from './loans.controller';
 import { ROLES_KEY } from '../auth/roles.decorator';
 
 describe('loan application rules', () => {
-  it.each([0, -1, NaN, Infinity, true, '100', 0.001, 100.999, 1e16])('rejects invalid finance amount %s before database access', async (amount) => {
+  it.each([0, -1, NaN, Infinity, true, 'abc', 0.001, 100.999, 1e16])('rejects invalid finance amount %s before database access', async (amount) => {
     const service = new LoansService({} as any, {} as any);
     await expect(service.create('finance', UserRole.FINANCE, { accountNumber: 'A', amount: amount as number })).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.approve('loan', 'finance', UserRole.FINANCE, { approvedAmount: amount as number })).rejects.toBeInstanceOf(BadRequestException);

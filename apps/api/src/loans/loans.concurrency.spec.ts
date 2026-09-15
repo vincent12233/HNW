@@ -25,14 +25,15 @@ describe('LoansService concurrency protection', () => {
     const service = new LoansService(prisma as any, audit as any);
     await service.approve(loan.id, 'finance', UserRole.FINANCE, { approvedAmount: amount });
     const expectedBalance = new Prisma.Decimal('200.15').add(amount).toFixed(2);
-    expect(tx.loanApplication.updateMany.mock.calls[0][0].data).toEqual(expect.objectContaining({
-      approvedAmount: amount, outstandingAmount: amount, status: 'DISBURSED',
-    }));
+    const updateData = tx.loanApplication.updateMany.mock.calls[0][0].data;
+    expect(updateData.status).toBe('DISBURSED');
+    expect(new Prisma.Decimal(updateData.approvedAmount).toFixed(2)).toBe(new Prisma.Decimal(amount).toFixed(2));
+    expect(new Prisma.Decimal(updateData.outstandingAmount).toFixed(2)).toBe(new Prisma.Decimal(amount).toFixed(2));
     const balanceUpdate = tx.account.update.mock.calls[0][0].data;
     expect(balanceUpdate.cashBalance.toFixed(2)).toBe(expectedBalance);
-    expect(balanceUpdate.buyingPower.increment).toBe(amount);
+    expect(new Prisma.Decimal(balanceUpdate.buyingPower.increment).toFixed(2)).toBe(new Prisma.Decimal(amount).toFixed(2));
     const entry = tx.accountTransaction.create.mock.calls[0][0].data;
-    expect(entry.amount).toBe(amount);
+    expect(new Prisma.Decimal(entry.amount).toFixed(2)).toBe(new Prisma.Decimal(amount).toFixed(2));
     expect(entry.balanceAfter.toFixed(2)).toBe(expectedBalance);
     expect(entry.referenceId).toBe('LN1');
     expect(prisma.$transaction.mock.calls[0][1]).toEqual({ isolationLevel: Prisma.TransactionIsolationLevel.Serializable });

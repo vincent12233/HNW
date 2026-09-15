@@ -83,6 +83,8 @@ export class DepositService {
     paymentMethod?: string,
     note?: string,
   ) {
+    throw new BadRequestException('Client deposit submission is disabled; contact support to fund your account');
+
     const account = await this.prisma.account.findUnique({
       where: {
         userId,

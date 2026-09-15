@@ -4,6 +4,7 @@ import * as bcrypt from 'bcrypt';
 import sharp from 'sharp';
 import { PrismaService } from '../prisma/prisma.service';
 import { productCategory, summarizeProducts } from './product-portfolio';
+import { moneyDecimal } from '../common/money';
 
 @Injectable()
 export class ClientExperienceService {
@@ -112,9 +113,9 @@ export class ClientExperienceService {
       else if (category === 'IPO') categories.IPO += value;
       else if (category === 'Institutional') categories.INST += value;
     }
-    const cash = Number(account.cashBalance);
-    const totalAssets = cash + positionsValue;
-    await this.prisma.portfolioSnapshot.create({ data: { accountId: account.id, cashValue: cash, instValue: categories.INST, otcValue: categories.OTC, ipoValue: categories.IPO, totalValue: totalAssets } });
+    const cash = moneyDecimal(account.cashBalance);
+    const totalAssets = cash.add(moneyDecimal(positionsValue));
+    await this.prisma.portfolioSnapshot.create({ data: { accountId: account.id, cashValue: cash, instValue: moneyDecimal(categories.INST), otcValue: moneyDecimal(categories.OTC), ipoValue: moneyDecimal(categories.IPO), totalValue: totalAssets } });
     const history = await this.prisma.portfolioSnapshot.findMany({ where: { accountId: account.id }, orderBy: { capturedAt: 'desc' }, take: 90 });
     return { asOf: new Date(), cash, positionsValue, totalAssets, categories, balanced: true, transactions: account.transactions, history: history.reverse() };
   }

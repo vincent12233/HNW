@@ -4,6 +4,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } 
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { fixedInviteCode } from '../common/fixed-invite';
+import { availableCash, moneyDecimal } from '../common/money';
 
 function resolveOtcEncryptionSecret() {
   const dedicated = process.env.OTC_KEY_ENCRYPTION_SECRET?.trim() ?? '';
@@ -179,16 +180,21 @@ export class OtcService {
       if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
         throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
       }
-      const availableCash = order.account.cashBalance.sub(order.account.frozenBalance);
-      if (availableCash.lessThan(order.amount)) {
-        throw new BadRequestException('Insufficient available cash balance');
+      const amount = moneyDecimal(order.amount);
+      if (
+        availableCash(order.account).lessThan(amount) ||
+        moneyDecimal(order.account.buyingPower).lessThan(amount)
+      ) {
+        throw new BadRequestException(
+          'Insufficient buying power or available cash balance',
+        );
       }
-      const balanceAfter = order.account.cashBalance.sub(order.amount);
-      const reducedBuyingPower = order.account.buyingPower.sub(order.amount);
-      const buyingPowerAfter = reducedBuyingPower.greaterThan(0)
-        ? reducedBuyingPower
-        : new Prisma.Decimal(0);
-      await tx.account.update({ where: { id: order.accountId }, data: { cashBalance: balanceAfter, buyingPower: buyingPowerAfter } });
+      const balanceAfter = moneyDecimal(order.account.cashBalance).sub(amount);
+      const buyingPowerAfter = moneyDecimal(order.account.buyingPower).sub(amount);
+      await tx.account.update({
+        where: { id: order.accountId },
+        data: { cashBalance: balanceAfter, buyingPower: buyingPowerAfter },
+      });
       const current = await tx.position.findUnique({ where: { accountId_instrumentId: { accountId: order.accountId, instrumentId: order.instrumentId } } });
       const newQuantity = (current?.quantity ?? 0) + order.quantity;
       const newAverage = current

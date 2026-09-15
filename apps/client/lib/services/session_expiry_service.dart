@@ -11,6 +11,7 @@ class SessionExpiryService {
 
   static final SessionExpiryService _instance = SessionExpiryService._();
   static const String _sessionKey = 'auth_session';
+  static const String _biometricSessionKey = 'biometric_auth_session';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
@@ -36,7 +37,9 @@ class SessionExpiryService {
   Future<void> _performExpiry() async {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
+    await preferences.remove(_biometricSessionKey);
     await _secureStorage.delete(key: _sessionKey);
+    await _secureStorage.delete(key: _biometricSessionKey);
     MarketSocketService().dispose();
     onExpired?.call();
   }

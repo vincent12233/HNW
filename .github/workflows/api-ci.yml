@@ -18,9 +18,6 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci
-      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow
 
     steps:
       - name: Checkout

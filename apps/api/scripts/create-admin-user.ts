@@ -6,6 +6,12 @@ import { PrismaPg } from '@prisma/adapter-pg';
 import { PrismaClient } from '../src/generated/prisma/client';
 import { UserRole, UserStatus } from '../src/generated/prisma/enums';
 
+if (process.env.NODE_ENV === 'production') {
+  throw new Error(
+    'create-admin-user.ts refuses to run when NODE_ENV=production (use seed once, then rotate passwords in-app)',
+  );
+}
+
 const connectionString = process.env.DATABASE_URL;
 
 if (!connectionString) {
@@ -18,7 +24,9 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   const employeeNo = 'ADMIN001';
   const password = process.env.ADMIN_INITIAL_PASSWORD;
-  if (!password || password.length < 12) throw new Error('ADMIN_INITIAL_PASSWORD must contain at least 12 characters');
+  if (!password || password.length < 12) {
+    throw new Error('ADMIN_INITIAL_PASSWORD must contain at least 12 characters');
+  }
   const passwordHash = await bcrypt.hash(password, 12);
   const internalEmail = `${employeeNo.toLowerCase()}@internal.hnw.local`;
 
@@ -26,8 +34,8 @@ async function main() {
     where: {
       email: internalEmail,
     },
+    // Do not overwrite passwordHash on update — operators may have rotated credentials.
     update: {
-      passwordHash,
       fullName: 'System Administrator',
       phone: null,
       role: UserRole.ADMIN,
@@ -70,7 +78,7 @@ async function main() {
   console.log('==============================');
   console.log('Admin account is ready');
   console.log(`Employee No: ${admin.businessProfile?.employeeNo}`);
-  console.log('Password was read securely from ADMIN_INITIAL_PASSWORD');
+  console.log('Password was read securely from ADMIN_INITIAL_PASSWORD (create only)');
   console.log(`Role: ${admin.role}`);
   console.log('==============================');
 }

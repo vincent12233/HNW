@@ -30,23 +30,27 @@ http://localhost:3002/login
 
 ## 生产发布
 
-发布前把 `NEXT_PUBLIC_API_URL` 改成正式 API 域名，例如：
+正式部署见 `docs/生产部署说明.md`。**必须为五个角色分别构建**，因为 `NEXT_PUBLIC_*` 在构建时写入浏览器包；HTTPS 域名没有端口，不能依赖本机端口推断角色。
 
-```env
-NEXT_PUBLIC_API_URL=https://api.example.com
-```
+| 角色 | `NEXT_PUBLIC_BACKEND_ROLE` | 本机端口 | 启动命令 |
+| --- | --- | --- | --- |
+| 超级管理员 | `ADMIN` | `3002` | `npm run start:admin` |
+| 管理员 | `MANAGER` | `3004` | `npm run start:manager` |
+| 财务 | `FINANCE` | `3005` | `npm run start:finance` |
+| 业务员 | `BUSINESS` | `3006` | `npm run start:business` |
+| 专用运营员 | `SUPPORT` | `3007` | `npm run start:support` |
 
-同时在 API 服务的 `CORS_ORIGINS` 中加入后台域名，例如：
-
-```env
-CORS_ORIGINS=https://admin.example.com
-```
-
-构建命令：
+示例（超级管理员）：
 
 ```powershell
+$env:NEXT_PUBLIC_API_URL="https://api.example.com"
+$env:NEXT_PUBLIC_BACKEND_ROLE="ADMIN"
+npm ci
 npm run build
+npm run start:admin
 ```
+
+对 `MANAGER` / `FINANCE` / `BUSINESS` / `SUPPORT` 重复上述流程。API 的 `CORS_ORIGINS` 须包含全部五个后台域名（及可选客户 Web 域名）。
 
 ## 默认账号
 

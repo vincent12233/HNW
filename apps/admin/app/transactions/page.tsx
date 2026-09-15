@@ -6,7 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -84,12 +84,9 @@ export default function TransactionsPage() {
         },
       });
       setRecords(Array.isArray(response.data.data) ? response.data.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "资金流水加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "资金流水加载失败",
       );
     } finally {
       setLoading(false);

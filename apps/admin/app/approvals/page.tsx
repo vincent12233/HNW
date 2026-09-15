@@ -71,7 +71,7 @@ export default function ApprovalsPage() {
       setSelected(null);
       setNote("");
       await load();
-    } catch (e: any) {
+    } catch (e: unknown) {
       message.error(getApiErrorMessage(e, "操作失败"));
     } finally {
       setSubmitting(false);

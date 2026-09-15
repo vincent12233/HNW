@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { Exchange } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { ListPositionsQueryDto } from './dto/list-positions-query.dto';
@@ -173,16 +174,18 @@ export class OrdersService {
 
     const normalizedExchange = query.exchange?.trim().toUpperCase();
     const normalizedSymbol = query.symbol?.trim().toUpperCase();
+    const exchangeFilter =
+      normalizedExchange === Exchange.NSE || normalizedExchange === Exchange.BSE
+        ? normalizedExchange
+        : undefined;
 
     const where: Prisma.PositionWhereInput = {
       accountId: account.id,
       quantity: { gt: 0 },
-      ...(normalizedExchange || normalizedSymbol
+      ...(exchangeFilter || normalizedSymbol
         ? {
             instrument: {
-              ...(normalizedExchange
-                ? { exchange: normalizedExchange as any }
-                : {}),
+              ...(exchangeFilter ? { exchange: exchangeFilter } : {}),
               ...(normalizedSymbol ? { symbol: normalizedSymbol } : {}),
             },
           }
@@ -275,13 +278,19 @@ export class OrdersService {
 
     const normalizedExchange = exchange.trim().toUpperCase();
     const normalizedSymbol = symbol.trim().toUpperCase();
+    if (
+      normalizedExchange !== Exchange.NSE &&
+      normalizedExchange !== Exchange.BSE
+    ) {
+      throw new NotFoundException('Position not found');
+    }
 
     const position = await this.prisma.position.findFirst({
       where: {
         accountId: account.id,
         quantity: { gt: 0 },
         instrument: {
-          exchange: normalizedExchange as any,
+          exchange: normalizedExchange,
           symbol: normalizedSymbol,
         },
       },

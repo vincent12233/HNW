@@ -23,7 +23,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import RecoveryInbox from "@/components/RecoveryInbox";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -131,12 +131,9 @@ export default function SupportConsolePage() {
       if (nextSelected) {
         await loadMessages(nextSelected.id);
       }
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "客服会话加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "客服会话加载失败",
       );
     } finally {
       setLoading(false);
@@ -205,9 +202,9 @@ export default function SupportConsolePage() {
           `${response.data.summary || ""}${response.data.suggestedReply || ""}` ||
           "翻译结果为空",
       }));
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "翻译失败");
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      message.error(responseMessage || "翻译失败");
     }
   }
 

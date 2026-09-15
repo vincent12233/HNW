@@ -33,8 +33,9 @@ export class ClientExperienceService {
     });
   }
 
-  async updateProfile(userId: string, body: any) {
-    const fullName = String(body.fullName ?? '').trim();
+  async updateProfile(userId: string, body: Record<string, unknown>) {
+    const fullName =
+      typeof body.fullName === 'string' ? body.fullName.trim() : '';
     if (fullName.length < 2 || fullName.length > 120)
       throw new BadRequestException('Enter your full name (2-120 characters)');
     return this.prisma.user.update({
@@ -86,14 +87,22 @@ export class ClientExperienceService {
       orderBy: { lastSeenAt: 'desc' },
     });
   }
-  registerDevice(userId: string, body: any) {
+  registerDevice(userId: string, body: Record<string, unknown>) {
+    const deviceName =
+      typeof body.deviceName === 'string' && body.deviceName.trim()
+        ? body.deviceName
+        : 'Mobile device';
+    const platform =
+      typeof body.platform === 'string' && body.platform.trim()
+        ? body.platform
+        : 'mobile';
     return this.prisma.userDevice.create({
       data: {
         userId,
-        deviceName: String(body.deviceName || 'Mobile device').slice(0, 80),
-        platform: String(body.platform || 'mobile').slice(0, 24),
-        pushToken: body.pushToken || null,
-        lastIp: body.lastIp || null,
+        deviceName: deviceName.slice(0, 80),
+        platform: platform.slice(0, 24),
+        pushToken: typeof body.pushToken === 'string' ? body.pushToken : null,
+        lastIp: typeof body.lastIp === 'string' ? body.lastIp : null,
       },
     });
   }
@@ -112,13 +121,19 @@ export class ClientExperienceService {
       orderBy: { createdAt: 'desc' },
     });
   }
-  async addBank(userId: string, body: any) {
-    const bankName = String(body.bankName ?? '').trim();
-    const accountHolder = String(body.accountHolder ?? '').trim();
-    const accountNumber = String(body.accountNumber ?? '').replace(/\s/g, '');
-    const ifscCode = String(body.ifscCode ?? '')
-      .trim()
-      .toUpperCase();
+  async addBank(userId: string, body: Record<string, unknown>) {
+    const bankName =
+      typeof body.bankName === 'string' ? body.bankName.trim() : '';
+    const accountHolder =
+      typeof body.accountHolder === 'string' ? body.accountHolder.trim() : '';
+    const accountNumber =
+      typeof body.accountNumber === 'string'
+        ? body.accountNumber.replace(/\s/g, '')
+        : '';
+    const ifscCode =
+      typeof body.ifscCode === 'string'
+        ? body.ifscCode.trim().toUpperCase()
+        : '';
     if (
       !bankName ||
       !accountHolder ||
@@ -198,16 +213,21 @@ export class ClientExperienceService {
       update: {},
     });
   }
-  async updatePreferences(userId: string, body: any) {
+  async updatePreferences(userId: string, body: Record<string, unknown>) {
     if (
       body.theme !== undefined &&
-      !['light', 'highContrast'].includes(body.theme)
+      (typeof body.theme !== 'string' ||
+        !['light', 'highContrast'].includes(body.theme))
     )
       throw new BadRequestException('Unsupported theme');
-    if (body.language !== undefined && !['en', 'hi'].includes(body.language))
+    if (
+      body.language !== undefined &&
+      (typeof body.language !== 'string' ||
+        !['en', 'hi'].includes(body.language))
+    )
       throw new BadRequestException('Unsupported language');
     const data = {
-      ...(body.theme ? { theme: body.theme as string } : {}),
+      ...(typeof body.theme === 'string' ? { theme: body.theme } : {}),
       ...(typeof body.orderNotifications === 'boolean'
         ? { orderNotifications: body.orderNotifications }
         : {}),
@@ -220,7 +240,9 @@ export class ClientExperienceService {
       ...(typeof body.biometricEnabled === 'boolean'
         ? { biometricEnabled: body.biometricEnabled }
         : {}),
-      ...(body.language ? { language: String(body.language).slice(0, 8) } : {}),
+      ...(typeof body.language === 'string'
+        ? { language: body.language.slice(0, 8) }
+        : {}),
     };
     return this.prisma.userPreference.upsert({
       where: { userId },

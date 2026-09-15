@@ -35,17 +35,26 @@ export class ClientExperienceController {
   }
   @Post('client/security/two-factor/setup')
   @Roles(UserRole.CLIENT)
-  twoFactorSetup(@Req() req: AuthenticatedRequest, @Body() body: any) {
+  twoFactorSetup(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.twoFactor.setup(req.user.userId, body.currentPassword);
   }
   @Post('client/security/two-factor/confirm')
   @Roles(UserRole.CLIENT)
-  twoFactorConfirm(@Req() req: AuthenticatedRequest, @Body() body: any) {
+  twoFactorConfirm(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.twoFactor.confirm(req.user.userId, body.code);
   }
   @Post('client/security/two-factor/disable')
   @Roles(UserRole.CLIENT)
-  twoFactorDisable(@Req() req: AuthenticatedRequest, @Body() body: any) {
+  twoFactorDisable(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.twoFactor.disable(
       req.user.userId,
       body.currentPassword,
@@ -60,7 +69,7 @@ export class ClientExperienceController {
   }
   @Post('client/security/withdrawal-pin') @Roles(UserRole.CLIENT) changePin(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.pins.change(req.user.userId, body);
   }
@@ -72,14 +81,14 @@ export class ClientExperienceController {
   }
   @Patch('client/profile/avatar') @Roles(UserRole.CLIENT) avatar(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.updateAvatar(req.user.userId, body.base64);
   }
   @Patch('admin/clients/:id/tier') @Roles(UserRole.ADMIN) tier(
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.updateTier(req.user.userId, id, body.tier);
   }
@@ -97,18 +106,18 @@ export class ClientExperienceController {
   }
   @Patch('client/profile') @Roles(UserRole.CLIENT) updateProfile(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.updateProfile(req.user.userId, body);
   }
   @Post('client/security/password') @Roles(UserRole.CLIENT) password(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.changePassword(
       req.user.userId,
-      body.currentPassword,
-      body.newPassword,
+      typeof body.currentPassword === 'string' ? body.currentPassword : '',
+      typeof body.newPassword === 'string' ? body.newPassword : '',
     );
   }
   @Get('client/security/devices') @Roles(UserRole.CLIENT) devices(
@@ -118,7 +127,7 @@ export class ClientExperienceController {
   }
   @Post('client/security/devices') @Roles(UserRole.CLIENT) registerDevice(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.registerDevice(req.user.userId, body);
   }
@@ -135,7 +144,7 @@ export class ClientExperienceController {
   }
   @Post('client/bank-accounts') @Roles(UserRole.CLIENT) addBank(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.addBank(req.user.userId, body);
   }
@@ -152,7 +161,7 @@ export class ClientExperienceController {
   }
   @Patch('client/preferences') @Roles(UserRole.CLIENT) updatePreferences(
     @Req() req: AuthenticatedRequest,
-    @Body() body: any,
+    @Body() body: Record<string, unknown>,
   ) {
     return this.service.updatePreferences(req.user.userId, body);
   }

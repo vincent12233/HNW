@@ -20,12 +20,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const requestId = response.getHeader('x-request-id')?.toString();
     const raw =
       exception instanceof HttpException ? exception.getResponse() : null;
+    const extractedMessage =
+      raw && typeof raw === 'object' && 'message' in raw
+        ? (raw as { message?: unknown }).message
+        : undefined;
     const message =
       status >= 500
         ? 'Internal server error'
         : typeof raw === 'string'
           ? raw
-          : (raw as any)?.message || 'Request failed';
+          : Array.isArray(extractedMessage)
+            ? extractedMessage.map(String).join(', ')
+            : typeof extractedMessage === 'string'
+              ? extractedMessage
+              : 'Request failed';
     console.error(
       JSON.stringify({
         level: 'error',
@@ -40,7 +48,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }),
     );
     const authentication =
-      status === HttpStatus.UNAUTHORIZED && raw && typeof raw === 'object'
+      status === Number(HttpStatus.UNAUTHORIZED) &&
+      raw &&
+      typeof raw === 'object'
         ? (raw as Record<string, unknown>)
         : {};
     response.status(status).json({

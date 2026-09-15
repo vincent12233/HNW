@@ -8,6 +8,8 @@ import { Prisma } from '../generated/prisma/client';
 import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 
+type ProductBody = Record<string, unknown>;
+
 @Injectable()
 export class AdminProductsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -20,7 +22,7 @@ export class AdminProductsService {
     });
   }
 
-  async createWatchlist(body: any) {
+  async createWatchlist(body: ProductBody) {
     this.require(body.symbol, '请输入股票代码');
     this.require(body.name, '请输入股票名称');
     const data = this.watchlistData(body);
@@ -34,7 +36,7 @@ export class AdminProductsService {
     return item;
   }
 
-  async updateWatchlist(id: string, body: any) {
+  async updateWatchlist(id: string, body: ProductBody) {
     const item = await this.updateOrThrow(() =>
       this.prisma.adminWatchlistItem.update({
         where: { id },
@@ -69,7 +71,7 @@ export class AdminProductsService {
     });
   }
 
-  createBlockTrade(body: any) {
+  createBlockTrade(body: ProductBody) {
     this.require(body.symbol, '请输入标的代码');
     return this.prisma.adminBlockTrade.create({
       data: {
@@ -80,7 +82,7 @@ export class AdminProductsService {
     });
   }
 
-  updateBlockTrade(id: string, body: any) {
+  updateBlockTrade(id: string, body: ProductBody) {
     return this.updateOrThrow(() =>
       this.prisma.adminBlockTrade.update({
         where: { id },
@@ -107,7 +109,7 @@ export class AdminProductsService {
     });
   }
 
-  createFund(body: any) {
+  createFund(body: ProductBody) {
     this.require(body.code, '请输入基金代码');
     this.require(body.name, '请输入基金名称');
     return this.prisma.adminFundProduct.create({
@@ -118,7 +120,7 @@ export class AdminProductsService {
     });
   }
 
-  updateFund(id: string, body: any) {
+  updateFund(id: string, body: ProductBody) {
     return this.updateOrThrow(() =>
       this.prisma.adminFundProduct.update({
         where: { id },
@@ -145,7 +147,7 @@ export class AdminProductsService {
     });
   }
 
-  createQuant(body: any) {
+  createQuant(body: ProductBody) {
     this.require(body.code, '请输入策略编号');
     this.require(body.name, '请输入策略名称');
     return this.prisma.adminQuantStrategy.create({
@@ -156,7 +158,7 @@ export class AdminProductsService {
     });
   }
 
-  updateQuant(id: string, body: any) {
+  updateQuant(id: string, body: ProductBody) {
     return this.updateOrThrow(() =>
       this.prisma.adminQuantStrategy.update({
         where: { id },
@@ -180,10 +182,8 @@ export class AdminProductsService {
     );
   }
 
-  private watchlistData(body: any) {
-    const direction = String(body.direction || 'UP')
-      .trim()
-      .toUpperCase();
+  private watchlistData(body: ProductBody) {
+    const direction = this.text(body.direction, 'UP').toUpperCase();
     if (!['UP', 'DOWN'].includes(direction))
       throw new BadRequestException('Direction must be UP or DOWN');
     const expectedReturn = this.moneyValue(
@@ -192,57 +192,55 @@ export class AdminProductsService {
       2,
       { optional: true, max: 100 },
     );
-    const market = String(body.market || 'NSE')
-      .trim()
-      .toUpperCase();
+    const market = this.text(body.market, 'NSE').toUpperCase();
     if (!['NSE', 'BSE'].includes(market)) {
       throw new BadRequestException('Market must be NSE or BSE');
     }
     return {
-      symbol: String(body.symbol).trim().toUpperCase(),
-      name: String(body.name).trim(),
+      symbol: this.text(body.symbol).toUpperCase(),
+      name: this.text(body.name),
       market,
-      category: String(body.category || '未分类').trim(),
-      risk: String(body.risk || '中').trim(),
-      reason: body.reason?.trim() || null,
+      category: this.text(body.category, '未分类'),
+      risk: this.text(body.risk, '中'),
+      reason: this.optionalText(body.reason),
       direction,
       expectedReturn,
     };
   }
 
-  private blockTradeData(body: any) {
+  private blockTradeData(body: ProductBody) {
     return {
-      symbol: String(body.symbol).trim().toUpperCase(),
-      side: String(body.side || '买入').trim(),
+      symbol: this.text(body.symbol).toUpperCase(),
+      side: this.text(body.side, '买入'),
       quantity: this.positiveInteger(body.quantity, 'Quantity'),
       price: this.moneyValue(body.price, 'Price', 4)!,
       minTicket: this.moneyValue(body.minTicket, 'Minimum ticket', 2)!,
-      note: body.note?.trim() || null,
+      note: this.optionalText(body.note),
     };
   }
 
-  private fundData(body: any) {
+  private fundData(body: ProductBody) {
     return {
-      code: String(body.code).trim().toUpperCase(),
-      name: String(body.name).trim(),
-      type: String(body.type || '股票型').trim(),
+      code: this.text(body.code).toUpperCase(),
+      name: this.text(body.name),
+      type: this.text(body.type, '股票型'),
       nav: this.moneyValue(body.nav, 'NAV', 4)!,
       minSubscribe: this.moneyValue(
         body.minSubscribe,
         'Minimum subscription',
         2,
       )!,
-      risk: String(body.risk || '中').trim(),
-      manager: body.manager?.trim() || null,
+      risk: this.text(body.risk, '中'),
+      manager: this.optionalText(body.manager),
     };
   }
 
-  private quantData(body: any) {
+  private quantData(body: ProductBody) {
     return {
-      code: String(body.code).trim().toUpperCase(),
-      name: String(body.name).trim(),
-      market: String(body.market || 'NSE').trim(),
-      risk: String(body.risk || '中').trim(),
+      code: this.text(body.code).toUpperCase(),
+      name: this.text(body.name),
+      market: this.text(body.market, 'NSE'),
+      risk: this.text(body.risk, '中'),
       annualReturn: this.moneyValue(body.annualReturn, 'Annual return', 2, {
         allowZero: true,
       })!,
@@ -251,6 +249,24 @@ export class AdminProductsService {
         max: 100,
       })!,
     };
+  }
+
+  private text(value: unknown, fallback = ''): string {
+    if (value == null || value === '') return fallback;
+    if (typeof value === 'string') return value.trim() || fallback;
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim() || fallback;
+    }
+    return fallback;
+  }
+
+  private optionalText(value: unknown): string | null {
+    if (value == null) return null;
+    if (typeof value === 'string') return value.trim() || null;
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      return String(value).trim() || null;
+    }
+    return null;
   }
 
   private moneyValue(
@@ -263,10 +279,18 @@ export class AdminProductsService {
       if (options.optional) return null;
       throw new BadRequestException(`${label} is required`);
     }
-    const text =
-      typeof value === 'number' && Number.isFinite(value)
-        ? value.toFixed(maxDecimals)
-        : String(value).trim();
+    let text: string;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      text = value.toFixed(maxDecimals);
+    } else if (typeof value === 'string') {
+      text = value.trim();
+    } else if (typeof value === 'boolean') {
+      text = String(value);
+    } else {
+      throw new BadRequestException(
+        `${label} must be a monetary value with up to ${maxDecimals} decimals`,
+      );
+    }
     const pattern =
       maxDecimals === 4
         ? /^(?:0|[1-9]\d*)(?:\.\d{1,4})?$/
@@ -298,10 +322,14 @@ export class AdminProductsService {
   }
 
   private positiveInteger(value: unknown, label: string, max = 1_000_000_000) {
-    const text =
-      typeof value === 'number' && Number.isFinite(value)
-        ? String(Math.trunc(value))
-        : String(value ?? '').trim();
+    let text: string;
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      text = String(Math.trunc(value));
+    } else if (typeof value === 'string') {
+      text = value.trim();
+    } else {
+      throw new BadRequestException(`${label} must be a positive whole number`);
+    }
     if (!/^\d+$/.test(text)) {
       throw new BadRequestException(`${label} must be a positive whole number`);
     }
@@ -313,9 +341,15 @@ export class AdminProductsService {
   }
 
   private require(value: unknown, message: string) {
-    if (!String(value ?? '').trim()) {
-      throw new BadRequestException(message);
+    if (typeof value === 'string') {
+      if (!value.trim()) throw new BadRequestException(message);
+      return;
     }
+    if (typeof value === 'number' || typeof value === 'boolean') {
+      if (!String(value).trim()) throw new BadRequestException(message);
+      return;
+    }
+    throw new BadRequestException(message);
   }
 
   private async markInstitutionalInstrument(

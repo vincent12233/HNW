@@ -423,7 +423,14 @@ export class AuthService {
   private async verifyGoogleToken(idToken: string) {
     if (!idToken?.trim())
       throw new BadRequestException('Google ID token is required');
-    const response = await axios.get(
+    type GoogleTokenInfo = {
+      sub?: string;
+      email?: string;
+      aud?: string;
+      iss?: string;
+      email_verified?: boolean | string;
+    };
+    const response = await axios.get<GoogleTokenInfo>(
       'https://oauth2.googleapis.com/tokeninfo',
       { params: { id_token: idToken }, timeout: 10000 },
     );
@@ -466,13 +473,18 @@ export class AuthService {
   }
 
   async biometricLogin(token: string) {
-    let payload: any;
+    type BiometricPayload = {
+      sub?: string;
+      purpose?: string;
+      version?: number;
+    };
+    let payload: BiometricPayload;
     try {
-      payload = await this.jwtService.verifyAsync(token);
+      payload = await this.jwtService.verifyAsync<BiometricPayload>(token);
     } catch {
       throw new UnauthorizedException('Biometric quick login has expired');
     }
-    if (payload?.purpose !== 'BIOMETRIC_LOGIN' || !payload?.sub)
+    if (payload.purpose !== 'BIOMETRIC_LOGIN' || !payload.sub)
       throw new UnauthorizedException('Invalid biometric quick login');
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },

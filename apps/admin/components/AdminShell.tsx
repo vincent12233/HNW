@@ -36,8 +36,9 @@ import type { ItemType } from "antd/es/menu/interface";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
+import { isAxiosError } from "axios";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -256,9 +257,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             throw new Error("Role not allowed on this backend");
           }
           return data;
-        } catch (error: any) {
+        } catch (error: unknown) {
           lastError = error;
-          const status = error?.response?.status;
+          const status = isAxiosError(error) ? error.response?.status : undefined;
           if (status === 401 || status === 403 || attempt === 2) throw error;
           await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
         }

@@ -24,7 +24,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Title, Paragraph } = Typography;
 
@@ -110,13 +110,10 @@ export default function BusinessUsersPage() {
       setRecords(
         Array.isArray(response.data) ? response.data : [response.data],
       );
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
 
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "业务员数据加载失败",
+      setError(responseMessage || "业务员数据加载失败",
       );
     } finally {
       setLoading(false);
@@ -162,13 +159,10 @@ export default function BusinessUsersPage() {
       );
 
       setCustomers(Array.isArray(response.data) ? response.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
 
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "客户数据加载失败",
+      message.error(responseMessage || "客户数据加载失败",
       );
     } finally {
       setCustomerLoading(false);
@@ -183,13 +177,10 @@ export default function BusinessUsersPage() {
 
       message.success(isActive ? "业务员已启用" : "业务员已停用");
       await loadRecords();
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
 
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "状态修改失败",
+      message.error(responseMessage || "状态修改失败",
       );
     }
   }
@@ -220,13 +211,10 @@ export default function BusinessUsersPage() {
       message.success("业务员密码已重置");
       setPasswordOpen(false);
       setNewPassword("");
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
 
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "密码重置失败",
+      message.error(responseMessage || "密码重置失败",
       );
     } finally {
       setPasswordLoading(false);

@@ -1,5 +1,4 @@
 import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IpoService } from './ipo.service';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';

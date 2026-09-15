@@ -5,8 +5,6 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { join } from 'path';
 import { AccountModule } from './account/account.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { ApprovalModule } from './approval/approval.module';
 import { AuthModule } from './auth/auth.module';
 import { HealthController } from './health/health.controller';
@@ -72,7 +70,6 @@ import { CompanyShowcaseModule } from './company-showcase/company-showcase.modul
     AppContentModule,
     CompanyShowcaseModule,
   ],
-  controllers: [AppController, HealthController],
-  providers: [AppService],
+  controllers: [HealthController],
 })
 export class AppModule {}

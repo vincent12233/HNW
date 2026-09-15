@@ -217,7 +217,10 @@ async function bootstrap() {
   validateProductionEnvironment();
   const app = await NestFactory.create(AppModule);
 
-  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+  const expressApp = app.getHttpAdapter().getInstance() as {
+    set: (setting: string, value: unknown) => unknown;
+  };
+  expressApp.set('trust proxy', 1);
   app.use(securityMiddleware);
 
   // KYC includes two ID files (15 MB each), a selfie (2 MB) and a signature (1 MB). Base64 increases payload size by

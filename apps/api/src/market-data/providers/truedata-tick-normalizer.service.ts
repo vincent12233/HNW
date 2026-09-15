@@ -14,7 +14,12 @@ export class TrueDataTickNormalizerService {
       throw new BadRequestException('Invalid TrueData tick payload');
     }
 
-    const providerSymbol = String(values[0] ?? '').trim();
+    const rawSymbol = values[0];
+    const providerSymbol = (
+      typeof rawSymbol === 'string' || typeof rawSymbol === 'number'
+        ? String(rawSymbol)
+        : ''
+    ).trim();
     const mapped = this.symbols.fromProviderSymbol(providerSymbol);
     const exchange = (exchangeOverride ?? mapped.exchange).trim().toUpperCase();
     const updatedAt = this.toDate(values[1]);

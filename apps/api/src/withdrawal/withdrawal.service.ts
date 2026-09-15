@@ -401,7 +401,10 @@ export class WithdrawalService {
     return rejected;
   }
 
-  private async assertFinanceAccount(userId: string, tx: any) {
+  private async assertFinanceAccount(
+    userId: string,
+    tx: Prisma.TransactionClient,
+  ) {
     const fixedCode = fixedInviteCode();
     const user = await tx.user.findUnique({
       where: { id: userId },

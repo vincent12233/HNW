@@ -425,7 +425,7 @@ export class DepositService {
     userId: string,
     role: string,
     actorId: string,
-    tx: any,
+    tx: Prisma.TransactionClient,
   ) {
     const visible = await tx.user.count({
       where: { id: userId, ...this.depositCustomerScope(role, actorId) },

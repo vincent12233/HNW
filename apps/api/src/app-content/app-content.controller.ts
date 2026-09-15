@@ -13,7 +13,10 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
-import { AppContentService } from './app-content.service';
+import {
+  AppContentService,
+  type AppContentUpsertInput,
+} from './app-content.service';
 
 @Controller()
 export class AppContentController {
@@ -34,14 +37,14 @@ export class AppContentController {
   @Put('admin/app-content')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  upsert(@Body() body: any) {
+  upsert(@Body() body: AppContentUpsertInput) {
     return this.service.upsertEntry(body);
   }
 
   @Post('admin/app-content/bulk')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  bulk(@Body() body: { entries?: any[] }) {
+  bulk(@Body() body: { entries?: AppContentUpsertInput[] }) {
     return this.service.bulkUpsert(body.entries ?? []);
   }
 

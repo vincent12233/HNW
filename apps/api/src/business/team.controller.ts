@@ -25,7 +25,7 @@ import {
   TeamReviewDto,
 } from './team.dto';
 import { ListAdminOrdersQueryDto } from '../orders/dto/list-admin-orders-query.dto';
-type ActorRequest = { user: { userId: string } };
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 @Controller('team')
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Roles('ADMIN', 'MANAGER')
@@ -35,19 +35,25 @@ export class TeamController {
     private readonly business: BusinessService,
     private readonly kyc: KycService,
   ) {}
-  @Get() list(@Req() req: ActorRequest) {
+  @Get() list(@Req() req: AuthenticatedRequest) {
     return this.team.list(req.user.userId);
   }
-  @Post() create(@Req() req: ActorRequest, @Body() dto: CreateTeamStaffDto) {
+  @Post() create(
+    @Req() req: AuthenticatedRequest,
+    @Body() dto: CreateTeamStaffDto,
+  ) {
     return this.team.create(req.user.userId, dto);
   }
-  @Delete(':id') remove(@Req() req: ActorRequest, @Param('id') id: string) {
+  @Delete(':id') remove(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
     return this.team.remove(req.user.userId, id);
   }
   @Get(':id/orders')
   @Roles('MANAGER')
   async orders(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Query() query: ListAdminOrdersQueryDto,
   ) {
@@ -57,7 +63,7 @@ export class TeamController {
   @Get(':id/:view')
   @Roles('MANAGER')
   async view(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Param('view') view: string,
   ) {
@@ -82,7 +88,7 @@ export class TeamController {
   @Get(':id/kyc/:submissionId/file')
   @Roles('MANAGER')
   async file(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Param('submissionId') submissionId: string,
     @Query('side') side: string,
@@ -99,7 +105,7 @@ export class TeamController {
   @Patch(':id/kyc')
   @Roles('MANAGER')
   async review(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() dto: TeamReviewDto,
   ) {
@@ -115,7 +121,7 @@ export class TeamController {
   @Patch(':id/customers/:customerId/status')
   @Roles('MANAGER')
   async customerStatus(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Param('customerId') customerId: string,
     @Body() dto: TeamStatusDto,
@@ -136,7 +142,7 @@ export class TeamController {
   @Patch(':id/active')
   @Roles('MANAGER')
   async active(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() dto: TeamActiveDto,
   ) {
@@ -148,7 +154,7 @@ export class TeamController {
   @Patch(':id/password')
   @Roles('MANAGER')
   async password(
-    @Req() req: ActorRequest,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() dto: TeamPasswordDto,
   ) {

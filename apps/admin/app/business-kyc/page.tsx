@@ -26,7 +26,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -100,12 +100,9 @@ export default function BusinessKycPage() {
     try {
       const response = await api.get<KycSubmission[]>("/kyc/business/pending");
       setItems(Array.isArray(response.data) ? response.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "KYC 加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "KYC 加载失败",
       );
     } finally {
       setLoading(false);
@@ -170,13 +167,10 @@ export default function BusinessKycPage() {
       if (missing.length) {
         setError(`部分资料暂时无法加载：${missing.join("、")}。证件正面仍可审核。`);
       }
-    } catch (requestError: any) {
+    } catch (requestError: unknown) {
       if (generation !== previewGeneration.current) return;
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "审核资料加载失败，请重试",
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "审核资料加载失败，请重试",
       );
     } finally {
       if (generation === previewGeneration.current) setFileLoading(false);
@@ -200,12 +194,9 @@ export default function BusinessKycPage() {
       setEvidence({ selfie: null, signature: null });
       setNote("");
       await loadItems();
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "KYC 审核失败，请刷新确认最新状态后重试",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      message.error(responseMessage || "KYC 审核失败，请刷新确认最新状态后重试",
       );
     } finally {
       reviewLock.current = false;

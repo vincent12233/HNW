@@ -242,7 +242,7 @@ export class SupportService {
       },
     });
 
-    this.gateway.conversationUpdated(conversationId);
+    void this.gateway.conversationUpdated(conversationId);
 
     return message;
   }
@@ -312,7 +312,7 @@ export class SupportService {
       resourceId: conversationId,
       metadata: { assignedToId },
     });
-    this.gateway.conversationUpdated(conversationId);
+    void this.gateway.conversationUpdated(conversationId);
     return conversation;
   }
 
@@ -327,7 +327,7 @@ export class SupportService {
       resource: 'support_conversation',
       resourceId: conversationId,
     });
-    this.gateway.conversationUpdated(conversationId);
+    void this.gateway.conversationUpdated(conversationId);
     return conversation;
   }
 

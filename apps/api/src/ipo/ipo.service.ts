@@ -104,7 +104,7 @@ export class IpoService {
   }
 
   private async reservedDraftQuantity(
-    tx: any,
+    tx: Prisma.TransactionClient,
     ipoId: string,
     excludeApplicationId?: string,
   ) {
@@ -1054,7 +1054,10 @@ export class IpoService {
     );
   }
 
-  async settleIpoApplication(tx: any, input: SettleIpoInput) {
+  async settleIpoApplication(
+    tx: Prisma.TransactionClient,
+    input: SettleIpoInput,
+  ) {
     return settleIpoHoldings(tx, input);
   }
 

@@ -28,7 +28,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
 
 const { Title, Paragraph, Text } = Typography;
@@ -299,14 +299,8 @@ export default function CustomersPage() {
           };
         }),
       );
-    } catch (requestError: any) {
-      const message = requestError.response?.data?.message;
-
-      setError(
-        Array.isArray(message)
-          ? message.join("，")
-          : message || "客户数据加载失败",
-      );
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "客户数据加载失败"));
     } finally {
       setLoading(false);
     }
@@ -334,12 +328,9 @@ export default function CustomersPage() {
         `/admin/customers/${customer.id}/overview`,
       );
       setOverview(response.data);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "客户详情加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      message.error(responseMessage || "客户详情加载失败",
       );
     } finally {
       setOverviewLoading(false);
@@ -358,14 +349,8 @@ export default function CustomersPage() {
       );
 
       setHistory(Array.isArray(response.data) ? response.data : []);
-    } catch (requestError: any) {
-      const message = requestError.response?.data?.message;
-
-      setError(
-        Array.isArray(message)
-          ? message.join("，")
-          : message || "登录记录加载失败",
-      );
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "登录记录加载失败"));
     } finally {
       setHistoryLoading(false);
     }
@@ -383,14 +368,8 @@ export default function CustomersPage() {
       );
 
       setSelectedRisk(response.data);
-    } catch (requestError: any) {
-      const message = requestError.response?.data?.message;
-
-      setError(
-        Array.isArray(message)
-          ? message.join("，")
-          : message || "登录风险数据加载失败",
-      );
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "登录风险数据加载失败"));
     } finally {
       setRiskLoading(false);
     }

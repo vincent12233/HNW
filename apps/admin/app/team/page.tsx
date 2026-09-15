@@ -5,7 +5,7 @@ import { CheckOutlined, CloseOutlined, EyeOutlined, PlusOutlined, ReloadOutlined
 import AdminShell from "@/components/AdminShell";
 import ScopedEditButton from "@/components/ScopedEditButton";
 import InvitePoolButton from "@/components/InvitePoolButton";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 import { loadTeamRecords } from "@/lib/team-records";
 
 type Staff = { id: string; fullName: string; role: string; status: string; businessProfile?: { employeeNo: string; isActive?: boolean }; _count?: { assignedCustomers: number; createdBusinessUsers: number } };
@@ -107,10 +107,10 @@ export default function TeamPage() {
       setEvidence({selfie:selfie.status === "fulfilled" ? selfie.value : null,signature:signature.status === "fulfilled" ? signature.value : null});
       const unavailable=[back.status === "rejected" ? "证件反面" : "",selfie.status === "rejected" ? "自拍" : "",signature.status === "rejected" ? "签名" : ""].filter(Boolean);
       if (unavailable.length) setError(`部分资料暂时无法加载：${unavailable.join("、")}。证件正面仍可审核。`);
-    } catch (failure: any) {
+    } catch (failure: unknown) {
       if (generation !== previewGeneration.current) return;
-      const detail=failure.response?.data?.message;
-      setError(Array.isArray(detail) ? detail.join("，") : detail || "KYC 审核资料加载失败，请重试。");
+      const detail = getApiErrorMessage(failure, "");
+      setError(detail || "KYC 审核资料加载失败，请重试。");
     } finally { if (generation === previewGeneration.current) setFileLoading(false); }
   }
   async function openKycReview(record: KycSubmission) {
@@ -125,9 +125,9 @@ export default function TeamPage() {
       await api.patch(`/team/${reviewing.ownerStaffId}/kyc`,{submissionId:reviewing.id,decision,note:reviewNote});
       message.success(decision === "APPROVED" ? "KYC 已通过" : "KYC 已拒绝");
       clearReview(); setRefreshNonce(value=>value+1);
-    } catch (failure: any) {
-      const detail=failure.response?.data?.message;
-      message.error(Array.isArray(detail) ? detail.join("，") : detail || "KYC 审核失败");
+    } catch (failure: unknown) {
+      const detail = getApiErrorMessage(failure, "");
+      message.error(detail || "KYC 审核失败");
     } finally {
       reviewLock.current=false;
       setReviewSaving(false);
@@ -136,7 +136,7 @@ export default function TeamPage() {
   async function create(values: {employeeNo:string;fullName:string;password:string}) {
     setSaving(true);
     try {await api.post("/team",values);setOpen(false);form.resetFields();message.success("账号创建成功");await load();}
-    catch(e:unknown) {const failure=e as {response?:{data?:{message?:string|string[]}}};const detail=failure.response?.data?.message;message.error(Array.isArray(detail)?detail.join("，"):detail||"创建失败");}
+    catch(e:unknown) {const failure=e as {response?:{data?:{message?:string|string[]}}};const detail = getApiErrorMessage(failure, "");message.error(detail || "创建失败");}
     finally {setSaving(false);}
   }
   async function removeStaff(row: Staff) {

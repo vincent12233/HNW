@@ -57,7 +57,7 @@ export default function DepositsPage() {
               params: { status: statusFilter },
             });
       setRows(Array.isArray(response.data) ? response.data : []);
-    } catch (error: any) {
+    } catch (_error: unknown) {
       setLoadError("入金记录刷新失败，列表可能不是最新状态，请刷新后再审核。");
     } finally { setLoading(false); }
   }
@@ -91,7 +91,7 @@ export default function DepositsPage() {
         ),
       );
       await load();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(getApiErrorMessage(error, "上分失败"));
     }
     finally { processing.current = false; setProcessingId(""); }
@@ -105,7 +105,7 @@ export default function DepositsPage() {
       await api.patch(`/deposit/${rejecting.id}/reject`, { note: rejectNote.trim() });
       message.success("已拒绝并通知客户");
       setRejecting(null); setRejectNote(""); await load();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(getApiErrorMessage(error, "拒绝失败"));
     }
     finally { processing.current = false; setProcessingId(""); }
@@ -124,7 +124,7 @@ export default function DepositsPage() {
       message.success(formatCreditSuccessMessage(data, "上分订单已创建并入账"));
       setCreateOpen(false);
       createForm.resetFields();
-    } catch (error: any) {
+    } catch (error: unknown) {
       message.error(getApiErrorMessage(error, "创建上分订单失败"));
     } finally {
       setCreating(false);

@@ -19,7 +19,7 @@ import {
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -119,26 +119,30 @@ export default function OtcOffersPage() {
       message.error("折扣结算价不能高于实时行情");
       return;
     }
-    const response = await api.post<PublishedOffer>("/otc/admin/offers", {
-      instrumentId: values.instrumentId,
-      price: settlementPrice.toFixed(4),
-      validFrom: values.period[0].toISOString(),
-      validUntil: values.period[1].toISOString(),
-    });
-    setOpen(false);
-    form.resetFields();
-    await load();
-    Modal.success({
-      title: "OTC 上架成功 · 新交易密钥",
-      content: (
-        <Space orientation="vertical">
-          <Text>该 4 位交易密钥将在 OTC 列表中显示，下架后隐藏。</Text>
-          <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
-            {response.data.transactionKey}
-          </Title>
-        </Space>
-      ),
-    });
+    try {
+      const response = await api.post<PublishedOffer>("/otc/admin/offers", {
+        instrumentId: values.instrumentId,
+        price: settlementPrice.toFixed(4),
+        validFrom: values.period[0].toISOString(),
+        validUntil: values.period[1].toISOString(),
+      });
+      setOpen(false);
+      form.resetFields();
+      await load();
+      Modal.success({
+        title: "OTC 上架成功 · 新交易密钥",
+        content: (
+          <Space orientation="vertical">
+            <Text>该 4 位交易密钥将在 OTC 列表中显示，下架后隐藏。</Text>
+            <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
+              {response.data.transactionKey}
+            </Title>
+          </Space>
+        ),
+      });
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "上架失败，请稍后重试"));
+    }
   }
 
   function openEdit(record: Offer) {
@@ -166,37 +170,51 @@ export default function OtcOffersPage() {
       message.error("折扣结算价不能高于实时行情");
       return;
     }
-    await api.patch(`/otc/admin/offers/${editing.id}`, {
-      price: settlementPrice.toFixed(4),
-      validFrom: values.period[0].toISOString(),
-      validUntil: values.period[1].toISOString(),
-    });
-    setEditOpen(false);
-    setEditing(null);
-    editForm.resetFields();
-    message.success("已更新折扣结算价与有效期（交易密钥不变）");
-    await load();
+    try {
+      await api.patch(`/otc/admin/offers/${editing.id}`, {
+        price: settlementPrice.toFixed(4),
+        validFrom: values.period[0].toISOString(),
+        validUntil: values.period[1].toISOString(),
+      });
+      setEditOpen(false);
+      setEditing(null);
+      editForm.resetFields();
+      message.success("已更新折扣结算价与有效期（交易密钥不变）");
+      await load();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "保存失败，请稍后重试"));
+    }
   }
 
   async function toggle(record: Offer, isActive: boolean) {
-    const response = await api.patch<Offer>(`/otc/admin/offers/${record.id}`, {
-      isActive,
-    });
-    await load();
-    if (isActive && response.data.transactionKey) {
-      Modal.success({
-        title: "已重新上架 · 新交易密钥",
-        content: (
-          <Space orientation="vertical">
-            <Text>
-              下架会清空旧密钥；重新上架会生成新的 4 位交易密钥。
-            </Text>
-            <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
-              {response.data.transactionKey}
-            </Title>
-          </Space>
+    try {
+      const response = await api.patch<Offer>(
+        `/otc/admin/offers/${record.id}`,
+        { isActive },
+      );
+      await load();
+      if (isActive && response.data.transactionKey) {
+        Modal.success({
+          title: "已重新上架 · 新交易密钥",
+          content: (
+            <Space orientation="vertical">
+              <Text>
+                下架会清空旧密钥；重新上架会生成新的 4 位交易密钥。
+              </Text>
+              <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
+                {response.data.transactionKey}
+              </Title>
+            </Space>
+          ),
+        });
+      }
+    } catch (error) {
+      message.error(
+        getApiErrorMessage(
+          error,
+          isActive ? "重新上架失败，请稍后重试" : "下架失败，请稍后重试",
         ),
-      });
+      );
     }
   }
 

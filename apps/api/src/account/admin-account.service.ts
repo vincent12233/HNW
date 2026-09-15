@@ -11,7 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AdjustBalanceDto } from './dto/adjust-balance.dto';
 import { ListAdminAccountsQueryDto } from './dto/list-admin-accounts-query.dto';
 import { ListAdminAccountTransactionsQueryDto } from './dto/list-admin-account-transactions-query.dto';
-import { applyIncomingFundsToIpoDebts, settleIpoHoldings } from '../common/ipo-debt-repay';
+import { applyIncomingFundsToIpoDebts } from '../common/ipo-debt-repay';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { availableCash, moneyDecimal } from '../common/money';
 type AdjustmentDirection = 'CREDIT' | 'DEBIT';
@@ -92,7 +92,6 @@ export class AdminAccountService {
             amount,
             balanceBefore,
           },
-          settleIpoHoldings,
         );
         ipoRepayment = applied.repayAmount;
         creditedAmount = applied.remainingAmount;

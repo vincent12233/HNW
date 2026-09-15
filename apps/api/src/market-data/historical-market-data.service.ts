@@ -336,7 +336,7 @@ export class HistoricalMarketDataService {
     return 60 * 60 * 1000;
   }
 
-  private dateWindow(range: '1M') {
+  private dateWindow(_range: '1M') {
     const nowIst = new Date(Date.now() + 330 * 60 * 1000);
     const fromDate = new Date(nowIst);
     fromDate.setUTCDate(fromDate.getUTCDate() - 31);

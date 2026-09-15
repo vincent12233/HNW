@@ -9,7 +9,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes, randomInt } from 'crypto';
+import { randomBytes } from 'crypto';
 import axios from 'axios';
 
 import {
@@ -352,16 +352,16 @@ export class AuthService {
     };
   }
 
-  async requestPasswordReset(phoneValue: string) {
+  requestPasswordReset(_phoneValue: string) {
     throw new BadRequestException(
       'Contact customer support to reset your password',
     );
   }
 
-  async confirmPasswordReset(
-    phoneValue: string,
-    code: string,
-    newPassword: string,
+  confirmPasswordReset(
+    _phoneValue: string,
+    _code: string,
+    _newPassword: string,
   ) {
     throw new BadRequestException(
       'Use the reset code in your customer support session',

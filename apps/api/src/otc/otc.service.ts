@@ -35,6 +35,22 @@ function resolveOtcEncryptionSecret() {
   return dedicated || process.env.JWT_SECRET || 'development-only-change-me';
 }
 
+type OtcSecretFields = {
+  keyHashTier1?: unknown;
+  keyHashTier2?: unknown;
+  keyHashTier3?: unknown;
+  transactionKeyEncrypted?: unknown;
+};
+
+function omitOtcSecrets<T extends OtcSecretFields>(value: T) {
+  const rest = { ...value };
+  delete rest.keyHashTier1;
+  delete rest.keyHashTier2;
+  delete rest.keyHashTier3;
+  delete rest.transactionKeyEncrypted;
+  return rest;
+}
+
 @Injectable()
 export class OtcService {
   private readonly encryptionSecret = resolveOtcEncryptionSecret();
@@ -51,19 +67,14 @@ export class OtcService {
       include: { instrument: { include: { quote: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    return offers.map(
-      ({
-        keyHashTier1,
-        keyHashTier2,
-        keyHashTier3,
-        transactionKeyEncrypted,
-        ...offer
-      }) => ({
-        ...offer,
+    return offers.map((offer) => {
+      const publicOffer = omitOtcSecrets(offer);
+      return {
+        ...publicOffer,
         marketPrice: offer.instrument.quote?.lastPrice ?? null,
         quoteAsOf: offer.instrument.quote?.asOf ?? null,
-      }),
-    );
+      };
+    });
   }
 
   async listAdminOffers() {
@@ -71,23 +82,18 @@ export class OtcService {
       include: { instrument: { include: { quote: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    return offers.map(
-      ({
-        keyHashTier1,
-        keyHashTier2,
-        keyHashTier3,
-        transactionKeyEncrypted,
-        ...offer
-      }) => ({
-        ...offer,
+    return offers.map((offer) => {
+      const publicOffer = omitOtcSecrets(offer);
+      return {
+        ...publicOffer,
         marketPrice: offer.instrument.quote?.lastPrice ?? null,
         quoteAsOf: offer.instrument.quote?.asOf ?? null,
         transactionKey:
-          offer.isActive && transactionKeyEncrypted
-            ? this.decryptKey(transactionKeyEncrypted)
+          offer.isActive && offer.transactionKeyEncrypted
+            ? this.decryptKey(offer.transactionKeyEncrypted)
             : null,
-      }),
-    );
+      };
+    });
   }
 
   async saveOffer(body: {
@@ -157,15 +163,8 @@ export class OtcService {
       },
       include: { instrument: true },
     });
-    const {
-      keyHashTier1,
-      keyHashTier2,
-      keyHashTier3,
-      transactionKeyEncrypted,
-      ...offer
-    } = saved;
     return {
-      ...offer,
+      ...omitOtcSecrets(saved),
       marketPrice: instrument.quote.lastPrice,
       transactionKey,
     };
@@ -264,20 +263,13 @@ export class OtcService {
       },
       include: { instrument: { include: { quote: true } } },
     });
-    const {
-      keyHashTier1,
-      keyHashTier2,
-      keyHashTier3,
-      transactionKeyEncrypted,
-      ...offer
-    } = saved;
     return {
-      ...offer,
+      ...omitOtcSecrets(saved),
       marketPrice: saved.instrument.quote?.lastPrice ?? null,
       transactionKey:
         mintedKey ??
-        (isActive && transactionKeyEncrypted
-          ? this.decryptKey(transactionKeyEncrypted)
+        (isActive && saved.transactionKeyEncrypted
+          ? this.decryptKey(saved.transactionKeyEncrypted)
           : null),
     };
   }

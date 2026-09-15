@@ -17,11 +17,7 @@ foreach ($port in $ports) {
     continue
   }
   $logPrefix = Join-Path $env:TEMP "india-admin-$port"
-  $arguments = if ($port -eq 3007) {
-    @("run", "start", "--", "-p", "$port", "-H", "0.0.0.0")
-  } else {
-    @("run", "start", "--", "-p", "$port")
-  }
+  $arguments = @("run", "start", "--", "-p", "$port", "-H", "0.0.0.0")
   Start-Process npm.cmd -WorkingDirectory $adminRoot -ArgumentList $arguments -RedirectStandardOutput "$logPrefix.out.log" -RedirectStandardError "$logPrefix.err.log" -WindowStyle Hidden | Out-Null
   Write-Host "后台入口已启动: http://localhost:$port/login"
 }

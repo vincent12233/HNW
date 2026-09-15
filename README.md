@@ -1,6 +1,8 @@
 # HNW Trading Platform
 
-这是一个面向印度手机号客户注册的交易平台项目，包含客户 App、四个分离的运营后台、API 后端和本地数据库编排。客服通过客户端内的 SaleSmartly 原生 SDK 接入，不再运行独立客服后台。
+面向印度手机号客户注册的交易平台：客户 App、五个分离的运营后台、API 后端。客服通过客户端内 SaleSmartly 原生 SDK 接入。
+
+**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。不再提供本机 Docker / compose 编排。
 
 ## 项目组成
 
@@ -13,7 +15,7 @@
 | 业务员后台 | `apps/admin` | 自有客户与业务数据，端口 `3006` |
 | 专用运营员后台 | `apps/admin` | 超级管理员固定邀请码客户，端口 `3007` |
 | 客户 App | `apps/client` | Flutter 客户端，界面英文 |
-| 数据库 | PostgreSQL 17.x | 生产部署在服务器；本地可用 `compose.yaml` 联调 |
+| 数据库 | PostgreSQL 17.x | 部署在服务器（或本机原生 Postgres 联调） |
 
 ## 核心规则
 
@@ -29,21 +31,29 @@
 - 业务员可查看自己客户的入金、提现、订单、成交记录，但不能审核提现。
 - 后台统一中文，客户 App 统一英文。
 
-## 本地启动
+## 生产部署
 
-先打开 Docker Desktop，然后复制 `.env.docker.example` 为 `.env.docker`，设置 API 初始化所需的角色密码，再在项目根目录执行：
-
-```powershell
-docker compose up -d --build
+```text
+docs/生产部署说明.md
 ```
 
-API 会在容器启动时自动执行数据库迁移和种子初始化。若只需单独运行 API 数据库迁移：
+服务器上：`npm ci` → 迁移 / seed → `npm run build` → `npm run start:prod`（API 入口为 `dist/main.js`），五个后台分别构建并用 Nginx 反代。
+
+## 本机联调（无 Docker）
+
+见 `docs/本地启动与联调.md`：本机安装 PostgreSQL + Node，直接跑 API / admin / Flutter。
 
 ```powershell
-docker compose logs -f api
+cd apps/api
+Copy-Item .env.example .env
+npm ci
+npm run db:generate
+npm run db:migrate
+npm run seed
+npm run start:dev
 ```
 
-启动五个分离的运营后台（共用同一个 API 和数据库）：
+五个运营后台：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-backends.ps1
@@ -63,7 +73,7 @@ API: http://localhost:3000
 客户 App：
 
 ```powershell
-cd ..\client
+cd apps/client
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://localhost:3000
 ```
@@ -78,7 +88,7 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 | 业务员 | `BUSINESS001` | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 | 专用运营员 | `SUPPORT001` | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 
-项目不提供固定默认密码。首次初始化前必须在 API 环境变量中设置四个不同的强密码。
+项目不提供固定默认密码。首次初始化前必须在 API 环境变量中设置各角色强密码。
 
 ## 免账号行情与新闻
 
@@ -88,8 +98,6 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 - 如需替换新闻源，可在 API 环境中设置逗号分隔的 `MARKET_NEWS_RSS_URLS`。
 
 ## 一键验收
-
-完整检查：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
@@ -101,13 +109,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -SkipVerification
 ```
 
-验证脚本会检查 API、运营后台和客户 App，并覆盖注册、KYC、SaleSmartly 客服标签、财务上分、交易、提现订单号和角色数据权限。
-
 ## 文档
 
-- `docs/本地启动与联调.md`
+- `docs/生产部署说明.md`（服务器上线主路径）
+- `docs/本地启动与联调.md`（本机无 Docker 联调）
 - `docs/运营流程说明.md`
 - `docs/客户APP发布配置.md`
 - `docs/交付验收清单.md`
-- `docs/生产部署说明.md`
 - `docs/项目交付总览.md`

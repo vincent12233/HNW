@@ -16,7 +16,6 @@ apps/**/.windsurf/
 .env
 .env.*
 !.env.example
-!.env.docker.example
 apps/**/.env
 apps/**/.env.*
 !apps/**/.env.example

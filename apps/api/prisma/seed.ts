@@ -31,8 +31,8 @@ type StaffSeed = {
 
 function initialPassword(name: string) {
   const value = process.env[name]?.trim();
-  if (!value || value.length < 6) {
-    throw new Error(`${name} must contain at least 6 characters`);
+  if (!value || value.length < 12) {
+    throw new Error(`${name} must contain at least 12 characters`);
   }
   return value;
 }
@@ -83,8 +83,9 @@ async function upsertStaff(seed: StaffSeed) {
     where: {
       email: internalEmail,
     },
+    // Do not overwrite passwordHash on update — operators may have rotated
+    // credentials after the first seed.
     update: {
-      passwordHash,
       fullName: seed.fullName,
       phone: null,
       role: seed.role,

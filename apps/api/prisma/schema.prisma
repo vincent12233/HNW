@@ -200,6 +200,7 @@ model Instrument {
   trades    Trade[]
   otcOffer  OtcOffer?
   otcOrders OtcOrder[]
+  ipos      Ipo[]
 
   @@unique([exchange, symbol])
   @@index([symbol])
@@ -336,6 +337,7 @@ model Ipo {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   instrumentId    String?
+  instrument      Instrument?      @relation(fields: [instrumentId], references: [id])
   applications    IpoApplication[]
 
   @@map("ipos")

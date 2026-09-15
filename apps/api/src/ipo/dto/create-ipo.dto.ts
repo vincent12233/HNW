@@ -21,6 +21,7 @@ export class CreateIpoDto {
   @IsString()
   instrumentId: string;
 
+  /** Internal subscription price — edited only in super-admin; used for settlement. */
   @IsString()
   @Matches(/^(?!0+(?:\.0{1,2})?$)\d+(?:\.\d{1,2})?$/, {
     message:

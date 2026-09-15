@@ -8,7 +8,7 @@ describe('IPO publication', () => {
       status: 'PENDING',
       draftQuantity: 10,
       draftPrice: 20,
-      ipo: { instrumentId: 'stock', symbol: 'ABC' },
+      ipo: { instrumentId: 'stock', symbol: 'ABC', issuePrice: 20 },
       account: {
         id: 'account',
         userId: 'customer',

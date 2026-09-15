@@ -1,15 +1,61 @@
-import { BadRequestException, ConflictException, ForbiddenException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { IpoService } from './ipo.service';
 
 describe('IpoService allocation safety', () => {
-  it('rejects invalid allocation values before starting a transaction', async () => {
+  it('rejects invalid allocation quantity before starting a transaction', async () => {
     const prisma = { $transaction: jest.fn() };
     const service = new IpoService(prisma as any);
 
-    await expect(service.allocate('application-1', 0, 79.1)).rejects.toBeInstanceOf(BadRequestException);
-    await expect(service.allocate('application-1', 10, 0)).rejects.toBeInstanceOf(BadRequestException);
+    await expect(
+      service.allocate('application-1', 0, 79.1),
+    ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('locks allocation price to IPO issuePrice and ignores caller price', async () => {
+    const tx = {
+      ipoApplication: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'application-1',
+          status: 'PENDING',
+          accountId: 'account-1',
+          ipo: {
+            symbol: 'VALIANTLAB',
+            instrumentId: 'instrument-1',
+            issuePrice: new Prisma.Decimal('100.50'),
+          },
+          account: {
+            id: 'account-1',
+            userId: 'client-1',
+            cashBalance: new Prisma.Decimal(1000),
+            user: { assignedBusinessId: 'business-owner' },
+          },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const service = new IpoService(prisma as any);
+
+    await service.allocate('application-1', 10, 999.99);
+    expect(tx.ipoApplication.updateMany).toHaveBeenCalledWith({
+      where: { id: 'application-1', status: 'PENDING', publishedAt: null },
+      data: {
+        draftQuantity: 10,
+        draftPrice: expect.any(Prisma.Decimal),
+      },
+    });
+    const call = tx.ipoApplication.updateMany.mock.calls[0][0];
+    expect(call.data.draftPrice.toFixed(2)).toBe('100.50');
   });
 
   it('does not debit cash or create debt when another operator claimed the application', async () => {
@@ -19,8 +65,17 @@ describe('IpoService allocation safety', () => {
           id: 'application-1',
           status: 'PENDING',
           accountId: 'account-1',
-          ipo: { symbol: 'VALIANTLAB', instrumentId: 'instrument-1' },
-          account: { id: 'account-1', userId: 'client-1', cashBalance: new Prisma.Decimal(1000) },
+          ipo: {
+            symbol: 'VALIANTLAB',
+            instrumentId: 'instrument-1',
+            issuePrice: new Prisma.Decimal('79.1'),
+          },
+          account: {
+            id: 'account-1',
+            userId: 'client-1',
+            cashBalance: new Prisma.Decimal(1000),
+            user: { assignedBusinessId: 'business-owner' },
+          },
         }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
@@ -29,11 +84,15 @@ describe('IpoService allocation safety', () => {
       notification: { create: jest.fn() },
     };
     const prisma = {
-      $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)),
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
     };
     const service = new IpoService(prisma as any);
 
-    await expect(service.allocate('application-1', 10, 79.1)).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      service.allocate('application-1', 10, 79.1),
+    ).rejects.toBeInstanceOf(ConflictException);
     expect(tx.account.update).not.toHaveBeenCalled();
     expect(tx.ipoDebt.create).not.toHaveBeenCalled();
     expect(tx.notification.create).not.toHaveBeenCalled();
@@ -45,7 +104,10 @@ describe('IpoService allocation safety', () => {
         findUnique: jest.fn().mockResolvedValue({
           id: 'application-1',
           status: 'PENDING',
-          ipo: { instrumentId: 'instrument-1' },
+          ipo: {
+            instrumentId: 'instrument-1',
+            issuePrice: new Prisma.Decimal('79.1'),
+          },
           account: {
             id: 'account-1',
             cashBalance: new Prisma.Decimal(1000),
@@ -56,11 +118,16 @@ describe('IpoService allocation safety', () => {
       },
       account: { update: jest.fn() },
     };
-    const prisma = { $transaction: jest.fn((callback: (client: typeof tx) => unknown) => callback(tx)) };
+    const prisma = {
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
     const service = new IpoService(prisma as any);
 
-    await expect(service.allocate('application-1', 10, 79.1, 'business-other'))
-      .rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.allocate('application-1', 10, 79.1, 'business-other'),
+    ).rejects.toBeInstanceOf(ForbiddenException);
     expect(tx.ipoApplication.updateMany).not.toHaveBeenCalled();
     expect(tx.account.update).not.toHaveBeenCalled();
   });

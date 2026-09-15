@@ -4,7 +4,7 @@ import { AuthService } from './auth.service';
 import { UserRole } from '../generated/prisma/enums';
 
 describe('AuthService access token TTL', () => {
-  it('issues 1h tokens for clients and 7d tokens for staff', async () => {
+  it('issues long-lived tokens for clients and staff until logout', async () => {
     const signAsync = jest.fn(
       async (_payload: unknown, options?: { expiresIn?: string }) =>
         `token:${options?.expiresIn ?? 'default'}`,
@@ -25,11 +25,13 @@ describe('AuthService access token TTL', () => {
       authVersion: 1,
     });
 
-    expect(clientToken).toBe('token:1h');
-    expect(financeToken).toBe('token:7d');
-    expect((auth as any).accessTokenExpiresIn(UserRole.CLIENT)).toBe(3600);
+    expect(clientToken).toBe('token:365d');
+    expect(financeToken).toBe('token:365d');
+    expect((auth as any).accessTokenExpiresIn(UserRole.CLIENT)).toBe(
+      365 * 24 * 60 * 60,
+    );
     expect((auth as any).accessTokenExpiresIn(UserRole.FINANCE)).toBe(
-      7 * 24 * 60 * 60,
+      365 * 24 * 60 * 60,
     );
   });
 });

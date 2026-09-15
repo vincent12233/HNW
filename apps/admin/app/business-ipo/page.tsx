@@ -128,7 +128,7 @@ export default function BusinessIpoPage() {
 
   async function allocate(record: IpoApplication) {
     let quantity = String(record.draftQuantity ?? "");
-    let price = record.draftPrice || record.ipo.issuePrice;
+    const price = record.ipo.issuePrice;
 
     Modal.confirm({
       title: "分配 IPO",
@@ -151,16 +151,12 @@ export default function BusinessIpoPage() {
               quantity = String(value ?? "");
             }}
           />
-          <InputNumber
-            min={0.01}
-            precision={2}
-            style={{ width: "100%" }}
-            placeholder="分配价格"
-            defaultValue={Number(price)}
-            onChange={(value) => {
-              price = String(value ?? "");
-            }}
-          />
+          <Text>
+            结算价（申购价）：{formatMoney(record.ipo.issuePrice)}
+          </Text>
+          <Text type="secondary">
+            分配结算固定使用超管申购价，实时行情仅用于展示价差。
+          </Text>
         </Space>
       ),
       okText: "保存分配",

@@ -21,6 +21,16 @@ class InstitutionalTab extends StatelessWidget {
   final List<StockQuote> marketStocks;
   final ValueChanged<InstitutionalStock>? onOpen;
 
+  StockQuote? _quoteFor(InstitutionalStock stock) {
+    for (final item in marketStocks) {
+      if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
+          item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
+        return item;
+      }
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListenableBuilder(
@@ -67,27 +77,25 @@ class InstitutionalTab extends StatelessWidget {
               return TradingGuideCard(title: guideTitle, body: guideBody);
             }
             final stock = stocks[guideBody.isNotEmpty ? index - 1 : index];
-            StockQuote? quote;
-            for (final item in marketStocks) {
-              if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
-                  item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
-                quote = item;
-                break;
-              }
-            }
-
+            final quote = _quoteFor(stock);
             final live = quote != null && quote.quoteFresh;
+            final settlementPrice = stock.price > 0
+                ? stock.price
+                : (live ? quote.price : 0.0);
+
             return ProductOfferCard(
               name: stock.companyName,
               symbol: stock.symbol,
               type: 'Ins. Stock',
-              marketPrice: stock.marketPrice > 0
-                  ? stock.marketPrice
-                  : (live ? quote.price : 0),
-              offerPrice: stock.price,
+              marketPrice: settlementPrice,
+              offerPrice: settlementPrice,
+              offerLabel: 'Live settlement',
+              expectedReturn: stock.expectedReturn,
               actionLabel: onOpen == null ? 'View details' : 'Trade Now',
-              onTrade: () {
-                if (onOpen != null && live) {
+              onTrade: settlementPrice <= 0 && onOpen != null
+                  ? null
+                  : () {
+                if (onOpen != null && settlementPrice > 0) {
                   onOpen!(stock);
                   return;
                 }
@@ -101,8 +109,16 @@ class InstitutionalTab extends StatelessWidget {
                       children: [
                         AppText('${stock.symbol} · ${stock.exchange}'),
                         const SizedBox(height: 16),
-                        AppText('Offer Price: ${formatPrice(stock.price)}'),
-                        if (!live) const AppText('Live quote unavailable'),
+                        AppText(
+                          'Settlement price (live): ${formatPrice(settlementPrice)}',
+                        ),
+                        if (stock.referencePrice != null &&
+                            stock.referencePrice! > 0)
+                          AppText(
+                            'Admin reference: ${formatPrice(stock.referencePrice!)}',
+                          ),
+                        if (!live && settlementPrice <= 0)
+                          const AppText('Live quote unavailable'),
                       ],
                     ),
                     actions: [

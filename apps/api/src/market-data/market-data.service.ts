@@ -65,8 +65,9 @@ export class MarketDataService {
         instrument.quote &&
         Date.now() - instrument.quote.asOf.getTime() <= staleAfterMs,
       );
+      // Institutional stocks settle at the live market quote (same as equity
+      // order preparation). Admin referencePrice is display metadata only.
       const livePrice = instrument.quote?.lastPrice.toFixed(4) ?? '0';
-      const offerPrice = item.referencePrice?.toFixed(4) ?? livePrice;
       return [
         {
           id: item.id,
@@ -74,10 +75,12 @@ export class MarketDataService {
           symbol: instrument.symbol,
           exchange: instrument.exchange,
           name: instrument.name,
-          // Offer / reference price for trading display.
-          price: offerPrice,
-          // Always expose the live market quote separately.
+          // Settlement / trade price — always the live last price.
+          price: livePrice,
+          // Same live quote for market display / price-difference UI.
           marketPrice: livePrice,
+          referencePrice: item.referencePrice?.toFixed(4) ?? null,
+          expectedReturn: item.expectedReturn?.toFixed(2) ?? null,
           quoteAsOf: instrument.quote?.asOf ?? null,
           quoteFresh: quoteIsFresh,
           status: item.status,

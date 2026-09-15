@@ -53,5 +53,10 @@ jobs:
       - name: Build API
         run: npm run build
 
+      - name: Assert production entrypoint
+        run: |
+          test -f dist/main.js
+          test ! -e dist/src/main.js
+
       - name: Run unit tests
         run: npm test -- --runInBand

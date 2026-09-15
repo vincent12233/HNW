@@ -8,7 +8,7 @@ import { api } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 type Instrument = { id: string; symbol: string; exchange: string; name: string };
-type Offer = { id: string; price: string; transactionKey?: string | null; isActive: boolean; validFrom: string; validUntil: string; instrument: Instrument };
+type Offer = { id: string; price: string; marketPrice?: string | null; transactionKey?: string | null; isActive: boolean; validFrom: string; validUntil: string; instrument: Instrument };
 type PublishedOffer = Offer & { transactionKey: string };
 
 export default function OtcOffersPage() {
@@ -45,7 +45,8 @@ export default function OtcOffersPage() {
     <Card><Space style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}><Button icon={<ReloadOutlined />} onClick={load}>刷新</Button><Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)}>上架股票</Button></Space>
       <Table rowKey="id" loading={loading} dataSource={offers} columns={[
         { title: "股票", render: (_: unknown, r: Offer) => <Space orientation="vertical" size={0}><Text strong>{r.instrument.symbol}</Text><Text type="secondary">{r.instrument.exchange} · {r.instrument.name}</Text></Space> },
-        { title: "价格来源", render: () => <Tag color="blue">实时行情</Tag> },
+        { title: "实时行情", render: (_: unknown, r: Offer) => r.marketPrice ? `₹${Number(r.marketPrice).toFixed(2)}` : "—" },
+        { title: "结算价", dataIndex: "price", render: (v: string) => `₹${Number(v).toFixed(2)}` },
         { title: "交易密钥", render: (_: unknown, r: Offer) => r.isActive && r.transactionKey ? <Text code copyable>{r.transactionKey}</Text> : <Text type="secondary">下架后隐藏</Text> },
         { title: "开始时间", dataIndex: "validFrom", render: (v: string) => new Date(v).toLocaleString("zh-CN") },
         { title: "结束时间", dataIndex: "validUntil", render: (v: string) => new Date(v).toLocaleString("zh-CN") },

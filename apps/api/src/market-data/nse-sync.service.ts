@@ -10,10 +10,18 @@ import { QuoteIngestionService } from './quote-ingestion.service';
 type PollingCandidate = {
   symbol: string;
   exchange: string;
+  category: string | null;
   quote: { asOf: Date } | null;
   positions: { id: string }[];
   orders: { id: string }[];
 };
+
+const PRIORITY_CATEGORIES = new Set([
+  'INSTITUTIONAL',
+  'INST',
+  'OTC',
+  'IPO',
+]);
 
 @Injectable()
 export class NseSyncService {
@@ -63,6 +71,7 @@ export class NseSyncService {
       select: {
         symbol: true,
         exchange: true,
+        category: true,
         quote: { select: { asOf: true } },
         positions: {
           where: { quantity: { not: 0 } },
@@ -147,7 +156,12 @@ export class NseSyncService {
   }
 
   private isPriority(instrument: PollingCandidate) {
-    return instrument.positions.length > 0 || instrument.orders.length > 0;
+    const category = (instrument.category ?? '').trim().toUpperCase();
+    return (
+      instrument.positions.length > 0 ||
+      instrument.orders.length > 0 ||
+      PRIORITY_CATEGORIES.has(category)
+    );
   }
 
   private pollingKey(exchange: string, symbol: string) {

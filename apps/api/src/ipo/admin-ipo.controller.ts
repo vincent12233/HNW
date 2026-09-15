@@ -61,6 +61,7 @@ export class AdminIpoController {
     return this.ipoService.updateStatus(id, dto);
   }
 
+
   @Patch(':id/instrument')
   @Roles('ADMIN')
   setInstrument(@Param('id') id: string, @Body() dto: SetIpoInstrumentDto) {

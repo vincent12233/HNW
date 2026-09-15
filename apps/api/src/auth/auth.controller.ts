@@ -7,7 +7,7 @@ import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
 const backendRoles = new Set(['ADMIN', 'MANAGER', 'FINANCE', 'BUSINESS', 'SUPPORT']);
-const staffSessionSeconds = 7 * 24 * 60 * 60;
+const staffSessionSeconds = 365 * 24 * 60 * 60;
 
 function staffCookieName(role?: string) {
   const normalized = role?.trim().toUpperCase();

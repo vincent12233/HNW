@@ -27,8 +27,10 @@ import { TwoFactorService } from './two-factor.service';
 import { fixedInviteCode } from '../common/fixed-invite';
 @Injectable()
 export class AuthService {
-  private static readonly CLIENT_TOKEN_SECONDS = 3600;
-  private static readonly STAFF_TOKEN_SECONDS = 7 * 24 * 60 * 60;
+  // Sessions stay valid until explicit logout (or authVersion revocation).
+  private static readonly CLIENT_TOKEN_SECONDS = 365 * 24 * 60 * 60;
+  private static readonly STAFF_TOKEN_SECONDS = 365 * 24 * 60 * 60;
+  private static readonly ACCESS_TOKEN_TTL = '365d';
 
   constructor(
     private readonly usersService: UsersService,
@@ -61,7 +63,7 @@ export class AuthService {
         role: user.role,
         version: user.authVersion,
       },
-      { expiresIn: this.isStaffRole(user.role) ? '7d' : '1h' },
+      { expiresIn: AuthService.ACCESS_TOKEN_TTL },
     );
   }
 

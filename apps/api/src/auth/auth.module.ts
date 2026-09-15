@@ -17,8 +17,8 @@ import { TwoFactorModule } from './two-factor.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          // Client access tokens default to 1h; staff logins override to 7d.
-          expiresIn: '1h',
+          // Long-lived sessions until explicit logout (client + staff).
+          expiresIn: '365d',
         },
       }),
     }),

@@ -46,13 +46,31 @@ describe('NseSyncService polling selection', () => {
       quoteAt?: Date | null;
       position?: boolean;
       order?: boolean;
+      category?: string | null;
     } = {},
   ) => ({
     symbol,
     exchange: 'NSE',
+    category: options.category ?? null,
     quote: options.quoteAt ? { asOf: options.quoteAt } : null,
     positions: options.position ? [{ id: `position-${symbol}` }] : [],
     orders: options.order ? [{ id: `order-${symbol}` }] : [],
+  });
+
+  it('prioritizes institutional/OTC/IPO catalog symbols before ordinary symbols', () => {
+    const { service } = createService('2');
+    const batch = service.selectPollingBatch([
+      candidate('REGULAR', { quoteAt: new Date('2026-08-12T01:00:00Z') }),
+      candidate('INST', {
+        quoteAt: new Date('2026-08-12T03:00:00Z'),
+        category: 'INSTITUTIONAL',
+      }),
+      candidate('OTC1', {
+        quoteAt: new Date('2026-08-12T02:00:00Z'),
+        category: 'OTC',
+      }),
+    ]);
+    expect(batch.map((item) => item.symbol)).toEqual(['OTC1', 'INST']);
   });
 
   it('prioritizes holdings and active-order symbols before ordinary symbols', () => {

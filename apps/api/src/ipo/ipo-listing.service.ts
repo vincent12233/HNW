@@ -15,6 +15,11 @@ export class IpoListingService {
 
   @Cron('0 */15 * * * *')
   async syncMaturedIpos() {
+    await this.promoteMaturedIpos();
+    await this.refreshListedQuotes();
+  }
+
+  private async promoteMaturedIpos() {
     const candidates = await this.prisma.ipo.findMany({
       where: {
         status: { in: ['PUBLISHED', 'OPEN'] },
@@ -28,6 +33,10 @@ export class IpoListingService {
       try {
         const quote = await this.provider.getQuote(ipo.symbol, ipo.exchange);
         await this.ingestion.ingest(ipo.exchange, quote, 'STOCK');
+        await this.prisma.instrument.update({
+          where: { id: ipo.instrumentId },
+          data: { category: 'IPO', isActive: true },
+        });
         await this.prisma.ipo.update({
           where: { id: ipo.id },
           data: { status: 'LISTED' },
@@ -36,6 +45,25 @@ export class IpoListingService {
       } catch (error: unknown) {
         this.logger.warn(
           `IPO listing check failed for ${ipo.symbol}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+  }
+
+  /** Keep live quotes flowing for already-listed IPO instruments. */
+  private async refreshListedQuotes() {
+    const listed = await this.prisma.ipo.findMany({
+      where: { status: 'LISTED', instrumentId: { not: null } },
+      take: 100,
+      orderBy: { updatedAt: 'asc' },
+    });
+    for (const ipo of listed) {
+      try {
+        const quote = await this.provider.getQuote(ipo.symbol, ipo.exchange);
+        await this.ingestion.ingest(ipo.exchange, quote, 'STOCK');
+      } catch (error: unknown) {
+        this.logger.warn(
+          `Listed IPO quote refresh failed for ${ipo.symbol}: ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     }

@@ -43,9 +43,14 @@ export class OtcService {
   }
 
   async listAdminOffers() {
-    const offers = await this.prisma.otcOffer.findMany({ include: { instrument: true }, orderBy: { updatedAt: 'desc' } });
+    const offers = await this.prisma.otcOffer.findMany({
+      include: { instrument: { include: { quote: true } } },
+      orderBy: { updatedAt: 'desc' },
+    });
     return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer }) => ({
       ...offer,
+      marketPrice: offer.instrument.quote?.lastPrice ?? null,
+      quoteAsOf: offer.instrument.quote?.asOf ?? null,
       transactionKey: offer.isActive && transactionKeyEncrypted ? this.decryptKey(transactionKeyEncrypted) : null,
     }));
   }

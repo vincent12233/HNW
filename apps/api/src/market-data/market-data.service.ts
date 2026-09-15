@@ -65,6 +65,8 @@ export class MarketDataService {
         instrument.quote &&
         Date.now() - instrument.quote.asOf.getTime() <= staleAfterMs,
       );
+      const livePrice = instrument.quote?.lastPrice.toFixed(4) ?? '0';
+      const offerPrice = item.referencePrice?.toFixed(4) ?? livePrice;
       return [
         {
           id: item.id,
@@ -72,7 +74,10 @@ export class MarketDataService {
           symbol: instrument.symbol,
           exchange: instrument.exchange,
           name: instrument.name,
-          price: instrument.quote?.lastPrice.toFixed(4) ?? '0',
+          // Offer / reference price for trading display.
+          price: offerPrice,
+          // Always expose the live market quote separately.
+          marketPrice: livePrice,
           quoteAsOf: instrument.quote?.asOf ?? null,
           quoteFresh: quoteIsFresh,
           status: item.status,

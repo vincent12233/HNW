@@ -27,25 +27,34 @@ export class IpoService {
       throw new BadRequestException('openDate must be earlier than closeDate');
     }
 
-    const ipo = await this.prisma.ipo.create({
-      data: {
-        symbol: dto.symbol.trim().toUpperCase(),
-        companyName: dto.companyName.trim(),
-        exchange: dto.exchange,
+    // issuePrice is the internal subscription price edited only in super-admin.
+    const issuePrice = moneyDecimal(dto.issuePrice);
 
-        instrumentId: dto.instrumentId,
+    const ipo = await this.prisma.$transaction(async (tx) => {
+      await tx.instrument.update({
+        where: { id: dto.instrumentId },
+        data: { category: 'IPO', isActive: true },
+      });
+      return tx.ipo.create({
+        data: {
+          symbol: dto.symbol.trim().toUpperCase(),
+          companyName: dto.companyName.trim(),
+          exchange: dto.exchange,
 
-        issuePrice: moneyDecimal(dto.issuePrice),
-        lotSize: dto.lotSize,
-        totalShares: dto.totalShares,
-        availableShares: dto.totalShares,
+          instrumentId: dto.instrumentId,
 
-        openDate,
-        closeDate,
-        // Publishing makes the product visible in the client app. It does not
-        // mean the IPO has been allotted or listed on an exchange.
-        status: 'PUBLISHED',
-      },
+          issuePrice,
+          lotSize: dto.lotSize,
+          totalShares: dto.totalShares,
+          availableShares: dto.totalShares,
+
+          openDate,
+          closeDate,
+          // Publishing makes the product visible in the client app. It does not
+          // mean the IPO has been allotted or listed on an exchange.
+          status: 'PUBLISHED',
+        },
+      });
     });
 
     return {
@@ -55,9 +64,32 @@ export class IpoService {
         ...ipo,
 
         issuePrice: ipo.issuePrice.toFixed(2),
+        // Before listing there is no live quote; display falls back to issuePrice.
+        marketPrice: ipo.issuePrice.toFixed(2),
       },
     };
   }
+
+  /**
+   * Display-only market quote (never used for IPO settlement).
+   * - before LISTED: no exchange quote → mirror issuePrice
+   * - after LISTED: live MarketQuote for UI price-difference display
+   * Settlement / allotment always use issuePrice (admin subscription price).
+   */
+  private resolveDisplayMarketPrice(ipo: {
+    status: string;
+    issuePrice: Prisma.Decimal;
+    instrument?: { quote?: { lastPrice: Prisma.Decimal } | null } | null;
+  }) {
+    if (ipo.status === 'LISTED') {
+      const live = ipo.instrument?.quote?.lastPrice;
+      if (live && live.greaterThan(0)) {
+        return live.toFixed(2);
+      }
+    }
+    return ipo.issuePrice.toFixed(2);
+  }
+
 
   async list() {
     const ipos = await this.prisma.ipo.findMany({
@@ -65,6 +97,11 @@ export class IpoService {
         _count: {
           select: {
             applications: true,
+          },
+        },
+        instrument: {
+          include: {
+            quote: true,
           },
         },
       },
@@ -87,6 +124,8 @@ export class IpoService {
         exchange: ipo.exchange,
 
         issuePrice: ipo.issuePrice.toFixed(2),
+
+        marketPrice: this.resolveDisplayMarketPrice(ipo),
 
         lotSize: ipo.lotSize,
 
@@ -350,6 +389,8 @@ export class IpoService {
         exchange: ipo.exchange,
 
         issuePrice: ipo.issuePrice.toFixed(2),
+
+        marketPrice: this.resolveDisplayMarketPrice(ipo),
 
         lotSize: ipo.lotSize,
 

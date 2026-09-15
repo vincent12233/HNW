@@ -33,6 +33,7 @@ type Ipo = {
   companyName: string;
   exchange: string;
   issuePrice: string;
+  marketPrice?: string;
   lotSize: number;
   totalShares: number;
   availableShares: number;
@@ -110,8 +111,7 @@ export default function IpoManagementPage() {
           <Title level={2}>IPO 上架管理</Title>
           <Paragraph type="secondary">
             超级管理员只负责将产品上架到
-            APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO
-            已上市。
+            APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO 已上市。申购价由超管编辑并用于结算；上市后实时行情仅用于展示价差。
           </Paragraph>
         </div>
         <Card>
@@ -149,7 +149,8 @@ export default function IpoManagementPage() {
                   </Space>
                 ),
               },
-              { title: "发行价", dataIndex: "issuePrice", width: 120 },
+              { title: "申购价", dataIndex: "issuePrice", width: 110 },
+              { title: "展示行情", dataIndex: "marketPrice", width: 110, render: (v: string | undefined, r) => v ?? r.issuePrice },
               { title: "每手", dataIndex: "lotSize", width: 90 },
               { title: "可用股数", dataIndex: "availableShares", width: 120 },
               { title: "申购数", dataIndex: "applicationCount", width: 90 },
@@ -172,7 +173,7 @@ export default function IpoManagementPage() {
                       OPEN: "已上架（旧数据）",
                       DRAFT: "草稿",
                       CLOSED: "已下架",
-                      LISTED: "已上市（行情已接入）",
+                      LISTED: "已上市（展示实时行情，仍按申购价结算）",
                       ALLOTMENT_DONE: "分配已完成",
                     }[v as Ipo["status"]] ?? v}
                   </Tag>
@@ -248,7 +249,7 @@ export default function IpoManagementPage() {
             </Form.Item>
             <Form.Item
               name="issuePrice"
-              label="发行价"
+              label="申购价（结算价）"
               rules={[{ required: true }]}
             >
               <InputNumber min={0.01} precision={2} style={{ width: "100%" }} />

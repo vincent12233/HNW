@@ -92,7 +92,7 @@ export default function WatchlistPage() {
   async function deleteItem(record: WatchItem) {
     await api.delete(`/admin-products/watchlist/${record.id}`);
     await loadItems();
-    message.success("自选股已删除");
+    message.success("机构股票已删除");
   }
 
   const columns: ColumnsType<WatchItem> = [
@@ -127,7 +127,7 @@ export default function WatchlistPage() {
           >
             {record.status === "ACTIVE" ? "暂停" : "展示"}
           </Button>
-          <Popconfirm title="确认删除这条自选股？" okText="删除" cancelText="取消" onConfirm={() => deleteItem(record)}>
+          <Popconfirm title="确认删除这条机构股票？" okText="删除" cancelText="取消" onConfirm={() => deleteItem(record)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -157,7 +157,7 @@ export default function WatchlistPage() {
         </Card>
       </Space>
 
-      <Modal title={editing ? "编辑自选股" : "新增自选股"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitItem)} okText="保存" cancelText="取消">
+      <Modal title={editing ? "编辑机构股票" : "新增机构股票"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitItem)} okText="保存" cancelText="取消">
         <Form form={form} layout="vertical">
           <Form.Item name="symbol" label="股票代码" rules={[{ required: true, message: "请输入股票代码" }]}><Input prefix={<StarOutlined />} /></Form.Item>
           <Form.Item name="name" label="股票名称" rules={[{ required: true, message: "请输入股票名称" }]}><Input /></Form.Item>

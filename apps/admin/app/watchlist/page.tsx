@@ -1,7 +1,7 @@
-﻿"use client";
+"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, StarOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
+import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select, Space, Table, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
@@ -98,7 +98,12 @@ export default function WatchlistPage() {
   const columns: ColumnsType<WatchItem> = [
     { title: "代码", dataIndex: "symbol", width: 130, fixed: "left", render: (value) => <Text strong>{value}</Text> },
     { title: "名称", dataIndex: "name", width: 220 },
-    { title: "市场", dataIndex: "market", width: 100 },
+    {
+      title: "市场",
+      dataIndex: "market",
+      width: 100,
+      render: (value) => <Tag color={value === "BSE" ? "purple" : "blue"}>{value || "NSE"}</Tag>,
+    },
     { title: "分类", dataIndex: "category", width: 130 },
     { title: "方向", dataIndex: "direction", width: 90, render: (value) => <Tag color={value === "UP" ? "green" : "red"}>{value === "UP" ? "上涨" : "下跌"}</Tag> },
     { title: "预期收益", dataIndex: "expectedReturn", width: 100, render: (value) => value ? `${Number(value).toFixed(2)}%` : "-" },
@@ -156,7 +161,15 @@ export default function WatchlistPage() {
         <Form form={form} layout="vertical">
           <Form.Item name="symbol" label="股票代码" rules={[{ required: true, message: "请输入股票代码" }]}><Input prefix={<StarOutlined />} /></Form.Item>
           <Form.Item name="name" label="股票名称" rules={[{ required: true, message: "请输入股票名称" }]}><Input /></Form.Item>
-          <Form.Item name="market" label="市场" initialValue="NSE"><Select options={[{ value: "NSE" }, { value: "BSE" }]} /></Form.Item>
+          <Form.Item
+            name="market"
+            label="市场"
+            initialValue="NSE"
+            rules={[{ required: true, message: "请选择市场" }]}
+            extra="可在 NSE / BSE 之间切换；成交仍按对应交易所实时行情结算。"
+          >
+            <Segmented options={[{ label: "NSE", value: "NSE" }, { label: "BSE", value: "BSE" }]} block />
+          </Form.Item>
           <Form.Item name="category" label="分类" initialValue="INSTITUTIONAL"><Input disabled /></Form.Item>
           <Form.Item name="direction" label="买入方向" rules={[{ required: true }]}><Select options={[{ value: "UP", label: "上涨 Upward" }, { value: "DOWN", label: "下跌 Downward" }]} /></Form.Item>
           <Form.Item name="expectedReturn" label="预期短期收益（%）">

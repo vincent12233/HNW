@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { applyIncomingFundsToIpoDebts, settleIpoHoldings, SettleIpoInput } from '../common/ipo-debt-repay';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { moneyDecimal } from '../common/money';
 
@@ -224,100 +225,19 @@ export class DepositService {
       await this.assertDepositVisible(account.userId, role, actorId, tx);
 
       const balanceBefore = moneyDecimal(account.cashBalance);
-      const debts = await tx.ipoDebt.findMany({
-        where: {
-          accountId: deposit.accountId,
-          status: { in: ['OPEN', 'PARTIAL'] },
-        },
-        include: { ipoApplication: { include: { ipo: true } } },
-        orderBy: { createdAt: 'asc' },
-      });
-
-      /*
-          1.
-          自动偿还 IPO Debt
-        */
-
-      for (const debt of debts) {
-        if (availableAmount.lte(0)) {
-          break;
-        }
-
-        const remainingDebt = moneyDecimal(debt.amount).sub(moneyDecimal(debt.paidAmount));
-        if (remainingDebt.lte(0)) {
-          continue;
-        }
-
-        const payment = availableAmount.lt(remainingDebt)
-          ? availableAmount
-          : remainingDebt;
-
-        await tx.ipoDebt.update({
-          where: {
-            id: debt.id,
-          },
-
-          data: {
-            paidAmount: {
-              increment: payment,
-            },
-
-            status: payment.gte(remainingDebt) ? 'PAID' : 'PARTIAL',
-          },
-        });
-
-        if (payment.gte(remainingDebt)) {
-          await tx.ipoApplication.update({
-            where: {
-              id: debt.ipoApplicationId,
-            },
-            data: {
-              paymentStatus: 'PAID',
-            },
-          });
-
-          if (debt.ipoApplication.ipo.instrumentId) {
-            await this.settleIpoApplication(tx, {
-              applicationId: debt.ipoApplication.id,
-              accountId: deposit.accountId,
-              instrumentId: debt.ipoApplication.ipo.instrumentId,
-              quantity: debt.ipoApplication.allocatedQuantity ?? 0,
-              price: moneyDecimal(
-                debt.ipoApplication.allocatedPrice ??
-                  debt.ipoApplication.ipo.issuePrice,
-              ),
-              totalAmount: moneyDecimal(
-                debt.ipoApplication.allocatedAmount ?? debt.amount,
-              ),
-            });
-            await tx.notification.create({data:{userId:account.userId,type:'IPO_ALLOTMENT_SETTLED',title:'IPO payment completed',body:`${debt.ipoApplication.ipo.symbol} is fully paid and has been added to your holdings.`,referenceId:debt.ipoApplication.id}});
-          }
-        }
-
-        await tx.accountTransaction.create({
-          data: {
+      const { repayAmount: applied, remainingAmount } =
+        await applyIncomingFundsToIpoDebts(
+          tx,
+          {
             accountId: deposit.accountId,
-
-            type: 'IPO_REPAYMENT',
-
-            status: 'COMPLETED',
-
-            amount: payment,
-
+            userId: account.userId,
+            amount: availableAmount,
             balanceBefore,
-
-            balanceAfter: balanceBefore,
-
-            referenceId: debt.id,
-
-            note: 'IPO debt repayment',
           },
-        });
-
-        availableAmount = availableAmount.sub(payment);
-
-        repayAmount = repayAmount.add(payment);
-      }
+          (client, settle) => this.settleIpoApplication(client, settle),
+        );
+      repayAmount = applied;
+      availableAmount = remainingAmount;
 
       /*
           2.
@@ -439,100 +359,7 @@ export class DepositService {
     if (!visible) throw new NotFoundException('Deposit request not found');
   }
 
-  private async settleIpoApplication(
-    tx: any,
-    input: {
-      applicationId: string;
-      accountId: string;
-      instrumentId: string;
-      quantity: number;
-      price: Prisma.Decimal;
-      totalAmount: Prisma.Decimal;
-    },
-  ) {
-    if (input.quantity <= 0) {
-      return;
-    }
-
-    const existingOrder = await tx.order.findUnique({
-      where: {
-        accountId_clientOrderId: {
-          accountId: input.accountId,
-          clientOrderId: `IPO-${input.applicationId}`,
-        },
-      },
-    });
-
-    if (existingOrder) {
-      return;
-    }
-
-    const order = await tx.order.create({
-      data: {
-        clientOrderId: `IPO-${input.applicationId}`,
-        accountId: input.accountId,
-        instrumentId: input.instrumentId,
-        side: 'BUY',
-        type: 'MARKET',
-        status: 'FILLED',
-        quantity: input.quantity,
-        filledQuantity: input.quantity,
-        limitPrice: input.price,
-        averageFillPrice: input.price,
-        completedAt: new Date(),
-      },
-    });
-
-    await tx.trade.create({
-      data: {
-        executionId: `IPO-EXEC-${input.applicationId}`,
-        orderId: order.id,
-        accountId: input.accountId,
-        instrumentId: input.instrumentId,
-        quantity: input.quantity,
-        price: input.price,
-        grossAmount: input.totalAmount,
-        fees: 0,
-        netAmount: input.totalAmount,
-      },
-    });
-
-    const position = await tx.position.findUnique({
-      where: {
-        accountId_instrumentId: {
-          accountId: input.accountId,
-          instrumentId: input.instrumentId,
-        },
-      },
-    });
-
-    if (position) {
-      const oldQty = position.quantity;
-      const newQty = oldQty + input.quantity;
-      const avgPrice = new Prisma.Decimal(position.averagePrice)
-        .mul(oldQty)
-        .add(input.price.mul(input.quantity))
-        .div(newQty)
-        .toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP);
-
-      await tx.position.update({
-        where: {
-          id: position.id,
-        },
-        data: {
-          quantity: newQty,
-          averagePrice: avgPrice,
-        },
-      });
-    } else {
-      await tx.position.create({
-        data: {
-          accountId: input.accountId,
-          instrumentId: input.instrumentId,
-          quantity: input.quantity,
-          averagePrice: input.price,
-        },
-      });
-    }
+  private async settleIpoApplication(tx: any, input: SettleIpoInput) {
+    return settleIpoHoldings(tx, input);
   }
 }

@@ -41,3 +41,41 @@ api.interceptors.response.use(
     return Promise.reject(error);
   },
 );
+
+const OTC_ERROR_ZH: Record<string, string> = {
+  'Valid offer period is required': '请填写有效的上架时间',
+  'Valid settlement price is required': '请填写有效的折扣结算价',
+  'Valid price and offer period are required':
+    '请填写有效的折扣结算价与上架时间',
+  'Active instrument not found': '未找到可用股票',
+  'A live market quote is required before publishing': '上架前需要有效的实时行情',
+  'A live market quote is required before updating settlement price':
+    '更新折扣结算价前需要有效的实时行情',
+  'Settlement price cannot exceed the live market quote':
+    '折扣结算价不能高于实时行情',
+  'This OTC stock is already listed; edit the existing offer instead':
+    '该股票已上架 OTC，请使用「编辑」修改，勿重复上架',
+  'OTC offer not found': '未找到 OTC 上架记录',
+  'OTC offer is not active': '该 OTC 上架已下架或不可用',
+  'OTC order not found': '未找到 OTC 订单',
+  'OTC order already reviewed': '该 OTC 订单已审核',
+  'Insufficient buying power or available cash balance':
+    '客户可用资金或购买力不足，无法完成结算',
+  'OTC order is not assigned to this business account':
+    '该 OTC 订单不在当前业务员名下',
+  'OTC order is outside the dedicated operator scope':
+    '该 OTC 订单不在当前专用运营范围内',
+};
+
+/** Prefer Nest `message`, with known OTC English strings mapped to Chinese. */
+export function getApiErrorMessage(error: unknown, fallback: string): string {
+  const raw = (error as { response?: { data?: { message?: unknown } } })
+    ?.response?.data?.message;
+  const text = Array.isArray(raw)
+    ? raw.map(String).join('；')
+    : raw == null
+      ? ''
+      : String(raw);
+  if (!text) return fallback;
+  return OTC_ERROR_ZH[text] ?? text;
+}

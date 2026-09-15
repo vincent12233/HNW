@@ -21,7 +21,7 @@ import {
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 type OtcOrder = {
@@ -99,8 +99,10 @@ export default function BusinessOtcPage() {
           : "订单已拒绝",
       );
       await load();
-    } catch {
-      message.error("审核未完成，请刷新订单状态后重试。");
+    } catch (error) {
+      message.error(
+        getApiErrorMessage(error, "审核未完成，请刷新订单状态后重试。"),
+      );
     } finally {
       setReviewing(null);
     }

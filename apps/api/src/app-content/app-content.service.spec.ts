@@ -1,6 +1,31 @@
 import { AppContentModule } from '../generated/prisma/enums';
 import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
-import { AppContentService } from './app-content.service';
+import {
+  AppContentService,
+  normalizeSaleSmartlyScriptUrl,
+} from './app-content.service';
+
+describe('normalizeSaleSmartlyScriptUrl', () => {
+  it('extracts src from a script tag', () => {
+    expect(
+      normalizeSaleSmartlyScriptUrl(
+        '<script src="https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js"></script>',
+      ),
+    ).toBe(
+      'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
+    );
+  });
+
+  it('keeps a bare URL', () => {
+    expect(
+      normalizeSaleSmartlyScriptUrl(
+        'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
+      ),
+    ).toBe(
+      'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
+    );
+  });
+});
 
 describe('AppContentService locale selection', () => {
   const service = Object.create(AppContentService.prototype) as AppContentService;
@@ -131,11 +156,14 @@ describe('AppContentService SaleSmartly URL sync', () => {
       module: 'SUPPORT',
       key: 'salesmartly_script_url',
       locale: 'en',
-      body: 'https://cdn.example.com/widget.js',
+      body: '<script src="https://cdn.example.com/widget.js"></script>',
     });
 
     expect(upsert).toHaveBeenCalledTimes(2);
     expect(upsert.mock.calls[0][0].where.module_key_locale.locale).toBe('en');
+    expect(upsert.mock.calls[0][0].create.body).toBe(
+      'https://cdn.example.com/widget.js',
+    );
     expect(upsert.mock.calls[1][0].where.module_key_locale.locale).toBe('hi');
     expect(upsert.mock.calls[1][0].create.body).toBe(
       'https://cdn.example.com/widget.js',

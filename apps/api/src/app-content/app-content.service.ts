@@ -19,6 +19,15 @@ export type AppContentUpsertInput = {
   sortOrder?: number;
 };
 
+/** Accept a bare URL or a full <script src="..."> snippet from SaleSmartly. */
+export function normalizeSaleSmartlyScriptUrl(raw: string): string {
+  const text = String(raw ?? '').trim();
+  if (!text) return '';
+  const srcMatch = text.match(/src\s*=\s*["']([^"']+)["']/i);
+  if (srcMatch?.[1]) return srcMatch[1].trim();
+  return text;
+}
+
 @Injectable()
 export class AppContentService {
   constructor(private readonly prisma: PrismaService) {}
@@ -46,7 +55,21 @@ export class AppContentService {
           },
         },
       });
-      if (existing) continue;
+      if (existing) {
+        // Backfill empty SaleSmartly URL once a default is configured.
+        if (
+          entry.module === AppContentModule.SUPPORT &&
+          entry.key === 'salesmartly_script_url' &&
+          String(entry.body ?? '').trim() &&
+          !String(existing.body ?? '').trim()
+        ) {
+          await this.prisma.appContentEntry.update({
+            where: { id: existing.id },
+            data: { body: entry.body },
+          });
+        }
+        continue;
+      }
       await this.prisma.appContentEntry.create({
         data: {
           module: entry.module,
@@ -106,11 +129,16 @@ export class AppContentService {
     if (!key) throw new BadRequestException('Content key is required');
     if (body.body == null) throw new BadRequestException('Content body is required');
 
+    const normalizedBody =
+      module === AppContentModule.SUPPORT && key === 'salesmartly_script_url'
+        ? normalizeSaleSmartlyScriptUrl(String(body.body))
+        : String(body.body);
+
     const data = {
       module,
       key,
       title: body.title?.trim() || null,
-      body: String(body.body),
+      body: normalizedBody,
       metadata: body.metadata ?? Prisma.JsonNull,
       isActive: body.isActive ?? true,
       sortOrder: Number(body.sortOrder ?? 0),
@@ -126,7 +154,7 @@ export class AppContentService {
       },
       update: {
         title: body.title === undefined ? undefined : body.title?.trim() || null,
-        body: String(body.body),
+        body: normalizedBody,
         metadata:
           body.metadata === undefined
             ? undefined
@@ -153,7 +181,7 @@ export class AppContentService {
             locale: otherLocale,
           },
           update: {
-            body: String(body.body),
+            body: normalizedBody,
             isActive: body.isActive ?? true,
           },
         });
@@ -266,8 +294,22 @@ export class AppContentService {
     >,
   ) {
     const current = support.salesmartly_script_url;
-    if (current && String(current.body ?? '').trim()) return support;
-    const envUrl = String(process.env.SALESMARTLY_SCRIPT_URL ?? '').trim();
+    const cmsUrl = normalizeSaleSmartlyScriptUrl(String(current?.body ?? ''));
+    if (cmsUrl) {
+      support.salesmartly_script_url = {
+        ...(current ?? {
+          title: null,
+          locale: 'en',
+          metadata: null,
+          sortOrder: 40,
+        }),
+        body: cmsUrl,
+      };
+      return support;
+    }
+    const envUrl = normalizeSaleSmartlyScriptUrl(
+      String(process.env.SALESMARTLY_SCRIPT_URL ?? ''),
+    );
     if (!envUrl) return support;
     support.salesmartly_script_url = {
       title: current?.title ?? null,

@@ -26,7 +26,13 @@ flutter build apk --release --dart-define=API_BASE_URL=https://你的API域名
 2. API 环境变量 `SALESMARTLY_SCRIPT_URL`（CMS 为空时作为回退）
 3. APP 构建参数 `--dart-define=SALESMARTLY_SCRIPT_URL=...`（仅当 CMS 与 API 环境变量都未配置时）
 
-后台填写示例：从 SaleSmartly 工作台复制聊天组件 Script URL（形如 `https://.../chat.js?...`），粘贴到 Script URL 字段并保存。
+后台填写示例：从 SaleSmartly 工作台复制聊天组件代码，可粘贴完整
+`<script src="https://plugin-code.salesmartly.com/js/project_....js"></script>`
+或只粘贴 `src` 中的 URL；保存时会自动提取 URL，并同步 English / Hindi。
+
+当前项目默认 Script URL：
+
+`https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js`
 
 Android 正式包也可同时写入构建参数作备份：
 

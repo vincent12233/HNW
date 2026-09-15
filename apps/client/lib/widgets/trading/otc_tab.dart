@@ -133,12 +133,23 @@ class _OtcTabState extends State<OtcTab> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            AppText('Market price ${formatPrice(item.marketPrice)}'),
-            AppText(
-              'Settlement price ${formatPrice(item.price)}',
-              style: const TextStyle(
-                color: AppConfig.gainColor,
-                fontWeight: FontWeight.w600,
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const AppText('Market quote (reference)'),
+                  Text(formatPrice(item.marketPrice)),
+                  const SizedBox(height: 8),
+                  const AppText('Discount settlement price'),
+                  Text(
+                    formatPrice(item.price),
+                    style: const TextStyle(
+                      color: AppConfig.gainColor,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 14),

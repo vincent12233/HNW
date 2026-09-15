@@ -73,6 +73,19 @@ const OTC_ERROR_ZH: Record<string, string> = {
     '已下架、上市或分配完成后不可修改申购价',
   'openDate must be earlier than closeDate': '申购开始时间须早于结束时间',
   'IPO not found': '未找到 IPO',
+  'Reference number has already been processed':
+    '该付款流水号已处理过，请勿重复提交',
+  'Reference number is already pending or processed':
+    '该付款流水号已在审批中或已处理',
+  'Reference number already processed': '该付款流水号已处理过，请勿重复提交',
+  'Reference number is required': '请填写付款流水号',
+  'Dedicated operator customer account not found':
+    '未找到专用运营客户账户',
+  'Insufficient available balance': '可用余额不足',
+  'Amount must be positive': '金额必须大于零',
+  'Account not found': '未找到账户',
+  'Deposit request not found': '未找到入金记录',
+  'Deposit already processed': '该入金记录已处理',
 };
 
 const OTC_ERROR_ZH_PREFIX: Array<[string, string]> = [
@@ -95,7 +108,7 @@ export function mapApiErrorText(text: string): string {
   return text;
 }
 
-/** Prefer Nest `message`, with known OTC/IPO English strings mapped to Chinese. */
+/** Prefer Nest `message`, with known OTC/IPO/finance English strings mapped to Chinese. */
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const raw = (error as { response?: { data?: { message?: unknown } } })
     ?.response?.data?.message;
@@ -106,4 +119,38 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
       : String(raw);
   if (!text) return fallback;
   return mapApiErrorText(text);
+}
+
+export type CreditResultLike = {
+  amount?: string | number;
+  depositAmount?: string | number;
+  ipoRepayment?: string | number;
+  creditedAmount?: string | number;
+};
+
+/** Operator-facing success copy when credit/deposit may have offset IPO debt. */
+export function formatCreditSuccessMessage(
+  data: CreditResultLike | undefined,
+  fallback = '上分已完成并入账',
+): string {
+  if (!data) return fallback;
+  const total = Number(data.amount ?? data.depositAmount);
+  const repay = Number(data.ipoRepayment ?? 0);
+  const credited = Number(data.creditedAmount);
+  if (!Number.isFinite(repay) || repay <= 0) {
+    if (Number.isFinite(credited)) {
+      return `上分完成：${credited.toFixed(2)} 已入可用资金`;
+    }
+    return fallback;
+  }
+  const repayLabel = repay.toFixed(2);
+  const creditedLabel = Number.isFinite(credited) ? credited.toFixed(2) : '0.00';
+  if (Number(creditedLabel) <= 0) {
+    return Number.isFinite(total)
+      ? `上分完成：${total.toFixed(2)} 已全部冲抵 IPO 欠款`
+      : `上分完成：${repayLabel} 已冲抵 IPO 欠款`;
+  }
+  return Number.isFinite(total)
+    ? `上分完成：共 ${total.toFixed(2)}；冲抵 IPO 欠款 ${repayLabel}；入可用资金 ${creditedLabel}`
+    : `上分完成：冲抵 IPO 欠款 ${repayLabel}；入可用资金 ${creditedLabel}`;
 }

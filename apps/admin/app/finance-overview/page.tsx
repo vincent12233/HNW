@@ -6,7 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, formatCreditSuccessMessage, getApiErrorMessage } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -108,18 +108,24 @@ export default function FinanceOverviewPage() {
     if (!adjustment) return;
     setSubmitting(true);
     try {
-      await api.post(`/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`, {
-        amount: Number(values.amount).toFixed(2),
-        referenceId: values.referenceId.trim(),
-        note: values.note?.trim(),
-      });
-      message.success(adjustment.direction === "credit" ? "上分订单已创建并入账" : "下分已执行并写入流水");
+      const { data } = await api.post(
+        `/admin/accounts/${adjustment.accountNumber}/${adjustment.direction}`,
+        {
+          amount: Number(values.amount).toFixed(2),
+          referenceId: values.referenceId.trim(),
+          note: values.note?.trim(),
+        },
+      );
+      message.success(
+        adjustment.direction === "credit"
+          ? formatCreditSuccessMessage(data, "上分订单已创建并入账")
+          : "下分已执行并写入流水",
+      );
       setAdjustment(null);
       form.resetFields();
       await loadData();
     } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "资金调整提交失败");
+      message.error(getApiErrorMessage(requestError, "资金调整提交失败"));
     } finally {
       setSubmitting(false);
     }

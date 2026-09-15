@@ -291,7 +291,11 @@ export class DepositService {
           userId: account.userId,
           type: 'DEPOSIT',
           title: 'Deposit approved',
-          body: `${availableAmount.toFixed(2)} has been added to your available balance.`,
+          body: repayAmount.gt(0)
+            ? availableAmount.gt(0)
+              ? `${availableAmount.toFixed(2)} added to available balance; ${repayAmount.toFixed(2)} applied to IPO debt.`
+              : `${repayAmount.toFixed(2)} applied to IPO debt; no surplus credited to cash.`
+            : `${availableAmount.toFixed(2)} has been added to your available balance.`,
           referenceId: depositId,
         },
       });

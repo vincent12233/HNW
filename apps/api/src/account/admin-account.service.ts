@@ -128,11 +128,15 @@ export class AdminAccountService {
           balanceBefore,
           balanceAfter,
           referenceId,
-          note:
-            direction === 'CREDIT' && ipoRepayment.gt(0)
-              ? `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} credit; ${ipoRepayment.toFixed(2)} applied to IPO debt`
-              : dto.note?.trim() ||
-                `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`,
+          note: (() => {
+            const base =
+              dto.note?.trim() ||
+              `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`;
+            if (direction === 'CREDIT' && ipoRepayment.gt(0)) {
+              return `${base}; ${ipoRepayment.toFixed(2)} applied to IPO debt`;
+            }
+            return base;
+          })(),
           createdById: operatorId,
         },
       });

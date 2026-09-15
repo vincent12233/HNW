@@ -23,7 +23,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api, getApiErrorMessage, mapApiErrorText } from "@/lib/api";
+import { api, getApiErrorMessage, mapApiErrorText } from '@/lib/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -131,12 +131,9 @@ export default function BusinessIpoPage() {
       );
       setItems(Array.isArray(response.data) ? response.data : []);
       setSelected([]);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "IPO 申请加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "IPO 申请加载失败",
       );
     } finally {
       setLoading(false);

@@ -15,7 +15,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -45,12 +45,9 @@ export default function BusinessInstitutionalPage() {
         "/admin-products/watchlist",
       );
       setItems(Array.isArray(response.data) ? response.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "涨停股加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "涨停股加载失败",
       );
     } finally {
       setLoading(false);

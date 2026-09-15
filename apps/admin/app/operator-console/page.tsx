@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import ScopedEditButton from "@/components/ScopedEditButton";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Text } = Typography;
 
@@ -49,8 +49,8 @@ export default function OperatorConsolePage() {
     try {
       const { data } = await api.get<Customer[]>("/operator/customers");
       setRows(Array.isArray(data) ? data : []);
-    } catch (requestError: any) {
-      setError(requestError.response?.data?.message || "专用运营员客户数据加载失败");
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "专用运营员客户数据加载失败"));
     } finally {
       setLoading(false);
     }

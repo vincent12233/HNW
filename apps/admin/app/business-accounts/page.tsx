@@ -66,7 +66,7 @@ export default function BusinessAccountsPage() {
     } catch (requestError: unknown) {
       if (request !== listRequest.current) return;
       const responseMessage = isAxiosError<{ message?: string | string[] }>(requestError) ? requestError.response?.data?.message : undefined;
-      setError(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "账户列表加载失败");
+      setError(Array.isArray(responseMessage) ? responseMessage.join("，") : (responseMessage || "账户列表加载失败"));
     } finally {
       if (request === listRequest.current) setLoading(false);
     }

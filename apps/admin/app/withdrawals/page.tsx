@@ -20,7 +20,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Text } = Typography;
 
@@ -96,12 +96,9 @@ export default function WithdrawalsPage() {
               params: { status: statusFilter },
             });
       setRecords(Array.isArray(response.data) ? response.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "提现申请加载失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "提现申请加载失败",
       );
     } finally {
       setLoading(false);
@@ -144,12 +141,9 @@ export default function WithdrawalsPage() {
       await api.patch(`/withdrawal/${record.id}/approve`);
       message.success("提现已通过");
       await loadRecords();
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "提现通过失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      message.error(responseMessage || "提现通过失败",
       );
     } finally {
       submitting.current = false;
@@ -175,12 +169,9 @@ export default function WithdrawalsPage() {
       setRejecting(null);
       setRejectNote("");
       await loadRecords();
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      message.error(
-        Array.isArray(responseMessage)
-          ? responseMessage.join("，")
-          : responseMessage || "提现拒绝失败",
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      message.error(responseMessage || "提现拒绝失败",
       );
     } finally {
       submitting.current = false;

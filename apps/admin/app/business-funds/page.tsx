@@ -7,7 +7,7 @@ import { isAxiosError } from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api, formatCreditSuccessMessage, getApiErrorMessage } from "@/lib/api";
+import { api, formatCreditSuccessMessage, getApiErrorMessage } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
 
 const { Title, Paragraph, Text } = Typography;
@@ -92,9 +92,9 @@ export default function BusinessFundsPage() {
       setDeposits(Array.isArray(depositResponse.data) ? depositResponse.data : []);
       setWithdrawals(Array.isArray(withdrawalResponse.data) ? withdrawalResponse.data : []);
       setLoans(Array.isArray(loanResponse.data) ? loanResponse.data : []);
-    } catch (requestError: any) {
-      const responseMessage = requestError.response?.data?.message;
-      setError(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "资金记录加载失败");
+    } catch (requestError: unknown) {
+      const responseMessage = getApiErrorMessage(requestError, "");
+      setError(responseMessage || "资金记录加载失败");
     } finally {
       setLoading(false);
     }

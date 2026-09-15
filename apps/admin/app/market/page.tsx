@@ -20,7 +20,6 @@ import {
   Space,
   Switch,
   Table,
-  Tag,
   Typography,
   message,
 } from "antd";
@@ -28,7 +27,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -75,11 +74,6 @@ function formatMoney(value?: string | number | null) {
   }).format(Number(value ?? 0));
 }
 
-function apiError(error: any, fallback: string) {
-  const value = error.response?.data?.message;
-  return Array.isArray(value) ? value.join("，") : value || fallback;
-}
-
 export default function MarketAdminPage() {
   const [items, setItems] = useState<Instrument[]>([]);
   const [keyword, setKeyword] = useState("");
@@ -103,8 +97,8 @@ export default function MarketAdminPage() {
         },
       });
       setItems(Array.isArray(response.data.data) ? response.data.data : []);
-    } catch (requestError: any) {
-      setError(apiError(requestError, "股票加载失败"));
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "股票加载失败"));
     } finally {
       setLoading(false);
     }
@@ -138,8 +132,8 @@ export default function MarketAdminPage() {
       setCreateOpen(false);
       createForm.resetFields();
       await loadItems();
-    } catch (requestError: any) {
-      message.error(apiError(requestError, "股票添加失败"));
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "股票添加失败"));
     }
   }
 
@@ -150,8 +144,8 @@ export default function MarketAdminPage() {
       });
       message.success(isActive ? "股票已启用" : "股票已停用");
       await loadItems();
-    } catch (requestError: any) {
-      message.error(apiError(requestError, "状态更新失败"));
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "状态更新失败"));
     }
   }
 
@@ -184,8 +178,8 @@ export default function MarketAdminPage() {
       setQuoteOpen(false);
       setSelected(null);
       await loadItems();
-    } catch (requestError: any) {
-      message.error(apiError(requestError, "行情更新失败"));
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "行情更新失败"));
     }
   }
 
@@ -194,8 +188,8 @@ export default function MarketAdminPage() {
       await api.post("/admin/market/seed");
       message.success("示例行情已初始化");
       await loadItems();
-    } catch (requestError: any) {
-      message.error(apiError(requestError, "初始化失败"));
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "初始化失败"));
     }
   }
 

@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from '@/lib/api';
 
 const { Text } = Typography;
 
@@ -34,8 +34,8 @@ export default function BankAccountsPage() {
     try {
       const response = await api.get<BankAccount[]>("/admin/bank-accounts");
       setRows(Array.isArray(response.data) ? response.data : []);
-    } catch (e: any) {
-      setError(e.response?.data?.message || "银行账户加载失败");
+    } catch (e: unknown) {
+      setError(getApiErrorMessage(e, "银行账户加载失败"));
     } finally {
       setLoading(false);
     }

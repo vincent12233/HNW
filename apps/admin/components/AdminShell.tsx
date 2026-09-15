@@ -36,7 +36,7 @@ import type { ItemType } from "antd/es/menu/interface";
 import { usePathname, useRouter } from "next/navigation";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
-import { api, getApiErrorMessage } from '@/lib/api';
+import { api } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
 import { isAxiosError } from "axios";
 

@@ -3,7 +3,7 @@
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -71,7 +71,7 @@ export default function TransactionsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function loadRecords(nextType = type) {
+  const loadRecords = useCallback(async (nextType = type) => {
     setLoading(true);
     setError("");
 
@@ -91,11 +91,11 @@ export default function TransactionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [type]);
 
   useEffect(() => {
-    loadRecords();
-  }, []);
+    void loadRecords();
+  }, [loadRecords]);
 
   const filteredRecords = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();
@@ -217,7 +217,6 @@ export default function TransactionsPage() {
               value={type}
               onChange={(value) => {
                 setType(value);
-                loadRecords(value);
               }}
               style={{ width: 220 }}
               options={[

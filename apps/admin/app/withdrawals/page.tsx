@@ -16,7 +16,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
@@ -84,7 +84,7 @@ export default function WithdrawalsPage() {
   const [submittingId, setSubmittingId] = useState("");
   const submitting = useRef(false);
 
-  async function loadRecords() {
+  const loadRecords = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -103,11 +103,11 @@ export default function WithdrawalsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [statusFilter]);
 
   useEffect(() => {
-    loadRecords();
-  }, [statusFilter]);
+    void loadRecords();
+  }, [loadRecords]);
 
   const filteredRecords = useMemo(() => {
     const normalized = keyword.trim().toLowerCase();

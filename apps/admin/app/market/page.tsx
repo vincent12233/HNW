@@ -24,7 +24,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -84,15 +84,19 @@ export default function MarketAdminPage() {
   const [selected, setSelected] = useState<Instrument | null>(null);
   const [createForm] = Form.useForm();
   const [quoteForm] = Form.useForm();
+  const keywordRef = useRef(keyword);
+  useEffect(() => {
+    keywordRef.current = keyword;
+  });
 
-  async function loadItems() {
+  const loadItems = useCallback(async () => {
     setLoading(true);
     setError("");
 
     try {
       const response = await api.get<InstrumentResponse>("/admin/market/instruments", {
         params: {
-          search: keyword || undefined,
+          search: keywordRef.current || undefined,
           pageSize: 100,
         },
       });
@@ -102,11 +106,11 @@ export default function MarketAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadItems();
-  }, []);
+    void loadItems();
+  }, [loadItems]);
 
   const filtered = useMemo(() => items, [items]);
 

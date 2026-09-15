@@ -4,7 +4,7 @@ import { BankOutlined, CreditCardOutlined, ReloadOutlined, SearchOutlined, Walle
 import { Alert, Button, Card, Col, Form, Input, InputNumber, Modal, Row, Space, Statistic, Table, Tabs, Tag, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { isAxiosError } from "axios";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api, formatCreditSuccessMessage, getApiErrorMessage } from '@/lib/api';
@@ -80,7 +80,7 @@ export default function BusinessFundsPage() {
   const [adjustmentError, setAdjustmentError] = useState("");
   const [adjustmentForm] = Form.useForm();
 
-  async function loadRecords() {
+  const loadRecords = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -98,11 +98,11 @@ export default function BusinessFundsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [dedicatedOperator]);
 
   useEffect(() => {
-    loadRecords();
-  }, []);
+    void loadRecords();
+  }, [loadRecords]);
 
   const filteredDeposits = useMemo(() => {
     const value = keyword.trim().toLowerCase();

@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
@@ -95,6 +101,14 @@ export class OtcService {
         'Settlement price cannot exceed the live market quote',
       );
     }
+    const existingOffer = await this.prisma.otcOffer.findUnique({
+      where: { instrumentId: instrument.id },
+    });
+    if (existingOffer) {
+      throw new ConflictException(
+        'This OTC stock is already listed; edit the existing offer instead',
+      );
+    }
     const transactionKey = randomInt(1000, 10000).toString();
     const keyHash = await bcrypt.hash(transactionKey, 12);
     const encryptedKey = this.encryptKey(transactionKey);
@@ -102,30 +116,14 @@ export class OtcService {
       where: { id: instrument.id },
       data: { category: 'OTC' },
     });
-    const saved = await this.prisma.otcOffer.upsert({
-      where: { instrumentId: instrument.id },
-      create: {
+    const saved = await this.prisma.otcOffer.create({
+      data: {
         instrumentId: instrument.id,
         price: settlementPrice,
         keyHashTier1: keyHash,
         transactionKeyEncrypted: encryptedKey,
         validFrom,
         validUntil,
-      },
-      update: {
-        price: settlementPrice,
-        priceTier2: null,
-        priceTier3: null,
-        profitTier1: null,
-        profitTier2: null,
-        profitTier3: null,
-        keyHashTier1: keyHash,
-        keyHashTier2: null,
-        keyHashTier3: null,
-        transactionKeyEncrypted: encryptedKey,
-        validFrom,
-        validUntil,
-        isActive: true,
       },
       include: { instrument: true },
     });

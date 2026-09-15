@@ -18,6 +18,7 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
+    # Placeholder URLs for prisma.config.ts / postinstall generate (no DB service).
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci
       SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow

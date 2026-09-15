@@ -32,24 +32,39 @@ http://localhost:3000
 
 ## 生产配置
 
-上线前至少需要修改：
+正式部署完整清单见仓库根目录 `docs/生产部署说明.md`。上线前至少配置：
 
 ```env
+NODE_ENV=production
 DATABASE_URL=正式数据库连接
-JWT_SECRET=高强度随机密钥
-CORS_ORIGINS=https://admin.example.com,https://support.example.com
+JWT_SECRET=≥32位高强度随机密钥
+TWO_FACTOR_ENCRYPTION_KEY=独立≥32位密钥
+OTC_KEY_ENCRYPTION_SECRET=另一组≥32位密钥
+OBJECT_SIGNING_SECRET=第三组≥32位密钥
+ADMIN_FIXED_INVITE_CODE=≥12位强唯一邀请码
+ADMIN_INITIAL_PASSWORD=≥12位
+FINANCE_INITIAL_PASSWORD=≥12位
+SUPPORT_INITIAL_PASSWORD=≥12位
+BUSINESS_INITIAL_PASSWORD=≥12位
+MANAGER_INITIAL_PASSWORD=≥12位
+CORS_ORIGINS=https://admin.example.com,https://manager.example.com,https://finance.example.com,https://business.example.com,https://operator.example.com,https://app.example.com
+VIRUS_SCAN_URL=https://malware-scanner.example.com/scan
+PRIVATE_OBJECT_ROOT=/var/lib/hnw/private-objects
 PORT=3000
 ```
 
-`/health` 只返回 API 基础状态，不暴露用户数量、账户数量或业务数据。
+生产启动：`npm run start:prod`（`NODE_ENV=production node dist/main.js`）。`/health` 与 `/health/ready` 只返回基础状态，不暴露业务数据。
+
+`create-*-user` 脚本在 `NODE_ENV=production` 下会拒绝执行；本地脚本与 seed 一样，再次 upsert **不会覆盖**已有密码哈希。
 
 ## 默认种子账号
 
 | 角色 | 员工编号 | 密码 |
 | --- | --- | --- |
-| 管理员 | ADMIN001 | `ADMIN_INITIAL_PASSWORD` 环境变量 |
+| 超级管理员 | ADMIN001 | `ADMIN_INITIAL_PASSWORD` 环境变量 |
+| 管理员 | MANAGER001 | `MANAGER_INITIAL_PASSWORD` 环境变量 |
 | 财务 | FINANCE001 | `FINANCE_INITIAL_PASSWORD` 环境变量 |
-| 客服 | SUPPORT001 | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
+| 专用运营员 | SUPPORT001 | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 | 业务员 | BUSINESS001 | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 
 项目不再提供固定默认密码。初始化前必须配置至少 12 位的独立密码，且脚本不会在日志中输出密码。

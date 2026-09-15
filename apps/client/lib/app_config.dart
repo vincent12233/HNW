@@ -9,8 +9,8 @@ class AppConfig {
     'API_BASE_URL',
     defaultValue: '',
   );
-  // This is enabled only by the local Docker Web build. Production mobile and
-  // hosted Web builds keep the HTTPS requirement enforced.
+  // Dev-only: allow http:// API hosts when ALLOW_INSECURE_API=true.
+  // Production mobile and hosted Web builds keep HTTPS enforced.
   static const bool _allowInsecureApi = bool.fromEnvironment(
     'ALLOW_INSECURE_API',
     defaultValue: false,

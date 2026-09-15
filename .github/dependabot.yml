@@ -14,10 +14,11 @@ updates:
           - 'prisma'
           - '@prisma/*'
     ignore:
-      # Nest CLI / ts-jest / typescript-eslint peers still block TS 7
+      # Nest CLI / ts-jest / typescript-eslint still need the TS<=6 compiler API
+      # (TypeScript 7 removed the programmatic API until ~7.1).
       - dependency-name: typescript
         update-types: ["version-update:semver-major"]
-      # Stay on Prisma 7 until 8 is stable (not RC)
+      # Stay on Prisma 7 until 8 is GA (currently RC / rewrite).
       - dependency-name: prisma
         update-types: ["version-update:semver-major"]
       - dependency-name: "@prisma/*"
@@ -40,10 +41,8 @@ updates:
           - 'antd'
           - '@ant-design/*'
     ignore:
+      # Next/admin stay on TS 6 until Nest/Next ecosystem ships TS 7 API support.
       - dependency-name: typescript
-        update-types: ["version-update:semver-major"]
-      # eslint-plugin-react still peers ESLint ^9 only
-      - dependency-name: eslint
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pub

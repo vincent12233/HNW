@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
+import { CreateOtcOfferDto } from './dto/create-otc-offer.dto';
 import { SubmitOtcOrderDto } from './dto/submit-otc-order.dto';
 import { UpdateOtcOfferDto } from './dto/update-otc-offer.dto';
 import { OtcService } from './otc.service';
@@ -36,7 +37,7 @@ export class OtcController {
 
   @Post('admin/offers')
   @Roles(UserRole.ADMIN)
-  createOffer(@Body() body: { instrumentId: string; validFrom: string; validUntil: string }) {
+  createOffer(@Body() body: CreateOtcOfferDto) {
     return this.otc.saveOffer(body);
   }
 

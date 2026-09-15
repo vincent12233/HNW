@@ -187,7 +187,7 @@ export default function TeamPage() {
       <Form form={form} layout="vertical" onFinish={create}>
         <Form.Item name="employeeNo" label="员工编号" rules={[{required:true},{pattern:/^[A-Za-z0-9_-]{3,32}$/,message:"使用 3–32 位字母、数字、下划线或短横线"}]}><Input autoComplete="off"/></Form.Item>
         <Form.Item name="fullName" label="姓名" rules={[{required:true},{min:2,max:100}]}><Input/></Form.Item>
-        <Form.Item name="password" label="初始密码" rules={[{required:true},{min:6,max:72,message:"密码长度为 6–72 位"}]}><Input.Password autoComplete="new-password"/></Form.Item>
+        <Form.Item name="password" label="初始密码" rules={[{required:true},{min:12,max:72,message:"密码长度为 12–72 位"}]}><Input.Password autoComplete="new-password"/></Form.Item>
       </Form>
     </Modal>
     <Modal title="审核团队 KYC" open={!!reviewing} width={860} onCancel={()=>{if(!reviewLock.current) clearReview();}} footer={[

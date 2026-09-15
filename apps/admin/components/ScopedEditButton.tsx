@@ -46,7 +46,7 @@ export default function ScopedEditButton({ name, endpoint, kind, current, onSave
             { value: 'GOLD', label: '黄金 Gold' }, { value: 'PLATINUM', label: '铂金 Platinum' },
           ]} />
         </Form.Item> : kind === "password" ? <Form.Item name="newPassword" label="新登录密码"
-          rules={[{ required: true }, { min: 6, max: 72, message: "密码长度为 6–72 位" }]}>
+          rules={[{ required: true }, { min: 12, max: 72, message: "密码长度为 12–72 位" }]}>
           <Input.Password autoComplete="new-password" disabled={saving} />
         </Form.Item> : <Form.Item name="status" label="账户状态" rules={[{ required: true }]}>
           <Select disabled={saving} options={[

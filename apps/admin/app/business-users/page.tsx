@@ -196,8 +196,8 @@ export default function BusinessUsersPage() {
       return;
     }
 
-    if (newPassword.length < 6) {
-      message.error("新密码至少需要 6 个字符");
+    if (newPassword.length < 12) {
+      message.error("新密码至少需要 12 个字符");
       return;
     }
 
@@ -490,7 +490,7 @@ export default function BusinessUsersPage() {
           <Input.Password
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
-            placeholder="请输入至少 6 个字符的新密码"
+            placeholder="请输入至少 12 个字符的新密码"
             prefix={<LockOutlined />}
           />
         </Space>

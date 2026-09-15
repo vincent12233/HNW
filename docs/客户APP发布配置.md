@@ -30,9 +30,7 @@ flutter build apk --release --dart-define=API_BASE_URL=https://你的API域名
 `<script src="https://plugin-code.salesmartly.com/js/project_....js"></script>`
 或只粘贴 `src` 中的 URL；保存时会自动提取 URL，并同步 English / Hindi。
 
-当前项目默认 Script URL：
-
-`https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js`
+请使用本租户自己的 Script URL（不要把示例/他人项目地址写进正式包）。
 
 Android 正式包也可同时写入构建参数作备份：
 
@@ -54,7 +52,7 @@ Web 构建不会打开原生 SaleSmartly SDK；请用 Android / iOS 包验证客
 storePassword=你的store密码
 keyPassword=你的key密码
 keyAlias=你的key别名
-storeFile=C:\\keys\\india-trading-release.jks
+storeFile=/absolute/path/to/india-trading-release.jks
 ```
 
-如果没有 `key.properties`，本地 release 构建会临时使用 debug 签名，方便调试；正式发布前必须配置自己的 release keystore。
+**Release 构建必须配置 `key.properties`。** 缺少该文件时 Gradle 会直接失败（`Release signing requires android/key.properties`），不会回退到 debug 签名。本地调试请用 `flutter run` / debug 构建。

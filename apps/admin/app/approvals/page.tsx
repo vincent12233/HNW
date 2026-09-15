@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
-import { api } from "@/lib/api";
+import { api, formatCreditSuccessMessage, getApiErrorMessage } from "@/lib/api";
 
 const { Text } = Typography;
 
@@ -59,13 +59,20 @@ export default function ApprovalsPage() {
     if (!selected || submitting) return;
     setSubmitting(true);
     try {
-      await api.post(`/admin/approvals/${selected.id}/decision`, { decision, note });
-      message.success(decision === "APPROVED" ? "已批准并执行" : "已拒绝");
+      const { data } = await api.post(`/admin/approvals/${selected.id}/decision`, {
+        decision,
+        note,
+      });
+      if (decision === "APPROVED" && selected.action.includes("CREDIT")) {
+        message.success(formatCreditSuccessMessage(data, "已批准并执行入账"));
+      } else {
+        message.success(decision === "APPROVED" ? "已批准并执行" : "已拒绝");
+      }
       setSelected(null);
       setNote("");
       await load();
     } catch (e: any) {
-      message.error(e.response?.data?.message || "操作失败");
+      message.error(getApiErrorMessage(e, "操作失败"));
     } finally {
       setSubmitting(false);
     }

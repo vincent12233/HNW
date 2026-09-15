@@ -86,6 +86,11 @@ const OTC_ERROR_ZH: Record<string, string> = {
   'Account not found': '未找到账户',
   'Deposit request not found': '未找到入金记录',
   'Deposit already processed': '该入金记录已处理',
+  'Approval request not found': '未找到审批申请',
+  'Approval request is no longer pending': '该审批申请已处理',
+  'Requester cannot approve their own operation':
+    '申请人不能批准自己发起的操作',
+  'Approval request has expired': '审批申请已过期',
 };
 
 const OTC_ERROR_ZH_PREFIX: Array<[string, string]> = [

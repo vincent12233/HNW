@@ -118,7 +118,7 @@ describe('Invite pool ownership', () => {
     await new TeamService(prisma as any).create('actor', {
       employeeNo: 'EMP001',
       fullName: 'Employee',
-      password: 'abcdef',
+      password: 'abcdefghijkl',
     });
     expect(tx.user.create).toHaveBeenCalledWith(
       expect.objectContaining({

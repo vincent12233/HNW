@@ -45,12 +45,19 @@ http://localhost:3002/login
 ```powershell
 $env:NEXT_PUBLIC_API_URL="https://api.example.com"
 $env:NEXT_PUBLIC_BACKEND_ROLE="ADMIN"
+$env:NEXT_DIST_DIR=".next-ADMIN"
 npm ci
 npm run build
 npm run start:admin
 ```
 
-对 `MANAGER` / `FINANCE` / `BUSINESS` / `SUPPORT` 重复上述流程。API 的 `CORS_ORIGINS` 须包含全部五个后台域名（及可选客户 Web 域名）。
+服务器上一键构建五个角色：
+
+```bash
+NEXT_PUBLIC_API_URL=https://api.example.com ./scripts/build-admin-roles.sh
+```
+
+对 `MANAGER` / `FINANCE` / `BUSINESS` / `SUPPORT` 分别用匹配的 `NEXT_DIST_DIR=.next-<ROLE>` 启动。API 的 `CORS_ORIGINS` 须包含全部五个后台域名（及可选客户 Web 域名）。完整说明见 `docs/生产部署说明.md`。
 
 ## 默认账号
 

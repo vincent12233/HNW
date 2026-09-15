@@ -428,8 +428,8 @@ export class BusinessService {
     const employeeNo = input.employeeNo.trim().toUpperCase();
     const email = `${employeeNo.toLowerCase()}@internal.hnw.local`;
 
-    if (!input.password || input.password.length < 6) {
-      throw new BadRequestException('密码至少需要 6 个字符');
+    if (!input.password || input.password.length < 12) {
+      throw new BadRequestException('密码至少需要 12 个字符');
     }
 
     if (!input.fullName?.trim()) {
@@ -793,8 +793,8 @@ export class BusinessService {
   }
 
   async resetBusinessPassword(businessUserId: string, newPassword: string) {
-    if (!newPassword || newPassword.length < 6) {
-      throw new BadRequestException('新密码至少需要 6 个字符');
+    if (!newPassword || newPassword.length < 12) {
+      throw new BadRequestException('新密码至少需要 12 个字符');
     }
 
     const business = await this.prisma.user.findFirst({

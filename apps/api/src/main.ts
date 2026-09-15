@@ -72,6 +72,12 @@ function validateProductionEnvironment() {
       'VIRUS_SCAN_URL must be configured with HTTPS in production',
     );
   }
+  const privateRoot = process.env.PRIVATE_OBJECT_ROOT?.trim() ?? '';
+  if (!privateRoot || !privateRoot.startsWith('/')) {
+    throw new Error(
+      'PRIVATE_OBJECT_ROOT must be an absolute filesystem path in production',
+    );
+  }
 }
 
 function requestLimit(path: string) {

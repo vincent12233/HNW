@@ -25,12 +25,22 @@ function resolveObjectSigningSecret() {
   return dedicated || process.env.JWT_SECRET || 'development-only-change-me';
 }
 
+function resolvePrivateObjectRoot() {
+  const configured = process.env.PRIVATE_OBJECT_ROOT?.trim() ?? '';
+  if (process.env.NODE_ENV === 'production') {
+    if (!configured || !isAbsolute(configured)) {
+      throw new Error(
+        'PRIVATE_OBJECT_ROOT must be an absolute filesystem path in production',
+      );
+    }
+    return configured;
+  }
+  return resolve(process.cwd(), configured || 'private-objects');
+}
+
 @Injectable()
 export class PrivateObjectStorageService implements OnModuleInit {
-  private readonly root = resolve(
-    process.cwd(),
-    process.env.PRIVATE_OBJECT_ROOT || 'private-objects',
-  );
+  private readonly root = resolvePrivateObjectRoot();
   private readonly secret = resolveObjectSigningSecret();
 
   onModuleInit() {
@@ -42,6 +52,14 @@ export class PrivateObjectStorageService implements OnModuleInit {
     ) {
       throw new Error(
         'OBJECT_SIGNING_SECRET must be a unique random value of at least 32 characters',
+      );
+    }
+    if (
+      process.env.NODE_ENV === 'production' &&
+      (!process.env.PRIVATE_OBJECT_ROOT?.trim() || !isAbsolute(this.root))
+    ) {
+      throw new Error(
+        'PRIVATE_OBJECT_ROOT must be an absolute filesystem path in production',
       );
     }
   }

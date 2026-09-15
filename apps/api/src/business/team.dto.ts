@@ -27,7 +27,7 @@ export class CreateTeamStaffDto {
   @IsString()
   @Length(2, 100)
   fullName: string;
-  @IsString() @Length(6, 72) password: string;
+  @IsString() @Length(12, 72) password: string;
 }
 export class TeamStatusDto {
   @IsIn(['ACTIVE', 'SUSPENDED', 'DISABLED']) status:
@@ -37,7 +37,7 @@ export class TeamActiveDto {
   @IsBoolean() isActive: boolean;
 }
 export class TeamPasswordDto {
-  @IsString() @Length(6, 72) newPassword: string;
+  @IsString() @Length(12, 72) newPassword: string;
 }
 export class TeamReviewDto {
   @IsString() submissionId: string;

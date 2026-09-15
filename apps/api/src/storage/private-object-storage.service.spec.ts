@@ -44,4 +44,20 @@ describe('Private object storage', () => {
       'Invalid object key',
     );
   });
+  it('requires an absolute PRIVATE_OBJECT_ROOT in production', () => {
+    const previousEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'production';
+    process.env.PRIVATE_OBJECT_ROOT = 'relative-objects';
+    process.env.OBJECT_SIGNING_SECRET =
+      'production-object-signing-secret-32chars!!';
+    try {
+      expect(() => new PrivateObjectStorageService()).toThrow(
+        /absolute filesystem path/,
+      );
+    } finally {
+      process.env.NODE_ENV = previousEnv;
+      process.env.PRIVATE_OBJECT_ROOT = directory;
+      delete process.env.OBJECT_SIGNING_SECRET;
+    }
+  });
 });

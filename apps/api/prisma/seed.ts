@@ -37,6 +37,21 @@ function initialPassword(name: string) {
   return value;
 }
 
+function assertDistinctStaffPasswords(seeds: StaffSeed[]) {
+  const passwords = seeds.map((seed) => seed.password);
+  if (new Set(passwords).size !== passwords.length) {
+    throw new Error(
+      'Staff *_INITIAL_PASSWORD values must be pairwise distinct',
+    );
+  }
+  const invite = fixedInviteCode();
+  if (passwords.includes(invite)) {
+    throw new Error(
+      'Staff *_INITIAL_PASSWORD values must differ from ADMIN_FIXED_INVITE_CODE',
+    );
+  }
+}
+
 const staffSeeds: StaffSeed[] = [
   {
     employeeNo: 'ADMIN001',
@@ -75,6 +90,7 @@ const staffSeeds: StaffSeed[] = [
   },
 ];
 
+assertDistinctStaffPasswords(staffSeeds);
 async function upsertStaff(seed: StaffSeed) {
   const passwordHash = await bcrypt.hash(seed.password, 12);
   const internalEmail = `${seed.employeeNo.toLowerCase()}@internal.hnw.local`;

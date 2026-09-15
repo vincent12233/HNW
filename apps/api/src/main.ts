@@ -15,6 +15,39 @@ function isLocalDevelopmentOrigin(origin: string) {
   );
 }
 
+function isLoopbackOrPrivateHostname(hostname: string) {
+  const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '0.0.0.0'
+  ) {
+    return true;
+  }
+  if (/^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^192\.168\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3}$/.test(host)) return true;
+  return false;
+}
+
+function assertPublicHttpsUrl(label: string, value: string) {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(`${label} must be a valid HTTPS URL in production`);
+  }
+  if (parsed.protocol !== 'https:') {
+    throw new Error(`${label} must use HTTPS in production`);
+  }
+  if (isLoopbackOrPrivateHostname(parsed.hostname)) {
+    throw new Error(
+      `${label} must not target localhost or private network hosts in production`,
+    );
+  }
+}
+
 function validateProductionEnvironment() {
   if (process.env.NODE_ENV !== 'production') return;
   const requiredSecrets = [
@@ -59,19 +92,18 @@ function validateProductionEnvironment() {
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean);
-  if (
-    !origins.length ||
-    origins.some((origin) => !origin.startsWith('https://'))
-  ) {
+  if (!origins.length) {
     throw new Error(
       'CORS_ORIGINS must contain only explicit HTTPS origins in production',
     );
   }
-  if (!process.env.VIRUS_SCAN_URL?.startsWith('https://')) {
-    throw new Error(
-      'VIRUS_SCAN_URL must be configured with HTTPS in production',
-    );
+  for (const origin of origins) {
+    assertPublicHttpsUrl('CORS_ORIGINS entry', origin);
   }
+  assertPublicHttpsUrl(
+    'VIRUS_SCAN_URL',
+    process.env.VIRUS_SCAN_URL?.trim() ?? '',
+  );
   const privateRoot = process.env.PRIVATE_OBJECT_ROOT?.trim() ?? '';
   if (!privateRoot || !privateRoot.startsWith('/')) {
     throw new Error(

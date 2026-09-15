@@ -1,25 +1,36 @@
-﻿import { Type } from 'class-transformer';
-import { IsNumber, IsOptional, IsPositive, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsInt,
+  IsOptional,
+  IsString,
+  Matches,
+  Min,
+} from 'class-validator';
 
 export class UpdateLiveQuoteDto {
-  @IsPositive()
-  @Type(() => Number)
-  lastPrice!: number;
+  @IsString()
+  @Matches(/^(?!0+(?:\.0{1,4})?$)\d+(?:\.\d{1,4})?$/, {
+    message: 'lastPrice must be a positive price with up to 4 decimals',
+  })
+  lastPrice!: string;
 
   @IsOptional()
-  @IsPositive()
-  @Type(() => Number)
-  bidPrice?: number;
+  @IsString()
+  @Matches(/^(?!0+(?:\.0{1,4})?$)\d+(?:\.\d{1,4})?$/, {
+    message: 'bidPrice must be a positive price with up to 4 decimals',
+  })
+  bidPrice?: string;
 
   @IsOptional()
-  @IsPositive()
-  @Type(() => Number)
-  askPrice?: number;
+  @IsString()
+  @Matches(/^(?!0+(?:\.0{1,4})?$)\d+(?:\.\d{1,4})?$/, {
+    message: 'askPrice must be a positive price with up to 4 decimals',
+  })
+  askPrice?: string;
 
   @IsOptional()
-  @IsNumber()
+  @Type(() => Number)
+  @IsInt()
   @Min(0)
-  @Type(() => Number)
   volume?: number;
 }
-

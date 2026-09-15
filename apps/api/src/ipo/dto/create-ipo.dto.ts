@@ -2,8 +2,8 @@ import {
   IsDateString,
   IsEnum,
   IsInt,
-  IsNumber,
   IsString,
+  Matches,
 } from 'class-validator';
 
 import { Exchange } from '../../generated/prisma/client';
@@ -21,8 +21,12 @@ export class CreateIpoDto {
   @IsString()
   instrumentId: string;
 
-  @IsNumber()
-  issuePrice: number;
+  @IsString()
+  @Matches(/^(?!0+(?:\.0{1,2})?$)\d+(?:\.\d{1,2})?$/, {
+    message:
+      'issuePrice must be a positive monetary string with up to 2 decimals',
+  })
+  issuePrice: string;
 
   @IsInt()
   lotSize: number;

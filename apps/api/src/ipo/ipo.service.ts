@@ -35,7 +35,7 @@ export class IpoService {
 
         instrumentId: dto.instrumentId,
 
-        issuePrice: dto.issuePrice,
+        issuePrice: moneyDecimal(dto.issuePrice),
         lotSize: dto.lotSize,
         totalShares: dto.totalShares,
         availableShares: dto.totalShares,
@@ -572,16 +572,23 @@ export class IpoService {
   async allocate(
     applicationId: string,
     quantity: number,
-    price: number,
+    price: number | string,
     businessUserId?: string,
   ) {
     if (!Number.isInteger(quantity) || quantity < 1 || quantity > 1_000_000) {
       throw new BadRequestException('IPO allocation quantity is invalid');
     }
-    if (!Number.isFinite(price) || price <= 0 || price > 100_000_000) {
+    const allocationPrice = moneyDecimal(price);
+    if (
+      !allocationPrice.isFinite() ||
+      allocationPrice.lte(0) ||
+      allocationPrice.gt(100_000_000)
+    ) {
       throw new BadRequestException('IPO allocation price is invalid');
     }
-    const totalAmount = moneyDecimal(new Prisma.Decimal(quantity).mul(price));
+    const totalAmount = moneyDecimal(
+      new Prisma.Decimal(quantity).mul(allocationPrice),
+    );
     if (!totalAmount.isFinite() || totalAmount.lte(0)) {
       throw new BadRequestException('IPO allocation amount is too large');
     }
@@ -603,7 +610,7 @@ export class IpoService {
           );
         const result = await tx.ipoApplication.updateMany({
           where: { id: applicationId, status: 'PENDING', publishedAt: null },
-          data: { draftQuantity: quantity, draftPrice: price },
+          data: { draftQuantity: quantity, draftPrice: allocationPrice },
         });
         if (result.count !== 1)
           throw new ConflictException('IPO application already processed');

@@ -513,9 +513,9 @@ export class MarketService {
       throw new NotFoundException('Market quote not found');
     }
 
-    const lastPrice = dto.lastPrice;
-    const bidPrice = dto.bidPrice ?? lastPrice;
-    const askPrice = dto.askPrice ?? lastPrice;
+    const lastPrice = new Prisma.Decimal(dto.lastPrice);
+    const bidPrice = new Prisma.Decimal(dto.bidPrice ?? dto.lastPrice);
+    const askPrice = new Prisma.Decimal(dto.askPrice ?? dto.lastPrice);
     const asOf = new Date();
 
     const quote = await this.prisma.marketQuote.update({

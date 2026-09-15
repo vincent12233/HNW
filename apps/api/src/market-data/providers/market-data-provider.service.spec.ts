@@ -1,12 +1,15 @@
 import { MarketDataProviderService } from './market-data-provider.service';
 
 describe('MarketDataProviderService', () => {
-  it('uses India Stock MCP by default', async () => {
+  it('uses Yahoo by default to avoid MCP zip-extraction dependency', async () => {
     const indiaStockMcp = {
       name: 'INDIA_STOCK_MCP',
       getQuote: jest.fn().mockResolvedValue({ symbol: 'RELIANCE' }),
     } as any;
-    const yahoo = { name: 'YAHOO', getQuote: jest.fn() } as any;
+    const yahoo = {
+      name: 'YAHOO',
+      getQuote: jest.fn().mockResolvedValue({ symbol: 'RELIANCE' }),
+    } as any;
     const config = { get: jest.fn().mockReturnValue(undefined) } as any;
     const service = new MarketDataProviderService(
       config,
@@ -14,22 +17,22 @@ describe('MarketDataProviderService', () => {
       yahoo,
     );
 
-    expect(service.providerName).toBe('INDIA_STOCK_MCP');
+    expect(service.providerName).toBe('YAHOO');
     await service.getQuote('RELIANCE', 'NSE');
-    expect(indiaStockMcp.getQuote).toHaveBeenCalledWith('RELIANCE', 'NSE');
+    expect(yahoo.getQuote).toHaveBeenCalledWith('RELIANCE', 'NSE');
   });
 
-  it('keeps Yahoo available as an explicit provider', () => {
+  it('keeps India Stock MCP available as an explicit provider', () => {
     const indiaStockMcp = { name: 'INDIA_STOCK_MCP' } as any;
     const yahoo = { name: 'YAHOO' } as any;
-    const config = { get: jest.fn().mockReturnValue('YAHOO') } as any;
+    const config = { get: jest.fn().mockReturnValue('INDIA_STOCK_MCP') } as any;
     const service = new MarketDataProviderService(
       config,
       indiaStockMcp,
       yahoo,
     );
 
-    expect(service.providerName).toBe('YAHOO');
+    expect(service.providerName).toBe('INDIA_STOCK_MCP');
   });
 
   it('rejects an unsupported configured provider', () => {

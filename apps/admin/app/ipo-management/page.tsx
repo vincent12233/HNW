@@ -79,7 +79,7 @@ export default function IpoManagementPage() {
       companyName: values.companyName,
       exchange: instrument.exchange,
       instrumentId: instrument.id,
-      issuePrice: Number(values.issuePrice),
+      issuePrice: Number(values.issuePrice).toFixed(2),
       lotSize: Number(values.lotSize),
       totalShares: Number(values.totalShares),
       openDate: values.period[0].toISOString(),

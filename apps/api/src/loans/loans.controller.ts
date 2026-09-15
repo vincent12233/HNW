@@ -3,6 +3,9 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
+import { ApproveLoanDto } from './dto/approve-loan.dto';
+import { CreateLoanDto } from './dto/create-loan.dto';
+import { RepayLoanDto } from './dto/repay-loan.dto';
 import { LoansService } from './loans.service';
 
 @Controller('loans')
@@ -26,27 +29,13 @@ export class LoansController {
 
   @Post()
   @Roles(UserRole.FINANCE)
-  create(
-    @Req() req: any,
-    @Body()
-    body: {
-      accountNumber: string;
-      amount: number;
-      interestRate?: number;
-      dueDate?: string;
-      note?: string;
-    },
-  ) {
+  create(@Req() req: any, @Body() body: CreateLoanDto) {
     return this.loansService.create(req.user.userId, req.user.role, body);
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.FINANCE)
-  approve(
-    @Req() req: any,
-    @Param('id') id: string,
-    @Body() body: { approvedAmount: number; interestRate?: number; dueDate?: string; note?: string },
-  ) {
+  approve(@Req() req: any, @Param('id') id: string, @Body() body: ApproveLoanDto) {
     return this.loansService.approve(id, req.user.userId, req.user.role, body);
   }
 
@@ -64,7 +53,7 @@ export class LoansController {
 
   @Patch(':id/repay')
   @Roles(UserRole.FINANCE)
-  repay(@Req() req: any, @Param('id') id: string, @Body() body: { amount: number; note?: string }) {
+  repay(@Req() req: any, @Param('id') id: string, @Body() body: RepayLoanDto) {
     return this.loansService.repay(id, req.user.userId, req.user.role, body.amount, body.note);
   }
 

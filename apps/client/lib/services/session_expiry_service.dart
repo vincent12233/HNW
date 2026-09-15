@@ -13,7 +13,10 @@ class SessionExpiryService {
   static const String _sessionKey = 'auth_session';
   static const String _biometricSessionKey = 'biometric_auth_session';
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(
+      migrateOnAlgorithmChange: true,
+      migrateWithBackup: true,
+    ),
   );
 
   VoidCallback? onExpired;

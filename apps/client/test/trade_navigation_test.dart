@@ -41,7 +41,6 @@ void main() {
             stocks: const [],
             positions: const {},
             orders: const [],
-            pendingOrders: const [],
             institutionalStocks: const [],
             ipos: const [],
             ipoApplications: const [],

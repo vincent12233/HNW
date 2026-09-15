@@ -18,7 +18,7 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   const employeeNo = 'ADMIN001';
   const password = process.env.ADMIN_INITIAL_PASSWORD;
-  if (!password || password.length < 6) throw new Error('ADMIN_INITIAL_PASSWORD must contain at least 6 characters');
+  if (!password || password.length < 12) throw new Error('ADMIN_INITIAL_PASSWORD must contain at least 12 characters');
   const passwordHash = await bcrypt.hash(password, 12);
   const internalEmail = `${employeeNo.toLowerCase()}@internal.hnw.local`;
 

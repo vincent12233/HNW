@@ -1040,6 +1040,8 @@ export class BusinessService {
         symbol: application.ipo.symbol,
         companyName: application.ipo.companyName,
         issuePrice: application.ipo.issuePrice.toFixed(2),
+        totalShares: application.ipo.totalShares,
+        availableShares: application.ipo.availableShares,
         status: application.ipo.status,
       },
       account: {

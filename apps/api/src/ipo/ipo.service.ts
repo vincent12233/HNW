@@ -705,7 +705,13 @@ export class IpoService {
           where: { id: applicationId },
           include: {
             account: { include: { user: true } },
-            ipo: { select: { issuePrice: true } },
+            ipo: {
+              select: {
+                id: true,
+                issuePrice: true,
+                availableShares: true,
+              },
+            },
           },
         });
         if (!application)
@@ -717,6 +723,25 @@ export class IpoService {
           throw new ForbiddenException(
             'IPO application is not assigned to this business account',
           );
+        // Draft allocations reserve against remaining inventory so over-allotment
+        // is caught before publish. Other PENDING drafts on the same IPO count.
+        const reserved = await tx.ipoApplication.aggregate({
+          where: {
+            ipoId: application.ipo.id,
+            status: 'PENDING',
+            publishedAt: null,
+            id: { not: applicationId },
+            draftQuantity: { not: null },
+          },
+          _sum: { draftQuantity: true },
+        });
+        const reservedQty = reserved._sum.draftQuantity ?? 0;
+        const remaining = application.ipo.availableShares - reservedQty;
+        if (quantity > remaining) {
+          throw new BadRequestException(
+            `Allocation exceeds remaining IPO shares (${remaining} available)`,
+          );
+        }
         // Settlement always uses the admin subscription/issue price — never a live quote.
         const allocationPrice = moneyDecimal(application.ipo.issuePrice);
         const result = await tx.ipoApplication.updateMany({
@@ -831,6 +856,20 @@ export class IpoService {
           throw new ConflictException(
             'IPO application was processed by another operator',
           );
+
+        // Atomically consume inventory; concurrent publishes cannot over-allot.
+        const inventory = await tx.ipo.updateMany({
+          where: {
+            id: application.ipo.id,
+            availableShares: { gte: quantity },
+          },
+          data: { availableShares: { decrement: quantity } },
+        });
+        if (inventory.count !== 1) {
+          throw new ConflictException(
+            'Insufficient IPO shares remaining for this allotment',
+          );
+        }
 
         const nextBuyingPower = buyingPowerAvailable.sub(debitAmount);
 

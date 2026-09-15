@@ -8,7 +8,13 @@ describe('IPO publication', () => {
       status: 'PENDING',
       draftQuantity: 10,
       draftPrice: 20,
-      ipo: { instrumentId: 'stock', symbol: 'ABC', issuePrice: 20 },
+      ipo: {
+        id: 'ipo-1',
+        instrumentId: 'stock',
+        symbol: 'ABC',
+        issuePrice: 20,
+        availableShares: 1000,
+      },
       account: {
         id: 'account',
         userId: 'customer',
@@ -21,11 +27,15 @@ describe('IPO publication', () => {
     const tx = {
       ipoApplication: {
         findUnique: jest.fn().mockImplementation(async () => application),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { draftQuantity: 0 } }),
         updateMany: jest.fn().mockImplementation(async ({ data }) => {
           Object.assign(application, data);
           return { count: 1 };
         }),
         findUniqueOrThrow: jest.fn().mockImplementation(async () => application),
+      },
+      ipo: {
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
       account: { update: jest.fn() },
       ipoDebt: { create: jest.fn() },
@@ -77,11 +87,24 @@ describe('IPO publication', () => {
     expect(tx.account.update.mock.calls[0][0].data.cashBalance).toEqual({
       decrement: new Prisma.Decimal(200),
     });
+    expect(tx.ipo.updateMany).toHaveBeenCalledWith({
+      where: { id: 'ipo-1', availableShares: { gte: 10 } },
+      data: { availableShares: { decrement: 10 } },
+    });
     expect(settle).toHaveBeenCalledTimes(1);
     expect(tx.ipoDebt.create).not.toHaveBeenCalled();
     expect(tx.notification.create.mock.calls[0][0].data.type).toBe(
       'IPO_ALLOTMENT_SETTLED',
     );
+  });
+
+  it('rejects publication when IPO inventory is exhausted', async () => {
+    const { service, tx, application } = setup();
+    application.account.cashBalance = 300;
+    application.account.buyingPower = 300;
+    tx.ipo.updateMany.mockResolvedValue({ count: 0 });
+    expect((await service.publish(['one'], 'business', 'business')).published).toBe(0);
+    expect(tx.account.update).not.toHaveBeenCalled();
   });
 
   it('preserves reserved funds and only debits available cash', async () => {

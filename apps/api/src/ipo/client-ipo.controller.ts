@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IpoService } from './ipo.service';
@@ -49,5 +42,4 @@ export class ClientIpoController {
   getMyDebts(@Req() request: AuthenticatedRequest) {
     return this.ipoService.listMyDebts(request.user.userId);
   }
-
 }

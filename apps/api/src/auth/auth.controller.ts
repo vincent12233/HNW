@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Req, Res, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Post,
+  Req,
+  Res,
+  UseGuards,
+} from '@nestjs/common';
 import type { Request, Response } from 'express';
 
 import { AuthService } from './auth.service';
@@ -6,12 +14,20 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 
-const backendRoles = new Set(['ADMIN', 'MANAGER', 'FINANCE', 'BUSINESS', 'SUPPORT']);
+const backendRoles = new Set([
+  'ADMIN',
+  'MANAGER',
+  'FINANCE',
+  'BUSINESS',
+  'SUPPORT',
+]);
 const staffSessionSeconds = 365 * 24 * 60 * 60;
 
 function staffCookieName(role?: string) {
   const normalized = role?.trim().toUpperCase();
-  return normalized && backendRoles.has(normalized) ? `staff_access_${normalized.toLowerCase()}` : 'staff_access';
+  return normalized && backendRoles.has(normalized)
+    ? `staff_access_${normalized.toLowerCase()}`
+    : 'staff_access';
 }
 
 @Controller('auth')
@@ -24,7 +40,11 @@ export class AuthController {
   }
 
   @Post('login')
-  async login(@Body() dto: LoginDto, @Req() req: Request, @Res({ passthrough: true }) response: Response) {
+  async login(
+    @Body() dto: LoginDto,
+    @Req() req: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const forwardedFor = req.headers['x-forwarded-for'];
 
     const forwardedIp = Array.isArray(forwardedFor)
@@ -40,9 +60,15 @@ export class AuthController {
       userAgent,
     });
     const backendRole = req.header('x-backend-role')?.trim().toUpperCase();
-    if (backendRole && backendRoles.has(backendRole) && result.user.role !== backendRole) {
+    if (
+      backendRole &&
+      backendRoles.has(backendRole) &&
+      result.user.role !== backendRole
+    ) {
       response.status(403);
-      return { message: `This account belongs to the ${result.user.role} backend.` };
+      return {
+        message: `This account belongs to the ${result.user.role} backend.`,
+      };
     }
     // Browser staff consoles use an HttpOnly cookie. Non-browser verification
     // and operational clients retain the Bearer-token response contract.
@@ -54,7 +80,11 @@ export class AuthController {
         maxAge: staffSessionSeconds * 1000,
         path: '/',
       });
-      return { ...result, accessToken: undefined, expiresIn: staffSessionSeconds };
+      return {
+        ...result,
+        accessToken: undefined,
+        expiresIn: staffSessionSeconds,
+      };
     }
     return result;
   }
@@ -67,7 +97,10 @@ export class AuthController {
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     } as const;
-    response.clearCookie(staffCookieName(req.header('x-backend-role')), cookieOptions);
+    response.clearCookie(
+      staffCookieName(req.header('x-backend-role')),
+      cookieOptions,
+    );
     response.clearCookie('staff_access', cookieOptions);
     return { loggedOut: true };
   }
@@ -78,8 +111,14 @@ export class AuthController {
   }
 
   @Post('password-reset/confirm')
-  confirmPasswordReset(@Body() body: { phone: string; code: string; newPassword: string }) {
-    return this.authService.confirmPasswordReset(body.phone, body.code, body.newPassword);
+  confirmPasswordReset(
+    @Body() body: { phone: string; code: string; newPassword: string },
+  ) {
+    return this.authService.confirmPasswordReset(
+      body.phone,
+      body.code,
+      body.newPassword,
+    );
   }
 
   @Post('google')

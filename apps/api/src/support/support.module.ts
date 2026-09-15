@@ -5,7 +5,10 @@ import { SupportController } from './support.controller';
 import { SupportService } from './support.service';
 import { SupportGateway } from './support.gateway';
 import { AccountRecoveryService } from './account-recovery.service';
-import { AccountRecoveryController, StaffRecoveryController } from './account-recovery.controller';
+import {
+  AccountRecoveryController,
+  StaffRecoveryController,
+} from './account-recovery.controller';
 import { OperatorController } from './operator.controller';
 import { OperatorService } from './operator.service';
 

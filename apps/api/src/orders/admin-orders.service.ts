@@ -150,10 +150,10 @@ export class AdminOrdersService {
             currency: true,
             isLive: true,
             user: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  phone: true,
+              select: {
+                id: true,
+                fullName: true,
+                phone: true,
                 role: true,
                 status: true,
               },
@@ -194,6 +194,10 @@ export class AdminOrdersService {
   private financeOrderScope(role: string): Prisma.OrderWhereInput {
     if (role !== 'FINANCE') return {};
     const fixedCode = fixedInviteCode();
-    return { account: { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } } };
+    return {
+      account: {
+        user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } },
+      },
+    };
   }
 }

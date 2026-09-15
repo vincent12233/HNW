@@ -227,7 +227,11 @@ export class AdminProductsService {
       name: String(body.name).trim(),
       type: String(body.type || '股票型').trim(),
       nav: this.moneyValue(body.nav, 'NAV', 4)!,
-      minSubscribe: this.moneyValue(body.minSubscribe, 'Minimum subscription', 2)!,
+      minSubscribe: this.moneyValue(
+        body.minSubscribe,
+        'Minimum subscription',
+        2,
+      )!,
       risk: String(body.risk || '中').trim(),
       manager: body.manager?.trim() || null,
     };
@@ -239,11 +243,15 @@ export class AdminProductsService {
       name: String(body.name).trim(),
       market: String(body.market || 'NSE').trim(),
       risk: String(body.risk || '中').trim(),
-      annualReturn: this.moneyValue(body.annualReturn, 'Annual return', 2, { allowZero: true })!,
-      maxDrawdown: this.moneyValue(body.maxDrawdown, 'Max drawdown', 2, { allowZero: true, max: 100 })!,
+      annualReturn: this.moneyValue(body.annualReturn, 'Annual return', 2, {
+        allowZero: true,
+      })!,
+      maxDrawdown: this.moneyValue(body.maxDrawdown, 'Max drawdown', 2, {
+        allowZero: true,
+        max: 100,
+      })!,
     };
   }
-
 
   private moneyValue(
     value: unknown,

@@ -9,7 +9,9 @@ type RateEntry = { count: number; resetAt: number };
 const rateEntries = new Map<string, RateEntry>();
 
 function isLocalDevelopmentOrigin(origin: string) {
-  return /^https?:\/\/(?:localhost|127\.0\.0\.1|10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)?\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3})(?::\d+)?$/i.test(origin);
+  return /^https?:\/\/(?:localhost|127\.0\.0\.1|10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)?\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3})(?::\d+)?$/i.test(
+    origin,
+  );
 }
 
 function validateProductionEnvironment() {
@@ -23,25 +25,51 @@ function validateProductionEnvironment() {
   for (const name of requiredSecrets) {
     const value = process.env[name]?.trim() ?? '';
     if (value.length < 32 || /replace|change-me|development/i.test(value)) {
-      throw new Error(`${name} must be a random value of at least 32 characters`);
+      throw new Error(
+        `${name} must be a random value of at least 32 characters`,
+      );
     }
   }
-  if (new Set(requiredSecrets.map((name) => process.env[name]?.trim())).size !== requiredSecrets.length) {
-    throw new Error('Production encryption and signing secrets must be different');
+  if (
+    new Set(requiredSecrets.map((name) => process.env[name]?.trim())).size !==
+    requiredSecrets.length
+  ) {
+    throw new Error(
+      'Production encryption and signing secrets must be different',
+    );
   }
   const inviteCode = process.env.ADMIN_FIXED_INVITE_CODE?.trim() ?? '';
-  if (inviteCode.length < 12 || /replace|change-me|adminfixed2026/i.test(inviteCode)) {
-    throw new Error('ADMIN_FIXED_INVITE_CODE must be set to a strong unique value in production');
+  if (
+    inviteCode.length < 12 ||
+    /replace|change-me|adminfixed2026/i.test(inviteCode)
+  ) {
+    throw new Error(
+      'ADMIN_FIXED_INVITE_CODE must be set to a strong unique value in production',
+    );
   }
-  if (requiredSecrets.some((name) => process.env[name]?.trim() === inviteCode)) {
-    throw new Error('ADMIN_FIXED_INVITE_CODE must be distinct from encryption secrets');
+  if (
+    requiredSecrets.some((name) => process.env[name]?.trim() === inviteCode)
+  ) {
+    throw new Error(
+      'ADMIN_FIXED_INVITE_CODE must be distinct from encryption secrets',
+    );
   }
-  const origins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
-  if (!origins.length || origins.some((origin) => !origin.startsWith('https://'))) {
-    throw new Error('CORS_ORIGINS must contain only explicit HTTPS origins in production');
+  const origins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean);
+  if (
+    !origins.length ||
+    origins.some((origin) => !origin.startsWith('https://'))
+  ) {
+    throw new Error(
+      'CORS_ORIGINS must contain only explicit HTTPS origins in production',
+    );
   }
   if (!process.env.VIRUS_SCAN_URL?.startsWith('https://')) {
-    throw new Error('VIRUS_SCAN_URL must be configured with HTTPS in production');
+    throw new Error(
+      'VIRUS_SCAN_URL must be configured with HTTPS in production',
+    );
   }
 }
 
@@ -74,45 +102,99 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
   const startedAt = Date.now();
   const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
   res.setHeader('x-request-id', requestId);
-  res.on('finish', () => console.log(JSON.stringify({ level: res.statusCode >= 500 ? 'error' : res.statusCode >= 400 ? 'warn' : 'info', event: 'http_request', requestId, method: req.method, path: req.path, statusCode: res.statusCode, durationMs: Date.now() - startedAt, ip: req.ip, userAgent: req.header('user-agent')?.slice(0, 200), timestamp: new Date().toISOString() })));
+  res.on('finish', () =>
+    console.log(
+      JSON.stringify({
+        level:
+          res.statusCode >= 500
+            ? 'error'
+            : res.statusCode >= 400
+              ? 'warn'
+              : 'info',
+        event: 'http_request',
+        requestId,
+        method: req.method,
+        path: req.path,
+        statusCode: res.statusCode,
+        durationMs: Date.now() - startedAt,
+        ip: req.ip,
+        userAgent: req.header('user-agent')?.slice(0, 200),
+        timestamp: new Date().toISOString(),
+      }),
+    ),
+  );
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('x-frame-options', 'DENY');
   res.setHeader('referrer-policy', 'no-referrer');
-  res.setHeader('permissions-policy', 'camera=(), microphone=(), geolocation=()');
+  res.setHeader(
+    'permissions-policy',
+    'camera=(), microphone=(), geolocation=()',
+  );
   res.setHeader('cross-origin-resource-policy', 'same-site');
-  res.setHeader('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
+  res.setHeader(
+    'content-security-policy',
+    "default-src 'none'; frame-ancestors 'none'",
+  );
   // Early middleware errors must remain readable by allowed browser clients.
   const requestOrigin = req.header('origin');
-  const configuredOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map(value => value.trim());
-  if (requestOrigin && (configuredOrigins.includes(requestOrigin) ||
-      (process.env.NODE_ENV !== 'production' && isLocalDevelopmentOrigin(requestOrigin)))) {
+  const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((value) => value.trim());
+  if (
+    requestOrigin &&
+    (configuredOrigins.includes(requestOrigin) ||
+      (process.env.NODE_ENV !== 'production' &&
+        isLocalDevelopmentOrigin(requestOrigin)))
+  ) {
     res.setHeader('Access-Control-Allow-Origin', requestOrigin);
     res.setHeader('Access-Control-Allow-Credentials', 'true');
     res.vary('Origin');
   }
-  if (req.method === 'OPTIONS') { next(); return; }
+  if (req.method === 'OPTIONS') {
+    next();
+    return;
+  }
   // Staff sessions use an HttpOnly cookie. Require an explicitly allowed
   // browser origin for state-changing cookie requests to prevent CSRF.
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) && req.headers.cookie?.match(/(?:^|;\s*)staff_access(?:_[a-z]+)?=/)) {
+  if (
+    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
+    req.headers.cookie?.match(/(?:^|;\s*)staff_access(?:_[a-z]+)?=/)
+  ) {
     const origin = req.header('origin');
-    const allowedOrigins = (process.env.CORS_ORIGINS ?? '').split(',').map((value) => value.trim()).filter(Boolean);
-    const localOrigin = process.env.NODE_ENV !== 'production' && !!origin && isLocalDevelopmentOrigin(origin);
+    const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
+      .split(',')
+      .map((value) => value.trim())
+      .filter(Boolean);
+    const localOrigin =
+      process.env.NODE_ENV !== 'production' &&
+      !!origin &&
+      isLocalDevelopmentOrigin(origin);
     if (!origin || (!allowedOrigins.includes(origin) && !localOrigin)) {
-      res.status(403).json({ statusCode: 403, message: 'Origin verification failed', requestId });
+      res
+        .status(403)
+        .json({
+          statusCode: 403,
+          message: 'Origin verification failed',
+          requestId,
+        });
       return;
     }
   }
   if (process.env.NODE_ENV === 'production') {
-    res.setHeader('strict-transport-security', 'max-age=31536000; includeSubDomains');
+    res.setHeader(
+      'strict-transport-security',
+      'max-age=31536000; includeSubDomains',
+    );
   }
 
   const now = Date.now();
   const windowMs = 60_000;
   const key = `${req.ip}:${req.method}:${req.path}`;
   const current = rateEntries.get(key);
-  const entry = !current || current.resetAt <= now
-    ? { count: 0, resetAt: now + windowMs }
-    : current;
+  const entry =
+    !current || current.resetAt <= now
+      ? { count: 0, resetAt: now + windowMs }
+      : current;
   entry.count += 1;
   rateEntries.set(key, entry);
   const limit = requestLimit(req.path);
@@ -120,7 +202,9 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
   res.setHeader('x-ratelimit-remaining', Math.max(0, limit - entry.count));
   if (entry.count > limit) {
     res.setHeader('retry-after', Math.ceil((entry.resetAt - now) / 1000));
-    res.status(429).json({ statusCode: 429, message: 'Too many requests', requestId });
+    res
+      .status(429)
+      .json({ statusCode: 429, message: 'Too many requests', requestId });
     return;
   }
   if (rateEntries.size > 10_000) {
@@ -149,13 +233,18 @@ async function bootstrap() {
     .filter(Boolean);
 
   app.enableCors({
-    origin(origin: string | undefined, callback: (error: Error | null, allow?: boolean) => void) {
+    origin(
+      origin: string | undefined,
+      callback: (error: Error | null, allow?: boolean) => void,
+    ) {
       if (!origin) {
         callback(null, true);
         return;
       }
 
-      const isLocalDevOrigin = process.env.NODE_ENV !== 'production' && isLocalDevelopmentOrigin(origin);
+      const isLocalDevOrigin =
+        process.env.NODE_ENV !== 'production' &&
+        isLocalDevelopmentOrigin(origin);
 
       if (isLocalDevOrigin || allowedOrigins.includes(origin)) {
         callback(null, true);

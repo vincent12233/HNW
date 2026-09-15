@@ -56,24 +56,44 @@ export class DepositController {
   @Get('pending')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
   listPending(@Req() req: any) {
-    return this.depositService.listPendingDeposits(req.user.role, req.user.userId);
+    return this.depositService.listPendingDeposits(
+      req.user.role,
+      req.user.userId,
+    );
   }
 
   @Get('history')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
   listHistory(@Req() req: any, @Query('status') status?: string) {
-    return this.depositService.listDepositHistory(req.user.role, req.user.userId, status);
+    return this.depositService.listDepositHistory(
+      req.user.role,
+      req.user.userId,
+      status,
+    );
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
   approve(@Param('id') id: string, @Req() req: any) {
-    return this.depositService.approveDeposit(id, req.user.userId, req.user.role);
+    return this.depositService.approveDeposit(
+      id,
+      req.user.userId,
+      req.user.role,
+    );
   }
 
   @Patch(':id/reject')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
-  reject(@Param('id') id: string, @Body() body: { note?: string }, @Req() req: any) {
-    return this.depositService.rejectDeposit(id, body.note, req.user.userId, req.user.role);
+  reject(
+    @Param('id') id: string,
+    @Body() body: { note?: string },
+    @Req() req: any,
+  ) {
+    return this.depositService.rejectDeposit(
+      id,
+      body.note,
+      req.user.userId,
+      req.user.role,
+    );
   }
 }

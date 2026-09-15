@@ -6,13 +6,18 @@ export class TrueDataSubscriptionPolicyService {
   constructor(private readonly config: ConfigService) {}
 
   validateAndBatch(symbols: string[]) {
-    const unique = [...new Set(symbols.map((item) => item.trim()).filter(Boolean))];
+    const unique = [
+      ...new Set(symbols.map((item) => item.trim()).filter(Boolean)),
+    ];
     const planLimit = this.positiveInteger(
       this.config.get<string>('TRUEDATA_SYMBOL_LIMIT'),
       200,
     );
     const batchSize = Math.min(
-      this.positiveInteger(this.config.get<string>('TRUEDATA_SUBSCRIBE_BATCH_SIZE'), 50),
+      this.positiveInteger(
+        this.config.get<string>('TRUEDATA_SUBSCRIBE_BATCH_SIZE'),
+        50,
+      ),
       planLimit,
     );
 

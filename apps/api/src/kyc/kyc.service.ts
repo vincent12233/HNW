@@ -10,7 +10,12 @@ import { PrivateObjectStorageService } from '../storage/private-object-storage.s
 
 export type KycSubmissionInput = {
   fullName?: string;
-  bankDetails?: { accountHolder: string; bankName: string; accountNumber: string; ifscCode: string };
+  bankDetails?: {
+    accountHolder: string;
+    bankName: string;
+    accountNumber: string;
+    ifscCode: string;
+  };
   documentType: 'AADHAAR' | 'PAN';
   fileName: string;
   mimeType?: string;
@@ -66,16 +71,27 @@ export class KycService {
   ) {}
 
   async submit(userId: string, input: KycSubmissionInput) {
-    const fullName = typeof input.fullName === 'string' ? input.fullName.trim() : '';
+    const fullName =
+      typeof input.fullName === 'string' ? input.fullName.trim() : '';
     const bank = input.bankDetails;
-    if (fullName.length < 2 || fullName.length > 120 || !bank ||
-        typeof bank.accountHolder !== 'string' || typeof bank.bankName !== 'string' ||
-        typeof bank.accountNumber !== 'string' || typeof bank.ifscCode !== 'string' ||
-        bank.bankName.trim().length < 2 || bank.bankName.length > 120 ||
-        !/^\d{6,18}$/.test(bank.accountNumber) ||
-        (bank.ifscCode !== '' && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bank.ifscCode)) ||
-        bank.accountHolder.trim().toLocaleLowerCase('en-IN') !== fullName.toLocaleLowerCase('en-IN')) {
-      throw new BadRequestException('Enter valid personal and bank details. The account holder must match your identity name.');
+    if (
+      fullName.length < 2 ||
+      fullName.length > 120 ||
+      !bank ||
+      typeof bank.accountHolder !== 'string' ||
+      typeof bank.bankName !== 'string' ||
+      typeof bank.accountNumber !== 'string' ||
+      typeof bank.ifscCode !== 'string' ||
+      bank.bankName.trim().length < 2 ||
+      bank.bankName.length > 120 ||
+      !/^\d{6,18}$/.test(bank.accountNumber) ||
+      (bank.ifscCode !== '' && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bank.ifscCode)) ||
+      bank.accountHolder.trim().toLocaleLowerCase('en-IN') !==
+        fullName.toLocaleLowerCase('en-IN')
+    ) {
+      throw new BadRequestException(
+        'Enter valid personal and bank details. The account holder must match your identity name.',
+      );
     }
     if (input.documentType !== 'AADHAAR' && input.documentType !== 'PAN') {
       throw new BadRequestException('Unsupported KYC document type');
@@ -136,9 +152,17 @@ export class KycService {
       throw new BadRequestException('Signature must be 1 MB or smaller');
     }
     if (
-      !['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif'].includes(input.selfieMimeType)
+      ![
+        'image/jpeg',
+        'image/png',
+        'image/webp',
+        'image/heic',
+        'image/heif',
+      ].includes(input.selfieMimeType)
     ) {
-      throw new BadRequestException('Selfie must be a JPG, PNG, WebP, HEIC or HEIF image');
+      throw new BadRequestException(
+        'Selfie must be a JPG, PNG, WebP, HEIC or HEIF image',
+      );
     }
 
     const storedKeys: string[] = [];
@@ -168,11 +192,14 @@ export class KycService {
         input.documentType,
       );
 
-      await this.prisma.$transaction(async tx => {
-      await tx.$queryRaw`SELECT id FROM users WHERE id = ${user.id} FOR UPDATE`;
-      const existing = await tx.$queryRaw<{ id: string }[]>`SELECT id FROM kyc_submissions WHERE "userId" = ${user.id} AND status IN ('PENDING', 'APPROVED') LIMIT 1`;
-      if (existing.length) throw new BadRequestException('KYC is already submitted or approved');
-      await tx.$executeRaw`
+      await this.prisma.$transaction(async (tx) => {
+        await tx.$queryRaw`SELECT id FROM users WHERE id = ${user.id} FOR UPDATE`;
+        const existing = await tx.$queryRaw<
+          { id: string }[]
+        >`SELECT id FROM kyc_submissions WHERE "userId" = ${user.id} AND status IN ('PENDING', 'APPROVED') LIMIT 1`;
+        if (existing.length)
+          throw new BadRequestException('KYC is already submitted or approved');
+        await tx.$executeRaw`
       INSERT INTO "kyc_submissions"
         ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "selfieFilePath", "selfieMimeType", "signatureFilePath", "fullName", "bankDetails", "updatedAt")
       VALUES
@@ -347,10 +374,13 @@ export class KycService {
       throw new BadRequestException('Invalid KYC review decision');
     }
 
-    return this.prisma.$transaction(async tx => {
-    const [submission] = await tx.$queryRaw<KycSubmissionRow[]>`SELECT * FROM kyc_submissions WHERE id = ${input.submissionId} AND "businessUserId" = ${businessUserId} AND status = 'PENDING' FOR UPDATE`;
-    if (!submission) throw new NotFoundException('Pending KYC submission not found');
-    const updated = await tx.$executeRaw`
+    return this.prisma.$transaction(async (tx) => {
+      const [submission] = await tx.$queryRaw<
+        KycSubmissionRow[]
+      >`SELECT * FROM kyc_submissions WHERE id = ${input.submissionId} AND "businessUserId" = ${businessUserId} AND status = 'PENDING' FOR UPDATE`;
+      if (!submission)
+        throw new NotFoundException('Pending KYC submission not found');
+      const updated = await tx.$executeRaw`
       UPDATE "kyc_submissions"
       SET
         "status" = ${input.decision},
@@ -363,12 +393,12 @@ export class KycService {
         AND "status" = 'PENDING'
     `;
 
-    if (Number(updated) !== 1) {
-      throw new NotFoundException('Pending KYC submission not found');
-    }
+      if (Number(updated) !== 1) {
+        throw new NotFoundException('Pending KYC submission not found');
+      }
 
-    if (input.decision === 'APPROVED') {
-      await tx.$executeRaw`
+      if (input.decision === 'APPROVED') {
+        await tx.$executeRaw`
         UPDATE "users" u
         SET "status" = 'ACTIVE', "fullName" = COALESCE(k."fullName", u."fullName"), "updatedAt" = CURRENT_TIMESTAMP
         FROM "kyc_submissions" k
@@ -377,22 +407,51 @@ export class KycService {
           AND k."businessUserId" = ${businessUserId}
           AND u."status" != 'DISABLED'
       `;
-      if (submission.bankDetails) {
-        const bank = submission.bankDetails;
-        const existingBank = await tx.bankAccount.findFirst({ where: { userId: submission.userId, accountNumber: bank.accountNumber, ifscCode: bank.ifscCode } });
-        if (!existingBank) {
-          const count = await tx.bankAccount.count({ where: { userId: submission.userId } });
-          await tx.bankAccount.create({ data: { ...bank, userId: submission.userId, status: 'APPROVED', isPrimary: count === 0 } });
+        if (submission.bankDetails) {
+          const bank = submission.bankDetails;
+          const existingBank = await tx.bankAccount.findFirst({
+            where: {
+              userId: submission.userId,
+              accountNumber: bank.accountNumber,
+              ifscCode: bank.ifscCode,
+            },
+          });
+          if (!existingBank) {
+            const count = await tx.bankAccount.count({
+              where: { userId: submission.userId },
+            });
+            await tx.bankAccount.create({
+              data: {
+                ...bank,
+                userId: submission.userId,
+                status: 'APPROVED',
+                isPrimary: count === 0,
+              },
+            });
+          }
         }
       }
-    }
 
-    await tx.notification.create({ data: { userId: submission.userId, type: 'KYC', title: input.decision === 'APPROVED' ? 'KYC approved' : 'KYC requires an update', body: input.note?.trim() || (input.decision === 'APPROVED' ? 'Your identity verification is complete.' : 'Please review and resubmit your documents.') } });
+      await tx.notification.create({
+        data: {
+          userId: submission.userId,
+          type: 'KYC',
+          title:
+            input.decision === 'APPROVED'
+              ? 'KYC approved'
+              : 'KYC requires an update',
+          body:
+            input.note?.trim() ||
+            (input.decision === 'APPROVED'
+              ? 'Your identity verification is complete.'
+              : 'Please review and resubmit your documents.'),
+        },
+      });
 
-    return {
-      reviewed: true,
-      status: input.decision,
-    };
+      return {
+        reviewed: true,
+        status: input.decision,
+      };
     });
   }
 
@@ -433,7 +492,15 @@ export class KycService {
 
   private safeExtension(fileName: string) {
     const extension = extname(fileName).toLowerCase();
-    const allowed = new Set(['.pdf', '.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif']);
+    const allowed = new Set([
+      '.pdf',
+      '.jpg',
+      '.jpeg',
+      '.png',
+      '.webp',
+      '.heic',
+      '.heif',
+    ]);
 
     return allowed.has(extension) ? extension : '.bin';
   }

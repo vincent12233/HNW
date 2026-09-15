@@ -87,9 +87,12 @@ describe('ApprovalService decide notifies client on credit', () => {
     const prisma = {
       $transaction: (fn: any) => fn(tx),
     };
-    const service = new ApprovalService(prisma as any, {
-      createLog: jest.fn(),
-    } as any);
+    const service = new ApprovalService(
+      prisma as any,
+      {
+        createLog: jest.fn(),
+      } as any,
+    );
     return { service, tx };
   }
 

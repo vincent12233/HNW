@@ -4,7 +4,9 @@ describe('IndiaStockMcpProvider', () => {
   const provider = new IndiaStockMcpProvider({ get: jest.fn() } as any);
 
   it('normalizes index aliases expected by india-stock-mcp', () => {
-    expect((provider as any).normalizeSymbol('NIFTY50', 'NSE')).toBe('NIFTY 50');
+    expect((provider as any).normalizeSymbol('NIFTY50', 'NSE')).toBe(
+      'NIFTY 50',
+    );
     expect((provider as any).normalizeSymbol('BANKNIFTY', 'NSE')).toBe(
       'NIFTY BANK',
     );

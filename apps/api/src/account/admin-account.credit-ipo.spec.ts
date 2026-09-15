@@ -46,7 +46,10 @@ describe('AdminAccountService credit applies IPO debt', () => {
       },
       ipoApplication: { update: jest.fn() },
       notification: { create: jest.fn() },
-      order: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn().mockResolvedValue({ id: 'order' }) },
+      order: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({ id: 'order' }),
+      },
       trade: { create: jest.fn() },
       position: {
         findUnique: jest.fn().mockResolvedValue(null),

@@ -1,15 +1,25 @@
-import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  CanActivate,
+  ExecutionContext,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class KycAccessGuard implements CanActivate {
-  constructor(private readonly jwt: JwtService, private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly jwt: JwtService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   async canActivate(context: ExecutionContext) {
     const request = context.switchToHttp().getRequest();
     const authorization = String(request.headers.authorization ?? '');
-    const token = authorization.startsWith('Bearer ') ? authorization.slice(7) : '';
+    const token = authorization.startsWith('Bearer ')
+      ? authorization.slice(7)
+      : '';
     if (!token) throw new UnauthorizedException('KYC access token is required');
 
     let payload: any;
@@ -26,7 +36,12 @@ export class KycAccessGuard implements CanActivate {
       throw new UnauthorizedException('KYC access token has been revoked');
     }
     const onboarding = payload.purpose === 'KYC_ONBOARDING';
-    if (user.role !== 'CLIENT' || user.status === 'DISABLED' || (payload.purpose && !onboarding)) throw new UnauthorizedException('Invalid KYC access');
+    if (
+      user.role !== 'CLIENT' ||
+      user.status === 'DISABLED' ||
+      (payload.purpose && !onboarding)
+    )
+      throw new UnauthorizedException('Invalid KYC access');
     if (!onboarding && user.status !== 'ACTIVE') {
       throw new UnauthorizedException('User account is not active');
     }

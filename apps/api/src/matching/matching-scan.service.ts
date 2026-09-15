@@ -47,7 +47,8 @@ export class MatchingScanService {
         try {
           await this.matchingService.matchOrder(order.id);
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           this.logger.error(`Could not match order ${order.id}: ${message}`);
         }
       }

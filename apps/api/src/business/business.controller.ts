@@ -26,7 +26,10 @@ import { CreateTeamStaffDto, InvitePoolDto } from './team.dto';
 @Controller('business')
 @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
 export class BusinessController {
-  constructor(private readonly businessService: BusinessService, private readonly team: TeamService) {}
+  constructor(
+    private readonly businessService: BusinessService,
+    private readonly team: TeamService,
+  ) {}
 
   @Get()
   @Roles(UserRole.ADMIN)
@@ -70,10 +73,7 @@ export class BusinessController {
 
   @Post()
   @Roles(UserRole.MANAGER)
-  createBusiness(
-    @Req() req: any,
-    @Body() body: CreateTeamStaffDto,
-  ) {
+  createBusiness(@Req() req: any, @Body() body: CreateTeamStaffDto) {
     return this.team.create(req.user.userId, body);
   }
 
@@ -163,10 +163,7 @@ export class BusinessController {
 
   @Get('my-trade-pairs')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myTradePairs(
-    @Req() req: any,
-    @Query('customerId') customerId?: string,
-  ) {
+  myTradePairs(@Req() req: any, @Query('customerId') customerId?: string) {
     return this.businessService.myTradePairs(req.user.userId, customerId);
   }
 
@@ -279,13 +276,24 @@ export class BusinessController {
   @Post('my-ipo-applications/publish')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   publishMyIpoApplications(@Req() req: any, @Body() body: { ids: string[] }) {
-    return this.businessService.publishMyIpoApplications(req.user.userId, body.ids);
+    return this.businessService.publishMyIpoApplications(
+      req.user.userId,
+      body.ids,
+    );
   }
 
   @Patch('customers/:customerId/tier')
   @Roles(UserRole.BUSINESS)
-  updateCustomerTier(@Req() req: any, @Param('customerId') customerId: string, @Body() body: { tier: unknown }) {
-    return this.businessService.updateCustomerTier(req.user.userId, customerId, body.tier);
+  updateCustomerTier(
+    @Req() req: any,
+    @Param('customerId') customerId: string,
+    @Body() body: { tier: unknown },
+  ) {
+    return this.businessService.updateCustomerTier(
+      req.user.userId,
+      customerId,
+      body.tier,
+    );
   }
 
   // ===============================
@@ -343,8 +351,15 @@ export class BusinessController {
     body: InvitePoolDto,
   ) {
     await this.team.business(req.user.userId, businessUserId);
-    const codes = await this.businessService.generateInviteCodes(businessUserId, body.count);
-    await this.team.audit(req.user.userId, businessUserId, 'MANAGER_INVITE_POOL_GENERATED');
+    const codes = await this.businessService.generateInviteCodes(
+      businessUserId,
+      body.count,
+    );
+    await this.team.audit(
+      req.user.userId,
+      businessUserId,
+      'MANAGER_INVITE_POOL_GENERATED',
+    );
     return { count: codes.length };
   }
 
@@ -370,4 +385,3 @@ export class BusinessController {
     );
   }
 }
-

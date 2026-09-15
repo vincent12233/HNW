@@ -16,12 +16,7 @@ type PollingCandidate = {
   orders: { id: string }[];
 };
 
-const PRIORITY_CATEGORIES = new Set([
-  'INSTITUTIONAL',
-  'INST',
-  'OTC',
-  'IPO',
-]);
+const PRIORITY_CATEGORIES = new Set(['INSTITUTIONAL', 'INST', 'OTC', 'IPO']);
 
 @Injectable()
 export class NseSyncService {
@@ -110,17 +105,25 @@ export class NseSyncService {
     // Bound concurrency to avoid overwhelming the public snapshot provider.
     for (let offset = 0; offset < batch.length; offset += 8) {
       const group = batch.slice(offset, offset + 8);
-      await Promise.allSettled(group.map(async (instrument) => {
-        const key = this.pollingKey(instrument.exchange, instrument.symbol);
-        this.lastPollingAttempt.set(key, Date.now());
-        try {
-          const quote = await this.provider.getQuote(instrument.symbol, instrument.exchange);
-          await this.ingestion.ingest(instrument.exchange, quote, 'STOCK');
-        } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : String(error);
-          this.logger.error(`${instrument.exchange}:${instrument.symbol} update failed: ${message}`);
-        }
-      }));
+      await Promise.allSettled(
+        group.map(async (instrument) => {
+          const key = this.pollingKey(instrument.exchange, instrument.symbol);
+          this.lastPollingAttempt.set(key, Date.now());
+          try {
+            const quote = await this.provider.getQuote(
+              instrument.symbol,
+              instrument.exchange,
+            );
+            await this.ingestion.ingest(instrument.exchange, quote, 'STOCK');
+          } catch (error: unknown) {
+            const message =
+              error instanceof Error ? error.message : String(error);
+            this.logger.error(
+              `${instrument.exchange}:${instrument.symbol} update failed: ${message}`,
+            );
+          }
+        }),
+      );
     }
   }
 
@@ -176,15 +179,18 @@ export class NseSyncService {
   }
 
   private async syncIndices() {
-    await Promise.allSettled(this.indices.map(async (symbol) => {
-      try {
-        const quote = await this.provider.getQuote(symbol, 'NSE');
-        await this.ingestion.ingest('NSE', quote, 'INDEX');
-      } catch (error: unknown) {
-        const message = error instanceof Error ? error.message : String(error);
-        this.logger.error(`${symbol} index update failed: ${message}`);
-      }
-    }));
+    await Promise.allSettled(
+      this.indices.map(async (symbol) => {
+        try {
+          const quote = await this.provider.getQuote(symbol, 'NSE');
+          await this.ingestion.ingest('NSE', quote, 'INDEX');
+        } catch (error: unknown) {
+          const message =
+            error instanceof Error ? error.message : String(error);
+          this.logger.error(`${symbol} index update failed: ${message}`);
+        }
+      }),
+    );
   }
 
   private streamingEnabled() {

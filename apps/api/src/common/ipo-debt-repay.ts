@@ -101,7 +101,10 @@ export async function applyIncomingFundsToIpoDebts(
     amount: Prisma.Decimal;
     balanceBefore: Prisma.Decimal;
   },
-  settleFn: (tx: any, settle: SettleIpoInput) => Promise<unknown> = settleIpoHoldings,
+  settleFn: (
+    tx: any,
+    settle: SettleIpoInput,
+  ) => Promise<unknown> = settleIpoHoldings,
 ): Promise<{ repayAmount: Prisma.Decimal; remainingAmount: Prisma.Decimal }> {
   let availableAmount = moneyDecimal(input.amount);
   let repayAmount = new Prisma.Decimal(0);

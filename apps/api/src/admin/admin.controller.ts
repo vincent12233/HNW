@@ -32,7 +32,10 @@ export class AdminController {
 
   @Get('customers/:customerId/login-audits')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerLoginAudits(@Param('customerId') customerId: string, @Req() req: any) {
+  customerLoginAudits(
+    @Param('customerId') customerId: string,
+    @Req() req: any,
+  ) {
     return this.adminService.customerLoginAudits(customerId, req.user.role);
   }
 
@@ -55,7 +58,13 @@ export class AdminController {
   }
 
   @Get('pending-counts')
-  @Roles(UserRole.ADMIN, UserRole.MANAGER, UserRole.BUSINESS, UserRole.FINANCE, UserRole.SUPPORT)
+  @Roles(
+    UserRole.ADMIN,
+    UserRole.MANAGER,
+    UserRole.BUSINESS,
+    UserRole.FINANCE,
+    UserRole.SUPPORT,
+  )
   pendingCounts(@Req() req: any) {
     return this.adminService.pendingCounts(req.user.role, req.user.userId);
   }

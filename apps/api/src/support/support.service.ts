@@ -113,7 +113,11 @@ export class SupportService {
 
   async updateMeta(
     conversationId: string,
-    body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
+    body: {
+      internalNote?: string;
+      priority?: string;
+      status?: 'OPEN' | 'CLOSED';
+    },
     actorId?: string,
   ) {
     const updated = await this.prisma.supportConversation.updateMany({
@@ -124,7 +128,9 @@ export class SupportService {
         ...(body.internalNote !== undefined
           ? { internalNote: body.internalNote.trim().slice(0, 1000) }
           : {}),
-        ...(body.priority ? { priority: body.priority.trim().slice(0, 16) } : {}),
+        ...(body.priority
+          ? { priority: body.priority.trim().slice(0, 16) }
+          : {}),
         ...(body.status ? { status: body.status } : {}),
       },
     });
@@ -162,7 +168,10 @@ export class SupportService {
   ) {
     const trimmedContent = content?.trim();
 
-    if (attachmentBase64 && Buffer.byteLength(attachmentBase64, 'base64') > 8 * 1024 * 1024) {
+    if (
+      attachmentBase64 &&
+      Buffer.byteLength(attachmentBase64, 'base64') > 8 * 1024 * 1024
+    ) {
       throw new BadRequestException('Attachment must be 8 MB or smaller');
     }
 
@@ -216,7 +225,9 @@ export class SupportService {
           userId: conversation.clientId,
           type: 'SUPPORT',
           title: 'New customer service message',
-          body: (trimmedContent || 'Customer service sent an attachment.').slice(0, 160),
+          body: (
+            trimmedContent || 'Customer service sent an attachment.'
+          ).slice(0, 160),
           referenceId: conversationId,
         },
       });
@@ -237,8 +248,13 @@ export class SupportService {
   }
 
   async markRead(conversationId: string, userId: string, role: UserRole) {
-    const conversation = await this.prisma.supportConversation.findUnique({ where: { id: conversationId } });
-    if (!conversation || (role === UserRole.CLIENT && conversation.clientId !== userId)) {
+    const conversation = await this.prisma.supportConversation.findUnique({
+      where: { id: conversationId },
+    });
+    if (
+      !conversation ||
+      (role === UserRole.CLIENT && conversation.clientId !== userId)
+    ) {
       throw new ForbiddenException('You cannot access this conversation');
     }
     return this.prisma.supportMessage.updateMany({
@@ -253,32 +269,64 @@ export class SupportService {
 
   async unreadCount(userId: string, role: UserRole) {
     const count = await this.prisma.supportMessage.count({
-      where: role === UserRole.CLIENT
-        ? { conversation: { clientId: userId }, senderType: { not: 'CLIENT' }, readAt: null }
-        : { senderType: 'CLIENT', readAt: null },
+      where:
+        role === UserRole.CLIENT
+          ? {
+              conversation: { clientId: userId },
+              senderType: { not: 'CLIENT' },
+              readAt: null,
+            }
+          : { senderType: 'CLIENT', readAt: null },
     });
     return { count };
   }
 
   async status() {
     const onlineAgents = await this.prisma.userDevice.count({
-      where: { user: { role: { in: ['SUPPORT', 'ADMIN'] }, status: 'ACTIVE' }, revokedAt: null, lastSeenAt: { gte: new Date(Date.now() - 15 * 60 * 1000) } },
+      where: {
+        user: { role: { in: ['SUPPORT', 'ADMIN'] }, status: 'ACTIVE' },
+        revokedAt: null,
+        lastSeenAt: { gte: new Date(Date.now() - 15 * 60 * 1000) },
+      },
     });
     return { online: onlineAgents > 0, onlineAgents };
   }
 
   async assign(conversationId: string, assignedToId: string, actorId: string) {
-    const agent = await this.prisma.user.findFirst({ where: { id: assignedToId, role: { in: ['SUPPORT', 'ADMIN'] }, status: 'ACTIVE' } });
+    const agent = await this.prisma.user.findFirst({
+      where: {
+        id: assignedToId,
+        role: { in: ['SUPPORT', 'ADMIN'] },
+        status: 'ACTIVE',
+      },
+    });
     if (!agent) throw new BadRequestException('Support agent not found');
-    const conversation = await this.prisma.supportConversation.update({ where: { id: conversationId }, data: { assignedToId } });
-    await this.auditService.createLog({ actorId, action: 'SUPPORT_CONVERSATION_ASSIGN', resource: 'support_conversation', resourceId: conversationId, metadata: { assignedToId } });
+    const conversation = await this.prisma.supportConversation.update({
+      where: { id: conversationId },
+      data: { assignedToId },
+    });
+    await this.auditService.createLog({
+      actorId,
+      action: 'SUPPORT_CONVERSATION_ASSIGN',
+      resource: 'support_conversation',
+      resourceId: conversationId,
+      metadata: { assignedToId },
+    });
     this.gateway.conversationUpdated(conversationId);
     return conversation;
   }
 
   async reopen(conversationId: string, actorId: string) {
-    const conversation = await this.prisma.supportConversation.update({ where: { id: conversationId }, data: { status: 'OPEN' } });
-    await this.auditService.createLog({ actorId, action: 'SUPPORT_CONVERSATION_REOPEN', resource: 'support_conversation', resourceId: conversationId });
+    const conversation = await this.prisma.supportConversation.update({
+      where: { id: conversationId },
+      data: { status: 'OPEN' },
+    });
+    await this.auditService.createLog({
+      actorId,
+      action: 'SUPPORT_CONVERSATION_REOPEN',
+      resource: 'support_conversation',
+      resourceId: conversationId,
+    });
     this.gateway.conversationUpdated(conversationId);
     return conversation;
   }
@@ -345,11 +393,11 @@ export class SupportService {
       lower.includes('pan')
     ) {
       summary = '客户在咨询 KYC。';
-      suggestedReply =
-        '请上传清晰的 Aadhaar 或 PAN 文件，业务员会尽快审核。';
+      suggestedReply = '请上传清晰的 Aadhaar 或 PAN 文件，业务员会尽快审核。';
     } else if (/[\u4e00-\u9fff]/.test(trimmedContent)) {
       summary = '检测到中文消息。';
-      suggestedReply = '请根据客户内容回复英文，必要时转交会英语的客服继续处理。';
+      suggestedReply =
+        '请根据客户内容回复英文，必要时转交会英语的客服继续处理。';
     } else {
       summary = '未匹配到固定业务关键词。';
       suggestedReply = '请结合客户原文、手机号和客户编号继续核查。';

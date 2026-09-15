@@ -19,7 +19,10 @@ export class MatchingService {
     private readonly prisma: PrismaService,
     config: ConfigService,
   ) {
-    this.batchSize = this.positiveInteger(config.get('MATCHING_BATCH_SIZE'), 100);
+    this.batchSize = this.positiveInteger(
+      config.get('MATCHING_BATCH_SIZE'),
+      100,
+    );
     this.maxFillQuantity = this.positiveInteger(
       config.get('MATCHING_MAX_FILL_QUANTITY'),
       1000,
@@ -59,7 +62,10 @@ export class MatchingService {
                 instrument: { include: { quote: true } },
               },
             });
-            if (!order || !['OPEN', 'PARTIALLY_FILLED'].includes(order.status)) {
+            if (
+              !order ||
+              !['OPEN', 'PARTIALLY_FILLED'].includes(order.status)
+            ) {
               return order;
             }
             const remaining = order.quantity - order.filledQuantity;
@@ -88,7 +94,10 @@ export class MatchingService {
               }
               return tx.order.findUnique({ where: { id: order.id } });
             }
-            if (order.timeInForce === 'FOK' && remaining > this.maxFillQuantity) {
+            if (
+              order.timeInForce === 'FOK' &&
+              remaining > this.maxFillQuantity
+            ) {
               await this.cancelRemainder(tx, order);
               return tx.order.findUnique({ where: { id: order.id } });
             }
@@ -171,7 +180,9 @@ export class MatchingService {
         );
       }
       if (currentAccount.cashBalance.lessThan(netAmount)) {
-        throw new ConflictException('Insufficient cash balance during settlement');
+        throw new ConflictException(
+          'Insufficient cash balance during settlement',
+        );
       }
 
       const updatedAccount = await tx.account.update({

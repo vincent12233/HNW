@@ -8,7 +8,9 @@ describe('MatchingScanService', () => {
       return undefined;
     }),
   } as any;
-  const openSession = { isNormalMarketOpen: jest.fn().mockReturnValue(true) } as any;
+  const openSession = {
+    isNormalMarketOpen: jest.fn().mockReturnValue(true),
+  } as any;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -18,7 +20,9 @@ describe('MatchingScanService', () => {
   it('does not scan or match while the normal market is closed', async () => {
     const prisma = { order: { findMany: jest.fn() } } as any;
     const matchingService = { matchOrder: jest.fn() } as any;
-    const marketSession = { isNormalMarketOpen: jest.fn().mockReturnValue(false) } as any;
+    const marketSession = {
+      isNormalMarketOpen: jest.fn().mockReturnValue(false),
+    } as any;
     const service = new MatchingScanService(
       prisma,
       matchingService,
@@ -51,7 +55,9 @@ describe('MatchingScanService', () => {
           ]),
       },
     } as any;
-    const matchingService = { matchOrder: jest.fn().mockResolvedValue(null) } as any;
+    const matchingService = {
+      matchOrder: jest.fn().mockResolvedValue(null),
+    } as any;
     const service = new MatchingScanService(
       prisma,
       matchingService,
@@ -119,7 +125,9 @@ describe('MatchingScanService', () => {
           .mockResolvedValueOnce([{ id: 'order-a', placedAt }]),
       },
     } as any;
-    const matchingService = { matchOrder: jest.fn().mockResolvedValue(null) } as any;
+    const matchingService = {
+      matchOrder: jest.fn().mockResolvedValue(null),
+    } as any;
     const service = new MatchingScanService(
       prisma,
       matchingService,

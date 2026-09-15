@@ -30,9 +30,11 @@ describe('TrueDataProvider', () => {
     } as any;
     let tickHandler: ((values: unknown[]) => void) | undefined;
     const transport = {
-      connect: jest.fn((_items: string[], handler: (values: unknown[]) => void) => {
-        tickHandler = handler;
-      }),
+      connect: jest.fn(
+        (_items: string[], handler: (values: unknown[]) => void) => {
+          tickHandler = handler;
+        },
+      ),
       disconnect: jest.fn(),
       subscribe: jest.fn(),
       isConnected: jest.fn().mockReturnValue(true),
@@ -77,9 +79,11 @@ describe('TrueDataProvider', () => {
     } as any;
     let tickHandler: ((values: unknown[]) => void) | undefined;
     const transport = {
-      connect: jest.fn((_items: string[], handler: (values: unknown[]) => void) => {
-        tickHandler = handler;
-      }),
+      connect: jest.fn(
+        (_items: string[], handler: (values: unknown[]) => void) => {
+          tickHandler = handler;
+        },
+      ),
       disconnect: jest.fn(),
       subscribe: jest.fn(),
       isConnected: jest.fn().mockReturnValue(true),

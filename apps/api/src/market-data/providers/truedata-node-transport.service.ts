@@ -4,7 +4,10 @@ import { ConfigService } from '@nestjs/config';
 type TrueDataFeed = {
   on: (event: string, handler: (payload: unknown[]) => void) => void;
   off?: (event: string, handler: (payload: unknown[]) => void) => void;
-  removeListener?: (event: string, handler: (payload: unknown[]) => void) => void;
+  removeListener?: (
+    event: string,
+    handler: (payload: unknown[]) => void,
+  ) => void;
 };
 
 type TrueDataNodeModule = {

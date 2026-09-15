@@ -32,7 +32,9 @@ describe('IPO publication', () => {
           Object.assign(application, data);
           return { count: 1 };
         }),
-        findUniqueOrThrow: jest.fn().mockImplementation(async () => application),
+        findUniqueOrThrow: jest
+          .fn()
+          .mockImplementation(async () => application),
       },
       ipo: {
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
@@ -43,7 +45,9 @@ describe('IPO publication', () => {
       auditLog: { create: jest.fn() },
       accountTransaction: { create: jest.fn() },
     };
-    const service = new IpoService({ $transaction: (fn: any) => fn(tx) } as any);
+    const service = new IpoService({
+      $transaction: (fn: any) => fn(tx),
+    } as any);
     return { service, tx, application };
   }
 
@@ -57,22 +61,32 @@ describe('IPO publication', () => {
 
   it('publication debits once and creates outstanding debt', async () => {
     const { service, tx } = setup();
-    expect((await service.publish(['one'], 'business', 'business')).published).toBe(1);
-    expect(tx.ipoDebt.create.mock.calls[0][0].data.amount).toEqual(new Prisma.Decimal(100));
+    expect(
+      (await service.publish(['one'], 'business', 'business')).published,
+    ).toBe(1);
+    expect(tx.ipoDebt.create.mock.calls[0][0].data.amount).toEqual(
+      new Prisma.Decimal(100),
+    );
     expect(tx.notification.create).toHaveBeenCalledTimes(1);
     expect(tx.notification.create.mock.calls[0][0].data).toMatchObject({
       type: 'IPO_PAYMENT_REQUIRED',
     });
-    expect((await service.publish(['one'], 'business', 'business')).published).toBe(0);
+    expect(
+      (await service.publish(['one'], 'business', 'business')).published,
+    ).toBe(0);
     expect(tx.account.update).toHaveBeenCalledTimes(1);
   });
 
   it('rejects unallocated and out-of-scope applications', async () => {
     const { service, tx, application } = setup();
     application.draftQuantity = null;
-    expect((await service.publish(['one'], 'business', 'business')).published).toBe(0);
+    expect(
+      (await service.publish(['one'], 'business', 'business')).published,
+    ).toBe(0);
     application.draftQuantity = 10;
-    expect((await service.publish(['one'], 'other', 'other')).published).toBe(0);
+    expect((await service.publish(['one'], 'other', 'other')).published).toBe(
+      0,
+    );
     expect(tx.account.update).not.toHaveBeenCalled();
   });
 
@@ -83,7 +97,9 @@ describe('IPO publication', () => {
     const settle = jest
       .spyOn(service, 'settleIpoApplication')
       .mockResolvedValue(undefined as any);
-    expect((await service.publish(['one'], 'business', 'business')).published).toBe(1);
+    expect(
+      (await service.publish(['one'], 'business', 'business')).published,
+    ).toBe(1);
     expect(tx.account.update.mock.calls[0][0].data.cashBalance).toEqual({
       decrement: new Prisma.Decimal(200),
     });
@@ -103,7 +119,9 @@ describe('IPO publication', () => {
     application.account.cashBalance = 300;
     application.account.buyingPower = 300;
     tx.ipo.updateMany.mockResolvedValue({ count: 0 });
-    expect((await service.publish(['one'], 'business', 'business')).published).toBe(0);
+    expect(
+      (await service.publish(['one'], 'business', 'business')).published,
+    ).toBe(0);
     expect(tx.account.update).not.toHaveBeenCalled();
   });
 

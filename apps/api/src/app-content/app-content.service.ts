@@ -105,8 +105,7 @@ export class AppContentService {
       about: this.moduleMap(preferred.rows, AppContentModule.ABOUT),
       insights: this.moduleMap(preferred.rows, AppContentModule.INSIGHTS),
       updatedAt: preferred.rows.reduce(
-        (latest, row) =>
-          row.updatedAt > latest ? row.updatedAt : latest,
+        (latest, row) => (row.updatedAt > latest ? row.updatedAt : latest),
         new Date(0),
       ),
     };
@@ -115,9 +114,7 @@ export class AppContentService {
   async listAdmin(module?: string) {
     await this.ensureDefaults();
     return this.prisma.appContentEntry.findMany({
-      where: module
-        ? { module: this.parseModule(module) }
-        : undefined,
+      where: module ? { module: this.parseModule(module) } : undefined,
       orderBy: [{ module: 'asc' }, { sortOrder: 'asc' }, { key: 'asc' }],
     });
   }
@@ -125,9 +122,13 @@ export class AppContentService {
   async upsertEntry(body: AppContentUpsertInput) {
     const module = this.parseModule(body.module);
     const key = String(body.key || '').trim();
-    const locale = String(body.locale || 'en').trim().toLowerCase() || 'en';
+    const locale =
+      String(body.locale || 'en')
+        .trim()
+        .toLowerCase() || 'en';
     if (!key) throw new BadRequestException('Content key is required');
-    if (body.body == null) throw new BadRequestException('Content body is required');
+    if (body.body == null)
+      throw new BadRequestException('Content body is required');
 
     const normalizedBody =
       module === AppContentModule.SUPPORT && key === 'salesmartly_script_url'
@@ -153,12 +154,13 @@ export class AppContentService {
         locale,
       },
       update: {
-        title: body.title === undefined ? undefined : body.title?.trim() || null,
+        title:
+          body.title === undefined ? undefined : body.title?.trim() || null,
         body: normalizedBody,
         metadata:
           body.metadata === undefined
             ? undefined
-            : body.metadata ?? Prisma.JsonNull,
+            : (body.metadata ?? Prisma.JsonNull),
         isActive: body.isActive,
         sortOrder:
           body.sortOrder === undefined ? undefined : Number(body.sortOrder),
@@ -212,7 +214,10 @@ export class AppContentService {
   }
 
   async getDepositRejectMessage(locale = 'en') {
-    const wanted = String(locale || 'en').trim().toLowerCase() || 'en';
+    const wanted =
+      String(locale || 'en')
+        .trim()
+        .toLowerCase() || 'en';
     const rows = await this.prisma.appContentEntry.findMany({
       where: {
         module: AppContentModule.DEPOSIT,
@@ -236,9 +241,7 @@ export class AppContentService {
       .trim()
       .toUpperCase();
     if (
-      !Object.values(AppContentModule).includes(
-        normalized as AppContentModule,
-      )
+      !Object.values(AppContentModule).includes(normalized as AppContentModule)
     ) {
       throw new BadRequestException('Invalid content module');
     }
@@ -329,7 +332,10 @@ export class AppContentService {
       body?: string | null;
     },
   >(rows: T[], locale: string) {
-    const wanted = String(locale || 'en').trim().toLowerCase() || 'en';
+    const wanted =
+      String(locale || 'en')
+        .trim()
+        .toLowerCase() || 'en';
     const groups = new Map<string, T[]>();
     for (const row of rows) {
       const mapKey = `${row.module}:${row.key}`;

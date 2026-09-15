@@ -85,7 +85,9 @@ export class OrderCancellationService {
     const remainingQuantity = order.quantity - order.filledQuantity;
     if (remainingQuantity <= 0) {
       if (allowInactive) return { cancelled: false, order };
-      throw new BadRequestException('Order has no remaining quantity to cancel');
+      throw new BadRequestException(
+        'Order has no remaining quantity to cancel',
+      );
     }
 
     if (order.side === 'BUY') {

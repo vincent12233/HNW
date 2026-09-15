@@ -11,7 +11,10 @@ describe('MarketDataGateway', () => {
       providers: [
         MarketDataGateway,
         { provide: JwtService, useValue: { verifyAsync: jest.fn() } },
-        { provide: PrismaService, useValue: { user: { findUnique: jest.fn() } } },
+        {
+          provide: PrismaService,
+          useValue: { user: { findUnique: jest.fn() } },
+        },
       ],
     }).compile();
 

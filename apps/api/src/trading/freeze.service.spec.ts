@@ -205,8 +205,8 @@ describe('FreezeService consistency guards', () => {
       },
     } as any;
 
-    await expect(
-      service.releaseSell(tx, 'position-1', 3),
-    ).rejects.toThrow('Frozen position quantity is inconsistent with the order');
+    await expect(service.releaseSell(tx, 'position-1', 3)).rejects.toThrow(
+      'Frozen position quantity is inconsistent with the order',
+    );
   });
 });

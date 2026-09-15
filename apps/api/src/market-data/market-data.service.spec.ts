@@ -40,11 +40,7 @@ describe('MarketDataService', () => {
       ),
     } as unknown as ConfigService;
 
-    return new MarketDataService(
-      prisma as never,
-      ingestion as never,
-      config,
-    );
+    return new MarketDataService(prisma as never, ingestion as never, config);
   }
 
   it('omits enabled instruments that do not have a valid positive quote', async () => {

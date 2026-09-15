@@ -37,7 +37,9 @@ export class IndiaStockMcpProvider
     const index = this.isIndexSymbol(symbol);
     const result = await client.callTool({
       name: index ? 'get_index' : 'get_quote',
-      arguments: index ? { index: normalizedSymbol } : { symbol: normalizedSymbol },
+      arguments: index
+        ? { index: normalizedSymbol }
+        : { symbol: normalizedSymbol },
     });
 
     return this.toQuote(this.parsePayload(result.content), symbol);
@@ -123,10 +125,14 @@ export class IndiaStockMcpProvider
 
     try {
       await client.connect(transport);
-      const names = new Set((await client.listTools()).tools.map((tool) => tool.name));
+      const names = new Set(
+        (await client.listTools()).tools.map((tool) => tool.name),
+      );
       if (!names.has('get_quote') || !names.has('get_index')) {
         await client.close().catch(() => undefined);
-        throw new Error('india-stock-mcp does not expose required quote/index tools');
+        throw new Error(
+          'india-stock-mcp does not expose required quote/index tools',
+        );
       }
       this.availableTools = names;
       this.logger.log('India Stock MCP provider connected');
@@ -186,7 +192,9 @@ export class IndiaStockMcpProvider
     return [];
   }
 
-  private historyPoint(row: Record<string, unknown>): MarketHistoryPoint | null {
+  private historyPoint(
+    row: Record<string, unknown>,
+  ): MarketHistoryPoint | null {
     const open = this.number(row.open ?? row.openPrice);
     const high = this.number(row.high ?? row.highPrice);
     const low = this.number(row.low ?? row.lowPrice);
@@ -228,7 +236,10 @@ export class IndiaStockMcpProvider
     return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
   }
 
-  private toQuote(payload: QuotePayload, requestedSymbol: string): MarketQuoteResult {
+  private toQuote(
+    payload: QuotePayload,
+    requestedSymbol: string,
+  ): MarketQuoteResult {
     const priceText = this.stringNumber(
       payload.price ?? payload.last ?? payload.lastPrice,
     );
@@ -289,7 +300,9 @@ export class IndiaStockMcpProvider
       bidPrice: this.stringNumber(payload.bid ?? payload.bidPrice),
       askPrice: this.stringNumber(payload.ask ?? payload.askPrice),
       volume: this.stringNumber(payload.volume) ?? '0',
-      change: Number(new Prisma.Decimal(changePct).toDecimalPlaces(2).toFixed()),
+      change: Number(
+        new Prisma.Decimal(changePct).toDecimalPlaces(2).toFixed(),
+      ),
       source: this.name,
       updatedAt: new Date(),
     };
@@ -308,25 +321,34 @@ export class IndiaStockMcpProvider
   }
 
   private normalizeSymbol(symbol: string, exchange: string) {
-    const value = symbol.trim().toUpperCase().replace(/\.(NS|BO)$/i, '');
+    const value = symbol
+      .trim()
+      .toUpperCase()
+      .replace(/\.(NS|BO)$/i, '');
     const indexAliases: Record<string, string> = {
       NIFTY50: 'NIFTY 50',
       BANKNIFTY: 'NIFTY BANK',
     };
     if (indexAliases[value]) return indexAliases[value];
-    if (exchange.trim().toUpperCase() === 'BSE' && /^\d{6}$/.test(value)) return value;
+    if (exchange.trim().toUpperCase() === 'BSE' && /^\d{6}$/.test(value))
+      return value;
     return value;
   }
 
   private cleanSymbol(value: unknown, fallback: string) {
     const symbol = typeof value === 'string' ? value : fallback;
-    return symbol.trim().toUpperCase().replace(/\.(NS|BO)$/i, '');
+    return symbol
+      .trim()
+      .toUpperCase()
+      .replace(/\.(NS|BO)$/i, '');
   }
 
   private stringNumber(value: unknown): string | null {
     try {
       const decimal = new Prisma.Decimal(
-        typeof value === 'string' ? value.replace(/,/g, '').trim() : (value as any),
+        typeof value === 'string'
+          ? value.replace(/,/g, '').trim()
+          : (value as any),
       );
       if (!decimal.isFinite()) return null;
       return decimal.toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP).toFixed();

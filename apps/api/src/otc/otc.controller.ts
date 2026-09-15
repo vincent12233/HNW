@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -15,25 +24,38 @@ export class OtcController {
 
   @Get('offers')
   @Roles(UserRole.CLIENT)
-  offers() { return this.otc.listOffers(); }
+  offers() {
+    return this.otc.listOffers();
+  }
 
   @Post('orders')
   @Roles(UserRole.CLIENT)
   submit(@Req() req: any, @Body() body: SubmitOtcOrderDto) {
-    return this.otc.submit(req.user.userId, body.offerId, body.quantity, body.transactionKey);
+    return this.otc.submit(
+      req.user.userId,
+      body.offerId,
+      body.quantity,
+      body.transactionKey,
+    );
   }
 
   @Get('orders/me')
   @Roles(UserRole.CLIENT)
-  mine(@Req() req: any) { return this.otc.myOrders(req.user.userId); }
+  mine(@Req() req: any) {
+    return this.otc.myOrders(req.user.userId);
+  }
 
   @Get('orders/pending')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  pending(@Req() req: any) { return this.otc.pendingOrders(req.user.userId); }
+  pending(@Req() req: any) {
+    return this.otc.pendingOrders(req.user.userId);
+  }
 
   @Get('admin/offers')
   @Roles(UserRole.ADMIN)
-  adminOffers() { return this.otc.listAdminOffers(); }
+  adminOffers() {
+    return this.otc.listAdminOffers();
+  }
 
   @Post('admin/offers')
   @Roles(UserRole.ADMIN)
@@ -55,7 +77,11 @@ export class OtcController {
 
   @Patch('orders/:id/reject')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  reject(@Req() req: any, @Param('id') id: string, @Body() body: { note?: string }) {
+  reject(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { note?: string },
+  ) {
     return this.otc.reject(req.user.userId, id, body.note);
   }
 }

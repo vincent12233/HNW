@@ -181,7 +181,10 @@ export class AdminTradesService {
     const normalizedExecutionId = executionId.trim();
 
     const trade = await this.prisma.trade.findFirst({
-      where: { executionId: normalizedExecutionId, ...this.financeTradeScope(role) },
+      where: {
+        executionId: normalizedExecutionId,
+        ...this.financeTradeScope(role),
+      },
       include: {
         account: {
           select: {
@@ -190,10 +193,10 @@ export class AdminTradesService {
             currency: true,
             isLive: true,
             user: {
-                select: {
-                  id: true,
-                  fullName: true,
-                  phone: true,
+              select: {
+                id: true,
+                fullName: true,
+                phone: true,
                 role: true,
                 status: true,
               },
@@ -230,6 +233,10 @@ export class AdminTradesService {
   private financeTradeScope(role: string): Prisma.TradeWhereInput {
     if (role !== 'FINANCE') return {};
     const fixedCode = fixedInviteCode();
-    return { account: { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } } };
+    return {
+      account: {
+        user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } },
+      },
+    };
   }
 }

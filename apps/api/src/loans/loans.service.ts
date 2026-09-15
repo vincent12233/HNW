@@ -1,4 +1,10 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomBytes } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
@@ -74,8 +80,16 @@ export class LoansService {
 
   async clientLoans(userId: string) {
     return this.prisma.loanApplication.findMany({
-      where: { account: { userId } }, orderBy: { createdAt: 'desc' },
-      select: { id: true, orderNo: true, status: true, approvedAmount: true, outstandingAmount: true, createdAt: true },
+      where: { account: { userId } },
+      orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        orderNo: true,
+        status: true,
+        approvedAmount: true,
+        outstandingAmount: true,
+        createdAt: true,
+      },
     });
   }
 
@@ -85,11 +99,17 @@ export class LoansService {
       if (!account) throw new NotFoundException('Trading account not found');
       // Lock the account so repeated requests reuse its pending application.
       await tx.$queryRaw`SELECT id FROM accounts WHERE id = ${account.id} FOR UPDATE`;
-      const existing = await tx.loanApplication.findFirst({ where: { accountId: account.id, status: LoanStatus.PENDING } });
+      const existing = await tx.loanApplication.findFirst({
+        where: { accountId: account.id, status: LoanStatus.PENDING },
+      });
       if (existing) return { id: existing.id, status: existing.status };
-      const loan = await tx.loanApplication.create({ data: {
-        accountId: account.id, orderNo: this.generateOrderNo(), requestedAmount: 0,
-      } });
+      const loan = await tx.loanApplication.create({
+        data: {
+          accountId: account.id,
+          orderNo: this.generateOrderNo(),
+          requestedAmount: 0,
+        },
+      });
       return { id: loan.id, status: loan.status };
     });
   }
@@ -118,7 +138,11 @@ export class LoansService {
     };
   }
 
-  async list(userId: string, role: UserRole, query: { search?: string; status?: LoanStatus }) {
+  async list(
+    userId: string,
+    role: UserRole,
+    query: { search?: string; status?: LoanStatus },
+  ) {
     const search = query.search?.trim();
     const fixedCode = fixedInviteCode();
     const where: Prisma.LoanApplicationWhereInput = {
@@ -133,19 +157,48 @@ export class LoansService {
           }
         : {}),
       ...(role === UserRole.SUPPORT
-        ? { account: { user: { assignedBusinessId: userId, usedInviteCode: { code: fixedCode } } } }
+        ? {
+            account: {
+              user: {
+                assignedBusinessId: userId,
+                usedInviteCode: { code: fixedCode },
+              },
+            },
+          }
         : {}),
       ...(role === UserRole.FINANCE
-        ? { account: { user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } } } }
+        ? {
+            account: {
+              user: { NOT: { usedInviteCode: { is: { code: fixedCode } } } },
+            },
+          }
         : {}),
       ...(search
         ? {
             OR: [
               { orderNo: { contains: search, mode: 'insensitive' } },
-              { account: { accountNumber: { contains: search, mode: 'insensitive' } } },
-              { account: { user: { fullName: { contains: search, mode: 'insensitive' } } } },
-              { account: { user: { phone: { contains: search, mode: 'insensitive' } } } },
-              { account: { user: { customerNo: { contains: search, mode: 'insensitive' } } } },
+              {
+                account: {
+                  accountNumber: { contains: search, mode: 'insensitive' },
+                },
+              },
+              {
+                account: {
+                  user: { fullName: { contains: search, mode: 'insensitive' } },
+                },
+              },
+              {
+                account: {
+                  user: { phone: { contains: search, mode: 'insensitive' } },
+                },
+              },
+              {
+                account: {
+                  user: {
+                    customerNo: { contains: search, mode: 'insensitive' },
+                  },
+                },
+              },
             ],
           }
         : {}),
@@ -171,9 +224,11 @@ export class LoansService {
       note?: string;
     },
   ) {
-    if (role !== UserRole.FINANCE) throw new ForbiddenException('Only finance can create loans');
+    if (role !== UserRole.FINANCE)
+      throw new ForbiddenException('Only finance can create loans');
     const amount = this.validateLoanAmount(body.amount);
-    if (!body.accountNumber?.trim()) throw new BadRequestException('请输入交易账号');
+    if (!body.accountNumber?.trim())
+      throw new BadRequestException('请输入交易账号');
 
     const account = await this.prisma.account.findUnique({
       where: {
@@ -246,65 +301,80 @@ export class LoansService {
     if (!requestBody) throw new BadRequestException('批准参数不完整');
     const approvedAmount = this.validateLoanAmount(requestBody.approvedAmount);
 
-    const result = await this.prisma.$transaction(async (tx) => {
-      const loan = await tx.loanApplication.findUnique({
-        where: { id },
-        include: { account: { include: { user: { include: { usedInviteCode: true } } } } },
-      });
-      if (!loan) throw new NotFoundException('贷款申请不存在');
-      this.assertFinanceLoanVisible(role, loan.account.user?.usedInviteCode?.code);
-      if (loan.status !== LoanStatus.PENDING) throw new ConflictException('贷款申请已被处理');
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const loan = await tx.loanApplication.findUnique({
+          where: { id },
+          include: {
+            account: {
+              include: { user: { include: { usedInviteCode: true } } },
+            },
+          },
+        });
+        if (!loan) throw new NotFoundException('贷款申请不存在');
+        this.assertFinanceLoanVisible(
+          role,
+          loan.account.user?.usedInviteCode?.code,
+        );
+        if (loan.status !== LoanStatus.PENDING)
+          throw new ConflictException('贷款申请已被处理');
 
-      const before = moneyDecimal(loan.account.cashBalance);
-      const after = before.add(approvedAmount);
-      const interestRate =
-        requestBody.interestRate === undefined || requestBody.interestRate === ''
-          ? moneyDecimal(loan.interestRate ?? 0)
-          : this.validateNonNegativeRate(requestBody.interestRate);
+        const before = moneyDecimal(loan.account.cashBalance);
+        const after = before.add(approvedAmount);
+        const interestRate =
+          requestBody.interestRate === undefined ||
+          requestBody.interestRate === ''
+            ? moneyDecimal(loan.interestRate ?? 0)
+            : this.validateNonNegativeRate(requestBody.interestRate);
 
-      const claimed = await tx.loanApplication.updateMany({
-        where: { id, status: LoanStatus.PENDING },
-        data: {
-          approvedAmount,
-          outstandingAmount: approvedAmount,
-          interestRate,
-          dueDate: requestBody.dueDate ? new Date(requestBody.dueDate) : loan.dueDate,
-          note: requestBody.note?.trim() || loan.note,
-          status: LoanStatus.DISBURSED,
-          approvedById: operatorId,
-          approvedAt: new Date(),
-          disbursedAt: new Date(),
-        },
-      });
-      if (claimed.count !== 1) throw new ConflictException('贷款申请已被其他操作员处理');
+        const claimed = await tx.loanApplication.updateMany({
+          where: { id, status: LoanStatus.PENDING },
+          data: {
+            approvedAmount,
+            outstandingAmount: approvedAmount,
+            interestRate,
+            dueDate: requestBody.dueDate
+              ? new Date(requestBody.dueDate)
+              : loan.dueDate,
+            note: requestBody.note?.trim() || loan.note,
+            status: LoanStatus.DISBURSED,
+            approvedById: operatorId,
+            approvedAt: new Date(),
+            disbursedAt: new Date(),
+          },
+        });
+        if (claimed.count !== 1)
+          throw new ConflictException('贷款申请已被其他操作员处理');
 
-      await tx.account.update({
-        where: { id: loan.accountId },
-        data: {
-          cashBalance: after,
-          buyingPower: { increment: approvedAmount },
-        },
-      });
+        await tx.account.update({
+          where: { id: loan.accountId },
+          data: {
+            cashBalance: after,
+            buyingPower: { increment: approvedAmount },
+          },
+        });
 
-      await tx.accountTransaction.create({
-        data: {
-          accountId: loan.accountId,
-          type: 'LOAN_DISBURSEMENT',
-          status: 'COMPLETED',
-          amount: approvedAmount,
-          balanceBefore: before,
-          balanceAfter: after,
-          referenceId: loan.orderNo,
-          note: requestBody.note?.trim() || '贷款审核通过并自动到账',
-          createdById: operatorId,
-        },
-      });
+        await tx.accountTransaction.create({
+          data: {
+            accountId: loan.accountId,
+            type: 'LOAN_DISBURSEMENT',
+            status: 'COMPLETED',
+            amount: approvedAmount,
+            balanceBefore: before,
+            balanceAfter: after,
+            referenceId: loan.orderNo,
+            note: requestBody.note?.trim() || '贷款审核通过并自动到账',
+            createdById: operatorId,
+          },
+        });
 
-      return tx.loanApplication.findUniqueOrThrow({
-        where: { id },
-        include: this.includeCustomer(),
-      });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return tx.loanApplication.findUniqueOrThrow({
+          where: { id },
+          include: this.includeCustomer(),
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     await this.auditService.createLog({
       actorId: operatorId,
@@ -319,10 +389,16 @@ export class LoansService {
   }
 
   async reject(id: string, operatorId: string, role: UserRole, note?: string) {
-    const loan = await this.prisma.loanApplication.findUnique({ where: { id }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
+    const loan = await this.prisma.loanApplication.findUnique({
+      where: { id },
+      include: {
+        account: { include: { user: { include: { usedInviteCode: true } } } },
+      },
+    });
     if (!loan) throw new NotFoundException('贷款申请不存在');
     this.assertFinanceLoanVisible(role, loan.account.user.usedInviteCode?.code);
-    if (loan.status !== LoanStatus.PENDING) throw new ConflictException('贷款申请已被处理');
+    if (loan.status !== LoanStatus.PENDING)
+      throw new ConflictException('贷款申请已被处理');
 
     const claimed = await this.prisma.loanApplication.updateMany({
       where: { id, status: LoanStatus.PENDING },
@@ -333,8 +409,12 @@ export class LoansService {
         note: note?.trim() || loan.note,
       },
     });
-    if (claimed.count !== 1) throw new ConflictException('贷款申请已被其他操作员处理');
-    const result = await this.prisma.loanApplication.findUniqueOrThrow({ where: { id }, include: this.includeCustomer() });
+    if (claimed.count !== 1)
+      throw new ConflictException('贷款申请已被其他操作员处理');
+    const result = await this.prisma.loanApplication.findUniqueOrThrow({
+      where: { id },
+      include: this.includeCustomer(),
+    });
 
     await this.auditService.createLog({
       actorId: operatorId,
@@ -348,14 +428,22 @@ export class LoansService {
     return result;
   }
 
-  async disburse(id: string, operatorId: string, role: UserRole, note?: string) {
+  async disburse(
+    id: string,
+    operatorId: string,
+    role: UserRole,
+    note?: string,
+  ) {
     const loan = await this.prisma.loanApplication.findUnique({
       where: { id },
-      include: { account: { include: { user: { include: { usedInviteCode: true } } } } },
+      include: {
+        account: { include: { user: { include: { usedInviteCode: true } } } },
+      },
     });
     if (!loan) throw new NotFoundException('贷款申请不存在');
     this.assertFinanceLoanVisible(role, loan.account.user.usedInviteCode?.code);
-    if (loan.status !== LoanStatus.APPROVED) throw new BadRequestException('贷款审核通过后已自动到账，无需重复放款');
+    if (loan.status !== LoanStatus.APPROVED)
+      throw new BadRequestException('贷款审核通过后已自动到账，无需重复放款');
 
     const amount = moneyDecimal(loan.approvedAmount ?? 0);
     if (amount.lte(0)) throw new BadRequestException('贷款批准金额不正确');
@@ -407,7 +495,12 @@ export class LoansService {
   ) {
     const repayment = this.validateLoanAmount(amount);
 
-    const loan = await this.prisma.loanApplication.findUnique({ where: { id }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
+    const loan = await this.prisma.loanApplication.findUnique({
+      where: { id },
+      include: {
+        account: { include: { user: { include: { usedInviteCode: true } } } },
+      },
+    });
     if (!loan) throw new NotFoundException('贷款申请不存在');
     this.assertFinanceLoanVisible(role, loan.account.user.usedInviteCode?.code);
     if (
@@ -426,7 +519,9 @@ export class LoansService {
       where: { id },
       data: {
         outstandingAmount: nextOutstanding,
-        status: nextOutstanding.lte(0) ? LoanStatus.REPAID : LoanStatus.PARTIAL_REPAID,
+        status: nextOutstanding.lte(0)
+          ? LoanStatus.REPAID
+          : LoanStatus.PARTIAL_REPAID,
         closedAt: nextOutstanding.lte(0) ? new Date() : null,
         note: note?.trim() || loan.note,
         approvedById: operatorId,
@@ -451,7 +546,12 @@ export class LoansService {
   }
 
   async markOverdue(id: string, role: UserRole) {
-    const loan = await this.prisma.loanApplication.findUnique({ where: { id }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
+    const loan = await this.prisma.loanApplication.findUnique({
+      where: { id },
+      include: {
+        account: { include: { user: { include: { usedInviteCode: true } } } },
+      },
+    });
     if (!loan) throw new NotFoundException('贷款申请不存在');
     this.assertFinanceLoanVisible(role, loan.account.user.usedInviteCode?.code);
     if (
@@ -481,7 +581,8 @@ export class LoansService {
   }
 
   private assertFinanceLoanVisible(role: UserRole, inviteCode?: string | null) {
-    if (role !== UserRole.FINANCE) throw new ForbiddenException('Only finance can manage loans');
+    if (role !== UserRole.FINANCE)
+      throw new ForbiddenException('Only finance can manage loans');
     const fixedCode = fixedInviteCode();
     if (role === UserRole.FINANCE && inviteCode?.toUpperCase() === fixedCode) {
       throw new NotFoundException('贷款申请不存在');

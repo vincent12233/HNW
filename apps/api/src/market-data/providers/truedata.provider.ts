@@ -94,7 +94,9 @@ export class TrueDataProvider implements StreamingMarketDataProvider {
   }
 
   ingestRawTick(values: unknown[]) {
-    const providerSymbol = String(values[0] ?? '').trim().toUpperCase();
+    const providerSymbol = String(values[0] ?? '')
+      .trim()
+      .toUpperCase();
     const exchange = this.exchangeByProviderSymbol.get(providerSymbol);
     this.handler?.(this.normalizer.fromArray(values, exchange));
   }

@@ -37,10 +37,7 @@ export class SupportController {
 
   @Post('conversations/:id/tags')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
-  updateTags(
-    @Param('id') id: string,
-    @Body() body: { tags?: string[] },
-  ) {
+  updateTags(@Param('id') id: string, @Body() body: { tags?: string[] }) {
     return this.supportService.updateTags(id, body.tags || []);
   }
 
@@ -49,7 +46,12 @@ export class SupportController {
   updateMeta(
     @Req() req: any,
     @Param('id') id: string,
-    @Body() body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
+    @Body()
+    body: {
+      internalNote?: string;
+      priority?: string;
+      status?: 'OPEN' | 'CLOSED';
+    },
   ) {
     return this.supportService.updateMeta(id, body, req.user.userId);
   }
@@ -78,8 +80,16 @@ export class SupportController {
 
   @Post('conversations/:id/assign')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
-  assign(@Req() req: any, @Param('id') id: string, @Body() body: { assignedToId?: string }) {
-    return this.supportService.assign(id, body.assignedToId || req.user.userId, req.user.userId);
+  assign(
+    @Req() req: any,
+    @Param('id') id: string,
+    @Body() body: { assignedToId?: string },
+  ) {
+    return this.supportService.assign(
+      id,
+      body.assignedToId || req.user.userId,
+      req.user.userId,
+    );
   }
 
   @Post('conversations/:id/reopen')

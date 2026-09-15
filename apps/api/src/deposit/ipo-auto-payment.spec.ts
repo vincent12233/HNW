@@ -8,7 +8,11 @@ describe('IPO automatic payment from approved deposits', () => {
       account: {
         findUnique: jest
           .fn()
-          .mockResolvedValue({ id: 'account', userId: 'client', cashBalance: 0 }),
+          .mockResolvedValue({
+            id: 'account',
+            userId: 'client',
+            cashBalance: 0,
+          }),
         update: jest.fn(),
       },
       user: { count: jest.fn().mockResolvedValue(1) },
@@ -47,19 +51,30 @@ describe('IPO automatic payment from approved deposits', () => {
       depositRequest: {
         findUnique: jest
           .fn()
-          .mockResolvedValue({ status: 'PENDING', amount, accountId: 'account' }),
+          .mockResolvedValue({
+            status: 'PENDING',
+            amount,
+            accountId: 'account',
+          }),
       },
       $transaction: (fn: any) => fn(tx),
     };
-    const service = new DepositService(prisma as any, {
-      createLog: jest.fn(),
-    } as any);
+    const service = new DepositService(
+      prisma as any,
+      {
+        createLog: jest.fn(),
+      } as any,
+    );
     return { service, tx };
   }
 
   it('partial deposit reduces debt without generating holdings', async () => {
     const { service, tx } = setup(40);
-    const result = await service.approveDeposit('deposit', 'finance', 'FINANCE');
+    const result = await service.approveDeposit(
+      'deposit',
+      'finance',
+      'FINANCE',
+    );
     expect(result.ipoRepayment).toEqual(new Prisma.Decimal(40));
     expect(result.creditedAmount).toEqual(new Prisma.Decimal(0));
     expect(tx.ipoDebt.update.mock.calls[0][0].data).toMatchObject({
@@ -72,7 +87,11 @@ describe('IPO automatic payment from approved deposits', () => {
 
   it('full payment creates holdings and credits only surplus', async () => {
     const { service, tx } = setup(150);
-    const result = await service.approveDeposit('deposit', 'finance', 'FINANCE');
+    const result = await service.approveDeposit(
+      'deposit',
+      'finance',
+      'FINANCE',
+    );
     expect(result.ipoRepayment).toEqual(new Prisma.Decimal(100));
     expect(result.creditedAmount).toEqual(new Prisma.Decimal(50));
     expect(tx.position.create).toHaveBeenCalled();

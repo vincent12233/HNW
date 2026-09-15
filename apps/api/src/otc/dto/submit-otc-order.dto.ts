@@ -1,11 +1,5 @@
 import { Type } from 'class-transformer';
-import {
-  IsInt,
-  IsString,
-  Matches,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsInt, IsString, Matches, Max, Min } from 'class-validator';
 
 export class SubmitOtcOrderDto {
   @IsString()

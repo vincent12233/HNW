@@ -107,11 +107,41 @@ export class ApprovalService {
           note:
             !debit && ipoRepayment.gt(0)
               ? `${payload.note || 'Approved credit'}; ${ipoRepayment.toFixed(2)} applied to IPO debt`
-              : payload.note,
+              : payload.note || null,
           createdById: deciderId,
         },
       });
-      return tx.approvalRequest.update({ where: { id }, data: { status: 'APPROVED', decidedById: deciderId, decisionNote: note, decidedAt: new Date() } });
+
+      await tx.notification.create({
+        data: {
+          userId: account.userId,
+          type: 'ACCOUNT',
+          title: debit ? 'Funds adjusted' : 'Funds credited',
+          body: debit
+            ? `${amount.negated().toFixed(2)} has been applied to your account balance.`
+            : ipoRepayment.gt(0)
+              ? `${creditedAmount.toFixed(2)} added to balance; ${ipoRepayment.toFixed(2)} applied to IPO debt.`
+              : `${creditedAmount.toFixed(2)} has been applied to your account balance.`,
+          referenceId: payload.referenceId,
+        },
+      });
+
+      const approved = await tx.approvalRequest.update({
+        where: { id },
+        data: {
+          status: 'APPROVED',
+          decidedById: deciderId,
+          decisionNote: note,
+          decidedAt: new Date(),
+        },
+      });
+      return {
+        ...approved,
+        amount: amount.toFixed(2),
+        ipoRepayment: ipoRepayment.toFixed(2),
+        creditedAmount: creditedAmount.toFixed(2),
+        direction: debit ? 'DEBIT' : 'CREDIT',
+      };
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     await this.audit.createLog({ actorId: deciderId, action: `APPROVAL_${decision}`, resource: 'APPROVAL', resourceId: id, description: `Independent reviewer ${decision.toLowerCase()} the operation`, metadata: { note: note || null } });
     return result;

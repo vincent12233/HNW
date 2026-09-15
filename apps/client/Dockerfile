@@ -13,7 +13,7 @@ ARG ALLOW_INSECURE_API=true
 RUN --mount=type=cache,id=india-trading-pub-cache,target=/root/.pub-cache \
     flutter build web --release --no-pub --pwa-strategy=none --dart-define=API_BASE_URL=${API_BASE_URL} --dart-define=ALLOW_INSECURE_API=${ALLOW_INSECURE_API}
 
-FROM nginx:1.30.4-alpine AS runner
+FROM nginx:1.31.5-alpine AS runner
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/build/web /usr/share/nginx/html
 EXPOSE 80

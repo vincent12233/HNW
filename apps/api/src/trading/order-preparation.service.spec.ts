@@ -37,9 +37,7 @@ describe('OrderPreparationService', () => {
 
   it('rejects stale quotes before execution pricing', () => {
     expect(() =>
-      (service as any).assertQuoteFresh(
-        new Date(Date.now() - 120001),
-      ),
+      (service as any).assertQuoteFresh(new Date(Date.now() - 120001)),
     ).toThrow('Market quote is temporarily unavailable');
   });
 
@@ -60,11 +58,7 @@ describe('OrderPreparationService', () => {
 
   it('rejects non-positive or crossed execution quotes', () => {
     expect(() =>
-      (service as any).assertQuotePrices(
-        new Prisma.Decimal(0),
-        null,
-        null,
-      ),
+      (service as any).assertQuotePrices(new Prisma.Decimal(0), null, null),
     ).toThrow('Market quote is temporarily unavailable');
     expect(() =>
       (service as any).assertQuotePrices(

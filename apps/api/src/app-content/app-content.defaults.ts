@@ -1007,7 +1007,6 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     sortOrder: 130,
   },
 
-
   // DEPOSIT (copy only — no receiving / bank accounts)
   {
     module: AppContentModule.DEPOSIT,
@@ -1199,16 +1198,14 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
   {
     module: AppContentModule.SUPPORT,
     key: 'hours',
-    body:
-      'Online customer service hours: Mon-Sun 09:00-22:00 (IST). We are here to help with deposits, trading and account questions.',
+    body: 'Online customer service hours: Mon-Sun 09:00-22:00 (IST). We are here to help with deposits, trading and account questions.',
     locale: 'en',
     sortOrder: 20,
   },
   {
     module: AppContentModule.SUPPORT,
     key: 'hours',
-    body:
-      'ऑनलाइन ग्राहक सेवा समय: सोम-रवि 09:00-22:00 (IST)। जमा, ट्रेडिंग और खाते में सहायता के लिए हम उपलब्ध हैं।',
+    body: 'ऑनलाइन ग्राहक सेवा समय: सोम-रवि 09:00-22:00 (IST)। जमा, ट्रेडिंग और खाते में सहायता के लिए हम उपलब्ध हैं।',
     locale: 'hi',
     sortOrder: 20,
   },

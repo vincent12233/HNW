@@ -11,11 +11,7 @@ describe('MarketDataProviderService', () => {
       getQuote: jest.fn().mockResolvedValue({ symbol: 'RELIANCE' }),
     } as any;
     const config = { get: jest.fn().mockReturnValue(undefined) } as any;
-    const service = new MarketDataProviderService(
-      config,
-      indiaStockMcp,
-      yahoo,
-    );
+    const service = new MarketDataProviderService(config, indiaStockMcp, yahoo);
 
     expect(service.providerName).toBe('YAHOO');
     await service.getQuote('RELIANCE', 'NSE');
@@ -26,11 +22,7 @@ describe('MarketDataProviderService', () => {
     const indiaStockMcp = { name: 'INDIA_STOCK_MCP' } as any;
     const yahoo = { name: 'YAHOO' } as any;
     const config = { get: jest.fn().mockReturnValue('INDIA_STOCK_MCP') } as any;
-    const service = new MarketDataProviderService(
-      config,
-      indiaStockMcp,
-      yahoo,
-    );
+    const service = new MarketDataProviderService(config, indiaStockMcp, yahoo);
 
     expect(service.providerName).toBe('INDIA_STOCK_MCP');
   });
@@ -39,11 +31,7 @@ describe('MarketDataProviderService', () => {
     const indiaStockMcp = { name: 'INDIA_STOCK_MCP' } as any;
     const yahoo = { name: 'YAHOO' } as any;
     const config = { get: jest.fn().mockReturnValue('UNKNOWN') } as any;
-    const service = new MarketDataProviderService(
-      config,
-      indiaStockMcp,
-      yahoo,
-    );
+    const service = new MarketDataProviderService(config, indiaStockMcp, yahoo);
 
     expect(() => service.providerName).toThrow(
       'Unsupported market data provider: UNKNOWN',

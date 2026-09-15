@@ -6,7 +6,11 @@ describe('MarketDataHealthService', () => {
     const service = new MarketDataHealthService(config);
 
     expect(service.getStatus()).toEqual(
-      expect.objectContaining({ healthy: false, stale: true, lastQuoteAt: null }),
+      expect.objectContaining({
+        healthy: false,
+        stale: true,
+        lastQuoteAt: null,
+      }),
     );
   });
 

@@ -23,7 +23,9 @@ export class FreezeService {
       account.buyingPower.lessThan(amount) ||
       availableCash(account).lessThan(amount)
     ) {
-      throw new BadRequestException('Insufficient buying power or cash balance');
+      throw new BadRequestException(
+        'Insufficient buying power or cash balance',
+      );
     }
 
     await tx.account.update({
@@ -53,7 +55,9 @@ export class FreezeService {
     positionId: string,
     quantity: number,
   ) {
-    const position = await tx.position.findUnique({ where: { id: positionId } });
+    const position = await tx.position.findUnique({
+      where: { id: positionId },
+    });
     if (!position) throw new BadRequestException('Position not found');
 
     const availableQuantity = position.quantity - position.frozenQuantity;
@@ -118,10 +122,14 @@ export class FreezeService {
     quantity: number,
   ) {
     if (quantity <= 0) {
-      throw new ConflictException('SELL order has no frozen quantity to release');
+      throw new ConflictException(
+        'SELL order has no frozen quantity to release',
+      );
     }
 
-    const position = await tx.position.findUnique({ where: { id: positionId } });
+    const position = await tx.position.findUnique({
+      where: { id: positionId },
+    });
     if (!position) {
       throw new ConflictException(
         'Position for this SELL order no longer exists',

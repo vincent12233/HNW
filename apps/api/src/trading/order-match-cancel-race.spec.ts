@@ -169,9 +169,9 @@ describe('order match/cancel race guards', () => {
 
     const service = new OrderCancellationService(prisma, freezeService);
 
-    await expect(service.cancel('user-1', activeOrder.id)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
+    await expect(
+      service.cancel('user-1', activeOrder.id),
+    ).rejects.toBeInstanceOf(BadRequestException);
 
     expect(prisma.$transaction).toHaveBeenCalledTimes(2);
     expect(freezeService.releaseBuy).toHaveBeenCalledTimes(1);

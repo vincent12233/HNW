@@ -28,14 +28,31 @@ describe('normalizeSaleSmartlyScriptUrl', () => {
 });
 
 describe('AppContentService locale selection', () => {
-  const service = Object.create(AppContentService.prototype) as AppContentService;
+  const service = Object.create(
+    AppContentService.prototype,
+  ) as AppContentService;
 
   it('prefers requested locale then falls back to English', () => {
     const pick = (service as any).pickLocale(
       [
-        { module: 'HOME', key: 'banner.title', locale: 'en', body: 'Live markets' },
-        { module: 'HOME', key: 'banner.title', locale: 'hi', body: 'लाइव मार्केट' },
-        { module: 'HOME', key: 'banner.subtitle', locale: 'en', body: 'Explore equities' },
+        {
+          module: 'HOME',
+          key: 'banner.title',
+          locale: 'en',
+          body: 'Live markets',
+        },
+        {
+          module: 'HOME',
+          key: 'banner.title',
+          locale: 'hi',
+          body: 'लाइव मार्केट',
+        },
+        {
+          module: 'HOME',
+          key: 'banner.subtitle',
+          locale: 'en',
+          body: 'Explore equities',
+        },
       ],
       'hi',
     );

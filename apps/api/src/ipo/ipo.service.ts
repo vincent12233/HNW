@@ -92,7 +92,6 @@ export class IpoService {
     return ipo.issuePrice.toFixed(2);
   }
 
-
   /**
    * Shares still free for a new/updated draft after other PENDING drafts.
    * Own draft is excluded so operators can edit quantity up to true headroom.
@@ -427,8 +426,7 @@ export class IpoService {
     });
     if (!ipo) throw new NotFoundException('IPO not found');
 
-    const editable =
-      ipo.status === 'DRAFT' || ipo._count.applications === 0;
+    const editable = ipo.status === 'DRAFT' || ipo._count.applications === 0;
     if (!editable) {
       throw new ConflictException(
         'IPO pricing can only be edited while DRAFT or before any applications',
@@ -886,7 +884,9 @@ export class IpoService {
           throw new BadRequestException(
             'Save IPO allocation before publication',
           );
-        const totalAmount = moneyDecimal(new Prisma.Decimal(quantity).mul(price));
+        const totalAmount = moneyDecimal(
+          new Prisma.Decimal(quantity).mul(price),
+        );
 
         const instrumentId = application.ipo.instrumentId;
         const account = application.account;
@@ -900,7 +900,9 @@ export class IpoService {
           buyingPowerAvailable,
           totalAmount,
         );
-        const debitAmount = payable.gt(0) ? moneyDecimal(payable) : new Prisma.Decimal(0);
+        const debitAmount = payable.gt(0)
+          ? moneyDecimal(payable)
+          : new Prisma.Decimal(0);
         let debtAmount = new Prisma.Decimal(0);
         const fullyPaid = debitAmount.gte(totalAmount);
 
@@ -1025,16 +1027,15 @@ export class IpoService {
         await tx.notification.create({
           data: {
             userId: account.userId,
-            type:
-              debtAmount.gt(0) ? 'IPO_PAYMENT_REQUIRED' : 'IPO_ALLOTMENT_SETTLED',
-            title:
-              debtAmount.gt(0)
-                ? 'IPO allotment payment required'
-                : 'IPO allotment completed',
-            body:
-              debtAmount.gt(0)
-                ? `${quantity} shares of ${application.ipo.symbol} allotted for INR ${totalAmount.toFixed(2)}. Add INR ${debtAmount.toFixed(2)} to complete your subscription. No further action is needed after funds arrive.`
-                : `${quantity} shares of ${application.ipo.symbol} allotted. INR ${totalAmount.toFixed(2)} deducted. Payment completed and shares added to your holdings.`,
+            type: debtAmount.gt(0)
+              ? 'IPO_PAYMENT_REQUIRED'
+              : 'IPO_ALLOTMENT_SETTLED',
+            title: debtAmount.gt(0)
+              ? 'IPO allotment payment required'
+              : 'IPO allotment completed',
+            body: debtAmount.gt(0)
+              ? `${quantity} shares of ${application.ipo.symbol} allotted for INR ${totalAmount.toFixed(2)}. Add INR ${debtAmount.toFixed(2)} to complete your subscription. No further action is needed after funds arrive.`
+              : `${quantity} shares of ${application.ipo.symbol} allotted. INR ${totalAmount.toFixed(2)} deducted. Payment completed and shares added to your holdings.`,
             referenceId: application.id,
           },
         });
@@ -1044,10 +1045,9 @@ export class IpoService {
 
           debtAmount,
 
-          message:
-            debtAmount.gt(0)
-              ? 'IPO allocated with outstanding debt'
-              : 'IPO allocated and settled successfully',
+          message: debtAmount.gt(0)
+            ? 'IPO allocated with outstanding debt'
+            : 'IPO allocated and settled successfully',
         };
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },

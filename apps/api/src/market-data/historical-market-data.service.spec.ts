@@ -8,7 +8,9 @@ describe('HistoricalMarketDataService', () => {
   function createService(history: any[] = []) {
     const prisma = {
       instrument: {
-        findFirst: jest.fn().mockResolvedValue({ symbol: 'RELIANCE', exchange: 'NSE' }),
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({ symbol: 'RELIANCE', exchange: 'NSE' }),
       },
     };
     const mcp = {
@@ -26,28 +28,34 @@ describe('HistoricalMarketDataService', () => {
     mockedAxios.get.mockResolvedValue({
       data: {
         chart: {
-          result: [{
-            timestamp: [1723453200, 1723456800],
-            indicators: { quote: [{
-              open: [100, 101],
-              high: [102, 103],
-              low: [99, 100],
-              close: [101, 102],
-              volume: [1000, 1100],
-            }] },
-            events: {
-              dividends: {
-                '1723453200': { date: 1723453200, amount: 10 },
+          result: [
+            {
+              timestamp: [1723453200, 1723456800],
+              indicators: {
+                quote: [
+                  {
+                    open: [100, 101],
+                    high: [102, 103],
+                    low: [99, 100],
+                    close: [101, 102],
+                    volume: [1000, 1100],
+                  },
+                ],
               },
-              splits: {
-                '1723456800': {
-                  date: 1723456800,
-                  numerator: 2,
-                  denominator: 1,
+              events: {
+                dividends: {
+                  '1723453200': { date: 1723453200, amount: 10 },
+                },
+                splits: {
+                  '1723456800': {
+                    date: 1723456800,
+                    numerator: 2,
+                    denominator: 1,
+                  },
                 },
               },
             },
-          }],
+          ],
         },
       },
     } as never);
@@ -61,32 +69,49 @@ describe('HistoricalMarketDataService', () => {
     ['3M', '3mo', '1d'],
     ['6M', '6mo', '1d'],
     ['1Y', '1y', '1d'],
-  ] as const)('loads real %s Yahoo history', async (range, providerRange, interval) => {
-    const { service } = createService();
-    mockYahoo();
+  ] as const)(
+    'loads real %s Yahoo history',
+    async (range, providerRange, interval) => {
+      const { service } = createService();
+      mockYahoo();
 
-    const result = await service.getHistory('RELIANCE', range, 'NSE');
+      const result = await service.getHistory('RELIANCE', range, 'NSE');
 
-    expect(result.interval).toBe(interval);
-    expect(result.exchange).toBe('NSE');
-    expect(result.timezone).toBe('Asia/Kolkata');
-    expect(result.data).toHaveLength(2);
-    expect(result.events).toEqual([
-      expect.objectContaining({ type: 'DIVIDEND', value: 10 }),
-      expect.objectContaining({ type: 'SPLIT', value: 2 }),
-    ]);
-    expect(mockedAxios.get).toHaveBeenCalledWith(
-      expect.stringContaining('RELIANCE.NS'),
-      expect.objectContaining({
-        params: expect.objectContaining({ range: providerRange, interval }),
-      }),
-    );
-  });
+      expect(result.interval).toBe(interval);
+      expect(result.exchange).toBe('NSE');
+      expect(result.timezone).toBe('Asia/Kolkata');
+      expect(result.data).toHaveLength(2);
+      expect(result.events).toEqual([
+        expect.objectContaining({ type: 'DIVIDEND', value: 10 }),
+        expect.objectContaining({ type: 'SPLIT', value: 2 }),
+      ]);
+      expect(mockedAxios.get).toHaveBeenCalledWith(
+        expect.stringContaining('RELIANCE.NS'),
+        expect.objectContaining({
+          params: expect.objectContaining({ range: providerRange, interval }),
+        }),
+      );
+    },
+  );
 
   it('prefers real India Stock MCP daily data for one month', async () => {
     const history = [
-      { date: '2026-08-10T00:00:00Z', open: 100, high: 105, low: 99, close: 104, volume: 1000 },
-      { date: '2026-08-11T00:00:00Z', open: 104, high: 106, low: 102, close: 105, volume: 1200 },
+      {
+        date: '2026-08-10T00:00:00Z',
+        open: 100,
+        high: 105,
+        low: 99,
+        close: 104,
+        volume: 1000,
+      },
+      {
+        date: '2026-08-11T00:00:00Z',
+        open: 104,
+        high: 106,
+        low: 102,
+        close: 105,
+        volume: 1200,
+      },
     ];
     const { service, mcp } = createService(history);
 
@@ -104,7 +129,9 @@ describe('HistoricalMarketDataService', () => {
     await service.getHistory('RELIANCE', '1D', 'BSE');
 
     expect(prisma.instrument.findFirst).toHaveBeenCalledWith(
-      expect.objectContaining({ where: expect.objectContaining({ exchange: 'BSE' }) }),
+      expect.objectContaining({
+        where: expect.objectContaining({ exchange: 'BSE' }),
+      }),
     );
   });
 

@@ -1,21 +1,8 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Post,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { IpoService } from './ipo.service';
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('ipo')
 @UseGuards(JwtAuthGuard)
@@ -49,5 +36,4 @@ export class ClientIpoController {
   getMyDebts(@Req() request: AuthenticatedRequest) {
     return this.ipoService.listMyDebts(request.user.userId);
   }
-
 }

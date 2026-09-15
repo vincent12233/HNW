@@ -133,7 +133,8 @@ export class StreamingMarketDataService
       void this.ingestion
         .ingest(quote.exchange, quote, 'STOCK')
         .catch((error: unknown) => {
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           this.logger.error(
             `Streaming quote ingestion failed for ${quote.exchange}:${quote.symbol}: ${message}`,
           );

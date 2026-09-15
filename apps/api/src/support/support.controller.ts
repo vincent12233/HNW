@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('support')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -20,7 +21,7 @@ export class SupportController {
   constructor(private readonly supportService: SupportService) {}
 
   @Post('conversations')
-  createConversation(@Req() req: any) {
+  createConversation(@Req() req: AuthenticatedRequest) {
     return this.supportService.createConversation(req.user.userId);
   }
 
@@ -31,43 +32,45 @@ export class SupportController {
   }
 
   @Get('conversations/me')
-  myConversations(@Req() req: any) {
+  myConversations(@Req() req: AuthenticatedRequest) {
     return this.supportService.listClientConversations(req.user.userId);
   }
 
   @Post('conversations/:id/tags')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
-  updateTags(
-    @Param('id') id: string,
-    @Body() body: { tags?: string[] },
-  ) {
+  updateTags(@Param('id') id: string, @Body() body: { tags?: string[] }) {
     return this.supportService.updateTags(id, body.tags || []);
   }
 
   @Post('conversations/:id/meta')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
   updateMeta(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
-    @Body() body: { internalNote?: string; priority?: string; status?: 'OPEN' | 'CLOSED' },
+    @Body()
+    body: {
+      internalNote?: string;
+      priority?: string;
+      status?: 'OPEN' | 'CLOSED';
+    },
   ) {
     return this.supportService.updateMeta(id, body, req.user.userId);
   }
 
   @Get('conversations/:id/messages')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN, UserRole.CLIENT)
-  getMessages(@Req() req: any, @Param('id') id: string) {
+  getMessages(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.supportService.getMessages(id, req.user.userId, req.user.role);
   }
 
   @Post('conversations/:id/read')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN, UserRole.CLIENT)
-  markRead(@Req() req: any, @Param('id') id: string) {
+  markRead(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.supportService.markRead(id, req.user.userId, req.user.role);
   }
 
   @Get('unread-count')
-  unreadCount(@Req() req: any) {
+  unreadCount(@Req() req: AuthenticatedRequest) {
     return this.supportService.unreadCount(req.user.userId, req.user.role);
   }
 
@@ -78,20 +81,28 @@ export class SupportController {
 
   @Post('conversations/:id/assign')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
-  assign(@Req() req: any, @Param('id') id: string, @Body() body: { assignedToId?: string }) {
-    return this.supportService.assign(id, body.assignedToId || req.user.userId, req.user.userId);
+  assign(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: { assignedToId?: string },
+  ) {
+    return this.supportService.assign(
+      id,
+      body.assignedToId || req.user.userId,
+      req.user.userId,
+    );
   }
 
   @Post('conversations/:id/reopen')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN)
-  reopen(@Req() req: any, @Param('id') id: string) {
+  reopen(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.supportService.reopen(id, req.user.userId);
   }
 
   @Post('messages')
   @Roles(UserRole.SUPPORT, UserRole.ADMIN, UserRole.CLIENT)
   sendMessage(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: {
       conversationId: string;

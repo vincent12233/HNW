@@ -171,11 +171,7 @@ describe('OrderCancellationService', () => {
 
     await service.cancel('user-1', order.id);
 
-    expect(freezeService.releaseSell).toHaveBeenCalledWith(
-      tx,
-      'position-1',
-      3,
-    );
+    expect(freezeService.releaseSell).toHaveBeenCalledWith(tx, 'position-1', 3);
     expect(freezeService.releaseBuy).not.toHaveBeenCalled();
     expect(tx.order.update).toHaveBeenCalledWith(
       expect.objectContaining({

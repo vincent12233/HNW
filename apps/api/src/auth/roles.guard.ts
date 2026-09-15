@@ -8,14 +8,7 @@
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { ROLES_KEY } from './roles.decorator';
-
-interface AuthenticatedRequest {
-  user?: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from './authenticated-request';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -34,7 +27,9 @@ export class RolesGuard implements CanActivate {
       return true;
     }
 
-    const request = context.switchToHttp().getRequest<AuthenticatedRequest>();
+    const request = context
+      .switchToHttp()
+      .getRequest<{ user?: AuthenticatedRequest['user'] }>();
 
     if (!request.user?.userId) {
       throw new UnauthorizedException('Authentication required');

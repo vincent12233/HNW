@@ -11,5 +11,7 @@ export interface StreamingMarketDataProvider {
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   subscribe(subscriptions: MarketSubscription[]): Promise<void>;
-  onQuote(handler: (quote: MarketQuoteResult & { exchange: string }) => void): void;
+  onQuote(
+    handler: (quote: MarketQuoteResult & { exchange: string }) => void,
+  ): void;
 }

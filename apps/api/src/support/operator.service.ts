@@ -7,7 +7,7 @@ export class OperatorService {
   constructor(private readonly prisma: PrismaService) {}
 
   private scope() {
-    const fixedCode = (fixedInviteCode());
+    const fixedCode = fixedInviteCode();
     return {
       role: 'CLIENT' as const,
       usedInviteCode: { code: fixedCode },
@@ -61,13 +61,19 @@ export class OperatorService {
             isLive: true,
             positions: {
               where: { quantity: { gt: 0 } },
-              select: { quantity: true, frozenQuantity: true, averagePrice: true, instrument: { select: { symbol: true, name: true } } },
+              select: {
+                quantity: true,
+                frozenQuantity: true,
+                averagePrice: true,
+                instrument: { select: { symbol: true, name: true } },
+              },
             },
           },
         },
       },
     });
-    if (!customer) throw new NotFoundException('客户不属于专用运营员邀请码范围');
+    if (!customer)
+      throw new NotFoundException('客户不属于专用运营员邀请码范围');
     return customer;
   }
 }

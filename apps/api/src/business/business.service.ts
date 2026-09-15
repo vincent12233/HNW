@@ -38,10 +38,9 @@ export class BusinessService {
 
   private generateInviteCode() {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    return Array.from(
-      { length: 7 },
-      () => chars[randomInt(chars.length)],
-    ).join('');
+    return Array.from({ length: 7 }, () => chars[randomInt(chars.length)]).join(
+      '',
+    );
   }
 
   private normalizePositionCategory(value?: string) {
@@ -63,11 +62,7 @@ export class BusinessService {
     name: string;
     category: string | null;
   }) {
-    const text = [
-      instrument.symbol,
-      instrument.name,
-      instrument.category ?? '',
-    ]
+    const text = [instrument.symbol, instrument.name, instrument.category ?? '']
       .join(' ')
       .toUpperCase();
 
@@ -323,7 +318,8 @@ export class BusinessService {
       ipoDebtAmount: moneyDecimal(openIpoDebts._sum.amount ?? 0)
         .sub(moneyDecimal(openIpoDebts._sum.paidAmount ?? 0))
         .toFixed(2),
-      loanOutstandingAmount: loanOutstanding._sum.outstandingAmount?.toFixed(2) ?? '0.00',
+      loanOutstandingAmount:
+        loanOutstanding._sum.outstandingAmount?.toFixed(2) ?? '0.00',
       loanOutstandingCount: loanOutstanding._count,
       totalAssets,
       unusedInviteCodes,
@@ -627,18 +623,28 @@ export class BusinessService {
 
   async currentInviteCode(businessUserId: string, previousId?: string) {
     const where = {
-      businessProfile: { userId: businessUserId, isActive: true, user: { role: UserRole.BUSINESS, status: UserStatus.ACTIVE } },
+      businessProfile: {
+        userId: businessUserId,
+        isActive: true,
+        user: { role: UserRole.BUSINESS, status: UserStatus.ACTIVE },
+      },
       status: InviteCodeStatus.UNUSED,
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
     };
     const select = { id: true, code: true, expiresAt: true };
     const next = await this.prisma.inviteCode.findFirst({
       where: { ...where, ...(previousId ? { id: { not: previousId } } : {}) },
-      select, orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      select,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
     });
-    const code = next ?? (previousId ? await this.prisma.inviteCode.findFirst({
-      where: { ...where, id: previousId }, select,
-    }) : null);
+    const code =
+      next ??
+      (previousId
+        ? await this.prisma.inviteCode.findFirst({
+            where: { ...where, id: previousId },
+            select,
+          })
+        : null);
     return { code };
   }
 
@@ -934,12 +940,17 @@ export class BusinessService {
     }
 
     const claimed = await this.prisma.user.updateMany({
-      where: { id: customerId, role: UserRole.CLIENT, assignedBusinessId: businessUserId },
+      where: {
+        id: customerId,
+        role: UserRole.CLIENT,
+        assignedBusinessId: businessUserId,
+      },
       data: {
         status,
       },
     });
-    if (claimed.count !== 1) throw new NotFoundException('客户不存在或不属于当前业务员');
+    if (claimed.count !== 1)
+      throw new NotFoundException('客户不存在或不属于当前业务员');
 
     const updated = await this.prisma.user.findUniqueOrThrow({
       where: { id: customerId },
@@ -974,17 +985,41 @@ export class BusinessService {
   }
 
   async updateCustomerTier(actorId: string, customerId: string, tier: unknown) {
-    if (typeof tier !== 'string' || !['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].includes(tier)) {
+    if (
+      typeof tier !== 'string' ||
+      !['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].includes(tier)
+    ) {
       throw new BadRequestException('Invalid membership tier');
     }
-    return this.prisma.$transaction(async tx => {
-      const scope = { id: customerId, role: UserRole.CLIENT, assignedBusinessId: actorId };
-      const previous = await tx.user.findFirst({ where: scope, select: { clientTier: true } });
-      if (!previous) throw new NotFoundException('Customer not assigned to this business user');
-      const result = await tx.user.updateMany({ where: scope, data: { clientTier: tier } });
-      if (result.count !== 1) throw new NotFoundException('Customer assignment changed');
-      await tx.auditLog.create({ data: { actorId, action: 'BUSINESS_CLIENT_TIER_UPDATED', resource: 'User',
-        resourceId: customerId, metadata: { previous: previous.clientTier, tier } } });
+    return this.prisma.$transaction(async (tx) => {
+      const scope = {
+        id: customerId,
+        role: UserRole.CLIENT,
+        assignedBusinessId: actorId,
+      };
+      const previous = await tx.user.findFirst({
+        where: scope,
+        select: { clientTier: true },
+      });
+      if (!previous)
+        throw new NotFoundException(
+          'Customer not assigned to this business user',
+        );
+      const result = await tx.user.updateMany({
+        where: scope,
+        data: { clientTier: tier },
+      });
+      if (result.count !== 1)
+        throw new NotFoundException('Customer assignment changed');
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'BUSINESS_CLIENT_TIER_UPDATED',
+          resource: 'User',
+          resourceId: customerId,
+          metadata: { previous: previous.clientTier, tier },
+        },
+      });
       return { id: customerId, clientTier: tier };
     });
   }
@@ -1053,41 +1088,41 @@ export class BusinessService {
         reservedByOthers,
       );
       return {
-      id: application.id,
-      quantity: application.quantity,
-      amount: application.amount.toFixed(2),
-      status: application.status,
-      paymentStatus: application.paymentStatus,
-      allocatedQuantity: application.allocatedQuantity,
-      draftQuantity: application.draftQuantity,
-      draftPrice: application.draftPrice?.toFixed(2) ?? null,
-      publishedAt: application.publishedAt,
-      allocatedPrice: application.allocatedPrice?.toFixed(2) ?? null,
-      allocatedAmount: application.allocatedAmount?.toFixed(2) ?? null,
-      createdAt: application.createdAt,
-      ipo: {
-        id: application.ipo.id,
-        symbol: application.ipo.symbol,
-        companyName: application.ipo.companyName,
-        issuePrice: application.ipo.issuePrice.toFixed(2),
-        totalShares: application.ipo.totalShares,
-        availableShares: application.ipo.availableShares,
-        reservedDraftShares: reservedByOthers,
-        remainingShares,
-        status: application.ipo.status,
-      },
-      account: {
-        ...application.account,
-        cashBalance: application.account.cashBalance.toFixed(2),
-      },
-      debt: application.ipoDebt
-        ? {
-            amount: application.ipoDebt.amount.toFixed(2),
-            paidAmount: application.ipoDebt.paidAmount.toFixed(2),
-            status: application.ipoDebt.status,
-          }
-        : null,
-    };
+        id: application.id,
+        quantity: application.quantity,
+        amount: application.amount.toFixed(2),
+        status: application.status,
+        paymentStatus: application.paymentStatus,
+        allocatedQuantity: application.allocatedQuantity,
+        draftQuantity: application.draftQuantity,
+        draftPrice: application.draftPrice?.toFixed(2) ?? null,
+        publishedAt: application.publishedAt,
+        allocatedPrice: application.allocatedPrice?.toFixed(2) ?? null,
+        allocatedAmount: application.allocatedAmount?.toFixed(2) ?? null,
+        createdAt: application.createdAt,
+        ipo: {
+          id: application.ipo.id,
+          symbol: application.ipo.symbol,
+          companyName: application.ipo.companyName,
+          issuePrice: application.ipo.issuePrice.toFixed(2),
+          totalShares: application.ipo.totalShares,
+          availableShares: application.ipo.availableShares,
+          reservedDraftShares: reservedByOthers,
+          remainingShares,
+          status: application.ipo.status,
+        },
+        account: {
+          ...application.account,
+          cashBalance: application.account.cashBalance.toFixed(2),
+        },
+        debt: application.ipoDebt
+          ? {
+              amount: application.ipoDebt.amount.toFixed(2),
+              paidAmount: application.ipoDebt.paidAmount.toFixed(2),
+              status: application.ipoDebt.status,
+            }
+          : null,
+      };
     });
   }
 
@@ -1105,9 +1140,16 @@ export class BusinessService {
       select: { id: true },
     });
     if (!ownedApplication) {
-      throw new NotFoundException('IPO application is not assigned to this operator');
+      throw new NotFoundException(
+        'IPO application is not assigned to this operator',
+      );
     }
-    const result = await this.ipoService.allocate(applicationId, quantity, price, businessUserId);
+    const result = await this.ipoService.allocate(
+      applicationId,
+      quantity,
+      price,
+      businessUserId,
+    );
 
     await this.auditService.createLog({
       actorId: businessUserId,
@@ -1131,7 +1173,9 @@ export class BusinessService {
       query.dateTo &&
       new Date(query.dateFrom) > new Date(query.dateTo)
     ) {
-      throw new BadRequestException('dateFrom must be earlier than or equal to dateTo');
+      throw new BadRequestException(
+        'dateFrom must be earlier than or equal to dateTo',
+      );
     }
 
     const search = query.search?.trim();
@@ -1160,11 +1204,33 @@ export class BusinessService {
         ? {
             OR: [
               { clientOrderId: { contains: search, mode: 'insensitive' } },
-              { account: { accountNumber: { contains: search, mode: 'insensitive' } } },
-              { account: { user: { fullName: { contains: search, mode: 'insensitive' } } } },
-              { account: { user: { phone: { contains: search, mode: 'insensitive' } } } },
-              { account: { user: { customerNo: { contains: search, mode: 'insensitive' } } } },
-              { instrument: { symbol: { contains: search, mode: 'insensitive' } } },
+              {
+                account: {
+                  accountNumber: { contains: search, mode: 'insensitive' },
+                },
+              },
+              {
+                account: {
+                  user: { fullName: { contains: search, mode: 'insensitive' } },
+                },
+              },
+              {
+                account: {
+                  user: { phone: { contains: search, mode: 'insensitive' } },
+                },
+              },
+              {
+                account: {
+                  user: {
+                    customerNo: { contains: search, mode: 'insensitive' },
+                  },
+                },
+              },
+              {
+                instrument: {
+                  symbol: { contains: search, mode: 'insensitive' },
+                },
+              },
             ],
           }
         : {}),
@@ -1230,7 +1296,9 @@ export class BusinessService {
       query.dateTo &&
       new Date(query.dateFrom) > new Date(query.dateTo)
     ) {
-      throw new BadRequestException('dateFrom must be earlier than or equal to dateTo');
+      throw new BadRequestException(
+        'dateFrom must be earlier than or equal to dateTo',
+      );
     }
 
     const search = query.search?.trim();
@@ -1257,12 +1325,38 @@ export class BusinessService {
         ? {
             OR: [
               { executionId: { contains: search, mode: 'insensitive' } },
-              { order: { clientOrderId: { contains: search, mode: 'insensitive' } } },
-              { account: { accountNumber: { contains: search, mode: 'insensitive' } } },
-              { account: { user: { fullName: { contains: search, mode: 'insensitive' } } } },
-              { account: { user: { phone: { contains: search, mode: 'insensitive' } } } },
-              { account: { user: { customerNo: { contains: search, mode: 'insensitive' } } } },
-              { instrument: { symbol: { contains: search, mode: 'insensitive' } } },
+              {
+                order: {
+                  clientOrderId: { contains: search, mode: 'insensitive' },
+                },
+              },
+              {
+                account: {
+                  accountNumber: { contains: search, mode: 'insensitive' },
+                },
+              },
+              {
+                account: {
+                  user: { fullName: { contains: search, mode: 'insensitive' } },
+                },
+              },
+              {
+                account: {
+                  user: { phone: { contains: search, mode: 'insensitive' } },
+                },
+              },
+              {
+                account: {
+                  user: {
+                    customerNo: { contains: search, mode: 'insensitive' },
+                  },
+                },
+              },
+              {
+                instrument: {
+                  symbol: { contains: search, mode: 'insensitive' },
+                },
+              },
             ],
           }
         : {}),
@@ -1329,18 +1423,43 @@ export class BusinessService {
   async myTradePairs(businessUserId: string, customerId?: string) {
     if (customerId) {
       const assigned = await this.prisma.user.count({
-        where: { id: customerId, role: UserRole.CLIENT, assignedBusinessId: businessUserId },
+        where: {
+          id: customerId,
+          role: UserRole.CLIENT,
+          assignedBusinessId: businessUserId,
+        },
       });
       if (!assigned) throw new NotFoundException('Customer not found');
     }
 
     const trades = await this.prisma.trade.findMany({
       where: {
-        account: { user: { role: UserRole.CLIENT, assignedBusinessId: businessUserId, ...(customerId ? { id: customerId } : {}) } },
+        account: {
+          user: {
+            role: UserRole.CLIENT,
+            assignedBusinessId: businessUserId,
+            ...(customerId ? { id: customerId } : {}),
+          },
+        },
       },
       include: {
-        account: { select: { id: true, accountNumber: true, user: { select: { id: true, customerNo: true, fullName: true, phone: true } } } },
-        instrument: { select: { id: true, exchange: true, symbol: true, name: true } },
+        account: {
+          select: {
+            id: true,
+            accountNumber: true,
+            user: {
+              select: {
+                id: true,
+                customerNo: true,
+                fullName: true,
+                phone: true,
+              },
+            },
+          },
+        },
+        instrument: {
+          select: { id: true, exchange: true, symbol: true, name: true },
+        },
         order: { select: { side: true } },
       },
       orderBy: { executedAt: 'asc' },
@@ -1361,19 +1480,32 @@ export class BusinessService {
       while (sellRemaining > 0 && queue.length) {
         const lot = queue[0];
         const quantity = Math.min(sellRemaining, lot.remaining);
-        const buyFee = Number(lot.trade.fees) * quantity / lot.trade.quantity;
-        const sellFee = Number(trade.fees) * quantity / trade.quantity;
+        const buyFee = (Number(lot.trade.fees) * quantity) / lot.trade.quantity;
+        const sellFee = (Number(trade.fees) * quantity) / trade.quantity;
         const buyPrice = Number(lot.trade.price);
         const sellPrice = Number(trade.price);
         rows.push({
           id: `${lot.trade.id}:${trade.id}:${lot.trade.quantity - lot.remaining}`,
-          status: 'CLOSED', quantity,
+          status: 'CLOSED',
+          quantity,
           customer: lot.trade.account.user,
           accountNumber: lot.trade.account.accountNumber,
           instrument: lot.trade.instrument,
-          buyExecutionId: lot.trade.executionId, buyTime: lot.trade.executedAt, buyPrice, buyFee,
-          sellExecutionId: trade.executionId, sellTime: trade.executedAt, sellPrice, sellFee,
-          holdingSeconds: Math.max(0, Math.floor((trade.executedAt.getTime() - lot.trade.executedAt.getTime()) / 1000)),
+          buyExecutionId: lot.trade.executionId,
+          buyTime: lot.trade.executedAt,
+          buyPrice,
+          buyFee,
+          sellExecutionId: trade.executionId,
+          sellTime: trade.executedAt,
+          sellPrice,
+          sellFee,
+          holdingSeconds: Math.max(
+            0,
+            Math.floor(
+              (trade.executedAt.getTime() - lot.trade.executedAt.getTime()) /
+                1000,
+            ),
+          ),
           realizedPnl: (sellPrice - buyPrice) * quantity - buyFee - sellFee,
         });
         lot.remaining -= quantity;
@@ -1385,18 +1517,33 @@ export class BusinessService {
     for (const queue of queues.values()) {
       for (const lot of queue) {
         if (lot.remaining <= 0) continue;
-        const buyFee = Number(lot.trade.fees) * lot.remaining / lot.trade.quantity;
+        const buyFee =
+          (Number(lot.trade.fees) * lot.remaining) / lot.trade.quantity;
         rows.push({
-          id: `${lot.trade.id}:OPEN`, status: 'OPEN', quantity: lot.remaining,
-          customer: lot.trade.account.user, accountNumber: lot.trade.account.accountNumber,
-          instrument: lot.trade.instrument, buyExecutionId: lot.trade.executionId,
-          buyTime: lot.trade.executedAt, buyPrice: Number(lot.trade.price), buyFee,
-          sellExecutionId: null, sellTime: null, sellPrice: null, sellFee: null,
-          holdingSeconds: null, realizedPnl: null,
+          id: `${lot.trade.id}:OPEN`,
+          status: 'OPEN',
+          quantity: lot.remaining,
+          customer: lot.trade.account.user,
+          accountNumber: lot.trade.account.accountNumber,
+          instrument: lot.trade.instrument,
+          buyExecutionId: lot.trade.executionId,
+          buyTime: lot.trade.executedAt,
+          buyPrice: Number(lot.trade.price),
+          buyFee,
+          sellExecutionId: null,
+          sellTime: null,
+          sellPrice: null,
+          sellFee: null,
+          holdingSeconds: null,
+          realizedPnl: null,
         });
       }
     }
-    rows.sort((a, b) => new Date(b.sellTime ?? b.buyTime).getTime() - new Date(a.sellTime ?? a.buyTime).getTime());
+    rows.sort(
+      (a, b) =>
+        new Date(b.sellTime ?? b.buyTime).getTime() -
+        new Date(a.sellTime ?? a.buyTime).getTime(),
+    );
     return { data: rows, total: rows.length, matchingMethod: 'FIFO' };
   }
 
@@ -1419,13 +1566,45 @@ export class BusinessService {
         ...(search
           ? {
               OR: [
-                { account: { accountNumber: { contains: search, mode: 'insensitive' } } },
-                { account: { user: { customerNo: { contains: search, mode: 'insensitive' } } } },
-                { account: { user: { fullName: { contains: search, mode: 'insensitive' } } } },
-                { account: { user: { phone: { contains: search, mode: 'insensitive' } } } },
-                { instrument: { symbol: { contains: search, mode: 'insensitive' } } },
-                { instrument: { name: { contains: search, mode: 'insensitive' } } },
-                { instrument: { category: { contains: search, mode: 'insensitive' } } },
+                {
+                  account: {
+                    accountNumber: { contains: search, mode: 'insensitive' },
+                  },
+                },
+                {
+                  account: {
+                    user: {
+                      customerNo: { contains: search, mode: 'insensitive' },
+                    },
+                  },
+                },
+                {
+                  account: {
+                    user: {
+                      fullName: { contains: search, mode: 'insensitive' },
+                    },
+                  },
+                },
+                {
+                  account: {
+                    user: { phone: { contains: search, mode: 'insensitive' } },
+                  },
+                },
+                {
+                  instrument: {
+                    symbol: { contains: search, mode: 'insensitive' },
+                  },
+                },
+                {
+                  instrument: {
+                    name: { contains: search, mode: 'insensitive' },
+                  },
+                },
+                {
+                  instrument: {
+                    category: { contains: search, mode: 'insensitive' },
+                  },
+                },
               ],
             }
           : {}),
@@ -1748,138 +1927,68 @@ export class BusinessService {
       .sort((a, b) => b.customerCount - a.customerCount);
   }
 
-async myRiskDashboard(businessUserId: string) {
+  async myRiskDashboard(businessUserId: string) {
+    const [
+      sharedIpRisks,
+      sharedDeviceRisks,
+      failedLogin24h,
+      highRiskCustomers,
+    ] = await Promise.all([
+      this.sharedIpRisks(businessUserId),
 
-  const [
-    sharedIpRisks,
-    sharedDeviceRisks,
-    failedLogin24h,
-    highRiskCustomers,
-  ] = await Promise.all([
+      this.sharedDeviceRisks(businessUserId),
 
+      this.prisma.loginAudit.count({
+        where: {
+          success: false,
 
-    this.sharedIpRisks(
-      businessUserId,
-    ),
-
-
-
-    this.sharedDeviceRisks(
-      businessUserId,
-    ),
-
-
-
-    this.prisma.loginAudit.count({
-
-      where: {
-
-        success: false,
-
-        createdAt: {
-          gte: new Date(
-            Date.now() -
-            24 * 60 * 60 * 1000,
-          ),
-        },
-
-
-        user: {
-
-          assignedBusinessId:
-            businessUserId,
-
-        },
-
-      },
-
-    }),
-
-
-
-
-    this.prisma.user.count({
-
-      where: {
-
-        role: UserRole.CLIENT,
-
-
-        assignedBusinessId:
-          businessUserId,
-
-
-        loginAudits: {
-
-          some: {
-
-            success: false,
-
-            createdAt: {
-
-              gte: new Date(
-                Date.now() -
-                24 * 60 * 60 * 1000,
-              ),
-
-            },
-
+          createdAt: {
+            gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
           },
 
+          user: {
+            assignedBusinessId: businessUserId,
+          },
         },
+      }),
 
-      },
+      this.prisma.user.count({
+        where: {
+          role: UserRole.CLIENT,
 
-    }),
+          assignedBusinessId: businessUserId,
 
+          loginAudits: {
+            some: {
+              success: false,
 
-  ]);
+              createdAt: {
+                gte: new Date(Date.now() - 24 * 60 * 60 * 1000),
+              },
+            },
+          },
+        },
+      }),
+    ]);
 
-
-
-  return {
-
-
-    sharedIpCustomers:
-      new Set(
-
-        sharedIpRisks.flatMap(
-          item =>
-            item.customers.map(
-              customer =>
-                customer.id,
-            ),
+    return {
+      sharedIpCustomers: new Set(
+        sharedIpRisks.flatMap((item) =>
+          item.customers.map((customer) => customer.id),
         ),
-
       ).size,
 
-
-
-    sharedDeviceCustomers:
-      new Set(
-
-        sharedDeviceRisks.flatMap(
-          item =>
-            item.customers.map(
-              customer =>
-                customer.id,
-            ),
+      sharedDeviceCustomers: new Set(
+        sharedDeviceRisks.flatMap((item) =>
+          item.customers.map((customer) => customer.id),
         ),
-
       ).size,
 
+      failedLogin24h,
 
-
-    failedLogin24h,
-
-
-
-    highRiskCustomers,
-
-
-  };
-
-}
+      highRiskCustomers,
+    };
+  }
 
   async sharedDeviceRisks(businessUserId: string) {
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000);

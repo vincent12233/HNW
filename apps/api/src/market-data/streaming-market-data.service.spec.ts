@@ -1,7 +1,7 @@
 import { StreamingMarketDataService } from './streaming-market-data.service';
 
 describe('StreamingMarketDataService', () => {
-  const health = () => ({ setStreamingStatus: jest.fn() } as any);
+  const health = () => ({ setStreamingStatus: jest.fn() }) as any;
 
   it('does not connect when streaming is disabled', async () => {
     const config = { get: jest.fn().mockReturnValue('false') } as any;
@@ -74,7 +74,9 @@ describe('StreamingMarketDataService', () => {
     const provider = {
       name: 'TRUEDATA',
       providerSymbolCount: 1,
-      connect: jest.fn().mockRejectedValue(new Error('TRUEDATA_USER is required')),
+      connect: jest
+        .fn()
+        .mockRejectedValue(new Error('TRUEDATA_USER is required')),
       disconnect: jest.fn(),
       subscribe: jest.fn().mockResolvedValue(undefined),
       onQuote: jest.fn(),
@@ -86,9 +88,9 @@ describe('StreamingMarketDataService', () => {
     } as any;
     const prisma = {
       instrument: {
-        findMany: jest.fn().mockResolvedValue([
-          { symbol: 'RELIANCE', exchange: 'NSE' },
-        ]),
+        findMany: jest
+          .fn()
+          .mockResolvedValue([{ symbol: 'RELIANCE', exchange: 'NSE' }]),
       },
     } as any;
     const healthService = health();

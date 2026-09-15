@@ -18,6 +18,7 @@ import { KycService } from './kyc.service';
 import type { KycSubmissionInput } from './kyc.service';
 import { KycAccessGuard } from './kyc-access.guard';
 import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scope.guard';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('kyc')
 export class KycController {
@@ -26,7 +27,7 @@ export class KycController {
   @Post('submit')
   @UseGuards(KycAccessGuard)
   submit(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: KycSubmissionInput,
   ) {
@@ -36,7 +37,7 @@ export class KycController {
   @Get('business/pending')
   @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  pendingForBusiness(@Req() req: any) {
+  pendingForBusiness(@Req() req: AuthenticatedRequest) {
     return this.kycService.pendingForBusiness(req.user.userId);
   }
 
@@ -44,7 +45,7 @@ export class KycController {
   @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   fileForBusiness(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('submissionId') submissionId: string,
     @Query('side') side?: string,
   ) {
@@ -59,7 +60,7 @@ export class KycController {
 
   @Get('status')
   @UseGuards(KycAccessGuard)
-  status(@Req() req: any) {
+  status(@Req() req: AuthenticatedRequest) {
     return this.kycService.status(req.user.userId);
   }
 
@@ -67,7 +68,7 @@ export class KycController {
   @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   review(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: {
       submissionId: string;

@@ -1,4 +1,8 @@
-import { ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
+import {
+  ExecutionContext,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { PrismaService } from '../prisma/prisma.service';
 import { RolesGuard } from './roles.guard';
@@ -24,30 +28,45 @@ describe('RolesGuard', () => {
   it('allows routes without role metadata', async () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValue(undefined);
     await expect(guard.canActivate(context)).resolves.toBe(true);
-    expect((prisma.user.findUnique as jest.Mock)).not.toHaveBeenCalled();
+    expect(prisma.user.findUnique as jest.Mock).not.toHaveBeenCalled();
   });
 
   it('rejects requests without an authenticated user', async () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['ADMIN']);
     request.user = undefined;
-    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('rejects inactive accounts even when the token role looks valid', async () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['ADMIN']);
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'ADMIN', status: 'SUSPENDED' });
-    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(UnauthorizedException);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      role: 'ADMIN',
+      status: 'SUSPENDED',
+    });
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
   });
 
   it('rejects a role that is not permitted by the endpoint', async () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['FINANCE']);
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'BUSINESS', status: 'ACTIVE' });
-    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(ForbiddenException);
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      role: 'BUSINESS',
+      status: 'ACTIVE',
+    });
+    await expect(guard.canActivate(context)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
   });
 
   it('uses the current database role and allows a permitted active user', async () => {
     (reflector.getAllAndOverride as jest.Mock).mockReturnValue(['FINANCE']);
-    (prisma.user.findUnique as jest.Mock).mockResolvedValue({ role: 'FINANCE', status: 'ACTIVE' });
+    (prisma.user.findUnique as jest.Mock).mockResolvedValue({
+      role: 'FINANCE',
+      status: 'ACTIVE',
+    });
     await expect(guard.canActivate(context)).resolves.toBe(true);
     expect(request.user.role).toBe('FINANCE');
   });

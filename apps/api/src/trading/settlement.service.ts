@@ -36,7 +36,9 @@ export class SettlementService {
       (account.buyingPower.lessThan(netAmount) ||
         availableCash(account).lessThan(netAmount))
     ) {
-      throw new BadRequestException('Insufficient buying power or cash balance');
+      throw new BadRequestException(
+        'Insufficient buying power or cash balance',
+      );
     }
 
     const balanceBefore = account.cashBalance;

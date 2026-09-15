@@ -13,9 +13,7 @@ export class MarketDataProviderService {
   ) {}
 
   get provider(): MarketDataProvider {
-    const name = (
-      this.config.get<string>('MARKET_DATA_PROVIDER') ?? 'YAHOO'
-    )
+    const name = (this.config.get<string>('MARKET_DATA_PROVIDER') ?? 'YAHOO')
       .trim()
       .toUpperCase();
 

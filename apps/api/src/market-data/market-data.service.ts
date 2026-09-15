@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Exchange,
@@ -250,14 +254,18 @@ export class MarketDataService {
     try {
       priceDecimal = new Prisma.Decimal(price);
     } catch {
-      throw new BadRequestException('price must be a positive price with up to 4 decimals');
+      throw new BadRequestException(
+        'price must be a positive price with up to 4 decimals',
+      );
     }
     if (
       !priceDecimal.isFinite() ||
       !priceDecimal.greaterThan(0) ||
       !priceDecimal.equals(priceDecimal.toDecimalPlaces(4))
     ) {
-      throw new BadRequestException('price must be a positive price with up to 4 decimals');
+      throw new BadRequestException(
+        'price must be a positive price with up to 4 decimals',
+      );
     }
 
     const previousClose =
@@ -282,8 +290,10 @@ export class MarketDataService {
       openPrice: instrument.quote?.openPrice?.toString() ?? null,
       highPrice: instrument.quote?.highPrice?.toString() ?? null,
       lowPrice: instrument.quote?.lowPrice?.toString() ?? null,
-      bidPrice: instrument.quote?.bidPrice?.toString() ?? priceDecimal.toFixed(),
-      askPrice: instrument.quote?.askPrice?.toString() ?? priceDecimal.toFixed(),
+      bidPrice:
+        instrument.quote?.bidPrice?.toString() ?? priceDecimal.toFixed(),
+      askPrice:
+        instrument.quote?.askPrice?.toString() ?? priceDecimal.toFixed(),
       volume: volume ?? instrument.quote?.volume?.toString() ?? '0',
       change,
       source: 'LIVE',

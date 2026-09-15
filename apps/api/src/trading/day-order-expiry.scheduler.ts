@@ -48,8 +48,11 @@ export class DayOrderExpiryScheduler {
         try {
           await this.cancellation.expireDayOrder(order.id);
         } catch (error: unknown) {
-          const message = error instanceof Error ? error.message : String(error);
-          this.logger.error(`Could not expire DAY order ${order.id}: ${message}`);
+          const message =
+            error instanceof Error ? error.message : String(error);
+          this.logger.error(
+            `Could not expire DAY order ${order.id}: ${message}`,
+          );
         }
       }
     } finally {

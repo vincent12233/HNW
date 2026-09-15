@@ -4,6 +4,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AdminTradesService } from './admin-trades.service';
 import { ListAdminTradesQueryDto } from './dto/list-admin-trades-query.dto';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin/trades')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,12 +13,18 @@ export class AdminTradesController {
   constructor(private readonly adminTradesService: AdminTradesService) {}
 
   @Get()
-  listTrades(@Query() query: ListAdminTradesQueryDto, @Req() req: any) {
+  listTrades(
+    @Query() query: ListAdminTradesQueryDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.adminTradesService.listTrades(query, req.user.role);
   }
 
   @Get(':executionId')
-  getTrade(@Param('executionId') executionId: string, @Req() req: any) {
+  getTrade(
+    @Param('executionId') executionId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.adminTradesService.getTrade(executionId, req.user.role);
   }
 }

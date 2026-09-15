@@ -20,6 +20,7 @@ import { UpdateIpoStatusDto } from './dto/update-ipo-status.dto';
 import { AllocateIpoDto } from './dto/allocate-ipo.dto';
 
 import { IpoService } from './ipo.service';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin/ipo')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -34,7 +35,7 @@ export class AdminIpoController {
 
   @Post('applications/publish')
   @Roles('ADMIN')
-  publish(@Req() req: any, @Body() body: { ids: string[] }) {
+  publish(@Req() req: AuthenticatedRequest, @Body() body: { ids: string[] }) {
     return this.ipoService.publish(body.ids, req.user.userId);
   }
 
@@ -46,7 +47,10 @@ export class AdminIpoController {
 
   @Get('debts')
   @Roles('ADMIN', 'FINANCE', 'BUSINESS')
-  listDebts(@Req() req: any, @Query('search') search?: string) {
+  listDebts(
+    @Req() req: AuthenticatedRequest,
+    @Query('search') search?: string,
+  ) {
     return this.ipoService.listDebts(req.user.userId, req.user.role, search);
   }
 

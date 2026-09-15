@@ -167,7 +167,8 @@ export class HistoricalMarketDataService {
         this.corporateActions(chart?.events),
       );
     } catch (error: unknown) {
-      const status = (error as { response?: { status?: number } })?.response?.status;
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
       const message = error instanceof Error ? error.message : String(error);
       this.logger.error(`History failed for ${exchange}:${symbol}: ${message}`);
       if (status === 404) {
@@ -230,7 +231,8 @@ export class HistoricalMarketDataService {
           denominator === null ||
           numerator <= 0 ||
           denominator <= 0
-        ) continue;
+        )
+          continue;
         result.push({
           date: new Date(timestamp * 1000).toISOString(),
           type: 'SPLIT',
@@ -253,7 +255,8 @@ export class HistoricalMarketDataService {
         point.high < Math.max(point.open, point.close) ||
         point.low > Math.min(point.open, point.close) ||
         Number.isNaN(Date.parse(point.date))
-      ) continue;
+      )
+        continue;
       byDate.set(point.date, point);
     }
     return [...byDate.values()].sort(
@@ -275,7 +278,8 @@ export class HistoricalMarketDataService {
     const low = this.number(lowValue);
     const close = this.number(closeValue);
     const volume = this.number(volumeValue) ?? 0;
-    if ([time, open, high, low, close].some((value) => value === null)) return null;
+    if ([time, open, high, low, close].some((value) => value === null))
+      return null;
     if (close! <= 0) return null;
     return {
       date: new Date(time! * 1000).toISOString(),
@@ -332,7 +336,7 @@ export class HistoricalMarketDataService {
     return 60 * 60 * 1000;
   }
 
-  private dateWindow(range: '1M') {
+  private dateWindow(_range: '1M') {
     const nowIst = new Date(Date.now() + 330 * 60 * 1000);
     const fromDate = new Date(nowIst);
     fromDate.setUTCDate(fromDate.getUTCDate() - 31);

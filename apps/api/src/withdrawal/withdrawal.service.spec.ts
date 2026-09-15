@@ -9,7 +9,11 @@ describe('WithdrawalService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [WithdrawalService],
     })
-      .useMocker((token) => token === WithdrawalPinService ? { verify: jest.fn().mockResolvedValue(undefined) } : {})
+      .useMocker((token) =>
+        token === WithdrawalPinService
+          ? { verify: jest.fn().mockResolvedValue(undefined) }
+          : {},
+      )
       .compile();
 
     service = module.get<WithdrawalService>(WithdrawalService);
@@ -20,10 +24,23 @@ describe('WithdrawalService', () => {
   });
 
   it('does not create or freeze funds when PIN verification fails', async () => {
-    (service as any).pins.verify.mockRejectedValue(new Error('Incorrect withdrawal PIN'));
+    (service as any).pins.verify.mockRejectedValue(
+      new Error('Incorrect withdrawal PIN'),
+    );
     const transaction = jest.fn();
     (service as any).prisma = { $transaction: transaction };
-    await expect(service.createRequest('user-1', 100, 'Bank', '123456789', 'TEST0001234', undefined, undefined, '000000')).rejects.toThrow('Incorrect withdrawal PIN');
+    await expect(
+      service.createRequest(
+        'user-1',
+        100,
+        'Bank',
+        '123456789',
+        'TEST0001234',
+        undefined,
+        undefined,
+        '000000',
+      ),
+    ).rejects.toThrow('Incorrect withdrawal PIN');
     expect(transaction).not.toHaveBeenCalled();
   });
 
@@ -249,9 +266,9 @@ describe('WithdrawalService', () => {
       ),
     };
 
-    await expect(
-      service.approveWithdrawal('withdrawal-1'),
-    ).rejects.toThrow('Withdrawal already processed');
+    await expect(service.approveWithdrawal('withdrawal-1')).rejects.toThrow(
+      'Withdrawal already processed',
+    );
     expect(transaction.account.update).not.toHaveBeenCalled();
     expect(transaction.accountTransaction.create).not.toHaveBeenCalled();
     expect(transaction.notification.create).not.toHaveBeenCalled();

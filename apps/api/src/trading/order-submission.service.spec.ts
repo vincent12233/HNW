@@ -60,7 +60,9 @@ describe('OrderSubmissionService', () => {
       }),
       getIdempotentOrder: jest.fn(),
     } as any;
-    const marketSession = { isNormalMarketOpen: jest.fn().mockReturnValue(false) } as any;
+    const marketSession = {
+      isNormalMarketOpen: jest.fn().mockReturnValue(false),
+    } as any;
     const { service, tradingService, limitOrderService, matchingService } =
       createService({ orderPreparation, marketSession });
 
@@ -88,7 +90,9 @@ describe('OrderSubmissionService', () => {
       prepare: jest.fn().mockResolvedValue(prepared),
       getIdempotentOrder: jest.fn(),
     } as any;
-    const marketSession = { isNormalMarketOpen: jest.fn().mockReturnValue(false) } as any;
+    const marketSession = {
+      isNormalMarketOpen: jest.fn().mockReturnValue(false),
+    } as any;
     const { service, tradingService, limitOrderService } = createService({
       orderPreparation,
       marketSession,

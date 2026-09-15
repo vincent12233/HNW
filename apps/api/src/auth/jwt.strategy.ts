@@ -6,6 +6,7 @@ import type { Request } from 'express';
 
 import { UserRole, UserStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuthUser } from './authenticated-request';
 
 interface JwtPayload {
   sub: string;
@@ -14,7 +15,13 @@ interface JwtPayload {
   purpose?: string;
 }
 
-const backendRoles = new Set(['ADMIN', 'MANAGER', 'FINANCE', 'BUSINESS', 'SUPPORT']);
+const backendRoles = new Set([
+  'ADMIN',
+  'MANAGER',
+  'FINANCE',
+  'BUSINESS',
+  'SUPPORT',
+]);
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -27,11 +34,17 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         ExtractJwt.fromAuthHeaderAsBearerToken(),
         (request: Request) => {
           const cookie = request?.headers?.cookie ?? '';
-          const backendRole = request.header('x-backend-role')?.trim().toUpperCase();
-          const cookieName = backendRole && backendRoles.has(backendRole)
-            ? `staff_access_${backendRole.toLowerCase()}`
-            : 'staff_access';
-          const match = cookie.match(new RegExp(`(?:^|;\\s*)${cookieName}=([^;]+)`));
+          const backendRole = request
+            .header('x-backend-role')
+            ?.trim()
+            .toUpperCase();
+          const cookieName =
+            backendRole && backendRoles.has(backendRole)
+              ? `staff_access_${backendRole.toLowerCase()}`
+              : 'staff_access';
+          const match = cookie.match(
+            new RegExp(`(?:^|;\\s*)${cookieName}=([^;]+)`),
+          );
           return match ? decodeURIComponent(match[1]) : null;
         },
       ]),
@@ -40,7 +53,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<AuthUser> {
     if (!payload.sub || payload.purpose) {
       throw new UnauthorizedException('Invalid access token');
     }

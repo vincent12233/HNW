@@ -49,7 +49,10 @@ export class InstrumentMasterController {
 
   @Patch('enable-all')
   @Roles(UserRole.ADMIN)
-  enableAll(@Req() req: { user: { userId: string } }, @Query('exchange') exchange?: string) {
+  enableAll(
+    @Req() req: { user: { userId: string } },
+    @Query('exchange') exchange?: string,
+  ) {
     return this.instruments.enableAll(req.user.userId, exchange);
   }
 
@@ -62,10 +65,18 @@ export class InstrumentMasterController {
   @Patch('bulk-status')
   @Roles(UserRole.ADMIN)
   setBulkStatus(
-    @Body() body: { symbols?: string[]; instrumentIds?: string[]; isActive?: boolean },
+    @Body()
+    body: {
+      symbols?: string[];
+      instrumentIds?: string[];
+      isActive?: boolean;
+    },
   ) {
     if (Array.isArray(body.instrumentIds)) {
-      return this.instruments.setBulkActiveByIds(body.instrumentIds, body.isActive === true);
+      return this.instruments.setBulkActiveByIds(
+        body.instrumentIds,
+        body.isActive === true,
+      );
     }
     return this.instruments.setBulkActive(
       Array.isArray(body.symbols) ? body.symbols : [],

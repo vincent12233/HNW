@@ -9,7 +9,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes, randomInt } from 'crypto';
+import { randomBytes } from 'crypto';
 import axios from 'axios';
 
 import {
@@ -187,7 +187,12 @@ export class AuthService {
     return {
       message: 'Registration successful',
       kycToken: await this.jwtService.signAsync(
-        { sub: result.id, role: result.role, version: result.authVersion, purpose: 'KYC_ONBOARDING' },
+        {
+          sub: result.id,
+          role: result.role,
+          version: result.authVersion,
+          purpose: 'KYC_ONBOARDING',
+        },
         { expiresIn: '30m' },
       ),
       user: {
@@ -266,12 +271,26 @@ export class AuthService {
         },
       });
 
-      if (user.role === UserRole.CLIENT && user.status === UserStatus.SUSPENDED) {
-        const approved = await this.prisma.$queryRaw<{ id: string }[]>`SELECT "id" FROM "kyc_submissions" WHERE "userId" = ${user.id} AND "status" = 'APPROVED' LIMIT 1`;
+      if (
+        user.role === UserRole.CLIENT &&
+        user.status === UserStatus.SUSPENDED
+      ) {
+        const approved = await this.prisma.$queryRaw<
+          { id: string }[]
+        >`SELECT "id" FROM "kyc_submissions" WHERE "userId" = ${user.id} AND "status" = 'APPROVED' LIMIT 1`;
         if (!approved.length) {
-          throw new UnauthorizedException({ message: 'KYC verification required', kycToken: await this.jwtService.signAsync(
-            { sub: user.id, role: user.role, version: user.authVersion, purpose: 'KYC_ONBOARDING' }, { expiresIn: '30m' },
-          ) });
+          throw new UnauthorizedException({
+            message: 'KYC verification required',
+            kycToken: await this.jwtService.signAsync(
+              {
+                sub: user.id,
+                role: user.role,
+                version: user.authVersion,
+                purpose: 'KYC_ONBOARDING',
+              },
+              { expiresIn: '30m' },
+            ),
+          });
         }
         throw new UnauthorizedException('KYC pending approval');
       }
@@ -298,7 +317,12 @@ export class AuthService {
     await this.twoFactor.verifyLogin(user.id, dto.verificationCode);
 
     await this.prisma.loginAudit.create({
-      data: { userId: user.id, ipAddress: context?.ipAddress || null, userAgent: context?.userAgent || null, success: true },
+      data: {
+        userId: user.id,
+        ipAddress: context?.ipAddress || null,
+        userAgent: context?.userAgent || null,
+        success: true,
+      },
     });
 
     await this.prisma.userDevice.create({
@@ -328,12 +352,20 @@ export class AuthService {
     };
   }
 
-  async requestPasswordReset(phoneValue: string) {
-    throw new BadRequestException('Contact customer support to reset your password');
+  requestPasswordReset(_phoneValue: string) {
+    throw new BadRequestException(
+      'Contact customer support to reset your password',
+    );
   }
 
-  async confirmPasswordReset(phoneValue: string, code: string, newPassword: string) {
-    throw new BadRequestException('Use the reset code in your customer support session');
+  confirmPasswordReset(
+    _phoneValue: string,
+    _code: string,
+    _newPassword: string,
+  ) {
+    throw new BadRequestException(
+      'Use the reset code in your customer support session',
+    );
   }
 
   async googleLogin(idToken: string) {
@@ -343,8 +375,14 @@ export class AuthService {
       where: { googleSubject: subject },
       include: { account: true },
     });
-    if (!user || user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Google account is not linked to an active trading account');
-    if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
+    if (!user || user.status !== UserStatus.ACTIVE)
+      throw new UnauthorizedException(
+        'Google account is not linked to an active trading account',
+      );
+    if ((await this.twoFactor.status(user.id)).enabled)
+      throw new UnauthorizedException(
+        'Use password sign in with your authenticator code',
+      );
     const accessToken = await this.issueAccessToken(user);
     return {
       message: 'Login successful',
@@ -364,18 +402,31 @@ export class AuthService {
 
   async linkGoogle(userId: string, idToken: string) {
     const { subject, email } = await this.verifyGoogleToken(idToken);
-    const conflict = await this.prisma.user.findFirst({ where: { googleSubject: subject, id: { not: userId } } });
-    if (conflict) throw new ConflictException('Google account is already linked');
+    const conflict = await this.prisma.user.findFirst({
+      where: { googleSubject: subject, id: { not: userId } },
+    });
+    if (conflict)
+      throw new ConflictException('Google account is already linked');
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new UnauthorizedException('Account not found');
-    if (user.email.toLowerCase() !== email) throw new BadRequestException('Google email must match the email saved in Personal Information');
-    await this.prisma.user.update({ where: { id: userId }, data: { googleSubject: subject } });
+    if (user.email.toLowerCase() !== email)
+      throw new BadRequestException(
+        'Google email must match the email saved in Personal Information',
+      );
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { googleSubject: subject },
+    });
     return { linked: true, email };
   }
 
   private async verifyGoogleToken(idToken: string) {
-    if (!idToken?.trim()) throw new BadRequestException('Google ID token is required');
-    const response = await axios.get('https://oauth2.googleapis.com/tokeninfo', { params: { id_token: idToken }, timeout: 10000 });
+    if (!idToken?.trim())
+      throw new BadRequestException('Google ID token is required');
+    const response = await axios.get(
+      'https://oauth2.googleapis.com/tokeninfo',
+      { params: { id_token: idToken }, timeout: 10000 },
+    );
     const subject = String(response.data?.sub || '');
     const email = String(response.data?.email || '').toLowerCase();
     const audience = String(response.data?.aud || '');
@@ -402,7 +453,10 @@ export class AuthService {
   }
 
   async createBiometricToken(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { authVersion: true } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { authVersion: true },
+    });
     if (!user) throw new UnauthorizedException('Account not found');
     const token = await this.jwtService.signAsync(
       { sub: userId, purpose: 'BIOMETRIC_LOGIN', version: user.authVersion },
@@ -413,11 +467,29 @@ export class AuthService {
 
   async biometricLogin(token: string) {
     let payload: any;
-    try { payload = await this.jwtService.verifyAsync(token); } catch { throw new UnauthorizedException('Biometric quick login has expired'); }
-    if (payload?.purpose !== 'BIOMETRIC_LOGIN' || !payload?.sub) throw new UnauthorizedException('Invalid biometric quick login');
-    const user = await this.prisma.user.findUnique({ where: { id: payload.sub }, include: { account: true } });
-    if (!user || user.status !== UserStatus.ACTIVE || payload.version !== user.authVersion) throw new UnauthorizedException('Biometric quick login must be enabled again');
-    if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
+    try {
+      payload = await this.jwtService.verifyAsync(token);
+    } catch {
+      throw new UnauthorizedException('Biometric quick login has expired');
+    }
+    if (payload?.purpose !== 'BIOMETRIC_LOGIN' || !payload?.sub)
+      throw new UnauthorizedException('Invalid biometric quick login');
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { account: true },
+    });
+    if (
+      !user ||
+      user.status !== UserStatus.ACTIVE ||
+      payload.version !== user.authVersion
+    )
+      throw new UnauthorizedException(
+        'Biometric quick login must be enabled again',
+      );
+    if ((await this.twoFactor.status(user.id)).enabled)
+      throw new UnauthorizedException(
+        'Use password sign in with your authenticator code',
+      );
     const accessToken = await this.issueAccessToken(user);
     return {
       message: 'Login successful',
@@ -486,7 +558,9 @@ export class AuthService {
         phone: true,
         role: true,
         status: true,
-        businessProfile: { select: { employeeNo: true, department: true, isActive: true } },
+        businessProfile: {
+          select: { employeeNo: true, department: true, isActive: true },
+        },
       },
     });
     if (!user || user.status !== UserStatus.ACTIVE) {

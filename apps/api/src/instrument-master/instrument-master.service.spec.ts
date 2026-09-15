@@ -6,7 +6,9 @@ import {
 
 describe('categoryForEquityMasterUpdate', () => {
   it('preserves institutional, OTC and IPO categories', () => {
-    expect(categoryForEquityMasterUpdate('INSTITUTIONAL')).toBe('INSTITUTIONAL');
+    expect(categoryForEquityMasterUpdate('INSTITUTIONAL')).toBe(
+      'INSTITUTIONAL',
+    );
     expect(categoryForEquityMasterUpdate('INST')).toBe('INST');
     expect(categoryForEquityMasterUpdate('LIMIT_UP')).toBe('LIMIT_UP');
     expect(categoryForEquityMasterUpdate('OTC')).toBe('OTC');

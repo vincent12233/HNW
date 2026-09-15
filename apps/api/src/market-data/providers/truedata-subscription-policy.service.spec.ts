@@ -20,10 +20,7 @@ describe('TrueDataSubscriptionPolicyService', () => {
     ]);
 
     expect(result.symbols).toEqual(['RELIANCE', 'TCS', 'HDFCBANK']);
-    expect(result.batches).toEqual([
-      ['RELIANCE', 'TCS'],
-      ['HDFCBANK'],
-    ]);
+    expect(result.batches).toEqual([['RELIANCE', 'TCS'], ['HDFCBANK']]);
   });
 
   it('rejects subscriptions above the configured plan limit', () => {

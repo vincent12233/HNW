@@ -35,15 +35,44 @@ export class AdminAccountService {
     administratorId: string,
     role: string,
   ) {
-    if (role === 'SUPPORT' || role === 'FINANCE') return this.directOperatorAdjustment(accountNumber, dto, administratorId, 'CREDIT', role);
+    if (role === 'SUPPORT' || role === 'FINANCE')
+      return this.directOperatorAdjustment(
+        accountNumber,
+        dto,
+        administratorId,
+        'CREDIT',
+        role,
+      );
     await this.assertAccountVisible(accountNumber, role);
-    return this.approvalService.requestBalance(accountNumber, dto, administratorId, 'CREDIT');
+    return this.approvalService.requestBalance(
+      accountNumber,
+      dto,
+      administratorId,
+      'CREDIT',
+    );
   }
 
-  async debit(accountNumber: string, dto: AdjustBalanceDto, administratorId: string, role: string) {
-    if (role === 'SUPPORT' || role === 'FINANCE') return this.directOperatorAdjustment(accountNumber, dto, administratorId, 'DEBIT', role);
+  async debit(
+    accountNumber: string,
+    dto: AdjustBalanceDto,
+    administratorId: string,
+    role: string,
+  ) {
+    if (role === 'SUPPORT' || role === 'FINANCE')
+      return this.directOperatorAdjustment(
+        accountNumber,
+        dto,
+        administratorId,
+        'DEBIT',
+        role,
+      );
     await this.assertAccountVisible(accountNumber, role);
-    return this.approvalService.requestBalance(accountNumber, dto, administratorId, 'DEBIT');
+    return this.approvalService.requestBalance(
+      accountNumber,
+      dto,
+      administratorId,
+      'DEBIT',
+    );
   }
 
   private async directOperatorAdjustment(
@@ -56,112 +85,130 @@ export class AdminAccountService {
     const normalizedAccountNumber = accountNumber.trim().toUpperCase();
     const fixedCode = fixedInviteCode();
     const amount = moneyDecimal(dto.amount);
-    if (!amount.isFinite() || !amount.isPositive()) throw new BadRequestException('Amount must be positive');
+    if (!amount.isFinite() || !amount.isPositive())
+      throw new BadRequestException('Amount must be positive');
     const referenceId = dto.referenceId.trim();
-    if (!referenceId) throw new BadRequestException('Reference number is required');
-    const result = await this.prisma.$transaction(async (tx) => {
-      const userScope = role === 'SUPPORT'
-        ? { role: 'CLIENT' as const, assignedBusinessId: operatorId, usedInviteCode: { is: { code: fixedCode } } }
-        : { role: 'CLIENT' as const, NOT: { usedInviteCode: { is: { code: fixedCode } } } };
-      const account = await tx.account.findFirst({
-        where: {
-          accountNumber: normalizedAccountNumber,
-          user: userScope,
-        },
-        include: { user: { select: { id: true } } },
-      });
-      if (!account) throw new NotFoundException('Dedicated operator customer account not found');
-      const duplicate = await tx.accountTransaction.findFirst({ where: { referenceId } });
-      if (duplicate) throw new ConflictException('Reference number has already been processed');
-      if (
-        direction === 'DEBIT' &&
-        (account.buyingPower.lt(amount) || availableCash(account).lt(amount))
-      ) {
-        throw new BadRequestException('Insufficient available balance');
-      }
-      const balanceBefore = moneyDecimal(account.cashBalance);
-      let creditedAmount = amount;
-      let ipoRepayment = new Prisma.Decimal(0);
+    if (!referenceId)
+      throw new BadRequestException('Reference number is required');
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const userScope =
+          role === 'SUPPORT'
+            ? {
+                role: 'CLIENT' as const,
+                assignedBusinessId: operatorId,
+                usedInviteCode: { is: { code: fixedCode } },
+              }
+            : {
+                role: 'CLIENT' as const,
+                NOT: { usedInviteCode: { is: { code: fixedCode } } },
+              };
+        const account = await tx.account.findFirst({
+          where: {
+            accountNumber: normalizedAccountNumber,
+            user: userScope,
+          },
+          include: { user: { select: { id: true } } },
+        });
+        if (!account)
+          throw new NotFoundException(
+            'Dedicated operator customer account not found',
+          );
+        const duplicate = await tx.accountTransaction.findFirst({
+          where: { referenceId },
+        });
+        if (duplicate)
+          throw new ConflictException(
+            'Reference number has already been processed',
+          );
+        if (
+          direction === 'DEBIT' &&
+          (account.buyingPower.lt(amount) || availableCash(account).lt(amount))
+        ) {
+          throw new BadRequestException('Insufficient available balance');
+        }
+        const balanceBefore = moneyDecimal(account.cashBalance);
+        let creditedAmount = amount;
+        let ipoRepayment = new Prisma.Decimal(0);
 
-      if (direction === 'CREDIT') {
-        const applied = await applyIncomingFundsToIpoDebts(
-          tx,
-          {
+        if (direction === 'CREDIT') {
+          const applied = await applyIncomingFundsToIpoDebts(tx, {
             accountId: account.id,
             userId: account.user.id,
             amount,
             balanceBefore,
-          },
-        );
-        ipoRepayment = applied.repayAmount;
-        creditedAmount = applied.remainingAmount;
-      }
+          });
+          ipoRepayment = applied.repayAmount;
+          creditedAmount = applied.remainingAmount;
+        }
 
-      let balanceAfter = balanceBefore;
-      if (direction === 'DEBIT') {
-        await tx.account.update({
-          where: { id: account.id },
+        let balanceAfter = balanceBefore;
+        if (direction === 'DEBIT') {
+          await tx.account.update({
+            where: { id: account.id },
+            data: {
+              cashBalance: { decrement: amount },
+              buyingPower: { decrement: amount },
+            },
+          });
+          balanceAfter = balanceBefore.sub(amount);
+        } else if (creditedAmount.gt(0)) {
+          await tx.account.update({
+            where: { id: account.id },
+            data: {
+              cashBalance: { increment: creditedAmount },
+              buyingPower: { increment: creditedAmount },
+            },
+          });
+          balanceAfter = balanceBefore.add(creditedAmount);
+        }
+
+        await tx.accountTransaction.create({
           data: {
-            cashBalance: { decrement: amount },
-            buyingPower: { decrement: amount },
+            accountId: account.id,
+            type: direction === 'CREDIT' ? 'ADMIN_CREDIT' : 'ADMIN_DEBIT',
+            status: 'COMPLETED',
+            amount: direction === 'CREDIT' ? creditedAmount : amount,
+            balanceBefore,
+            balanceAfter,
+            referenceId,
+            note: (() => {
+              const base =
+                dto.note?.trim() ||
+                `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`;
+              if (direction === 'CREDIT' && ipoRepayment.gt(0)) {
+                return `${base}; ${ipoRepayment.toFixed(2)} applied to IPO debt`;
+              }
+              return base;
+            })(),
+            createdById: operatorId,
           },
         });
-        balanceAfter = balanceBefore.sub(amount);
-      } else if (creditedAmount.gt(0)) {
-        await tx.account.update({
-          where: { id: account.id },
+        await tx.notification.create({
           data: {
-            cashBalance: { increment: creditedAmount },
-            buyingPower: { increment: creditedAmount },
+            userId: account.user.id,
+            type: 'ACCOUNT',
+            title: direction === 'CREDIT' ? 'Funds credited' : 'Funds adjusted',
+            body:
+              direction === 'CREDIT'
+                ? ipoRepayment.gt(0)
+                  ? `${creditedAmount.toFixed(2)} added to balance; ${ipoRepayment.toFixed(2)} applied to IPO debt.`
+                  : `${creditedAmount.toFixed(2)} has been applied to your account balance.`
+                : `${amount.negated().toFixed(2)} has been applied to your account balance.`,
+            referenceId,
           },
         });
-        balanceAfter = balanceBefore.add(creditedAmount);
-      }
-
-      await tx.accountTransaction.create({
-        data: {
-          accountId: account.id,
-          type: direction === 'CREDIT' ? 'ADMIN_CREDIT' : 'ADMIN_DEBIT',
-          status: 'COMPLETED',
-          amount: direction === 'CREDIT' ? creditedAmount : amount,
-          balanceBefore,
-          balanceAfter,
-          referenceId,
-          note: (() => {
-            const base =
-              dto.note?.trim() ||
-              `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`;
-            if (direction === 'CREDIT' && ipoRepayment.gt(0)) {
-              return `${base}; ${ipoRepayment.toFixed(2)} applied to IPO debt`;
-            }
-            return base;
-          })(),
-          createdById: operatorId,
-        },
-      });
-      await tx.notification.create({
-        data: {
-          userId: account.user.id,
-          type: 'ACCOUNT',
-          title: direction === 'CREDIT' ? 'Funds credited' : 'Funds adjusted',
-          body:
-            direction === 'CREDIT'
-              ? ipoRepayment.gt(0)
-                ? `${creditedAmount.toFixed(2)} added to balance; ${ipoRepayment.toFixed(2)} applied to IPO debt.`
-                : `${creditedAmount.toFixed(2)} has been applied to your account balance.`
-              : `${amount.negated().toFixed(2)} has been applied to your account balance.`,
-          referenceId,
-        },
-      });
-      return {
-        accountNumber: normalizedAccountNumber,
-        direction,
-        amount: amount.toFixed(2),
-        ipoRepayment: ipoRepayment.toFixed(2),
-        creditedAmount: creditedAmount.toFixed(2),
-        balance: balanceAfter.toFixed(2),
-      };
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        return {
+          accountNumber: normalizedAccountNumber,
+          direction,
+          amount: amount.toFixed(2),
+          ipoRepayment: ipoRepayment.toFixed(2),
+          creditedAmount: creditedAmount.toFixed(2),
+          balance: balanceAfter.toFixed(2),
+        };
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
     await this.auditService.createLog({
       actorId: operatorId,
       action: `${role === 'FINANCE' ? 'FINANCE' : 'DEDICATED'}_${direction}`,
@@ -220,7 +267,9 @@ export class AdminAccountService {
           ],
         }
       : {};
-    const where: Prisma.AccountWhereInput = { AND: [this.financeScope(role), searchWhere] };
+    const where: Prisma.AccountWhereInput = {
+      AND: [this.financeScope(role), searchWhere],
+    };
 
     const [total, accounts] = await this.prisma.$transaction([
       this.prisma.account.count({ where }),
@@ -518,7 +567,10 @@ export class AdminAccountService {
     };
   }
 
-  async listTransactions(query: ListAdminAccountTransactionsQueryDto, role: string) {
+  async listTransactions(
+    query: ListAdminAccountTransactionsQueryDto,
+    role: string,
+  ) {
     if (
       query.dateFrom &&
       query.dateTo &&

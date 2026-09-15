@@ -116,9 +116,9 @@ export class MarketSessionService {
   }
 
   private minuteLabel(value: number) {
-    return `${Math.floor(value / 60).toString().padStart(2, '0')}:${(value % 60)
+    return `${Math.floor(value / 60)
       .toString()
-      .padStart(2, '0')}`;
+      .padStart(2, '0')}:${(value % 60).toString().padStart(2, '0')}`;
   }
 
   private dateKey(parts: IstClockParts): string {

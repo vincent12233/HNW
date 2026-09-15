@@ -21,7 +21,9 @@ describe('DayOrderExpiryScheduler', () => {
         .fn()
         .mockImplementation((placedAt: Date) => placedAt === expiredAt),
     } as any;
-    const cancellation = { expireDayOrder: jest.fn().mockResolvedValue({}) } as any;
+    const cancellation = {
+      expireDayOrder: jest.fn().mockResolvedValue({}),
+    } as any;
     const scheduler = new DayOrderExpiryScheduler(
       prisma,
       marketSession,
@@ -45,7 +47,9 @@ describe('DayOrderExpiryScheduler', () => {
         ]),
       },
     } as any;
-    const marketSession = { isDayOrderExpired: jest.fn().mockReturnValue(true) } as any;
+    const marketSession = {
+      isDayOrderExpired: jest.fn().mockReturnValue(true),
+    } as any;
     const cancellation = {
       expireDayOrder: jest
         .fn()

@@ -15,14 +15,7 @@ import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { ListTradesQueryDto } from './dto/list-trades-query.dto';
 import { ListPositionsQueryDto } from './dto/list-positions-query.dto';
 import { TradingOrdersService } from './trading-orders.service';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('orders')
 @UseGuards(JwtAuthGuard)

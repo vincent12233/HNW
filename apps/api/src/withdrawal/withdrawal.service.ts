@@ -38,10 +38,7 @@ export class WithdrawalService {
     note?: string,
     withdrawalPin?: string,
   ) {
-    assertAtMostTwoDecimals(
-      amountInput,
-      'Withdrawal amount',
-    );
+    assertAtMostTwoDecimals(amountInput, 'Withdrawal amount');
     const amount = moneyDecimal(amountInput);
     assertPositiveMoney(amount, 'Amount');
 
@@ -71,9 +68,7 @@ export class WithdrawalService {
           moneyDecimal(account.buyingPower).lt(amount) ||
           availableCash(account).lt(amount)
         ) {
-          throw new BadRequestException(
-            'Insufficient available balance',
-          );
+          throw new BadRequestException('Insufficient available balance');
         }
 
         const request = await tx.withdrawalRequest.create({
@@ -133,7 +128,13 @@ export class WithdrawalService {
     return this.prisma.withdrawalRequest.findMany({
       where: {
         status: 'PENDING',
-        ...(role === 'FINANCE' ? { account: { user: { usedInviteCode: { code: { not: fixedCode } } } } } : {}),
+        ...(role === 'FINANCE'
+          ? {
+              account: {
+                user: { usedInviteCode: { code: { not: fixedCode } } },
+              },
+            }
+          : {}),
       },
       include: {
         account: {
@@ -154,7 +155,9 @@ export class WithdrawalService {
   }
 
   async listWithdrawalHistory(role?: string, status?: string) {
-    const normalized = String(status ?? 'ALL').trim().toUpperCase();
+    const normalized = String(status ?? 'ALL')
+      .trim()
+      .toUpperCase();
     const allowed = new Set(['ALL', 'PENDING', 'APPROVED', 'REJECTED']);
     if (!allowed.has(normalized)) {
       throw new BadRequestException('Invalid withdrawal status filter');
@@ -163,8 +166,16 @@ export class WithdrawalService {
     const fixedCode = fixedInviteCode();
     return this.prisma.withdrawalRequest.findMany({
       where: {
-        ...(normalized === 'ALL' ? {} : { status: normalized as 'PENDING' | 'APPROVED' | 'REJECTED' }),
-        ...(role === 'FINANCE' ? { account: { user: { usedInviteCode: { code: { not: fixedCode } } } } } : {}),
+        ...(normalized === 'ALL'
+          ? {}
+          : { status: normalized as 'PENDING' | 'APPROVED' | 'REJECTED' }),
+        ...(role === 'FINANCE'
+          ? {
+              account: {
+                user: { usedInviteCode: { code: { not: fixedCode } } },
+              },
+            }
+          : {}),
       },
       include: {
         account: {
@@ -185,176 +196,219 @@ export class WithdrawalService {
     });
   }
 
-  async approveWithdrawal(withdrawalId: string, actorId?: string, role?: string) {
-    const result = await this.prisma.$transaction(async (tx) => {
-      const withdrawal = await tx.withdrawalRequest.findUnique({
-        where: { id: withdrawalId },
-      });
+  async approveWithdrawal(
+    withdrawalId: string,
+    actorId?: string,
+    role?: string,
+  ) {
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        const withdrawal = await tx.withdrawalRequest.findUnique({
+          where: { id: withdrawalId },
+        });
 
-      if (!withdrawal) {
-        throw new NotFoundException('Withdrawal request not found');
-      }
+        if (!withdrawal) {
+          throw new NotFoundException('Withdrawal request not found');
+        }
 
-      if (withdrawal.status !== 'PENDING') {
-        throw new BadRequestException('Withdrawal already processed');
-      }
+        if (withdrawal.status !== 'PENDING') {
+          throw new BadRequestException('Withdrawal already processed');
+        }
 
-      const account = await tx.account.findUnique({
-        where: { id: withdrawal.accountId },
-      });
+        const account = await tx.account.findUnique({
+          where: { id: withdrawal.accountId },
+        });
 
-      if (!account) {
-        throw new NotFoundException('Account not found');
-      }
-      if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
+        if (!account) {
+          throw new NotFoundException('Account not found');
+        }
+        if (role === 'FINANCE')
+          await this.assertFinanceAccount(account.userId, tx);
 
-      const amount = moneyDecimal(withdrawal.amount);
-      const withdrawalFrozenAmount = moneyDecimal(withdrawal.frozenAmount ?? 0);
-      const hasDedicatedFreeze = withdrawalFrozenAmount.gte(amount);
-      const cashBalance = moneyDecimal(account.cashBalance);
-      const frozenBalance = moneyDecimal(account.frozenBalance);
-      const buyingPower = moneyDecimal(account.buyingPower);
-
-      if (cashBalance.lt(amount)) {
-        throw new BadRequestException('Insufficient cash balance');
-      }
-      if (hasDedicatedFreeze && frozenBalance.lt(amount)) {
-        throw new BadRequestException(
-          'Frozen balance is inconsistent with withdrawal request',
+        const amount = moneyDecimal(withdrawal.amount);
+        const withdrawalFrozenAmount = moneyDecimal(
+          withdrawal.frozenAmount ?? 0,
         );
-      }
+        const hasDedicatedFreeze = withdrawalFrozenAmount.gte(amount);
+        const cashBalance = moneyDecimal(account.cashBalance);
+        const frozenBalance = moneyDecimal(account.frozenBalance);
+        const buyingPower = moneyDecimal(account.buyingPower);
 
-      const balanceAfter = cashBalance.sub(amount);
-      const frozenBalanceAfter = hasDedicatedFreeze
-        ? frozenBalance.sub(amount)
-        : frozenBalance;
+        if (cashBalance.lt(amount)) {
+          throw new BadRequestException('Insufficient cash balance');
+        }
+        if (hasDedicatedFreeze && frozenBalance.lt(amount)) {
+          throw new BadRequestException(
+            'Frozen balance is inconsistent with withdrawal request',
+          );
+        }
 
-      const claimed = await tx.withdrawalRequest.updateMany({
-        where: { id: withdrawalId, status: 'PENDING' },
-        data: { status: 'APPROVED', frozenAmount: 0 },
-      });
-      if (claimed.count !== 1) {
-        throw new BadRequestException('Withdrawal already processed');
-      }
+        const balanceAfter = cashBalance.sub(amount);
+        const frozenBalanceAfter = hasDedicatedFreeze
+          ? frozenBalance.sub(amount)
+          : frozenBalance;
 
-      await tx.account.update({
-        where: { id: account.id },
-        data: {
-          cashBalance: balanceAfter,
-          ...(hasDedicatedFreeze
-            ? { frozenBalance: { decrement: amount } }
-            : {
-                buyingPower: Prisma.Decimal.max(
-                  new Prisma.Decimal(0),
-                  buyingPower.sub(amount),
-                ),
-              }),
-        },
-      });
+        const claimed = await tx.withdrawalRequest.updateMany({
+          where: { id: withdrawalId, status: 'PENDING' },
+          data: { status: 'APPROVED', frozenAmount: 0 },
+        });
+        if (claimed.count !== 1) {
+          throw new BadRequestException('Withdrawal already processed');
+        }
 
-      await tx.accountTransaction.create({
-        data: {
-          accountId: account.id,
-          type: 'WITHDRAWAL',
-          status: 'COMPLETED',
-          amount: withdrawal.amount,
-          balanceBefore: cashBalance,
-          balanceAfter,
-          referenceId: withdrawalId,
-          note: 'Withdrawal approved',
-        },
-      });
-      await tx.notification.create({
-        data: {
-          userId: account.userId,
-          type: 'WITHDRAWAL',
-          title: 'Withdrawal approved',
-          body: `${withdrawal.orderNo ?? 'Your withdrawal'} has been completed and deducted from your cash balance.`,
-          referenceId: withdrawalId,
-        },
-      });
-
-      return {
-        message: 'Withdrawal approved',
-        withdrawalId,
-        amount: withdrawal.amount,
-        balanceBefore: cashBalance,
-        balanceAfter,
-        frozenBalanceAfter,
-      };
-    }, { isolationLevel: 'Serializable' });
-    if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_APPROVED', resource: 'withdrawal', resourceId: withdrawalId, description: 'Withdrawal approved by finance operator', metadata: { amount: String(result.amount) } });
-    return result;
-  }
-
-  async rejectWithdrawal(withdrawalId: string, note?: string, actorId?: string, role?: string) {
-    const rejected = await this.prisma.$transaction(async (tx) => {
-      const withdrawal = await tx.withdrawalRequest.findUnique({
-        where: { id: withdrawalId },
-      });
-      if (!withdrawal) {
-        throw new NotFoundException('Withdrawal request not found');
-      }
-      if (withdrawal.status !== 'PENDING') {
-        throw new BadRequestException('Withdrawal already processed');
-      }
-
-      const account = await tx.account.findUnique({
-        where: { id: withdrawal.accountId },
-      });
-      if (!account) {
-        throw new NotFoundException('Account not found');
-      }
-      if (role === 'FINANCE') await this.assertFinanceAccount(account.userId, tx);
-      const amount = moneyDecimal(withdrawal.amount);
-      const hasDedicatedFreeze = moneyDecimal(withdrawal.frozenAmount ?? 0).gte(amount);
-      if (hasDedicatedFreeze && moneyDecimal(account.frozenBalance).lt(amount)) {
-        throw new BadRequestException(
-          'Frozen balance is inconsistent with withdrawal request',
-        );
-      }
-
-      const claimed = await tx.withdrawalRequest.updateMany({
-        where: { id: withdrawalId, status: 'PENDING' },
-        data: {
-          status: 'REJECTED',
-          frozenAmount: 0,
-          note: note?.trim() || withdrawal.note,
-        },
-      });
-      if (claimed.count !== 1) {
-        throw new BadRequestException('Withdrawal already processed');
-      }
-      if (hasDedicatedFreeze) {
         await tx.account.update({
           where: { id: account.id },
           data: {
-            buyingPower: { increment: amount },
-            frozenBalance: { decrement: amount },
+            cashBalance: balanceAfter,
+            ...(hasDedicatedFreeze
+              ? { frozenBalance: { decrement: amount } }
+              : {
+                  buyingPower: Prisma.Decimal.max(
+                    new Prisma.Decimal(0),
+                    buyingPower.sub(amount),
+                  ),
+                }),
           },
         });
-      }
-      await tx.notification.create({
-        data: {
-          userId: account.userId,
-          type: 'WITHDRAWAL',
-          title: 'Withdrawal rejected',
-          body: `${withdrawal.orderNo ?? 'Your withdrawal'} was rejected and the frozen funds were released.${note ? ` ${note}` : ''}`,
-          referenceId: withdrawalId,
-        },
+
+        await tx.accountTransaction.create({
+          data: {
+            accountId: account.id,
+            type: 'WITHDRAWAL',
+            status: 'COMPLETED',
+            amount: withdrawal.amount,
+            balanceBefore: cashBalance,
+            balanceAfter,
+            referenceId: withdrawalId,
+            note: 'Withdrawal approved',
+          },
+        });
+        await tx.notification.create({
+          data: {
+            userId: account.userId,
+            type: 'WITHDRAWAL',
+            title: 'Withdrawal approved',
+            body: `${withdrawal.orderNo ?? 'Your withdrawal'} has been completed and deducted from your cash balance.`,
+            referenceId: withdrawalId,
+          },
+        });
+
+        return {
+          message: 'Withdrawal approved',
+          withdrawalId,
+          amount: withdrawal.amount,
+          balanceBefore: cashBalance,
+          balanceAfter,
+          frozenBalanceAfter,
+        };
+      },
+      { isolationLevel: 'Serializable' },
+    );
+    if (actorId)
+      await this.audit.createLog({
+        actorId,
+        action: 'WITHDRAWAL_APPROVED',
+        resource: 'withdrawal',
+        resourceId: withdrawalId,
+        description: 'Withdrawal approved by finance operator',
+        metadata: { amount: String(result.amount) },
       });
-      return tx.withdrawalRequest.findUnique({
-        where: { id: withdrawalId },
+    return result;
+  }
+
+  async rejectWithdrawal(
+    withdrawalId: string,
+    note?: string,
+    actorId?: string,
+    role?: string,
+  ) {
+    const rejected = await this.prisma.$transaction(
+      async (tx) => {
+        const withdrawal = await tx.withdrawalRequest.findUnique({
+          where: { id: withdrawalId },
+        });
+        if (!withdrawal) {
+          throw new NotFoundException('Withdrawal request not found');
+        }
+        if (withdrawal.status !== 'PENDING') {
+          throw new BadRequestException('Withdrawal already processed');
+        }
+
+        const account = await tx.account.findUnique({
+          where: { id: withdrawal.accountId },
+        });
+        if (!account) {
+          throw new NotFoundException('Account not found');
+        }
+        if (role === 'FINANCE')
+          await this.assertFinanceAccount(account.userId, tx);
+        const amount = moneyDecimal(withdrawal.amount);
+        const hasDedicatedFreeze = moneyDecimal(
+          withdrawal.frozenAmount ?? 0,
+        ).gte(amount);
+        if (
+          hasDedicatedFreeze &&
+          moneyDecimal(account.frozenBalance).lt(amount)
+        ) {
+          throw new BadRequestException(
+            'Frozen balance is inconsistent with withdrawal request',
+          );
+        }
+
+        const claimed = await tx.withdrawalRequest.updateMany({
+          where: { id: withdrawalId, status: 'PENDING' },
+          data: {
+            status: 'REJECTED',
+            frozenAmount: 0,
+            note: note?.trim() || withdrawal.note,
+          },
+        });
+        if (claimed.count !== 1) {
+          throw new BadRequestException('Withdrawal already processed');
+        }
+        if (hasDedicatedFreeze) {
+          await tx.account.update({
+            where: { id: account.id },
+            data: {
+              buyingPower: { increment: amount },
+              frozenBalance: { decrement: amount },
+            },
+          });
+        }
+        await tx.notification.create({
+          data: {
+            userId: account.userId,
+            type: 'WITHDRAWAL',
+            title: 'Withdrawal rejected',
+            body: `${withdrawal.orderNo ?? 'Your withdrawal'} was rejected and the frozen funds were released.${note ? ` ${note}` : ''}`,
+            referenceId: withdrawalId,
+          },
+        });
+        return tx.withdrawalRequest.findUnique({
+          where: { id: withdrawalId },
+        });
+      },
+      { isolationLevel: 'Serializable' },
+    );
+    if (actorId)
+      await this.audit.createLog({
+        actorId,
+        action: 'WITHDRAWAL_REJECTED',
+        resource: 'withdrawal',
+        resourceId: withdrawalId,
+        description: note?.trim() || 'Withdrawal rejected by finance operator',
       });
-    }, { isolationLevel: 'Serializable' });
-    if (actorId) await this.audit.createLog({ actorId, action: 'WITHDRAWAL_REJECTED', resource: 'withdrawal', resourceId: withdrawalId, description: note?.trim() || 'Withdrawal rejected by finance operator' });
     return rejected;
   }
 
   private async assertFinanceAccount(userId: string, tx: any) {
     const fixedCode = fixedInviteCode();
-    const user = await tx.user.findUnique({ where: { id: userId }, select: { usedInviteCode: { select: { code: true } } } });
-    if (user?.usedInviteCode?.code?.toUpperCase() === fixedCode) throw new NotFoundException('Withdrawal request not found');
+    const user = await tx.user.findUnique({
+      where: { id: userId },
+      select: { usedInviteCode: { select: { code: true } } },
+    });
+    if (user?.usedInviteCode?.code?.toUpperCase() === fixedCode)
+      throw new NotFoundException('Withdrawal request not found');
   }
 
   private generateOrderNo() {

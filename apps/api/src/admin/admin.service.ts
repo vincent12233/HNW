@@ -11,43 +11,90 @@ export class AdminService {
 
   async pendingCounts(role: UserRole, userId: string) {
     const fixedCode = fixedInviteCode();
-    const customerFilter = role === UserRole.SUPPORT
-      ? { user: { assignedBusinessId: userId, usedInviteCode: { is: { code: fixedCode } } } }
-      : role === UserRole.FINANCE
-        ? { user: { usedInviteCode: { isNot: { code: fixedCode } } } }
-        : role === UserRole.BUSINESS
-          ? { user: { assignedBusinessId: userId } }
-          : role === UserRole.MANAGER
-            ? { user: { assignedBusiness: { role: UserRole.BUSINESS, businessCreatorId: userId, deletedAt: null } } }
-            : { user: { role: UserRole.CLIENT } };
-    const kycScope = role === UserRole.SUPPORT || role === UserRole.BUSINESS
-      ? Prisma.sql`AND "businessUserId" = ${userId}`
-      : role === UserRole.MANAGER
-        ? Prisma.sql`AND "businessUserId" IN (SELECT id FROM users WHERE "businessCreatorId" = ${userId} AND role = 'BUSINESS' AND "deletedAt" IS NULL)`
+    const customerFilter =
+      role === UserRole.SUPPORT
+        ? {
+            user: {
+              assignedBusinessId: userId,
+              usedInviteCode: { is: { code: fixedCode } },
+            },
+          }
         : role === UserRole.FINANCE
-          ? Prisma.sql`AND FALSE`
-          : Prisma.empty;
-    const [kyc, deposits, withdrawals, loans, otc, ipo, approvals] = await Promise.all([
-      this.prisma.$queryRaw<{ count: bigint }[]>`SELECT COUNT(*)::bigint AS count FROM "kyc_submissions" WHERE status = 'PENDING' ${kycScope}`.then(rows => Number(rows[0]?.count ?? 0)),
-      this.prisma.depositRequest.count({ where: { status: 'PENDING', account: customerFilter } }),
-      this.prisma.withdrawalRequest.count({ where: { status: 'PENDING', account: customerFilter } }),
-      role === UserRole.FINANCE ? this.prisma.loanApplication.count({ where: { status: 'PENDING', account: customerFilter } }) : Promise.resolve(0),
-      this.prisma.otcOrder.count({ where: { status: 'PENDING', account: customerFilter } }),
-      this.prisma.ipoApplication.count({ where: { status: 'PENDING', account: customerFilter } }),
-      role === UserRole.ADMIN
-        ? this.prisma.approvalRequest.count({ where: { status: 'PENDING' } })
-        : Promise.resolve(0),
-    ]);
-    return { kyc, deposits, withdrawals, loans, otc, ipo, approvals, total: kyc + deposits + withdrawals + loans + otc + ipo + approvals };
+          ? { user: { usedInviteCode: { isNot: { code: fixedCode } } } }
+          : role === UserRole.BUSINESS
+            ? { user: { assignedBusinessId: userId } }
+            : role === UserRole.MANAGER
+              ? {
+                  user: {
+                    assignedBusiness: {
+                      role: UserRole.BUSINESS,
+                      businessCreatorId: userId,
+                      deletedAt: null,
+                    },
+                  },
+                }
+              : { user: { role: UserRole.CLIENT } };
+    const kycScope =
+      role === UserRole.SUPPORT || role === UserRole.BUSINESS
+        ? Prisma.sql`AND "businessUserId" = ${userId}`
+        : role === UserRole.MANAGER
+          ? Prisma.sql`AND "businessUserId" IN (SELECT id FROM users WHERE "businessCreatorId" = ${userId} AND role = 'BUSINESS' AND "deletedAt" IS NULL)`
+          : role === UserRole.FINANCE
+            ? Prisma.sql`AND FALSE`
+            : Prisma.empty;
+    const [kyc, deposits, withdrawals, loans, otc, ipo, approvals] =
+      await Promise.all([
+        this.prisma.$queryRaw<
+          { count: bigint }[]
+        >`SELECT COUNT(*)::bigint AS count FROM "kyc_submissions" WHERE status = 'PENDING' ${kycScope}`.then(
+          (rows) => Number(rows[0]?.count ?? 0),
+        ),
+        this.prisma.depositRequest.count({
+          where: { status: 'PENDING', account: customerFilter },
+        }),
+        this.prisma.withdrawalRequest.count({
+          where: { status: 'PENDING', account: customerFilter },
+        }),
+        role === UserRole.FINANCE
+          ? this.prisma.loanApplication.count({
+              where: { status: 'PENDING', account: customerFilter },
+            })
+          : Promise.resolve(0),
+        this.prisma.otcOrder.count({
+          where: { status: 'PENDING', account: customerFilter },
+        }),
+        this.prisma.ipoApplication.count({
+          where: { status: 'PENDING', account: customerFilter },
+        }),
+        role === UserRole.ADMIN
+          ? this.prisma.approvalRequest.count({ where: { status: 'PENDING' } })
+          : Promise.resolve(0),
+      ]);
+    return {
+      kyc,
+      deposits,
+      withdrawals,
+      loans,
+      otc,
+      ipo,
+      approvals,
+      total: kyc + deposits + withdrawals + loans + otc + ipo + approvals,
+    };
   }
 
   private customerScope(role: UserRole): Prisma.UserWhereInput {
     const fixedCode = fixedInviteCode();
     if (role === UserRole.FINANCE) {
-      return { role: UserRole.CLIENT, NOT: { usedInviteCode: { is: { code: fixedCode } } } };
+      return {
+        role: UserRole.CLIENT,
+        NOT: { usedInviteCode: { is: { code: fixedCode } } },
+      };
     }
     if (role === UserRole.SUPPORT) {
-      return { role: UserRole.CLIENT, usedInviteCode: { is: { code: fixedCode } } };
+      return {
+        role: UserRole.CLIENT,
+        usedInviteCode: { is: { code: fixedCode } },
+      };
     }
     return { role: UserRole.CLIENT };
   }

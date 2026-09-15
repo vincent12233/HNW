@@ -6,7 +6,9 @@ export function normalizePhone(value: string): string | null {
   const digits = input.replace(/\D/g, '');
   // Preserve existing Indian account keys; international accounts use E.164.
   const parsed = parsePhoneNumberFromString(
-    !input.startsWith('+') && /^91[6-9]\d{9}$/.test(digits) ? `+${digits}` : input,
+    !input.startsWith('+') && /^91[6-9]\d{9}$/.test(digits)
+      ? `+${digits}`
+      : input,
     'IN',
   );
   if (!parsed?.isValid()) return null;

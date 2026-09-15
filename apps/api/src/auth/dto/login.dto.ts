@@ -1,4 +1,10 @@
-import { IsOptional, IsString, Length, Matches, MinLength } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  Length,
+  Matches,
+  MinLength,
+} from 'class-validator';
 
 export class LoginDto {
   @IsOptional()

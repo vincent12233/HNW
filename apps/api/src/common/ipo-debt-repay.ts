@@ -11,7 +11,10 @@ export type SettleIpoInput = {
 };
 
 /** Create filled IPO order/trade and upsert holdings (idempotent by clientOrderId). */
-export async function settleIpoHoldings(tx: any, input: SettleIpoInput) {
+export async function settleIpoHoldings(
+  tx: Prisma.TransactionClient,
+  input: SettleIpoInput,
+) {
   if (input.quantity <= 0) return;
   const price = moneyDecimal(input.price);
   const totalAmount = moneyDecimal(input.totalAmount);
@@ -94,14 +97,17 @@ export async function settleIpoHoldings(tx: any, input: SettleIpoInput) {
  * Repayments do not increase cash; full pay settles holdings via settleFn.
  */
 export async function applyIncomingFundsToIpoDebts(
-  tx: any,
+  tx: Prisma.TransactionClient,
   input: {
     accountId: string;
     userId: string;
     amount: Prisma.Decimal;
     balanceBefore: Prisma.Decimal;
   },
-  settleFn: (tx: any, settle: SettleIpoInput) => Promise<unknown> = settleIpoHoldings,
+  settleFn: (
+    tx: Prisma.TransactionClient,
+    settle: SettleIpoInput,
+  ) => Promise<unknown> = settleIpoHoldings,
 ): Promise<{ repayAmount: Prisma.Decimal; remainingAmount: Prisma.Decimal }> {
   let availableAmount = moneyDecimal(input.amount);
   let repayAmount = new Prisma.Decimal(0);

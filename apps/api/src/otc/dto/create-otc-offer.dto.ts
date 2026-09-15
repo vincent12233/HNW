@@ -1,9 +1,4 @@
-import {
-  IsDateString,
-  IsNotEmpty,
-  IsString,
-  Matches,
-} from 'class-validator';
+import { IsDateString, IsNotEmpty, IsString, Matches } from 'class-validator';
 
 export class CreateOtcOfferDto {
   @IsString()

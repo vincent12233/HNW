@@ -6,7 +6,13 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { createCipheriv, createDecipheriv, createHash, randomBytes, randomInt } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  randomInt,
+} from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { fixedInviteCode } from '../common/fixed-invite';
@@ -29,6 +35,22 @@ function resolveOtcEncryptionSecret() {
   return dedicated || process.env.JWT_SECRET || 'development-only-change-me';
 }
 
+type OtcSecretFields = {
+  keyHashTier1?: unknown;
+  keyHashTier2?: unknown;
+  keyHashTier3?: unknown;
+  transactionKeyEncrypted?: unknown;
+};
+
+function omitOtcSecrets<T extends OtcSecretFields>(value: T) {
+  const rest = { ...value };
+  delete rest.keyHashTier1;
+  delete rest.keyHashTier2;
+  delete rest.keyHashTier3;
+  delete rest.transactionKeyEncrypted;
+  return rest;
+}
+
 @Injectable()
 export class OtcService {
   private readonly encryptionSecret = resolveOtcEncryptionSecret();
@@ -37,15 +59,22 @@ export class OtcService {
   async listOffers() {
     const now = new Date();
     const offers = await this.prisma.otcOffer.findMany({
-      where: { isActive: true, validFrom: { lte: now }, validUntil: { gte: now } },
+      where: {
+        isActive: true,
+        validFrom: { lte: now },
+        validUntil: { gte: now },
+      },
       include: { instrument: { include: { quote: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer }) => ({
-      ...offer,
-      marketPrice: offer.instrument.quote?.lastPrice ?? null,
-      quoteAsOf: offer.instrument.quote?.asOf ?? null,
-    }));
+    return offers.map((offer) => {
+      const publicOffer = omitOtcSecrets(offer);
+      return {
+        ...publicOffer,
+        marketPrice: offer.instrument.quote?.lastPrice ?? null,
+        quoteAsOf: offer.instrument.quote?.asOf ?? null,
+      };
+    });
   }
 
   async listAdminOffers() {
@@ -53,12 +82,18 @@ export class OtcService {
       include: { instrument: { include: { quote: true } } },
       orderBy: { updatedAt: 'desc' },
     });
-    return offers.map(({ keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer }) => ({
-      ...offer,
-      marketPrice: offer.instrument.quote?.lastPrice ?? null,
-      quoteAsOf: offer.instrument.quote?.asOf ?? null,
-      transactionKey: offer.isActive && transactionKeyEncrypted ? this.decryptKey(transactionKeyEncrypted) : null,
-    }));
+    return offers.map((offer) => {
+      const publicOffer = omitOtcSecrets(offer);
+      return {
+        ...publicOffer,
+        marketPrice: offer.instrument.quote?.lastPrice ?? null,
+        quoteAsOf: offer.instrument.quote?.asOf ?? null,
+        transactionKey:
+          offer.isActive && offer.transactionKeyEncrypted
+            ? this.decryptKey(offer.transactionKeyEncrypted)
+            : null,
+      };
+    });
   }
 
   async saveOffer(body: {
@@ -89,7 +124,8 @@ export class OtcService {
       where: { id: body.instrumentId },
       include: { quote: true },
     });
-    if (!instrument?.isActive) throw new NotFoundException('Active instrument not found');
+    if (!instrument?.isActive)
+      throw new NotFoundException('Active instrument not found');
     // Live quote remains required as market reference; settlement uses admin price.
     if (!instrument.quote?.lastPrice.greaterThan(0)) {
       throw new BadRequestException(
@@ -127,15 +163,8 @@ export class OtcService {
       },
       include: { instrument: true },
     });
-    const {
-      keyHashTier1,
-      keyHashTier2,
-      keyHashTier3,
-      transactionKeyEncrypted,
-      ...offer
-    } = saved;
     return {
-      ...offer,
+      ...omitOtcSecrets(saved),
       marketPrice: instrument.quote.lastPrice,
       transactionKey,
     };
@@ -160,14 +189,18 @@ export class OtcService {
       try {
         price = new Prisma.Decimal(body.price);
       } catch {
-        throw new BadRequestException('Valid price and offer period are required');
+        throw new BadRequestException(
+          'Valid price and offer period are required',
+        );
       }
       if (
         !price.isFinite() ||
         !price.greaterThan(0) ||
         !price.equals(price.toDecimalPlaces(4))
       ) {
-        throw new BadRequestException('Valid price and offer period are required');
+        throw new BadRequestException(
+          'Valid price and offer period are required',
+        );
       }
       const liveQuote = existing.instrument.quote?.lastPrice;
       if (!liveQuote?.greaterThan(0)) {
@@ -190,7 +223,9 @@ export class OtcService {
       !Number.isFinite(validFrom.getTime()) ||
       validUntil <= validFrom
     ) {
-      throw new BadRequestException('Valid price and offer period are required');
+      throw new BadRequestException(
+        'Valid price and offer period are required',
+      );
     }
     const isActive = body.isActive ?? existing.isActive;
     const reactivating = isActive && !existing.isActive;
@@ -198,12 +233,14 @@ export class OtcService {
     // Deactivate clears the key; reactivate (or repair a keyless active offer)
     // mints a new 4-digit key so the offer is tradeable again.
     let mintedKey: string | null = null;
-    let keyPatch: {
-      transactionKeyEncrypted: string | null;
-      keyHashTier1: string | null;
-      keyHashTier2?: null;
-      keyHashTier3?: null;
-    } | Record<string, never> = {};
+    let keyPatch:
+      | {
+          transactionKeyEncrypted: string | null;
+          keyHashTier1: string | null;
+          keyHashTier2?: null;
+          keyHashTier3?: null;
+        }
+      | Record<string, never> = {};
     if (!isActive) {
       keyPatch = { transactionKeyEncrypted: null, keyHashTier1: null };
     } else if (reactivating || !existing.transactionKeyEncrypted) {
@@ -226,20 +263,13 @@ export class OtcService {
       },
       include: { instrument: { include: { quote: true } } },
     });
-    const {
-      keyHashTier1,
-      keyHashTier2,
-      keyHashTier3,
-      transactionKeyEncrypted,
-      ...offer
-    } = saved;
     return {
-      ...offer,
+      ...omitOtcSecrets(saved),
       marketPrice: saved.instrument.quote?.lastPrice ?? null,
       transactionKey:
         mintedKey ??
-        (isActive && transactionKeyEncrypted
-          ? this.decryptKey(transactionKeyEncrypted)
+        (isActive && saved.transactionKeyEncrypted
+          ? this.decryptKey(saved.transactionKeyEncrypted)
           : null),
     };
   }
@@ -248,16 +278,39 @@ export class OtcService {
     if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 1000000) {
       throw new BadRequestException('Quantity must be a positive whole number');
     }
-    const user = await this.prisma.user.findUnique({ where: { id: userId }, include: { account: true } });
-    if (!user?.account) throw new NotFoundException('Trading account not found');
-    const offer = await this.prisma.otcOffer.findUnique({ where: { id: offerId }, include: { instrument: { include: { quote: true } } } });
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      include: { account: true },
+    });
+    if (!user?.account)
+      throw new NotFoundException('Trading account not found');
+    const offer = await this.prisma.otcOffer.findUnique({
+      where: { id: offerId },
+      include: { instrument: { include: { quote: true } } },
+    });
     const now = new Date();
-    if (!offer || !offer.isActive || offer.validFrom > now || offer.validUntil < now) {
+    if (
+      !offer ||
+      !offer.isActive ||
+      offer.validFrom > now ||
+      offer.validUntil < now
+    ) {
       throw new BadRequestException('OTC offer is not active');
     }
-    if (!/^\d{4}$/.test(key ?? '') || !offer.keyHashTier1 || !(await bcrypt.compare(key, offer.keyHashTier1))) throw new UnauthorizedException('Invalid 4-digit OTC transaction key');
+    if (
+      !/^\d{4}$/.test(key ?? '') ||
+      !offer.keyHashTier1 ||
+      !(await bcrypt.compare(key, offer.keyHashTier1))
+    )
+      throw new UnauthorizedException('Invalid 4-digit OTC transaction key');
     const quote = offer.instrument.quote;
-    if (!quote?.lastPrice.greaterThan(0) || Date.now() - quote.asOf.getTime() > 5 * 60_000) throw new BadRequestException('Live market price is temporarily unavailable');
+    if (
+      !quote?.lastPrice.greaterThan(0) ||
+      Date.now() - quote.asOf.getTime() > 5 * 60_000
+    )
+      throw new BadRequestException(
+        'Live market price is temporarily unavailable',
+      );
     // The quote validates the system's market feed; the published OTC offer
     // is the contractual discounted settlement price.
     const selectedPrice = offer.price;
@@ -276,17 +329,29 @@ export class OtcService {
       include: { instrument: true },
     });
     await this.prisma.notification.create({
-      data: { userId, type: 'OTC', title: 'OTC order pending review', body: `${offer.instrument.symbol} · ${quantity} shares is awaiting review.`, referenceId: order.id },
+      data: {
+        userId,
+        type: 'OTC',
+        title: 'OTC order pending review',
+        body: `${offer.instrument.symbol} · ${quantity} shares is awaiting review.`,
+        referenceId: order.id,
+      },
     });
     return order;
   }
 
   async myOrders(userId: string) {
-    return this.prisma.otcOrder.findMany({ where: { account: { userId } }, include: { instrument: true }, orderBy: { createdAt: 'desc' } });
+    return this.prisma.otcOrder.findMany({
+      where: { account: { userId } },
+      include: { instrument: true },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   async pendingOrders(reviewerId: string) {
-    const reviewer = await this.prisma.user.findUnique({ where: { id: reviewerId } });
+    const reviewer = await this.prisma.user.findUnique({
+      where: { id: reviewerId },
+    });
     const fixedCode = fixedInviteCode();
     return this.prisma.otcOrder.findMany({
       where: {
@@ -294,7 +359,14 @@ export class OtcService {
         ...(reviewer?.role === 'BUSINESS'
           ? { account: { user: { assignedBusinessId: reviewerId } } }
           : reviewer?.role === 'SUPPORT'
-            ? { account: { user: { assignedBusinessId: reviewerId, usedInviteCode: { is: { code: fixedCode } } } } }
+            ? {
+                account: {
+                  user: {
+                    assignedBusinessId: reviewerId,
+                    usedInviteCode: { is: { code: fixedCode } },
+                  },
+                },
+              }
             : {}),
       },
       include: {
@@ -321,98 +393,220 @@ export class OtcService {
   }
 
   approve(reviewerId: string, orderId: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
-      if (!order) throw new NotFoundException('OTC order not found');
-      if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
-      const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
-      const fixedCode = fixedInviteCode();
-      if ((reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') && order.account.user.assignedBusinessId !== reviewerId) {
-        throw new UnauthorizedException('OTC order is not assigned to this business account');
-      }
-      if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
-        throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
-      }
-      const amount = moneyDecimal(order.amount);
-      if (
-        availableCash(order.account).lessThan(amount) ||
-        moneyDecimal(order.account.buyingPower).lessThan(amount)
-      ) {
-        throw new BadRequestException(
-          'Insufficient buying power or available cash balance',
+    return this.prisma.$transaction(
+      async (tx) => {
+        const order = await tx.otcOrder.findUnique({
+          where: { id: orderId },
+          include: {
+            account: {
+              include: { user: { include: { usedInviteCode: true } } },
+            },
+          },
+        });
+        if (!order) throw new NotFoundException('OTC order not found');
+        if (order.status !== 'PENDING')
+          throw new BadRequestException('OTC order already reviewed');
+        const reviewer = await tx.user.findUnique({
+          where: { id: reviewerId },
+        });
+        const fixedCode = fixedInviteCode();
+        if (
+          (reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') &&
+          order.account.user.assignedBusinessId !== reviewerId
+        ) {
+          throw new UnauthorizedException(
+            'OTC order is not assigned to this business account',
+          );
+        }
+        if (
+          reviewer?.role === 'SUPPORT' &&
+          order.account.user.usedInviteCode?.code !== fixedCode
+        ) {
+          throw new UnauthorizedException(
+            'OTC order is outside the dedicated operator scope',
+          );
+        }
+        const amount = moneyDecimal(order.amount);
+        if (
+          availableCash(order.account).lessThan(amount) ||
+          moneyDecimal(order.account.buyingPower).lessThan(amount)
+        ) {
+          throw new BadRequestException(
+            'Insufficient buying power or available cash balance',
+          );
+        }
+        const balanceAfter = moneyDecimal(order.account.cashBalance).sub(
+          amount,
         );
-      }
-      const balanceAfter = moneyDecimal(order.account.cashBalance).sub(amount);
-      const buyingPowerAfter = moneyDecimal(order.account.buyingPower).sub(amount);
-      await tx.account.update({
-        where: { id: order.accountId },
-        data: { cashBalance: balanceAfter, buyingPower: buyingPowerAfter },
-      });
-      const current = await tx.position.findUnique({ where: { accountId_instrumentId: { accountId: order.accountId, instrumentId: order.instrumentId } } });
-      const newQuantity = (current?.quantity ?? 0) + order.quantity;
-      const newAverage = current
-        ? current.averagePrice.mul(current.quantity).add(order.price.mul(order.quantity)).div(newQuantity).toDecimalPlaces(4)
-        : order.price;
-      await tx.position.upsert({
-        where: { accountId_instrumentId: { accountId: order.accountId, instrumentId: order.instrumentId } },
-        create: { accountId: order.accountId, instrumentId: order.instrumentId, quantity: order.quantity, averagePrice: order.price },
-        update: { quantity: newQuantity, averagePrice: newAverage },
-      });
-      const executionOrder = await tx.order.create({
-        data: {
-          clientOrderId: `OTC-${order.id}`,
-          accountId: order.accountId,
-          instrumentId: order.instrumentId,
-          side: 'BUY',
-          type: 'LIMIT',
-          status: 'FILLED',
-          quantity: order.quantity,
-          filledQuantity: order.quantity,
-          limitPrice: order.price,
-          averageFillPrice: order.price,
-          completedAt: new Date(),
-        },
-      });
-      await tx.trade.create({
-        data: {
-          executionId: `OTC-EXEC-${order.id}`,
-          orderId: executionOrder.id,
-          accountId: order.accountId,
-          instrumentId: order.instrumentId,
-          quantity: order.quantity,
-          price: order.price,
-          grossAmount: order.amount,
-          fees: new Prisma.Decimal(0),
-          netAmount: order.amount,
-        },
-      });
-      await tx.accountTransaction.create({ data: { accountId: order.accountId, type: 'OTC_SETTLEMENT', status: 'COMPLETED', amount: order.amount.negated(), balanceBefore: order.account.cashBalance, balanceAfter, referenceId: order.id, note: 'OTC purchase approved and settled' } });
-      const claimed = await tx.otcOrder.updateMany({ where: { id: order.id, status: 'PENDING' }, data: { status: 'APPROVED', reviewedById: reviewerId, reviewedAt: new Date() } });
-      if (claimed.count !== 1) throw new BadRequestException('OTC order already reviewed');
-      const approved = await tx.otcOrder.findUniqueOrThrow({ where: { id: order.id }, include: { instrument: true } });
-      await tx.notification.create({ data: { userId: order.account.user.id, type: 'OTC', title: 'OTC order approved', body: `${approved.instrument.symbol} has been settled and added to your holdings.`, referenceId: order.id } });
-      return approved;
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+        const buyingPowerAfter = moneyDecimal(order.account.buyingPower).sub(
+          amount,
+        );
+        await tx.account.update({
+          where: { id: order.accountId },
+          data: { cashBalance: balanceAfter, buyingPower: buyingPowerAfter },
+        });
+        const current = await tx.position.findUnique({
+          where: {
+            accountId_instrumentId: {
+              accountId: order.accountId,
+              instrumentId: order.instrumentId,
+            },
+          },
+        });
+        const newQuantity = (current?.quantity ?? 0) + order.quantity;
+        const newAverage = current
+          ? current.averagePrice
+              .mul(current.quantity)
+              .add(order.price.mul(order.quantity))
+              .div(newQuantity)
+              .toDecimalPlaces(4)
+          : order.price;
+        await tx.position.upsert({
+          where: {
+            accountId_instrumentId: {
+              accountId: order.accountId,
+              instrumentId: order.instrumentId,
+            },
+          },
+          create: {
+            accountId: order.accountId,
+            instrumentId: order.instrumentId,
+            quantity: order.quantity,
+            averagePrice: order.price,
+          },
+          update: { quantity: newQuantity, averagePrice: newAverage },
+        });
+        const executionOrder = await tx.order.create({
+          data: {
+            clientOrderId: `OTC-${order.id}`,
+            accountId: order.accountId,
+            instrumentId: order.instrumentId,
+            side: 'BUY',
+            type: 'LIMIT',
+            status: 'FILLED',
+            quantity: order.quantity,
+            filledQuantity: order.quantity,
+            limitPrice: order.price,
+            averageFillPrice: order.price,
+            completedAt: new Date(),
+          },
+        });
+        await tx.trade.create({
+          data: {
+            executionId: `OTC-EXEC-${order.id}`,
+            orderId: executionOrder.id,
+            accountId: order.accountId,
+            instrumentId: order.instrumentId,
+            quantity: order.quantity,
+            price: order.price,
+            grossAmount: order.amount,
+            fees: new Prisma.Decimal(0),
+            netAmount: order.amount,
+          },
+        });
+        await tx.accountTransaction.create({
+          data: {
+            accountId: order.accountId,
+            type: 'OTC_SETTLEMENT',
+            status: 'COMPLETED',
+            amount: order.amount.negated(),
+            balanceBefore: order.account.cashBalance,
+            balanceAfter,
+            referenceId: order.id,
+            note: 'OTC purchase approved and settled',
+          },
+        });
+        const claimed = await tx.otcOrder.updateMany({
+          where: { id: order.id, status: 'PENDING' },
+          data: {
+            status: 'APPROVED',
+            reviewedById: reviewerId,
+            reviewedAt: new Date(),
+          },
+        });
+        if (claimed.count !== 1)
+          throw new BadRequestException('OTC order already reviewed');
+        const approved = await tx.otcOrder.findUniqueOrThrow({
+          where: { id: order.id },
+          include: { instrument: true },
+        });
+        await tx.notification.create({
+          data: {
+            userId: order.account.user.id,
+            type: 'OTC',
+            title: 'OTC order approved',
+            body: `${approved.instrument.symbol} has been settled and added to your holdings.`,
+            referenceId: order.id,
+          },
+        });
+        return approved;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async reject(reviewerId: string, orderId: string, note?: string) {
-    return this.prisma.$transaction(async (tx) => {
-      const order = await tx.otcOrder.findUnique({ where: { id: orderId }, include: { account: { include: { user: { include: { usedInviteCode: true } } } }, instrument: true } });
-      if (!order) throw new NotFoundException('OTC order not found');
-      if (order.status !== 'PENDING') throw new BadRequestException('OTC order already reviewed');
-      const reviewer = await tx.user.findUnique({ where: { id: reviewerId } });
-      const fixedCode = fixedInviteCode();
-      if ((reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') && order.account.user.assignedBusinessId !== reviewerId) {
-        throw new UnauthorizedException('OTC order is not assigned to this business account');
-      }
-      if (reviewer?.role === 'SUPPORT' && order.account.user.usedInviteCode?.code !== fixedCode) {
-        throw new UnauthorizedException('OTC order is outside the dedicated operator scope');
-      }
-      const claimed = await tx.otcOrder.updateMany({ where: { id: orderId, status: 'PENDING' }, data: { status: 'REJECTED', reviewedById: reviewerId, reviewedAt: new Date(), reviewNote: note?.trim() || null } });
-      if (claimed.count !== 1) throw new BadRequestException('OTC order already reviewed');
-      await tx.notification.create({ data: { userId: order.account.userId, type: 'OTC', title: 'OTC order rejected', body: `${order.instrument.symbol} was not approved.${note ? ` ${note}` : ''}`, referenceId: orderId } });
-      return tx.otcOrder.findUnique({ where: { id: orderId }, include: { instrument: true } });
-    }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
+    return this.prisma.$transaction(
+      async (tx) => {
+        const order = await tx.otcOrder.findUnique({
+          where: { id: orderId },
+          include: {
+            account: {
+              include: { user: { include: { usedInviteCode: true } } },
+            },
+            instrument: true,
+          },
+        });
+        if (!order) throw new NotFoundException('OTC order not found');
+        if (order.status !== 'PENDING')
+          throw new BadRequestException('OTC order already reviewed');
+        const reviewer = await tx.user.findUnique({
+          where: { id: reviewerId },
+        });
+        const fixedCode = fixedInviteCode();
+        if (
+          (reviewer?.role === 'BUSINESS' || reviewer?.role === 'SUPPORT') &&
+          order.account.user.assignedBusinessId !== reviewerId
+        ) {
+          throw new UnauthorizedException(
+            'OTC order is not assigned to this business account',
+          );
+        }
+        if (
+          reviewer?.role === 'SUPPORT' &&
+          order.account.user.usedInviteCode?.code !== fixedCode
+        ) {
+          throw new UnauthorizedException(
+            'OTC order is outside the dedicated operator scope',
+          );
+        }
+        const claimed = await tx.otcOrder.updateMany({
+          where: { id: orderId, status: 'PENDING' },
+          data: {
+            status: 'REJECTED',
+            reviewedById: reviewerId,
+            reviewedAt: new Date(),
+            reviewNote: note?.trim() || null,
+          },
+        });
+        if (claimed.count !== 1)
+          throw new BadRequestException('OTC order already reviewed');
+        await tx.notification.create({
+          data: {
+            userId: order.account.userId,
+            type: 'OTC',
+            title: 'OTC order rejected',
+            body: `${order.instrument.symbol} was not approved.${note ? ` ${note}` : ''}`,
+            referenceId: orderId,
+          },
+        });
+        return tx.otcOrder.findUnique({
+          where: { id: orderId },
+          include: { instrument: true },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   private encryptionKey() {
@@ -432,15 +626,25 @@ export class OtcService {
   private encryptKey(value: string) {
     const iv = randomBytes(12);
     const cipher = createCipheriv('aes-256-gcm', this.encryptionKey(), iv);
-    const encrypted = Buffer.concat([cipher.update(value, 'utf8'), cipher.final()]);
+    const encrypted = Buffer.concat([
+      cipher.update(value, 'utf8'),
+      cipher.final(),
+    ]);
     return `${iv.toString('base64url')}.${cipher.getAuthTag().toString('base64url')}.${encrypted.toString('base64url')}`;
   }
 
   private decryptKey(value: string) {
     const [iv, tag, encrypted] = value.split('.');
     if (!iv || !tag || !encrypted) throw new Error('Invalid encrypted OTC key');
-    const decipher = createDecipheriv('aes-256-gcm', this.encryptionKey(), Buffer.from(iv, 'base64url'));
+    const decipher = createDecipheriv(
+      'aes-256-gcm',
+      this.encryptionKey(),
+      Buffer.from(iv, 'base64url'),
+    );
     decipher.setAuthTag(Buffer.from(tag, 'base64url'));
-    return Buffer.concat([decipher.update(Buffer.from(encrypted, 'base64url')), decipher.final()]).toString('utf8');
+    return Buffer.concat([
+      decipher.update(Buffer.from(encrypted, 'base64url')),
+      decipher.final(),
+    ]).toString('utf8');
   }
 }

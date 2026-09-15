@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
@@ -26,11 +30,7 @@ export class WatchlistService {
     `;
   }
 
-  async add(
-    userId: string,
-    symbol: string,
-    exchange: Exchange = Exchange.NSE,
-  ) {
+  async add(userId: string, symbol: string, exchange: Exchange = Exchange.NSE) {
     const normalizedSymbol = symbol.trim().toUpperCase();
     if (!normalizedSymbol) {
       throw new BadRequestException('Symbol is required');

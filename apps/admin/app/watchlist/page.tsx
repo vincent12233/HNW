@@ -70,11 +70,22 @@ export default function WatchlistPage() {
 
   async function submitItem() {
     const values = form.getFieldsValue();
+    const payload = {
+      ...values,
+      referencePrice:
+        values.referencePrice == null || values.referencePrice === ''
+          ? undefined
+          : Number(values.referencePrice).toFixed(2),
+      expectedReturn:
+        values.expectedReturn == null || values.expectedReturn === ''
+          ? undefined
+          : Number(values.expectedReturn).toFixed(2),
+    };
     if (editing) {
-      await api.patch(`/admin-products/watchlist/${editing.id}`, values);
+      await api.patch(`/admin-products/watchlist/${editing.id}`, payload);
       message.success("Inst. 股票已更新");
     } else {
-      await api.post("/admin-products/watchlist", values);
+      await api.post("/admin-products/watchlist", payload);
       message.success("Inst. 股票已上架");
     }
     setOpen(false);

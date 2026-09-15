@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import axios from 'axios';
+import { Prisma } from '../../generated/prisma/client';
 import {
   MarketDataProvider,
   MarketQuoteResult,
@@ -40,37 +41,25 @@ export class YahooProvider implements MarketDataProvider {
         throw new Error('Yahoo price missing');
       }
 
-      const currentPrice = Number(price);
-      const previousClose =
-        meta.chartPreviousClose ?? meta.previousClose ?? currentPrice;
-      const previousCloseNumber = Number(previousClose);
-      const change =
-        previousCloseNumber > 0
-          ? ((currentPrice - previousCloseNumber) / previousCloseNumber) * 100
-          : 0;
+      const currentPrice = this.quoteDecimal(price);
+      const previousClose = this.quoteDecimal(
+        meta.chartPreviousClose ?? meta.previousClose ?? price,
+      );
+      const change = previousClose.gt(0)
+        ? currentPrice.sub(previousClose).div(previousClose).mul(100)
+        : new Prisma.Decimal(0);
 
       return {
         symbol: normalizedSymbol,
-        price: String(currentPrice),
-        previousClose: String(previousCloseNumber),
-        openPrice:
-          meta.regularMarketOpen !== undefined
-            ? String(meta.regularMarketOpen)
-            : null,
-        highPrice:
-          meta.regularMarketDayHigh !== undefined
-            ? String(meta.regularMarketDayHigh)
-            : null,
-        lowPrice:
-          meta.regularMarketDayLow !== undefined
-            ? String(meta.regularMarketDayLow)
-            : null,
-        bidPrice:
-          meta.bid !== undefined && meta.bid !== null ? String(meta.bid) : null,
-        askPrice:
-          meta.ask !== undefined && meta.ask !== null ? String(meta.ask) : null,
+        price: this.quoteText(currentPrice),
+        previousClose: this.quoteText(previousClose),
+        openPrice: this.optionalQuoteText(meta.regularMarketOpen),
+        highPrice: this.optionalQuoteText(meta.regularMarketDayHigh),
+        lowPrice: this.optionalQuoteText(meta.regularMarketDayLow),
+        bidPrice: this.optionalQuoteText(meta.bid),
+        askPrice: this.optionalQuoteText(meta.ask),
         volume: String(meta.regularMarketVolume ?? 0),
-        change: Number(change.toFixed(2)),
+        change: Number(change.toDecimalPlaces(2).toFixed()),
         source: this.name,
         updatedAt: new Date(),
       };
@@ -84,6 +73,31 @@ export class YahooProvider implements MarketDataProvider {
         ),
       );
       throw error;
+    }
+  }
+
+  private quoteDecimal(value: unknown): Prisma.Decimal {
+    try {
+      const decimal = new Prisma.Decimal(value as string | number);
+      if (!decimal.isFinite() || decimal.lte(0)) {
+        throw new Error('invalid');
+      }
+      return decimal.toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP);
+    } catch {
+      throw new Error('Yahoo price invalid');
+    }
+  }
+
+  private quoteText(value: Prisma.Decimal): string {
+    return value.toFixed();
+  }
+
+  private optionalQuoteText(value: unknown): string | null {
+    if (value === undefined || value === null || value === '') return null;
+    try {
+      return this.quoteText(this.quoteDecimal(value));
+    } catch {
+      return null;
     }
   }
 }

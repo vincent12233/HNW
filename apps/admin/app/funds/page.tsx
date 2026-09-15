@@ -73,12 +73,17 @@ export default function FundsPage() {
 
   async function submitFund() {
     const values = form.getFieldsValue();
+    const payload = {
+      ...values,
+      nav: Number(values.nav).toFixed(4),
+      minSubscribe: Number(values.minSubscribe).toFixed(2),
+    };
 
     if (editing) {
-      await api.patch(`/admin-products/funds/${editing.id}`, values);
+      await api.patch(`/admin-products/funds/${editing.id}`, payload);
       message.success("基金产品已更新");
     } else {
-      await api.post("/admin-products/funds", values);
+      await api.post("/admin-products/funds", payload);
       message.success("基金产品已新增");
     }
 

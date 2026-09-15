@@ -17,7 +17,6 @@ import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
 import '../models/ipo.dart';
 import '../models/market_news_item.dart';
-import '../models/pending_order.dart';
 import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
@@ -124,7 +123,6 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   final List<TradingOrder> orders = <TradingOrder>[];
 
-  final List<PendingOrder> pendingOrders = <PendingOrder>[];
 
   final List<WithdrawalRequest> withdrawalRequests = <WithdrawalRequest>[];
 
@@ -1067,7 +1065,6 @@ class _MarketHomePageState extends State<MarketHomePage>
           stocks: stocks,
           positions: positions,
           orders: orders,
-          pendingOrders: pendingOrders,
           institutionalStocks: institutionalStocks,
           ipos: ipos,
           ipoApplications: ipoApplications,
@@ -3046,195 +3043,6 @@ class _MarketHomePageState extends State<MarketHomePage>
       return null;
     } catch (error) {
       return error.toString();
-    }
-  }
-
-  // ignore: unused_element
-  Widget _ordersBody() {
-    if (orders.isEmpty) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(32),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.receipt_long_outlined,
-                size: 72,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 16),
-              const AppText(
-                'No orders yet',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              const AppText(
-                'Open a stock and place a Buy or Sell order. It will appear here.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
-              ),
-              const SizedBox(height: 20),
-              FilledButton.icon(
-                onPressed: () {
-                  setState(() => selectedIndex = 0);
-                },
-                icon: const Icon(Icons.show_chart),
-                label: const AppText('Browse stocks'),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(22, 18, 22, 28),
-      children: [
-        Row(
-          children: [
-            const Expanded(
-              child: AppText(
-                'Order History',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-              ),
-            ),
-            TextButton.icon(
-              onPressed: _refreshRemoteTradingData,
-              icon: const Icon(Icons.refresh_rounded),
-              label: const AppText('Refresh'),
-            ),
-          ],
-        ),
-        AppText(
-          '${orders.length} order'
-          '${orders.length == 1 ? '' : 's'}',
-          style: const TextStyle(color: Colors.black54),
-        ),
-        const SizedBox(height: 12),
-        ...orders.map(_orderCard),
-      ],
-    );
-  }
-
-  Widget _orderCard(TradingOrder order) {
-    final sideColor = order.isBuy ? Colors.green : Colors.red;
-
-    return Card(
-      color: Colors.white,
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: sideColor.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: AppText(
-                    order.isBuy ? 'BUY' : 'SELL',
-                    style: TextStyle(
-                      color: sideColor,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: AppText(
-                    order.symbol,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const Chip(
-                  avatar: Icon(Icons.check_circle, size: 18),
-                  label: AppText('Completed'),
-                ),
-              ],
-            ),
-            const Divider(height: 24),
-            Row(
-              children: [
-                Expanded(child: _orderValue('Quantity', '${order.quantity}')),
-                Expanded(child: _orderValue('Price', formatPrice(order.price))),
-                Expanded(
-                  child: _orderValue('Amount', formatPrice(order.amount)),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: AppText(
-                order.formattedTime,
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _orderValue(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: const TextStyle(color: Colors.black54, fontSize: 12),
-        ),
-        const SizedBox(height: 4),
-        AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-      ],
-    );
-  }
-
-  Future<void> _refreshRemoteTradingData() async {
-    try {
-      final snapshot = await tradingService.fetchAccountSnapshot();
-      final remoteOrders = await tradingService.fetchOrders();
-      if (!mounted) return;
-      setState(() {
-        if (snapshot != null) {
-          cashBalance = snapshot.cashBalance;
-          buyingPower = snapshot.buyingPower;
-          frozenBalance = snapshot.frozenBalance;
-          realizedProfitLoss = snapshot.realizedProfitLoss;
-          positions
-            ..clear()
-            ..addEntries(
-              snapshot.positions.map(
-                (position) => MapEntry(
-                  _positionKey(position.exchange, position.symbol),
-                  position,
-                ),
-              ),
-            );
-        }
-        orders
-          ..clear()
-          ..addAll(remoteOrders);
-      });
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: AppText('Trading data refreshed')),
-      );
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: AppText(error.toString())));
     }
   }
 

@@ -78,18 +78,6 @@ export class DepositService {
     return deposit;
   }
 
-  async createDepositRequest(
-    _userId: string,
-    _amount: number,
-    _paymentMethod?: string,
-    _note?: string,
-  ) {
-    // Client self-serve deposit creation stays disabled; funding is support-led.
-    throw new BadRequestException(
-      'Client deposit submission is disabled; contact support to fund your account',
-    );
-  }
-
   async myDeposits(userId: string) {
     const account = await this.prisma.account.findUnique({
       where: {

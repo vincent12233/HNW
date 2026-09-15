@@ -9,7 +9,6 @@ import '../utils/number_formatters.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/account_transaction.dart';
 import '../models/ipo.dart';
-import '../models/pending_order.dart';
 import '../models/portfolio_position.dart';
 import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
@@ -32,7 +31,6 @@ class TradingCenterPage extends StatefulWidget {
     required this.stocks,
     required this.positions,
     required this.orders,
-    required this.pendingOrders,
     required this.institutionalStocks,
     required this.ipos,
     required this.ipoApplications,
@@ -50,7 +48,6 @@ class TradingCenterPage extends StatefulWidget {
   final List<IpoApplication> ipoApplications;
   final Map<String, PortfolioPosition> positions;
   final List<TradingOrder> orders;
-  final List<PendingOrder> pendingOrders;
   final List<InstitutionalStock> institutionalStocks;
 
   final ValueChanged<StockQuote> onTrade;

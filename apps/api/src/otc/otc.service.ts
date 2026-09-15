@@ -143,8 +143,19 @@ export class OtcService {
     };
   }
 
-  async updateOffer(id: string, body: { price?: string; validFrom?: string; validUntil?: string; isActive?: boolean }) {
-    const existing = await this.prisma.otcOffer.findUnique({ where: { id } });
+  async updateOffer(
+    id: string,
+    body: {
+      price?: string;
+      validFrom?: string;
+      validUntil?: string;
+      isActive?: boolean;
+    },
+  ) {
+    const existing = await this.prisma.otcOffer.findUnique({
+      where: { id },
+      include: { instrument: { include: { quote: true } } },
+    });
     if (!existing) throw new NotFoundException('OTC offer not found');
     let price = existing.price;
     if (body.price != null) {
@@ -160,16 +171,59 @@ export class OtcService {
       ) {
         throw new BadRequestException('Valid price and offer period are required');
       }
+      const liveQuote = existing.instrument.quote?.lastPrice;
+      if (!liveQuote?.greaterThan(0)) {
+        throw new BadRequestException(
+          'A live market quote is required before updating settlement price',
+        );
+      }
+      if (price.greaterThan(liveQuote)) {
+        throw new BadRequestException(
+          'Settlement price cannot exceed the live market quote',
+        );
+      }
     }
-    const validFrom = body.validFrom == null ? existing.validFrom : new Date(body.validFrom);
-    const validUntil = body.validUntil == null ? existing.validUntil : new Date(body.validUntil);
-    if (!price.greaterThan(0) || !Number.isFinite(validFrom.getTime()) || validUntil <= validFrom) {
+    const validFrom =
+      body.validFrom == null ? existing.validFrom : new Date(body.validFrom);
+    const validUntil =
+      body.validUntil == null ? existing.validUntil : new Date(body.validUntil);
+    if (
+      !price.greaterThan(0) ||
+      !Number.isFinite(validFrom.getTime()) ||
+      validUntil <= validFrom
+    ) {
       throw new BadRequestException('Valid price and offer period are required');
     }
     const isActive = body.isActive ?? existing.isActive;
-    const saved = await this.prisma.otcOffer.update({ where: { id }, data: { price, validFrom, validUntil, isActive, ...(isActive ? {} : { transactionKeyEncrypted: null, keyHashTier1: null }) }, include: { instrument: true } });
-    const { keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer } = saved;
-    return { ...offer, transactionKey: isActive && transactionKeyEncrypted ? this.decryptKey(transactionKeyEncrypted) : null };
+    // Editing settlement price / validity keeps the existing 4-digit key.
+    const saved = await this.prisma.otcOffer.update({
+      where: { id },
+      data: {
+        price,
+        validFrom,
+        validUntil,
+        isActive,
+        ...(isActive
+          ? {}
+          : { transactionKeyEncrypted: null, keyHashTier1: null }),
+      },
+      include: { instrument: { include: { quote: true } } },
+    });
+    const {
+      keyHashTier1,
+      keyHashTier2,
+      keyHashTier3,
+      transactionKeyEncrypted,
+      ...offer
+    } = saved;
+    return {
+      ...offer,
+      marketPrice: saved.instrument.quote?.lastPrice ?? null,
+      transactionKey:
+        isActive && transactionKeyEncrypted
+          ? this.decryptKey(transactionKeyEncrypted)
+          : null,
+    };
   }
 
   async submit(userId: string, offerId: string, quantity: number, key: string) {

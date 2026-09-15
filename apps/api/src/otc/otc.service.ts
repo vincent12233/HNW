@@ -55,15 +55,46 @@ export class OtcService {
     }));
   }
 
-  async saveOffer(body: { instrumentId: string; validFrom: string; validUntil: string }) {
+  async saveOffer(body: {
+    instrumentId: string;
+    price: string;
+    validFrom: string;
+    validUntil: string;
+  }) {
     const validFrom = new Date(body.validFrom);
     const validUntil = new Date(body.validUntil);
     if (!Number.isFinite(validFrom.getTime()) || validUntil <= validFrom) {
       throw new BadRequestException('Valid offer period is required');
     }
-    const instrument = await this.prisma.instrument.findUnique({ where: { id: body.instrumentId }, include: { quote: true } });
+    let settlementPrice: Prisma.Decimal;
+    try {
+      settlementPrice = new Prisma.Decimal(body.price);
+    } catch {
+      throw new BadRequestException('Valid settlement price is required');
+    }
+    if (
+      !settlementPrice.isFinite() ||
+      !settlementPrice.greaterThan(0) ||
+      !settlementPrice.equals(settlementPrice.toDecimalPlaces(4))
+    ) {
+      throw new BadRequestException('Valid settlement price is required');
+    }
+    const instrument = await this.prisma.instrument.findUnique({
+      where: { id: body.instrumentId },
+      include: { quote: true },
+    });
     if (!instrument?.isActive) throw new NotFoundException('Active instrument not found');
-    if (!instrument.quote?.lastPrice.greaterThan(0)) throw new BadRequestException('A live market quote is required before publishing');
+    // Live quote remains required as market reference; settlement uses admin price.
+    if (!instrument.quote?.lastPrice.greaterThan(0)) {
+      throw new BadRequestException(
+        'A live market quote is required before publishing',
+      );
+    }
+    if (settlementPrice.greaterThan(instrument.quote.lastPrice)) {
+      throw new BadRequestException(
+        'Settlement price cannot exceed the live market quote',
+      );
+    }
     const transactionKey = randomInt(1000, 10000).toString();
     const keyHash = await bcrypt.hash(transactionKey, 12);
     const encryptedKey = this.encryptKey(transactionKey);
@@ -73,12 +104,43 @@ export class OtcService {
     });
     const saved = await this.prisma.otcOffer.upsert({
       where: { instrumentId: instrument.id },
-      create: { instrumentId: instrument.id, price: instrument.quote.lastPrice, keyHashTier1: keyHash, transactionKeyEncrypted: encryptedKey, validFrom, validUntil },
-      update: { price: instrument.quote.lastPrice, priceTier2: null, priceTier3: null, profitTier1: null, profitTier2: null, profitTier3: null, keyHashTier1: keyHash, keyHashTier2: null, keyHashTier3: null, transactionKeyEncrypted: encryptedKey, validFrom, validUntil, isActive: true },
+      create: {
+        instrumentId: instrument.id,
+        price: settlementPrice,
+        keyHashTier1: keyHash,
+        transactionKeyEncrypted: encryptedKey,
+        validFrom,
+        validUntil,
+      },
+      update: {
+        price: settlementPrice,
+        priceTier2: null,
+        priceTier3: null,
+        profitTier1: null,
+        profitTier2: null,
+        profitTier3: null,
+        keyHashTier1: keyHash,
+        keyHashTier2: null,
+        keyHashTier3: null,
+        transactionKeyEncrypted: encryptedKey,
+        validFrom,
+        validUntil,
+        isActive: true,
+      },
       include: { instrument: true },
     });
-    const { keyHashTier1, keyHashTier2, keyHashTier3, transactionKeyEncrypted, ...offer } = saved;
-    return { ...offer, transactionKey };
+    const {
+      keyHashTier1,
+      keyHashTier2,
+      keyHashTier3,
+      transactionKeyEncrypted,
+      ...offer
+    } = saved;
+    return {
+      ...offer,
+      marketPrice: instrument.quote.lastPrice,
+      transactionKey,
+    };
   }
 
   async updateOffer(id: string, body: { price?: string; validFrom?: string; validUntil?: string; isActive?: boolean }) {

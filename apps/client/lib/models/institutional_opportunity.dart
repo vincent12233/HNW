@@ -15,8 +15,10 @@ class InstitutionalStock {
   final String id;
   final String symbol;
   final String companyName;
-  /// Live settlement / trade price (realtime lastPrice).
+  /// Trade/settlement price. For OTC this is the discount settlement price;
+  /// for institutional offers this is typically the live lastPrice.
   final double price;
+  /// Live market quote (reference). For OTC, trade settles at [price], not this.
   final double marketPrice;
   final double? expectedReturn;
   @Deprecated('Quantity limits are not used for Inst. or OTC orders')

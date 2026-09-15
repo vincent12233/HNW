@@ -589,6 +589,8 @@ const hindi = <String, String>{
   'Quantity': 'मात्रा',
   'Price': 'मूल्य',
   'Market Price': 'बाज़ार मूल्य',
+  'Market quote (reference)': 'बाज़ार भाव (संदर्भ)',
+  'Discount settlement price': 'डिस्काउंट निपटान मूल्य',
   'Limit Price': 'सीमा मूल्य',
   'Order Type': 'ऑर्डर प्रकार',
   'Time in Force': 'ऑर्डर की अवधि',

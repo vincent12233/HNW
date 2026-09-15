@@ -157,4 +157,63 @@ describe('OtcService.updateOffer settlement price', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.otcOffer.update).not.toHaveBeenCalled();
   });
+
+  it('mints a new 4-digit key when reactivating a deactivated offer', async () => {
+    const inactive = {
+      ...baseOffer,
+      isActive: false,
+      keyHashTier1: null,
+      transactionKeyEncrypted: null,
+    };
+    const update = jest.fn().mockImplementation(async ({ data }) => ({
+      ...inactive,
+      ...data,
+      instrument: inactive.instrument,
+    }));
+    const prisma = {
+      otcOffer: {
+        findUnique: jest.fn().mockResolvedValue(inactive),
+        update,
+      },
+    };
+    const service = buildService(prisma);
+    jest.spyOn(service as any, 'encryptKey').mockReturnValue('enc-new');
+
+    const result = await service.updateOffer('offer-1', { isActive: true });
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          isActive: true,
+          transactionKeyEncrypted: 'enc-new',
+          keyHashTier1: expect.any(String),
+        }),
+      }),
+    );
+    expect(result.transactionKey).toMatch(/^\d{4}$/);
+  });
+
+  it('keeps the existing key when editing while already active', async () => {
+    const update = jest.fn().mockResolvedValue({
+      ...baseOffer,
+      validUntil: new Date('2027-01-01T00:00:00.000Z'),
+    });
+    const prisma = {
+      otcOffer: {
+        findUnique: jest.fn().mockResolvedValue(baseOffer),
+        update,
+      },
+    };
+    const service = buildService(prisma);
+    jest.spyOn(service as any, 'decryptKey').mockReturnValue('5678');
+
+    const result = await service.updateOffer('offer-1', {
+      validUntil: '2027-01-01T00:00:00.000Z',
+    });
+
+    const data = update.mock.calls[0][0].data;
+    expect(data.transactionKeyEncrypted).toBeUndefined();
+    expect(data.keyHashTier1).toBeUndefined();
+    expect(result.transactionKey).toBe('5678');
+  });
 });

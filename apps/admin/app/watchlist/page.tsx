@@ -137,7 +137,7 @@ export default function WatchlistPage() {
           <Title level={2}>Inst. 上架管理</Title>
           <Paragraph type="secondary">
             仅管理员可以新增、上架或下架机构股票；业务员和客户端只能查看已上架项目。
-            客户端成交价按实时行情结算，无需配置后台参考价。
+            客户端成交价按实时行情结算。
           </Paragraph>
         </div>
         <Card>

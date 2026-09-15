@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -16,6 +16,7 @@ import {
   Typography,
   message,
 } from "antd";
+import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -43,12 +44,21 @@ type Offer = {
 
 type PublishedOffer = Offer & { transactionKey: string };
 
+function parseMarketPrice(raw: string | number | null | undefined) {
+  if (raw == null || raw === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 export default function OtcOffersPage() {
   const [offers, setOffers] = useState<Offer[]>([]);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
   const selectedInstrumentId = Form.useWatch("instrumentId", form);
 
   const selectedInstrument = useMemo(
@@ -56,12 +66,15 @@ export default function OtcOffersPage() {
     [instruments, selectedInstrumentId],
   );
 
-  const liveMarketPrice = useMemo(() => {
-    const raw = selectedInstrument?.quote?.lastPrice;
-    if (raw == null || raw === "") return null;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : null;
-  }, [selectedInstrument]);
+  const liveMarketPrice = useMemo(
+    () => parseMarketPrice(selectedInstrument?.quote?.lastPrice),
+    [selectedInstrument],
+  );
+
+  const editLiveMarketPrice = useMemo(
+    () => parseMarketPrice(editing?.marketPrice),
+    [editing],
+  );
 
   async function load() {
     setLoading(true);
@@ -118,6 +131,43 @@ export default function OtcOffersPage() {
     });
   }
 
+  function openEdit(record: Offer) {
+    setEditing(record);
+    editForm.setFieldsValue({
+      price: Number(record.price),
+      period: [dayjs(record.validFrom), dayjs(record.validUntil)],
+    });
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    const values = await editForm.validateFields();
+    const settlementPrice = Number(values.price);
+    if (!Number.isFinite(settlementPrice) || settlementPrice <= 0) {
+      message.error("请填写有效的折扣结算价");
+      return;
+    }
+    if (
+      editLiveMarketPrice != null &&
+      Number.isFinite(editLiveMarketPrice) &&
+      settlementPrice > editLiveMarketPrice
+    ) {
+      message.error("折扣结算价不能高于实时行情");
+      return;
+    }
+    await api.patch(`/otc/admin/offers/${editing.id}`, {
+      price: settlementPrice.toFixed(4),
+      validFrom: values.period[0].toISOString(),
+      validUntil: values.period[1].toISOString(),
+    });
+    setEditOpen(false);
+    setEditing(null);
+    editForm.resetFields();
+    message.success("已更新折扣结算价与有效期（交易密钥不变）");
+    await load();
+  }
+
   async function toggle(record: Offer, isActive: boolean) {
     await api.patch(`/otc/admin/offers/${record.id}`, { isActive });
     await load();
@@ -129,8 +179,8 @@ export default function OtcOffersPage() {
         <div>
           <Title level={2}>OTC 上架管理</Title>
           <Paragraph type="secondary">
-            实时行情仅作参考；上架时填写折扣结算价（成交按此价格结算）。每次上架自动生成新的
-            4 位交易密钥。
+            实时行情仅作参考；上架/编辑时填写折扣结算价（成交按此价格结算）。新上架会生成
+            4 位交易密钥；编辑价格或有效期不会更换密钥。
           </Paragraph>
         </div>
         <Card>
@@ -212,6 +262,18 @@ export default function OtcOffersPage() {
                   <Switch checked={r.isActive} onChange={(v) => toggle(r, v)} />
                 ),
               },
+              {
+                title: "操作",
+                render: (_: unknown, r: Offer) => (
+                  <Button
+                    size="small"
+                    icon={<EditOutlined />}
+                    onClick={() => openEdit(r)}
+                  >
+                    编辑
+                  </Button>
+                ),
+              },
             ]}
           />
         </Card>
@@ -253,6 +315,49 @@ export default function OtcOffersPage() {
                 precision={4}
                 style={{ width: "100%" }}
                 placeholder="例如低于行情的折扣价"
+              />
+            </Form.Item>
+            <Form.Item name="period" label="有效时间" rules={[{ required: true }]}>
+              <DatePicker.RangePicker showTime style={{ width: "100%" }} />
+            </Form.Item>
+          </Form>
+        </Modal>
+        <Modal
+          title={
+            editing ? `编辑 · ${editing.instrument.symbol}` : "编辑 OTC 上架"
+          }
+          open={editOpen}
+          onCancel={() => {
+            setEditOpen(false);
+            setEditing(null);
+            editForm.resetFields();
+          }}
+          onOk={saveEdit}
+          okText="保存"
+          cancelText="取消"
+        >
+          <Paragraph type="secondary" style={{ marginTop: 0 }}>
+            修改折扣结算价或有效期不会更换现有 4 位交易密钥。
+          </Paragraph>
+          <Form form={editForm} layout="vertical">
+            <Form.Item label="实时行情（参考）">
+              <Text>
+                {editLiveMarketPrice != null
+                  ? `₹${editLiveMarketPrice.toFixed(2)}`
+                  : "暂无行情"}
+              </Text>
+            </Form.Item>
+            <Form.Item
+              name="price"
+              label="折扣结算价（₹）"
+              rules={[{ required: true, message: "请填写折扣结算价" }]}
+              extra="须低于或等于实时行情。"
+            >
+              <InputNumber
+                min={0.0001}
+                step={0.01}
+                precision={4}
+                style={{ width: "100%" }}
               />
             </Form.Item>
             <Form.Item name="period" label="有效时间" rules={[{ required: true }]}>

@@ -135,7 +135,7 @@ export default function BusinessOtcPage() {
     },
     { title: "数量", dataIndex: "quantity", align: "right", width: 100 },
     {
-      title: "成交单价",
+      title: "折扣结算价",
       dataIndex: "price",
       align: "right",
       width: 140,

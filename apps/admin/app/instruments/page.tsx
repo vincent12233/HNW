@@ -25,7 +25,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
@@ -108,19 +108,32 @@ export default function InstrumentLibraryPage() {
   const [enablingAll, setEnablingAll] = useState(false);
   const [error, setError] = useState("");
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
+  const filtersRef = useRef({ search, active, exchange, page, pageSize });
+  useEffect(() => {
+    filtersRef.current = { search, active, exchange, page, pageSize };
+  });
 
-  async function loadRecords(nextPage = page, nextPageSize = pageSize) {
+  const loadRecords = useCallback(async (nextPage?: number, nextPageSize?: number) => {
+    const {
+      search: nextSearch,
+      active: nextActive,
+      exchange: nextExchange,
+      page: currentPage,
+      pageSize: currentPageSize,
+    } = filtersRef.current;
+    const pageToLoad = nextPage ?? currentPage;
+    const pageSizeToLoad = nextPageSize ?? currentPageSize;
     const version = ++requestVersion.current;
     setLoading(true);
     setError("");
     try {
       const response = await api.get<InstrumentMasterResponse>("/admin/instruments", {
         params: {
-          search: search.trim() || undefined,
-          active,
-          exchange,
-          page: nextPage,
-          pageSize: nextPageSize,
+          search: nextSearch.trim() || undefined,
+          active: nextActive,
+          exchange: nextExchange,
+          page: pageToLoad,
+          pageSize: pageSizeToLoad,
         },
       });
       if (version !== requestVersion.current) return;
@@ -128,8 +141,8 @@ export default function InstrumentLibraryPage() {
       setAutoSync(response.data.autoSync);
       setRecords(Array.isArray(response.data.data) ? response.data.data : []);
       setTotal(Number(response.data.total ?? 0));
-      setPage(Number(response.data.page ?? nextPage));
-      setPageSize(Number(response.data.pageSize ?? nextPageSize));
+      setPage(Number(response.data.page ?? pageToLoad));
+      setPageSize(Number(response.data.pageSize ?? pageSizeToLoad));
       setSelectedRowKeys([]);
     } catch (requestError: unknown) {
       if (version !== requestVersion.current) return;
@@ -137,16 +150,20 @@ export default function InstrumentLibraryPage() {
     } finally {
       if (version === requestVersion.current) setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
+    const versionRef = requestVersion;
     const timer = window.setTimeout(() => {
       void loadRecords(1, 50);
     }, 0);
-    return () => { window.clearTimeout(timer); requestVersion.current++; };
+    return () => {
+      window.clearTimeout(timer);
+      // Invalidate in-flight loads from this effect instance on exchange switch/unmount.
+      versionRef.current += 1;
+    };
     // Initial server load only; filters are submitted explicitly.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [exchange]);
+  }, [exchange, loadRecords]);
 
   async function enableAll() {
     setEnablingAll(true);

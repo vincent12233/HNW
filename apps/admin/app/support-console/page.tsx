@@ -19,7 +19,7 @@ import {
   Typography,
   message,
 } from "antd";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import RecoveryInbox from "@/components/RecoveryInbox";
@@ -81,8 +81,12 @@ export default function SupportConsolePage() {
   const [supportTagsState, setSupportTagsState] = useState<string[]>(supportTags);
 
   const selectedTags = useMemo(() => selected?.tags || [], [selected?.tags]);
+  const selectedIdRef = useRef<string | null>(null);
+  useEffect(() => {
+    selectedIdRef.current = selected?.id ?? null;
+  });
 
-  async function loadQuickReplies() {
+  const loadQuickReplies = useCallback(async () => {
     try {
       const response = await api.get<{
         support?: Record<string, { body?: string }>;
@@ -110,9 +114,22 @@ export default function SupportConsolePage() {
     } catch {
       // Keep built-in fallbacks when ops content is unavailable.
     }
-  }
+  }, []);
 
-  async function loadConversations() {
+  const loadMessages = useCallback(async (conversationId: string) => {
+    setMessageLoading(true);
+
+    try {
+      const response = await api.get<SupportMessage[]>(
+        `/support/conversations/${conversationId}/messages`,
+      );
+      setMessages(Array.isArray(response.data) ? response.data : []);
+    } finally {
+      setMessageLoading(false);
+    }
+  }, []);
+
+  const loadConversations = useCallback(async () => {
     setLoading(true);
     setError("");
 
@@ -121,9 +138,10 @@ export default function SupportConsolePage() {
       const list = Array.isArray(response.data) ? response.data : [];
       setConversations(list);
 
+      const currentId = selectedIdRef.current;
       const nextSelected =
-        selected && list.find((item) => item.id === selected.id)
-          ? list.find((item) => item.id === selected.id)!
+        currentId && list.find((item) => item.id === currentId)
+          ? list.find((item) => item.id === currentId)!
           : list[0] || null;
 
       setSelected(nextSelected);
@@ -138,20 +156,7 @@ export default function SupportConsolePage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  async function loadMessages(conversationId: string) {
-    setMessageLoading(true);
-
-    try {
-      const response = await api.get<SupportMessage[]>(
-        `/support/conversations/${conversationId}/messages`,
-      );
-      setMessages(Array.isArray(response.data) ? response.data : []);
-    } finally {
-      setMessageLoading(false);
-    }
-  }
+  }, [loadMessages]);
 
   async function updateTags(tags: string[]) {
     if (!selected) return;
@@ -211,7 +216,7 @@ export default function SupportConsolePage() {
   useEffect(() => {
     void loadConversations();
     void loadQuickReplies();
-  }, []);
+  }, [loadConversations, loadQuickReplies]);
 
   return (
     <AdminShell>

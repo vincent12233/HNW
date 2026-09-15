@@ -3,7 +3,7 @@
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -70,8 +70,13 @@ export default function TradesPage() {
   const [side, setSide] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const filtersRef = useRef({ search, side });
+  useEffect(() => {
+    filtersRef.current = { search, side };
+  });
 
-  async function loadRecords() {
+  const loadRecords = useCallback(async () => {
+    const { search: nextSearch, side: nextSide } = filtersRef.current;
     setLoading(true);
     setError("");
 
@@ -80,8 +85,8 @@ export default function TradesPage() {
         params: {
           page: 1,
           pageSize: 100,
-          search: search.trim() || undefined,
-          side,
+          search: nextSearch.trim() || undefined,
+          side: nextSide,
         },
       });
       setRecords(Array.isArray(response.data.data) ? response.data.data : []);
@@ -92,11 +97,11 @@ export default function TradesPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadRecords();
-  }, []);
+    void loadRecords();
+  }, [loadRecords]);
 
   const columns: ColumnsType<TradeRecord> = [
     {

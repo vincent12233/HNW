@@ -3,7 +3,7 @@
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import { Alert, Button, Card, Input, Select, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -73,35 +73,42 @@ export default function AuditLogsPage() {
   const [error, setError] = useState("");
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
+  const filtersRef = useRef({ action, resource, keyword, page });
+  useEffect(() => {
+    filtersRef.current = { action, resource, keyword, page };
+  });
 
-  async function loadRecords(nextPage = page) {
+  const loadRecords = useCallback(async (nextPage?: number) => {
+    const { action: nextAction, resource: nextResource, keyword: nextKeyword, page: currentPage } =
+      filtersRef.current;
+    const pageToLoad = nextPage ?? currentPage;
     setLoading(true);
     setError("");
 
     try {
       const response = await api.get<AuditResponse>("/admin/audit-logs", {
         params: {
-          page: nextPage,
+          page: pageToLoad,
           pageSize: 20,
-          action: action || undefined,
-          resource: resource || undefined,
-          resourceId: keyword.trim() || undefined,
+          action: nextAction || undefined,
+          resource: nextResource || undefined,
+          resourceId: nextKeyword.trim() || undefined,
         },
       });
       setRecords(Array.isArray(response.data.data) ? response.data.data : []);
       setTotal(response.data.total ?? 0);
-      setPage(response.data.page ?? nextPage);
+      setPage(response.data.page ?? pageToLoad);
     } catch (requestError: unknown) {
       const responseMessage = getApiErrorMessage(requestError, "");
       setError(responseMessage || "操作日志加载失败");
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    loadRecords(1);
-  }, []);
+    void loadRecords(1);
+  }, [loadRecords]);
 
   const visibleRecords = useMemo(() => {
     const value = keyword.trim().toLowerCase();

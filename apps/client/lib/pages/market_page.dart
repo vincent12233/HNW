@@ -44,6 +44,7 @@ import '../widgets/market_header.dart';
 import '../widgets/market_status_card.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/floating_support_button.dart';
+import '../widgets/support_chat_launcher.dart';
 import '../widgets/support_ui_metrics.dart';
 import 'login_page.dart';
 import 'markets_page.dart';
@@ -54,7 +55,6 @@ import 'account_content_page.dart';
 import 'legal_page.dart';
 import 'stock_detail_page.dart';
 import 'stock_search_page.dart';
-import 'support_chat_page.dart';
 import 'deposit_page.dart';
 import 'trading_center_page.dart';
 
@@ -1928,61 +1928,8 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openSupportChat({String? initialMessage}) {
-    showGeneralDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Close support',
-      barrierColor: const Color(0x73071326),
-      transitionDuration: const Duration(milliseconds: 260),
-      pageBuilder: (dialogContext, animation, secondaryAnimation) {
-        return SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final m = SupportUiMetrics.of(context);
-              return Align(
-                alignment: Alignment.bottomCenter,
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    m.panelHorizontalInset,
-                    12,
-                    m.panelHorizontalInset,
-                    m.panelBottomInset,
-                  ),
-                  child: SizedBox(
-                    width: m.panelWidth,
-                    height: m.panelMaxHeight,
-                    child: Material(
-                      color: Colors.transparent,
-                      elevation: 16,
-                      shadowColor: const Color(0x66071326),
-                      borderRadius: BorderRadius.circular(m.panelRadius),
-                      clipBehavior: Clip.antiAlias,
-                      child: SupportChatPage(initialMessage: initialMessage),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-        );
-      },
-      transitionBuilder: (context, animation, secondaryAnimation, child) {
-        final curved = CurvedAnimation(
-          parent: animation,
-          curve: Curves.easeOutCubic,
-        );
-        return FadeTransition(
-          opacity: curved,
-          child: SlideTransition(
-            position: Tween<Offset>(
-              begin: const Offset(0, 0.08),
-              end: Offset.zero,
-            ).animate(curved),
-            child: child,
-          ),
-        );
-      },
-    );
+    // Side FAB and Help both open the SaleSmartly-backed support panel.
+    unawaited(showSupportChatPanel(context, initialMessage: initialMessage));
   }
 
   Future<void> _openWithdrawalRequest() async {

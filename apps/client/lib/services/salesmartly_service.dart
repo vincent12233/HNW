@@ -25,7 +25,7 @@ class SaleSmartlyService {
     final configured = scriptUrlOverride?.trim().isNotEmpty == true
         ? scriptUrlOverride!.trim()
         : AppConfig.saleSmartlyScriptUrl.trim();
-    final scriptUrl = configured;
+    final scriptUrl = _normalizeScriptUrl(configured);
     if (scriptUrl.isEmpty) {
       throw const SaleSmartlyException(
         'Customer service is not configured. Ask an administrator to set the SaleSmartly script URL.',
@@ -59,6 +59,17 @@ class SaleSmartlyService {
     } on PlatformException {
       // Session deletion must still succeed if the native SDK is unavailable.
     }
+  }
+
+  /// Accepts a bare URL or a full `<script src="...">` snippet.
+  static String _normalizeScriptUrl(String raw) {
+    final text = raw.trim();
+    if (text.isEmpty) return '';
+    final match = RegExp(
+      r'''src\s*=\s*["']([^"']+)["']''',
+      caseSensitive: false,
+    ).firstMatch(text);
+    return (match?.group(1) ?? text).trim();
   }
 }
 

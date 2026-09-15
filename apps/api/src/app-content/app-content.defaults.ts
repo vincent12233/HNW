@@ -1313,14 +1313,14 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
   {
     module: AppContentModule.SUPPORT,
     key: 'salesmartly_script_url',
-    body: '',
+    body: 'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
     locale: 'en',
     sortOrder: 40,
   },
   {
     module: AppContentModule.SUPPORT,
     key: 'salesmartly_script_url',
-    body: '',
+    body: 'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
     locale: 'hi',
     sortOrder: 40,
   },

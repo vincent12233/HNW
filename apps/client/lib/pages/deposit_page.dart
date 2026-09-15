@@ -6,7 +6,7 @@ import '../l10n/app_language.dart';
 import '../models/account_transaction.dart';
 import '../services/app_content_service.dart';
 import '../services/trading_service.dart';
-import 'support_chat_page.dart';
+import '../widgets/support_chat_launcher.dart';
 import '../utils/number_formatters.dart';
 
 class DepositPage extends StatefulWidget {
@@ -65,11 +65,8 @@ class _DepositPageState extends State<DepositPage> {
         fallback: 'Hello, I would like to make a deposit.',
       ),
     );
-    Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => SupportChatPage(initialMessage: message),
-      ),
-    );
+    // Same SaleSmartly panel as the side floating customer-service button.
+    unawaited(showSupportChatPanel(context, initialMessage: message));
   }
 
   @override
@@ -237,7 +234,7 @@ class _DepositPageState extends State<DepositPage> {
                                 Icons.support_agent_rounded,
                                 size: 18,
                               ),
-                              label: const AppText('Contact customer support'),
+                              label: AppText(ctaLabel),
                             ),
                           ],
                         ),

@@ -87,10 +87,11 @@ class _SupportChatPageState extends State<SupportChatPage>
         throw const SaleSmartlyException('Please sign in again.');
       }
       final content = await _appContent.load();
-      final scriptUrl = content.text('support', 'salesmartly_script_url');
+      final scriptUrl = content.text('support', 'salesmartly_script_url').trim();
       await _saleSmartly.openChat(
         session: session,
         initialMessage: launchMessage,
+        // CMS (or API env fallback embedded in CMS bundle) first; dart-define last.
         scriptUrlOverride: scriptUrl.isEmpty ? null : scriptUrl,
       );
     } on SaleSmartlyException catch (error) {

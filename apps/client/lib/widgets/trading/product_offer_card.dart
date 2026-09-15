@@ -34,9 +34,11 @@ class ProductOfferCard extends StatelessWidget {
         offerPrice > 0 &&
         marketPrice.isFinite &&
         offerPrice.isFinite;
+    // Prefer admin/CMS expectedReturn. Only derive from price spread when the
+    // offer differs from market (e.g. OTC). Equal live prices must not show 0%.
     final expected = expectedReturn != null && expectedReturn!.isFinite
         ? expectedReturn
-        : valid
+        : valid && (marketPrice - offerPrice).abs() > 1e-9
             ? (marketPrice - offerPrice) / offerPrice * 100
             : null;
     return Container(

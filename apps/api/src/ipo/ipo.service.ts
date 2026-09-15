@@ -104,11 +104,7 @@ export class IpoService {
   }
 
   private async reservedDraftQuantity(
-    tx: {
-      ipoApplication: {
-        aggregate: (args: unknown) => Promise<{ _sum: { draftQuantity: number | null } }>;
-      };
-    },
+    tx: any,
     ipoId: string,
     excludeApplicationId?: string,
   ) {

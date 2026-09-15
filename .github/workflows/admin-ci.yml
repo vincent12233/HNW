@@ -41,6 +41,9 @@ jobs:
       - name: Test
         run: npm test
 
+      - name: Typecheck
+        run: npx tsc --noEmit
+
       - name: Build
         run: npm run build
         env:

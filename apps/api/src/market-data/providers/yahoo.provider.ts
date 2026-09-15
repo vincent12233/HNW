@@ -5,6 +5,10 @@ import {
   MarketDataProvider,
   MarketQuoteResult,
 } from './market-data-provider.interface';
+import {
+  firstYahooChartResult,
+  type YahooChartResponse,
+} from './yahoo-chart.types';
 
 @Injectable()
 export class YahooProvider implements MarketDataProvider {
@@ -26,16 +30,17 @@ export class YahooProvider implements MarketDataProvider {
 
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
-      const response = await axios.get(url, {
+      const response = await axios.get<YahooChartResponse>(url, {
         params: { interval: '1m', range: '1d' },
         headers: { 'User-Agent': 'Mozilla/5.0' },
         timeout: 10000,
       });
 
-      const result = response.data?.chart?.result?.[0];
+      const result = firstYahooChartResult(response.data);
       if (!result) throw new Error('Yahoo quote empty');
 
       const meta = result.meta;
+      if (!meta) throw new Error('Yahoo meta missing');
       const price = meta.regularMarketPrice;
       if (price === undefined || price === null) {
         throw new Error('Yahoo price missing');
@@ -63,15 +68,14 @@ export class YahooProvider implements MarketDataProvider {
         source: this.name,
         updatedAt: new Date(),
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       this.logger.error(`Yahoo quote failed: ${normalizedSymbol}`);
-      this.logger.error(
-        JSON.stringify(
-          { status: error?.response?.status, message: error?.message },
-          null,
-          2,
-        ),
-      );
+      const status =
+        error && typeof error === 'object' && 'response' in error
+          ? (error as { response?: { status?: number } }).response?.status
+          : undefined;
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(JSON.stringify({ status, message }, null, 2));
       throw error;
     }
   }

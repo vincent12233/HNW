@@ -13,6 +13,10 @@ import {
   MarketHistoryEvent,
   MarketHistoryResult,
 } from './providers/market-data-provider.interface';
+import {
+  firstYahooChartResult,
+  type YahooChartResponse,
+} from './providers/yahoo-chart.types';
 
 type HistoryRange = '1D' | '1W' | '1M' | '3M' | '6M' | '1Y';
 type HistoryWindow = {
@@ -127,7 +131,7 @@ export class HistoricalMarketDataService {
   ): Promise<MarketHistoryResult> {
     const yahooSymbol = `${symbol}.${exchange === 'BSE' ? 'BO' : 'NS'}`;
     try {
-      const response = await axios.get(
+      const response = await axios.get<YahooChartResponse>(
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`,
         {
           params: {
@@ -140,7 +144,7 @@ export class HistoricalMarketDataService {
           timeout: 10000,
         },
       );
-      const chart = response.data?.chart?.result?.[0];
+      const chart = firstYahooChartResult(response.data);
       const timestamps = Array.isArray(chart?.timestamp) ? chart.timestamp : [];
       const quote = chart?.indicators?.quote?.[0];
       if (!quote || timestamps.length === 0) {

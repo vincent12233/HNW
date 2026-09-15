@@ -13,6 +13,10 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 
+type InstrumentWithQuote = Prisma.InstrumentGetPayload<{
+  include: { quote: true };
+}>;
+
 @Injectable()
 export class MarketDataService {
   constructor(
@@ -129,7 +133,10 @@ export class MarketDataService {
           take: safeLimit,
         }),
         requestedSymbols.length === 0
-          ? this.prisma.instrument.findMany({ where: { id: { in: [] } } })
+          ? this.prisma.instrument.findMany({
+              where: { id: { in: [] } },
+              include: { quote: true },
+            })
           : this.prisma.instrument.findMany({
               where: {
                 ...ordinaryStockWhere,
@@ -171,7 +178,7 @@ export class MarketDataService {
         }),
       ]);
 
-    const byInstrument = new Map<string, any>();
+    const byInstrument = new Map<string, InstrumentWithQuote>();
     for (const instrument of [
       ...featured,
       ...requested,
@@ -309,7 +316,7 @@ export class MarketDataService {
     };
   }
 
-  private mapSnapshot(instruments: any[]) {
+  private mapSnapshot(instruments: InstrumentWithQuote[]) {
     const now = Date.now();
     const staleAfterMs = this.positiveInteger(
       this.config.get<string>('MARKET_DATA_STALE_AFTER_MS'),
@@ -319,13 +326,14 @@ export class MarketDataService {
     return instruments
       .filter((item) => Number(item.quote?.lastPrice ?? 0) > 0)
       .map((item) => {
-        const lastPrice = Number(item.quote.lastPrice);
-        const previousClose = Number(item.quote.previousClose ?? 0);
+        const quote = item.quote!;
+        const lastPrice = Number(quote.lastPrice);
+        const previousClose = Number(quote.previousClose ?? 0);
         const change =
           previousClose > 0
             ? ((lastPrice - previousClose) / previousClose) * 100
             : 0;
-        const updatedAt = item.quote.asOf as Date;
+        const updatedAt = quote.asOf;
         const quoteFresh = now - updatedAt.getTime() <= staleAfterMs;
         return {
           symbol: item.symbol,
@@ -335,20 +343,20 @@ export class MarketDataService {
             item.logoUrl ||
             (this.config.get<string>('STOCK_LOGO_PROVIDER') !== 'none' &&
             /^[A-Z]{2}[A-Z0-9]{9}[0-9]$/.test(item.isin || '')
-              ? `${this.config.get<string>('STOCK_LOGO_BASE_URL') || 'https://api.elbstream.com/logos/isin'}/${encodeURIComponent(item.isin)}?format=png`
+              ? `${this.config.get<string>('STOCK_LOGO_BASE_URL') || 'https://api.elbstream.com/logos/isin'}/${encodeURIComponent(item.isin || '')}?format=png`
               : null),
           category: item.category,
           displayOrder: item.displayOrder,
-          price: item.quote.lastPrice,
+          price: quote.lastPrice,
           change,
-          previousClose: item.quote.previousClose ?? null,
-          open: item.quote.openPrice ?? null,
-          high: item.quote.highPrice ?? null,
-          low: item.quote.lowPrice ?? null,
-          bid: item.quote.bidPrice ?? null,
-          ask: item.quote.askPrice ?? null,
-          volume: item.quote.volume?.toString() ?? '0',
-          source: item.quote.source ?? null,
+          previousClose: quote.previousClose ?? null,
+          open: quote.openPrice ?? null,
+          high: quote.highPrice ?? null,
+          low: quote.lowPrice ?? null,
+          bid: quote.bidPrice ?? null,
+          ask: quote.askPrice ?? null,
+          volume: quote.volume?.toString() ?? '0',
+          source: quote.source ?? null,
           updatedAt,
           quoteFresh,
         };

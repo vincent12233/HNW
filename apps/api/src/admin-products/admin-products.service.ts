@@ -192,12 +192,16 @@ export class AdminProductsService {
       2,
       { optional: true, max: 100 },
     );
+    const market = String(body.market || 'NSE')
+      .trim()
+      .toUpperCase();
+    if (!['NSE', 'BSE'].includes(market)) {
+      throw new BadRequestException('Market must be NSE or BSE');
+    }
     return {
       symbol: String(body.symbol).trim().toUpperCase(),
       name: String(body.name).trim(),
-      market: String(body.market || 'NSE')
-        .trim()
-        .toUpperCase(),
+      market,
       category: String(body.category || '未分类').trim(),
       risk: String(body.risk || '中').trim(),
       reason: body.reason?.trim() || null,

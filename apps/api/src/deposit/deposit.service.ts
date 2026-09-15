@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
-import { applyIncomingFundsToIpoDebts, settleIpoHoldings, SettleIpoInput } from '../common/ipo-debt-repay';
+import { applyIncomingFundsToIpoDebts } from '../common/ipo-debt-repay';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { moneyDecimal } from '../common/money';
 
@@ -226,33 +226,14 @@ export class DepositService {
 
       const balanceBefore = moneyDecimal(account.cashBalance);
       const { repayAmount: applied, remainingAmount } =
-        await applyIncomingFundsToIpoDebts(
-          tx,
-          {
-            accountId: deposit.accountId,
-            userId: account.userId,
-            amount: availableAmount,
-            balanceBefore,
-          },
-          (client, settle) => this.settleIpoApplication(client, settle),
-        );
+        await applyIncomingFundsToIpoDebts(tx, {
+          accountId: deposit.accountId,
+          userId: account.userId,
+          amount: availableAmount,
+          balanceBefore,
+        });
       repayAmount = applied;
       availableAmount = remainingAmount;
-
-      /*
-          2.
-          Deposit 状态更新
-        */
-
-      /*
-          3.
-          Deposit 流水
-        */
-
-      /*
-          4.
-          剩余资金进入账户
-        */
 
       if (availableAmount.gt(0)) {
         await tx.account.update({
@@ -361,9 +342,5 @@ export class DepositService {
   private async assertDepositVisible(userId: string, role: string, actorId: string, tx: any) {
     const visible = await tx.user.count({ where: { id: userId, ...this.depositCustomerScope(role, actorId) } });
     if (!visible) throw new NotFoundException('Deposit request not found');
-  }
-
-  private async settleIpoApplication(tx: any, input: SettleIpoInput) {
-    return settleIpoHoldings(tx, input);
   }
 }

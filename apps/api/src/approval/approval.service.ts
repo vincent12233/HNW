@@ -2,7 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { AuditService } from '../audit/audit.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { applyIncomingFundsToIpoDebts, settleIpoHoldings } from '../common/ipo-debt-repay';
+import { applyIncomingFundsToIpoDebts } from '../common/ipo-debt-repay';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { availableCash, moneyDecimal } from '../common/money';
 
@@ -69,7 +69,6 @@ export class ApprovalService {
             amount,
             balanceBefore,
           },
-          settleIpoHoldings,
         );
         ipoRepayment = applied.repayAmount;
         creditedAmount = applied.remainingAmount;

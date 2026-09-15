@@ -9,6 +9,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
+import { settleIpoHoldings, SettleIpoInput } from '../common/ipo-debt-repay';
 import { availableCash, moneyDecimal } from '../common/money';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
@@ -1053,101 +1054,8 @@ export class IpoService {
     );
   }
 
-  async settleIpoApplication(
-    tx: any,
-    input: {
-      applicationId: string;
-      accountId: string;
-      instrumentId: string;
-      quantity: number;
-      price: Prisma.Decimal | number;
-      totalAmount: Prisma.Decimal | number;
-    },
-  ) {
-    const price = moneyDecimal(input.price);
-    const totalAmount = moneyDecimal(input.totalAmount);
-    const existingOrder = await tx.order.findUnique({
-      where: {
-        accountId_clientOrderId: {
-          accountId: input.accountId,
-          clientOrderId: `IPO-${input.applicationId}`,
-        },
-      },
-    });
-
-    if (existingOrder) {
-      return existingOrder;
-    }
-
-    const order = await tx.order.create({
-      data: {
-        clientOrderId: `IPO-${input.applicationId}`,
-        accountId: input.accountId,
-        instrumentId: input.instrumentId,
-        side: 'BUY',
-        type: 'MARKET',
-        status: 'FILLED',
-        quantity: input.quantity,
-        filledQuantity: input.quantity,
-        limitPrice: price,
-        averageFillPrice: price,
-        completedAt: new Date(),
-      },
-    });
-
-    await tx.trade.create({
-      data: {
-        executionId: `IPO-EXEC-${input.applicationId}`,
-        orderId: order.id,
-        accountId: input.accountId,
-        instrumentId: input.instrumentId,
-        quantity: input.quantity,
-        price,
-        grossAmount: totalAmount,
-        fees: 0,
-        netAmount: totalAmount,
-      },
-    });
-
-    const position = await tx.position.findUnique({
-      where: {
-        accountId_instrumentId: {
-          accountId: input.accountId,
-          instrumentId: input.instrumentId,
-        },
-      },
-    });
-
-    if (position) {
-      const oldQty = position.quantity;
-      const newQty = oldQty + input.quantity;
-      const avgPrice = new Prisma.Decimal(position.averagePrice)
-        .mul(oldQty)
-        .add(price.mul(input.quantity))
-        .div(newQty)
-        .toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP);
-
-      await tx.position.update({
-        where: {
-          id: position.id,
-        },
-        data: {
-          quantity: newQty,
-          averagePrice: avgPrice,
-        },
-      });
-    } else {
-      await tx.position.create({
-        data: {
-          accountId: input.accountId,
-          instrumentId: input.instrumentId,
-          quantity: input.quantity,
-          averagePrice: price,
-        },
-      });
-    }
-
-    return order;
+  async settleIpoApplication(tx: any, input: SettleIpoInput) {
+    return settleIpoHoldings(tx, input);
   }
 
   async getApplicationLimit(userId: string, ipoId: string) {

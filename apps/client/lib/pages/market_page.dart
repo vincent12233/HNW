@@ -924,7 +924,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                         'fab_label',
                         fallback: 'Customer Service',
                       ),
-                      onTap: () => _openSupportChat(),
+                      onTap: () => unawaited(showSupportChatPanel(context)),
                     ),
                   ),
                 ),
@@ -1927,11 +1927,6 @@ class _MarketHomePageState extends State<MarketHomePage>
     ).push(MaterialPageRoute<void>(builder: (_) => const DepositPage()));
   }
 
-  void _openSupportChat({String? initialMessage}) {
-    // Side FAB and Help both open the SaleSmartly-backed support panel.
-    unawaited(showSupportChatPanel(context, initialMessage: initialMessage));
-  }
-
   Future<void> _openWithdrawalRequest() async {
     if (_withdrawalSubmitting) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -2568,146 +2563,6 @@ class _MarketHomePageState extends State<MarketHomePage>
         ),
       ],
     );
-  }
-
-  void _openCustomerService({
-    required String title,
-    required String initialMessage,
-    required IconData icon,
-  }) {
-    final messageController = TextEditingController(text: initialMessage);
-    final greeting = _appContent.text(
-      'support',
-      'greeting',
-      fallback: 'You are contacting online customer service inside the app.',
-    );
-    final hours = _appContent.text('support', 'hours');
-
-    showDialog<void>(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
-          contentPadding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          title: Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE8EEFA),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, color: AppConfig.primaryColor),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppText(
-                  title,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FB),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Icon(
-                        Icons.support_agent,
-                        size: 22,
-                        color: AppConfig.primaryColor,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(
-                              greeting,
-                              style: const TextStyle(height: 1.4),
-                            ),
-                            if (hours.isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              AppText(
-                                hours,
-                                style: const TextStyle(
-                                  color: Color(0xFF64748B),
-                                  fontSize: 12,
-                                  height: 1.35,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 18),
-                TextField(
-                  controller: messageController,
-                  minLines: 3,
-                  maxLines: 5,
-                  decoration: const InputDecoration(
-                    labelText: 'Message',
-                    alignLabelWithHint: true,
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                const AppText(
-                  'Send a message directly to online customer service. '
-                  'Customer service will assist you in this conversation.',
-                  style: TextStyle(
-                    color: Colors.black54,
-                    fontSize: 12,
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const AppText('Cancel'),
-            ),
-            FilledButton.icon(
-              onPressed: () async {
-                final message = messageController.text.trim();
-
-                if (message.isEmpty) {
-                  return;
-                }
-
-                Navigator.pop(dialogContext);
-                _openSupportChat(initialMessage: message);
-              },
-              icon: const Icon(Icons.send_outlined),
-              label: const AppText('Send Message'),
-            ),
-          ],
-        );
-      },
-    ).whenComplete(() {
-      messageController.dispose();
-    });
   }
 
   Widget _marketBody() {
@@ -3901,14 +3756,15 @@ class _MarketHomePageState extends State<MarketHomePage>
                   'profile.tile.help.subtitle',
                   fallback: 'FAQs, contact support and raise a ticket',
                 ),
-                onTap: () => _openCustomerService(
-                  title: 'Help & support',
-                  initialMessage: _appContent.text(
-                    'support',
-                    'chat_preset.help',
-                    fallback: 'Hello, I need help with my account.',
+                onTap: () => unawaited(
+                  showSupportChatPanel(
+                    context,
+                    initialMessage: _appContent.text(
+                      'support',
+                      'chat_preset.help',
+                      fallback: 'Hello, I need help with my account.',
+                    ),
                   ),
-                  icon: Icons.help_outline,
                 ),
                 color: const Color(0xFF2563EB),
               ),

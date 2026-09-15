@@ -26,7 +26,7 @@ type InstitutionalStock = {
   market: string;
   category: string;
   status: string;
-  note?: string | null;
+  reason?: string | null;
   expectedReturn?: string | null;
   risk?: string | null;
 };
@@ -71,7 +71,7 @@ export default function BusinessInstitutionalPage() {
         item.market,
         item.category,
         item.status,
-        item.note,
+        item.reason,
       ].some((field) =>
         String(field ?? "")
           .toLowerCase()
@@ -116,7 +116,7 @@ export default function BusinessInstitutionalPage() {
         </Tag>
       ),
     },
-    { title: "备注", dataIndex: "note", render: (value) => value || "-" },
+    { title: "推荐理由", dataIndex: "reason", render: (value) => value || "-" },
   ];
 
   return (

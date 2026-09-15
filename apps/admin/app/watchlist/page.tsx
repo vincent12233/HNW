@@ -57,7 +57,7 @@ export default function WatchlistPage() {
   function openCreate() {
     setEditing(null);
     form.resetFields();
-    form.setFieldsValue({ market: "BSE", category: "INSTITUTIONAL", risk: "MEDIUM", direction: "UP", expectedReturn: 5 });
+    form.setFieldsValue({ market: "NSE", category: "INSTITUTIONAL", risk: "MEDIUM", direction: "UP", expectedReturn: 5 });
     setOpen(true);
   }
 

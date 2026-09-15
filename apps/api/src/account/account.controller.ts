@@ -1,5 +1,4 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
-import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AccountService } from './account.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';

@@ -29,7 +29,7 @@ export class AdminProductsController {
 
   @Post('watchlist')
   @Roles(UserRole.ADMIN)
-  createWatchlist(@Body() body: any) {
+  createWatchlist(@Body() body: Record<string, unknown>) {
     return this.service.createWatchlist(body);
   }
 
@@ -44,7 +44,10 @@ export class AdminProductsController {
 
   @Patch('watchlist/:id')
   @Roles(UserRole.ADMIN)
-  updateWatchlist(@Param('id') id: string, @Body() body: any) {
+  updateWatchlist(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.service.updateWatchlist(id, body);
   }
 
@@ -62,7 +65,7 @@ export class AdminProductsController {
 
   @Post('block-trades')
   @Roles(UserRole.ADMIN)
-  createBlockTrade(@Body() body: any) {
+  createBlockTrade(@Body() body: Record<string, unknown>) {
     return this.service.createBlockTrade(body);
   }
 
@@ -77,7 +80,10 @@ export class AdminProductsController {
 
   @Patch('block-trades/:id')
   @Roles(UserRole.ADMIN)
-  updateBlockTrade(@Param('id') id: string, @Body() body: any) {
+  updateBlockTrade(
+    @Param('id') id: string,
+    @Body() body: Record<string, unknown>,
+  ) {
     return this.service.updateBlockTrade(id, body);
   }
 
@@ -95,7 +101,7 @@ export class AdminProductsController {
 
   @Post('funds')
   @Roles(UserRole.ADMIN)
-  createFund(@Body() body: any) {
+  createFund(@Body() body: Record<string, unknown>) {
     return this.service.createFund(body);
   }
 
@@ -107,7 +113,7 @@ export class AdminProductsController {
 
   @Patch('funds/:id')
   @Roles(UserRole.ADMIN)
-  updateFund(@Param('id') id: string, @Body() body: any) {
+  updateFund(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.service.updateFund(id, body);
   }
 
@@ -125,7 +131,7 @@ export class AdminProductsController {
 
   @Post('quant')
   @Roles(UserRole.ADMIN)
-  createQuant(@Body() body: any) {
+  createQuant(@Body() body: Record<string, unknown>) {
     return this.service.createQuant(body);
   }
 
@@ -137,7 +143,7 @@ export class AdminProductsController {
 
   @Patch('quant/:id')
   @Roles(UserRole.ADMIN)
-  updateQuant(@Param('id') id: string, @Body() body: any) {
+  updateQuant(@Param('id') id: string, @Body() body: Record<string, unknown>) {
     return this.service.updateQuant(id, body);
   }
 

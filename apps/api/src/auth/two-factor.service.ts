@@ -14,7 +14,15 @@ import {
 } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import * as OTPAuth from 'otpauth';
+import { Prisma, type TwoFactorCredential } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+
+type AttemptFailure = { error: string; locked?: boolean };
+
+type TotpProof = {
+  lastStep?: number;
+  recoveryHashes?: string[];
+};
 
 @Injectable()
 export class TwoFactorService {
@@ -95,11 +103,22 @@ export class TwoFactorService {
     };
   }
 
+  private isFailure(value: object): value is AttemptFailure {
+    return (
+      'error' in value &&
+      typeof (value as AttemptFailure).error === 'string' &&
+      Boolean((value as AttemptFailure).error)
+    );
+  }
+
   // Lock the credential row so retries, recovery codes and TOTP replays are atomic.
-  private async attempt(
+  private async attempt<T extends object>(
     userId: string,
-    action: (tx: any, row: any) => Promise<any>,
-  ) {
+    action: (
+      tx: Prisma.TransactionClient,
+      row: TwoFactorCredential,
+    ) => Promise<T | AttemptFailure>,
+  ): Promise<T> {
     await this.prisma.twoFactorCredential.upsert({
       where: { userId },
       create: { userId },
@@ -114,9 +133,9 @@ export class TwoFactorService {
         return {
           error: 'Too many attempts. Try again in 15 minutes.',
           locked: true,
-        };
+        } satisfies AttemptFailure;
       const value = await action(tx, row);
-      if (value.error) {
+      if (this.isFailure(value)) {
         const attempts = row.lockedUntil ? 1 : row.attempts + 1;
         await tx.twoFactorCredential.update({
           where: { userId },
@@ -133,7 +152,7 @@ export class TwoFactorService {
       }
       return value;
     });
-    if (result.error)
+    if (this.isFailure(result))
       throw new HttpException(result.error, result.locked ? 429 : 400);
     return result;
   }
@@ -169,16 +188,16 @@ export class TwoFactorService {
   }
 
   private proof(
-    row: any,
+    row: TwoFactorCredential,
     code: unknown,
     pending = false,
-  ): { lastStep?: number; recoveryHashes?: string[] } | null {
+  ): TotpProof | null {
     if (typeof code !== 'string' || code.length > 64) return null;
     const normalized = code.trim().toLowerCase();
     if (!pending && row.recoveryHashes.includes(this.hash(normalized)))
       return {
         recoveryHashes: row.recoveryHashes.filter(
-          (hash: string) => hash !== this.hash(normalized),
+          (hash) => hash !== this.hash(normalized),
         ),
       };
     const encrypted = pending ? row.pendingSecret : row.secret;
@@ -223,7 +242,7 @@ export class TwoFactorService {
         where: { id: userId },
         data: { authVersion: { increment: 1 } },
       });
-      return { enabled: true, recoveryCodes };
+      return { enabled: true as const, recoveryCodes };
     });
   }
 
@@ -256,7 +275,7 @@ export class TwoFactorService {
         where: { id: userId },
         data: { authVersion: { increment: 1 } },
       });
-      return { enabled: false };
+      return { enabled: false as const };
     });
   }
 
@@ -275,7 +294,7 @@ export class TwoFactorService {
       const proof = this.proof(row, code);
       if (!proof) return { error: 'Invalid or already used verification code' };
       await tx.twoFactorCredential.update({ where: { userId }, data: proof });
-      return { verified: true };
+      return { verified: true as const };
     });
   }
 }

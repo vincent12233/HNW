@@ -106,7 +106,7 @@ export default function WatchlistPage() {
     { title: "市场", dataIndex: "market", width: 100 },
     { title: "分类", dataIndex: "category", width: 130 },
     { title: "方向", dataIndex: "direction", width: 90, render: (value) => <Tag color={value === "UP" ? "green" : "red"}>{value === "UP" ? "上涨" : "下跌"}</Tag> },
-    { title: "参考价", dataIndex: "referencePrice", width: 110, render: (value) => value ? `₹${Number(value).toFixed(2)}` : "实时价" },
+    { title: "参考价（不结算）", dataIndex: "referencePrice", width: 140, render: (value) => value ? `₹${Number(value).toFixed(2)}` : "—" },
     { title: "预期收益", dataIndex: "expectedReturn", width: 100, render: (value) => value ? `${Number(value).toFixed(2)}%` : "-" },
     { title: "风险", dataIndex: "risk", width: 90, render: (value) => <Tag color={value === "HIGH" ? "red" : value === "MEDIUM" ? "gold" : "green"}>{value}</Tag> },
     { title: "状态", dataIndex: "status", width: 110, render: (value) => <Tag color={value === "ACTIVE" ? "green" : "default"}>{value === "ACTIVE" ? "展示中" : "已暂停"}</Tag> },
@@ -141,7 +141,10 @@ export default function WatchlistPage() {
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
           <Title level={2}>Inst. 上架管理</Title>
-          <Paragraph type="secondary">仅管理员可以新增、上架或下架机构股票；业务员和客户端只能查看已上架项目。</Paragraph>
+          <Paragraph type="secondary">
+            仅管理员可以新增、上架或下架机构股票；业务员和客户端只能查看已上架项目。
+            客户端成交价按实时行情结算；参考买入价仅作展示，不参与结算。
+          </Paragraph>
         </div>
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
@@ -162,7 +165,18 @@ export default function WatchlistPage() {
           <Form.Item name="market" label="市场" initialValue="NSE"><Select options={[{ value: "NSE" }, { value: "BSE" }]} /></Form.Item>
           <Form.Item name="category" label="分类" initialValue="INSTITUTIONAL"><Input disabled /></Form.Item>
           <Form.Item name="direction" label="买入方向" rules={[{ required: true }]}><Select options={[{ value: "UP", label: "上涨 Upward" }, { value: "DOWN", label: "下跌 Downward" }]} /></Form.Item>
-          <Space style={{ display: "flex" }} align="start"><Form.Item name="referencePrice" label="参考买入价（₹）"><InputNumber min={0.01} precision={2} style={{ width: 180 }} /></Form.Item><Form.Item name="expectedReturn" label="预期短期收益（%）"><InputNumber min={0.01} max={100} precision={2} style={{ width: 180 }} /></Form.Item></Space>
+          <Space style={{ display: "flex" }} align="start">
+            <Form.Item
+              name="referencePrice"
+              label="参考买入价（₹，不参与结算）"
+              extra="机构股按实时行情成交；此价格仅作客户端展示参考。"
+            >
+              <InputNumber min={0.01} precision={2} style={{ width: 180 }} />
+            </Form.Item>
+            <Form.Item name="expectedReturn" label="预期短期收益（%）">
+              <InputNumber min={0.01} max={100} precision={2} style={{ width: 180 }} />
+            </Form.Item>
+          </Space>
           <Form.Item name="risk" label="风险等级"><Select options={[{ value: "LOW", label: "低" }, { value: "MEDIUM", label: "中" }, { value: "HIGH", label: "高" }]} /></Form.Item>
           <Form.Item name="reason" label="推荐理由"><Input.TextArea rows={3} /></Form.Item>
         </Form>

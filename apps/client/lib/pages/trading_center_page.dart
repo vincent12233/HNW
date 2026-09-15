@@ -697,6 +697,31 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         return InstitutionalTab(
           stocks: widget.institutionalStocks,
           marketStocks: widget.stocks,
+          onOpen: (stock) {
+            StockQuote? match;
+            for (final item in widget.stocks) {
+              if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
+                  item.exchange.toUpperCase() ==
+                      stock.exchange.toUpperCase()) {
+                match = item;
+                break;
+              }
+            }
+            final quote =
+                match ??
+                StockQuote(
+                  stock.symbol,
+                  stock.companyName,
+                  stock.price > 0 ? stock.price : stock.marketPrice,
+                  0,
+                  0,
+                  DateTime.now(),
+                  exchange: stock.exchange,
+                  category: 'INSTITUTIONAL',
+                  quoteFresh: stock.price > 0 || stock.marketPrice > 0,
+                );
+            widget.onTrade(quote);
+          },
         );
       case 2:
         return HoldingsTab(

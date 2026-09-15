@@ -5,20 +5,27 @@ class InstitutionalStock {
     required this.companyName,
     required this.price,
     this.marketPrice = 0,
+    this.referencePrice,
+    this.expectedReturn,
     this.minimumQuantity,
     required this.status,
     this.exchange = 'NSE',
+    this.instrumentId,
   });
 
   final String id;
   final String symbol;
   final String companyName;
+  /// Live settlement / trade price (realtime lastPrice).
   final double price;
   final double marketPrice;
+  final double? referencePrice;
+  final double? expectedReturn;
   @Deprecated('Quantity limits are not used for Inst. or OTC orders')
   final int? minimumQuantity;
   final String status;
   final String exchange;
+  final String? instrumentId;
 
   factory InstitutionalStock.fromOtcJson(Map<String, dynamic> json) {
     final instrument =
@@ -31,6 +38,7 @@ class InstitutionalStock {
       marketPrice: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? 'ACTIVE',
       exchange: instrument['exchange']?.toString() ?? 'BSE',
+      instrumentId: instrument['id']?.toString(),
     );
   }
 
@@ -42,8 +50,13 @@ class InstitutionalStock {
         price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
         marketPrice:
             double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
+        referencePrice:
+            double.tryParse(json['referencePrice']?.toString() ?? ''),
+        expectedReturn:
+            double.tryParse(json['expectedReturn']?.toString() ?? ''),
         status: json['status']?.toString() ?? '',
         exchange: json['exchange']?.toString() ?? 'NSE',
+        instrumentId: json['instrumentId']?.toString(),
       );
 }
 

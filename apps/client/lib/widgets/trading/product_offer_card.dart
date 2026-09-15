@@ -16,12 +16,15 @@ class ProductOfferCard extends StatelessWidget {
     this.status,
     this.actionLabel = 'Trade Now',
     this.offerLabel = 'Offer Price',
+    this.expectedReturn,
   });
 
   final String name, symbol, type, actionLabel;
   final String? status;
   final double marketPrice, offerPrice;
   final String offerLabel;
+  /// When set, shown instead of (market − offer) / offer.
+  final double? expectedReturn;
   final VoidCallback? onTrade;
 
   @override
@@ -31,9 +34,11 @@ class ProductOfferCard extends StatelessWidget {
         offerPrice > 0 &&
         marketPrice.isFinite &&
         offerPrice.isFinite;
-    final expected = valid
-        ? (marketPrice - offerPrice) / offerPrice * 100
-        : null;
+    final expected = expectedReturn != null && expectedReturn!.isFinite
+        ? expectedReturn
+        : valid
+            ? (marketPrice - offerPrice) / offerPrice * 100
+            : null;
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(

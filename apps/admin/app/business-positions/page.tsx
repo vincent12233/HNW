@@ -72,7 +72,7 @@ type PositionsResponse = {
 };
 
 const categoryLabels: Record<PositionCategory, string> = {
-  INSTITUTIONAL: "机构股",
+  INSTITUTIONAL: "涨停股",
   IPO: "IPO",
   OTC: "OTC",
 };
@@ -220,7 +220,7 @@ export default function BusinessPositionsPage() {
         <div>
           <Title level={2}>客户持仓</Title>
           <Paragraph type="secondary">
-            与客户 App 持仓同步，按机构股、IPO、OTC 分类查看自己名下客户的真实持仓。
+            与客户 App 持仓同步，按涨停股、IPO、OTC 分类查看自己名下客户的真实持仓。
           </Paragraph>
         </div>
 
@@ -292,7 +292,7 @@ export default function BusinessPositionsPage() {
             items={[
               {
                 key: "INSTITUTIONAL",
-                label: `机构股 ${summary?.categories.INSTITUTIONAL ?? 0}`,
+                label: `涨停股 ${summary?.categories.INSTITUTIONAL ?? 0}`,
               },
               { key: "IPO", label: `IPO ${summary?.categories.IPO ?? 0}` },
               { key: "OTC", label: `OTC ${summary?.categories.OTC ?? 0}` },

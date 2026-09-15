@@ -78,10 +78,10 @@ export default function WatchlistPage() {
     };
     if (editing) {
       await api.patch(`/admin-products/watchlist/${editing.id}`, payload);
-      message.success("Inst. 股票已更新");
+      message.success("涨停股已更新");
     } else {
       await api.post("/admin-products/watchlist", payload);
-      message.success("Inst. 股票已上架");
+      message.success("涨停股已上架");
     }
     setOpen(false);
     setEditing(null);
@@ -92,7 +92,7 @@ export default function WatchlistPage() {
   async function deleteItem(record: WatchItem) {
     await api.delete(`/admin-products/watchlist/${record.id}`);
     await loadItems();
-    message.success("机构股票已删除");
+    message.success("涨停股已删除");
   }
 
   const columns: ColumnsType<WatchItem> = [
@@ -127,7 +127,7 @@ export default function WatchlistPage() {
           >
             {record.status === "ACTIVE" ? "暂停" : "展示"}
           </Button>
-          <Popconfirm title="确认删除这条机构股票？" okText="删除" cancelText="取消" onConfirm={() => deleteItem(record)}>
+          <Popconfirm title="确认删除这条涨停股？" okText="删除" cancelText="取消" onConfirm={() => deleteItem(record)}>
             <Button size="small" danger icon={<DeleteOutlined />} />
           </Popconfirm>
         </Space>
@@ -139,10 +139,10 @@ export default function WatchlistPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
-          <Title level={2}>Inst. 上架管理</Title>
+          <Title level={2}>涨停股上架</Title>
           <Paragraph type="secondary">
-            仅管理员可以新增、上架或下架机构股票；业务员和客户端只能查看已上架项目。
-            客户端成交价按实时行情结算。
+            仅管理员可以新增、上架或下架涨停股（机构股票）；业务员和客户端只能查看已上架项目。
+            涨停股成交按实时行情结算。客户端「自选股」是普通股票关注列表，与涨停股无关。
           </Paragraph>
         </div>
         <Card>
@@ -150,14 +150,14 @@ export default function WatchlistPage() {
             <Input prefix={<SearchOutlined />} allowClear placeholder="搜索代码、名称、分类或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 360 }} />
             <Space>
               <Button icon={<ReloadOutlined />} loading={loading} onClick={loadItems}>刷新</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增 Inst. 股票</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增涨停股</Button>
             </Space>
           </Space>
           <Table rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1020 }} />
         </Card>
       </Space>
 
-      <Modal title={editing ? "编辑机构股票" : "新增机构股票"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitItem)} okText="保存" cancelText="取消">
+      <Modal title={editing ? "编辑涨停股" : "新增涨停股"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitItem)} okText="保存" cancelText="取消">
         <Form form={form} layout="vertical">
           <Form.Item name="symbol" label="股票代码" rules={[{ required: true, message: "请输入股票代码" }]}><Input prefix={<StarOutlined />} /></Form.Item>
           <Form.Item name="name" label="股票名称" rules={[{ required: true, message: "请输入股票名称" }]}><Input /></Form.Item>
@@ -170,7 +170,7 @@ export default function WatchlistPage() {
           >
             <Segmented options={[{ label: "NSE", value: "NSE" }, { label: "BSE", value: "BSE" }]} block />
           </Form.Item>
-          <Form.Item name="category" label="分类" initialValue="INSTITUTIONAL"><Input disabled /></Form.Item>
+          <Form.Item name="category" label="分类（涨停股 / 机构股票）" initialValue="INSTITUTIONAL"><Input disabled /></Form.Item>
           <Form.Item name="direction" label="买入方向" rules={[{ required: true }]}><Select options={[{ value: "UP", label: "上涨 Upward" }, { value: "DOWN", label: "下跌 Downward" }]} /></Form.Item>
           <Form.Item name="expectedReturn" label="预期短期收益（%）">
             <InputNumber min={0.01} max={100} precision={2} style={{ width: 180 }} />

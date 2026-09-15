@@ -381,7 +381,7 @@ export default function DashboardPage() {
             ) : (
               <Card title="交易产品运营" style={{ borderRadius: 8 }}>
                 <Row gutter={[12, 12]}>
-                  <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理机构股票上架；成交按实时行情结算" icon={<StockOutlined />} tone="#2563eb" onClick={() => router.push("/watchlist")} /></Col>
+                  <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理涨停股（机构股票）上架；成交按实时行情结算" icon={<StockOutlined />} tone="#2563eb" onClick={() => router.push("/watchlist")} /></Col>
                   <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" onClick={() => router.push("/block-trades")} /></Col>
                   <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" onClick={() => router.push("/ipo-management")} /></Col>
                 </Row>

@@ -34,7 +34,7 @@ export type YahooChartResponse = {
 };
 
 export function firstYahooChartResult(
-  data: YahooChartResponse | unknown,
+  data: unknown,
 ): YahooChartResult | undefined {
   if (!data || typeof data !== 'object') return undefined;
   const chart = (data as YahooChartResponse).chart;

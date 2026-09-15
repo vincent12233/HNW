@@ -64,7 +64,6 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.3.7",
     "@eslint/js": "^10.0.1",
     "@nestjs/cli": "^12.0.1",
     "@nestjs/schematics": "^12.0.2",

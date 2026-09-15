@@ -13,6 +13,15 @@ updates:
         patterns:
           - 'prisma'
           - '@prisma/*'
+    ignore:
+      # Nest CLI / ts-jest / typescript-eslint peers still block TS 7
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # Stay on Prisma 7 until 8 is stable (not RC)
+      - dependency-name: prisma
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/*"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /apps/admin
@@ -30,6 +39,12 @@ updates:
         patterns:
           - 'antd'
           - '@ant-design/*'
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      # eslint-plugin-react still peers ESLint ^9 only
+      - dependency-name: eslint
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pub
     directory: /apps/client
@@ -48,15 +63,26 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 2
+    ignore:
+      # Stay on Node 24 LTS (not Current 26)
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /apps/admin
     schedule:
       interval: weekly
     open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: docker
     directory: /apps/client
     schedule:
       interval: weekly
     open-pull-requests-limit: 2
+    ignore:
+      # Stay on nginx 1.30 stable (skip 1.31+ mainline)
+      - dependency-name: nginx
+        versions: [">=1.31.0"]

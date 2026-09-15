@@ -695,6 +695,7 @@ export class IpoService {
 
       include: {
         ipo: true,
+        ipoDebt: true,
       },
 
       orderBy: {
@@ -723,6 +724,14 @@ export class IpoService {
         createdAt: application.createdAt,
 
         updatedAt: application.updatedAt,
+
+        debt: application.ipoDebt
+          ? {
+              amount: application.ipoDebt.amount.toFixed(2),
+              paidAmount: application.ipoDebt.paidAmount.toFixed(2),
+              status: application.ipoDebt.status,
+            }
+          : null,
 
         ipo: {
           id: application.ipo.id,

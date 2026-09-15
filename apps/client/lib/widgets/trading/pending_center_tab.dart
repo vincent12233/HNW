@@ -421,6 +421,42 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                   style: TextStyle(color: Colors.black54),
                 ),
               ],
+              if (application.needsSubscription) ...[
+                const SizedBox(height: 12),
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF7ED),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: const Color(0xFFFDBA74)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        'Outstanding Payment: ${formatPrice(application.remainingAmount)}',
+                        style: const TextStyle(
+                          color: Color(0xFF9A3412),
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const AppText(
+                        'Contact support to add funds. Payment is applied automatically after deposit.',
+                        style: TextStyle(
+                          color: Color(0xFF9A3412),
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
               if (application.hasAllocation) ...[
                 const SizedBox(height: 12),
                 TextButton.icon(

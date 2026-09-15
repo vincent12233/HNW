@@ -198,10 +198,16 @@ class IpoApplication {
         ? _doubleValue(json['allocatedAmount'])
         : allocatedQuantity * subscriptionPrice;
     final debt = (json['debt'] as Map?)?.cast<String, dynamic>();
-    final outstandingDebt =
-        _doubleValue(debt?['amount']) - _doubleValue(debt?['paidAmount']);
+    final debtStatus = debt?['status']?.toString().toUpperCase();
+    final outstandingDebt = debt == null || debtStatus == 'PAID'
+        ? 0.0
+        : (() {
+            final value =
+                _doubleValue(debt['amount']) - _doubleValue(debt['paidAmount']);
+            return value > 0 ? value : 0.0;
+          })();
     final paidAmount = allocatedAmount > 0
-        ? (allocatedAmount - (outstandingDebt > 0 ? outstandingDebt : 0))
+        ? (allocatedAmount - outstandingDebt)
         : 0.0;
 
     return IpoApplication(

@@ -7,6 +7,7 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../models/picked_bytes_file.dart';
 import '../services/auth_service.dart';
 import '../app_config.dart';
 import '../widgets/kyc_signature_pad.dart';
@@ -50,13 +51,13 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   String documentType = 'PAN';
-  PlatformFile? selectedFile;
-  PlatformFile? selectedBackFile;
+  PickedBytesFile? selectedFile;
+  PickedBytesFile? selectedBackFile;
   bool isSubmitting = false;
   String? errorText;
   int step = 0;
-  PlatformFile? selfieFile;
-  PlatformFile? signatureFile;
+  PickedBytesFile? selfieFile;
+  PickedBytesFile? signatureFile;
   Map<String, String>? bankDetails;
   String fullName = '';
   String? existingStatus, reviewNote;
@@ -358,9 +359,8 @@ class _KycUploadPageState extends State<KycUploadPage> {
                   if (signatureFile == null)
                     KycSignaturePad(
                       onSaved: (bytes) => setState(() {
-                        signatureFile = PlatformFile(
+                        signatureFile = PickedBytesFile(
                           name: 'signature.png',
-                          size: bytes.length,
                           bytes: bytes,
                         );
                         errorText = null;
@@ -373,7 +373,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                     )
                   else ...[
                     Image.memory(
-                      signatureFile!.bytes!,
+                      signatureFile!.bytes,
                       height: 180,
                       fit: BoxFit.contain,
                     ),
@@ -652,15 +652,15 @@ class _KycUploadPageState extends State<KycUploadPage> {
               borderRadius: BorderRadius.circular(8),
             ),
             child:
-                file?.bytes != null &&
+                file != null &&
                     const {
                       'jpg',
                       'jpeg',
                       'png',
                       'webp',
-                    }.contains(file!.extension?.toLowerCase())
+                    }.contains(file.extension?.toLowerCase())
                 ? Image.memory(
-                    file.bytes!,
+                    file.bytes,
                     fit: BoxFit.contain,
                     errorBuilder: (_, _, _) =>
                         const Center(child: AppText('Preview unavailable')),
@@ -704,7 +704,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     );
   }
 
-  Widget _reviewFile(PlatformFile file, String title, {int editStep = 1}) =>
+  Widget _reviewFile(PickedBytesFile file, String title, {int editStep = 1}) =>
       ListTile(
         contentPadding: EdgeInsets.zero,
         leading: const Icon(Icons.check_circle, color: AppConfig.gainColor),
@@ -737,7 +737,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
                       color: AppConfig.primaryColor,
                     ),
                   )
-                : Image.memory(selfieFile!.bytes!, fit: BoxFit.cover),
+                : Image.memory(selfieFile!.bytes, fit: BoxFit.cover),
           ),
         ),
       ),
@@ -769,11 +769,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
         );
         if (bytes != null && mounted) {
           setState(() {
-            selfieFile = PlatformFile(
-              name: 'selfie.png',
-              size: bytes.length,
-              bytes: bytes,
-            );
+            selfieFile = PickedBytesFile(name: 'selfie.png', bytes: bytes);
             errorText = null;
           });
         }
@@ -798,11 +794,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
         return;
       }
       setState(() {
-        selfieFile = PlatformFile(
-          name: 'selfie.$extension',
-          size: bytes.length,
-          bytes: bytes,
-        );
+        selfieFile = PickedBytesFile(name: 'selfie.$extension', bytes: bytes);
         errorText = null;
       });
     } catch (_) {
@@ -848,22 +840,22 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Future<void> _readPickedFile({bool back = false}) async {
-    final result = await FilePicker.platform.pickFiles(
-      withData: true,
+    final picked = await FilePicker.pickFile(
       type: FileType.custom,
       allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
     );
 
-    if (!mounted || result == null || result.files.isEmpty) {
+    if (!mounted || picked == null) {
       return;
     }
-    final picked = result.files.single;
-    if (!_validateFile(picked)) return;
+    final bytes = await picked.readAsBytes();
+    final file = PickedBytesFile(name: picked.name, bytes: bytes);
+    if (!_validateFile(file)) return;
     setState(() {
       if (back) {
-        selectedBackFile = picked;
+        selectedBackFile = file;
       } else {
-        selectedFile = picked;
+        selectedFile = file;
       }
       errorText = null;
     });
@@ -902,9 +894,8 @@ class _KycUploadPageState extends State<KycUploadPage> {
       return;
     }
     setState(() {
-      final file = PlatformFile(
+      final file = PickedBytesFile(
         name: '${DateTime.now().millisecondsSinceEpoch}.jpg',
-        size: bytes.length,
         bytes: bytes,
       );
       if (back) {
@@ -916,7 +907,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     });
   }
 
-  bool _validateFile(PlatformFile file) {
+  bool _validateFile(PickedBytesFile file) {
     final extension = file.extension?.toLowerCase() ?? '';
     if (!const {
       'pdf',
@@ -932,7 +923,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
       );
       return false;
     }
-    if (file.bytes == null || file.bytes!.isEmpty) {
+    if (file.bytes.isEmpty) {
       setState(() => errorText = 'Unable to read the selected file');
       return false;
     }
@@ -980,17 +971,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
         selfieFile: selfieFile!,
         signatureFile: signatureFile!,
         file: documentType == 'AADHAAR'
-            ? PlatformFile(
-                name: 'aadhaar-front-${file.name}',
-                size: file.size,
-                bytes: file.bytes,
-              )
+            ? file.renamed('aadhaar-front-${file.name}')
             : file,
         backFile: documentType == 'AADHAAR'
-            ? PlatformFile(
-                name: 'aadhaar-back-${selectedBackFile!.name}',
-                size: selectedBackFile!.size,
-                bytes: selectedBackFile!.bytes,
+            ? selectedBackFile!.renamed(
+                'aadhaar-back-${selectedBackFile!.name}',
               )
             : null,
       );

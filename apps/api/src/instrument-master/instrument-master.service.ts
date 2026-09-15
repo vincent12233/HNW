@@ -13,6 +13,28 @@ type NseEquityRow = {
   lotSize: number;
 };
 
+/** Product categories that must survive equity-master metadata sync. */
+const PROTECTED_INSTRUMENT_CATEGORIES = new Set([
+  'INST',
+  'INSTITUTIONAL',
+  'LIMIT_UP',
+  'OTC',
+  'BLOCK',
+  'BLOCK_TRADE',
+  'IPO',
+]);
+
+/** Keep Inst/OTC/IPO (and aliases) on update; default new/ordinary rows to EQUITY. */
+export function categoryForEquityMasterUpdate(
+  existingCategory: string | null | undefined,
+): string {
+  const raw = (existingCategory ?? '').trim();
+  if (PROTECTED_INSTRUMENT_CATEGORIES.has(raw.toUpperCase())) {
+    return raw;
+  }
+  return 'EQUITY';
+}
+
 @Injectable()
 export class InstrumentMasterService {
   private readonly logger = new Logger(InstrumentMasterService.name);
@@ -80,7 +102,7 @@ export class InstrumentMasterService {
             symbol: row.symbol,
           },
         },
-        select: { id: true },
+        select: { id: true, category: true },
       });
 
       if (existing) {
@@ -92,7 +114,7 @@ export class InstrumentMasterService {
             type: InstrumentType.EQUITY,
             currency: 'INR',
             lotSize: row.lotSize,
-            category: 'EQUITY',
+            category: categoryForEquityMasterUpdate(existing.category),
           },
         });
         updated += 1;
@@ -274,9 +296,18 @@ export class InstrumentMasterService {
     for (const row of rows) {
       const existing = await this.prisma.instrument.findUnique({
         where: { exchange_symbol: { exchange: Exchange.BSE, symbol: row.symbol } },
-        select: { id: true },
+        select: { id: true, category: true },
       });
-      const data = { name: row.name, isin: row.isin, type: InstrumentType.EQUITY, currency: 'INR', lotSize: row.lotSize, category: 'EQUITY' };
+      const data = {
+        name: row.name,
+        isin: row.isin,
+        type: InstrumentType.EQUITY,
+        currency: 'INR',
+        lotSize: row.lotSize,
+        category: existing
+          ? categoryForEquityMasterUpdate(existing.category)
+          : 'EQUITY',
+      };
       if (existing) {
         await this.prisma.instrument.update({ where: { id: existing.id }, data });
         updated++;

@@ -126,7 +126,7 @@ export default function BusinessInstitutionalPage() {
           <Title level={2}>机构股票</Title>
           <Paragraph type="secondary">
             此处同步展示超级管理员已启用的机构股票，业务员可查看并向客户跟进。
-            客户成交按实时行情结算；后台参考价不参与结算。
+            客户成交按实时行情结算。
           </Paragraph>
         </div>
         {error && <Alert type="error" title={error} showIcon />}

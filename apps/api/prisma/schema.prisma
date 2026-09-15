@@ -579,7 +579,6 @@ model AdminWatchlistItem {
   status    String   @default("ACTIVE")
   reason    String?
   direction String   @default("UP")
-  referencePrice Decimal? @db.Decimal(18, 4)
   expectedReturn Decimal? @db.Decimal(8, 2)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

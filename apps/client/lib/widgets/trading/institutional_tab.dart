@@ -112,11 +112,6 @@ class InstitutionalTab extends StatelessWidget {
                         AppText(
                           'Settlement price (live): ${formatPrice(settlementPrice)}',
                         ),
-                        if (stock.referencePrice != null &&
-                            stock.referencePrice! > 0)
-                          AppText(
-                            'Admin reference: ${formatPrice(stock.referencePrice!)}',
-                          ),
                         if (!live && settlementPrice <= 0)
                           const AppText('Live quote unavailable'),
                       ],

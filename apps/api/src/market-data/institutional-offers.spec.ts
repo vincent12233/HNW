@@ -26,7 +26,6 @@ describe('MarketDataService institutional offers', () => {
             symbol: 'RELIANCE',
             market: 'NSE',
             status: 'ACTIVE',
-            referencePrice: new Prisma.Decimal('100.00'),
             expectedReturn: new Prisma.Decimal('5.00'),
           },
         ]),
@@ -52,12 +51,12 @@ describe('MarketDataService institutional offers', () => {
     expect(offers).toHaveLength(1);
     expect(offers[0].price).toBe('250.5000');
     expect(offers[0].marketPrice).toBe('250.5000');
-    expect(offers[0].referencePrice).toBe('100.0000');
+    expect(offers[0]).not.toHaveProperty('referencePrice');
     expect(offers[0].expectedReturn).toBe('5.00');
     expect(offers[0].instrumentId).toBe('i1');
   });
 
-  it('does not fall back to referencePrice when the live quote is missing', async () => {
+  it('returns zero prices when the live quote is missing', async () => {
     const prisma = {
       adminWatchlistItem: {
         findMany: jest.fn().mockResolvedValue([
@@ -66,7 +65,6 @@ describe('MarketDataService institutional offers', () => {
             symbol: 'INFY',
             market: 'NSE',
             status: 'ACTIVE',
-            referencePrice: new Prisma.Decimal('99.00'),
             expectedReturn: null,
           },
         ]),
@@ -89,7 +87,7 @@ describe('MarketDataService institutional offers', () => {
     expect(offers).toHaveLength(1);
     expect(offers[0].price).toBe('0');
     expect(offers[0].marketPrice).toBe('0');
-    expect(offers[0].referencePrice).toBe('99.0000');
+    expect(offers[0]).not.toHaveProperty('referencePrice');
     expect(offers[0].quoteFresh).toBe(false);
   });
 });

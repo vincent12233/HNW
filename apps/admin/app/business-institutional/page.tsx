@@ -50,7 +50,7 @@ export default function BusinessInstitutionalPage() {
       setError(
         Array.isArray(responseMessage)
           ? responseMessage.join("，")
-          : responseMessage || "机构股票加载失败",
+          : responseMessage || "涨停股加载失败",
       );
     } finally {
       setLoading(false);
@@ -123,10 +123,10 @@ export default function BusinessInstitutionalPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <div>
-          <Title level={2}>机构股票</Title>
+          <Title level={2}>涨停股</Title>
           <Paragraph type="secondary">
-            此处同步展示超级管理员已启用的机构股票，业务员可查看并向客户跟进。
-            客户成交按实时行情结算。
+            此处同步展示超级管理员已启用的涨停股（机构股票），业务员可查看并向客户跟进。
+            涨停股成交按实时行情结算；与客户端普通股票「自选股」不是同一产品。
           </Paragraph>
         </div>
         {error && <Alert type="error" title={error} showIcon />}
@@ -162,7 +162,7 @@ export default function BusinessInstitutionalPage() {
             loading={loading}
             pagination={{
               pageSize: 15,
-              showTotal: (total) => `共 ${total} 条机构股票`,
+              showTotal: (total) => `共 ${total} 条涨停股`,
             }}
           />
         </Card>

@@ -290,10 +290,10 @@ const tradingFields: FieldDef[] = [
   { key: "tab.history", label: "Tab · History", rows: 1 },
   { key: "tab.funds_ledger", label: "Tab · Funds Ledger", rows: 1 },
   { key: "tab.all", label: "产品筛选 · All", rows: 1 },
-  { key: "tab.ins_stock", label: "产品筛选 · Ins. Stock", rows: 1 },
+  { key: "tab.ins_stock", label: "产品筛选 · 涨停股", rows: 1 },
   { key: "shortcut.orders", label: "快捷入口 · Orders", rows: 1 },
-  { key: "institutional.empty_title", label: "机构空状态标题", rows: 2 },
-  { key: "institutional.empty_subtitle", label: "机构空状态说明", rows: 3 },
+  { key: "institutional.empty_title", label: "涨停股空状态标题", rows: 2 },
+  { key: "institutional.empty_subtitle", label: "涨停股空状态说明", rows: 3 },
   { key: "otc.empty_title", label: "OTC 空状态标题", rows: 2 },
   { key: "otc.empty_subtitle", label: "OTC 空状态说明", rows: 3 },
   {
@@ -316,7 +316,7 @@ const tradingFields: FieldDef[] = [
   { key: "holdings.empty_subtitle", label: "持仓空状态说明", rows: 2 },
   {
     key: "guide.institutional",
-    label: "交易说明 · 机构",
+    label: "交易说明 · 涨停股",
     rows: 4,
     title: true,
   },
@@ -771,7 +771,7 @@ export default function AppOpsContentPage() {
                     />
                     <FieldGroup
                       title="空状态与组合页"
-                      hint="机构/OTC/IPO 空态、组合页标题与持仓空态"
+                      hint="涨停股/OTC/IPO 空态、组合页标题与持仓空态"
                       fields={tradingEmptyFields}
                     />
                     <FieldGroup

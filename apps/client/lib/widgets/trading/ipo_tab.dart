@@ -28,7 +28,8 @@ class IpoTab extends StatefulWidget {
 }
 
 class _IpoTabState extends State<IpoTab> {
-  int selectedSection = 3;
+  // Default to Open so clients land on offerings they can apply to.
+  int selectedSection = 1;
 
   final List<String> sections = const ['Upcoming', 'Open', 'Closed', 'All'];
 

@@ -40,6 +40,8 @@ type Ipo = {
   lotSize: number;
   totalShares: number;
   availableShares: number;
+  reservedDraftShares?: number;
+  remainingShares?: number;
   openDate: string;
   closeDate: string;
   status:
@@ -219,7 +221,22 @@ export default function IpoManagementPage() {
                 render: (v: string | undefined, r) => v ?? r.issuePrice,
               },
               { title: "每手", dataIndex: "lotSize", width: 90 },
-              { title: "可用股数", dataIndex: "availableShares", width: 120 },
+              { title: "发行总量", dataIndex: "totalShares", width: 100 },
+              {
+                title: "可用股数",
+                width: 160,
+                render: (_, r) => (
+                  <Space orientation="vertical" size={0}>
+                    <Text>
+                      剩余可分配 {r.remainingShares ?? r.availableShares}
+                    </Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>
+                      未公布草稿占用 {r.reservedDraftShares ?? 0} · 公布后库存{" "}
+                      {r.availableShares}
+                    </Text>
+                  </Space>
+                ),
+              },
               { title: "申购数", dataIndex: "applicationCount", width: 90 },
               {
                 title: "状态",

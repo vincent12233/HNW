@@ -92,6 +92,39 @@ export class IpoService {
   }
 
 
+  /**
+   * Shares still free for a new/updated draft after other PENDING drafts.
+   * Own draft is excluded so operators can edit quantity up to true headroom.
+   */
+  static remainingAfterDrafts(
+    availableShares: number,
+    reservedByOthers: number,
+  ) {
+    return Math.max(0, availableShares - Math.max(0, reservedByOthers));
+  }
+
+  private async reservedDraftQuantity(
+    tx: {
+      ipoApplication: {
+        aggregate: (args: unknown) => Promise<{ _sum: { draftQuantity: number | null } }>;
+      };
+    },
+    ipoId: string,
+    excludeApplicationId?: string,
+  ) {
+    const reserved = await tx.ipoApplication.aggregate({
+      where: {
+        ipoId,
+        status: 'PENDING',
+        publishedAt: null,
+        draftQuantity: { not: null },
+        ...(excludeApplicationId ? { id: { not: excludeApplicationId } } : {}),
+      },
+      _sum: { draftQuantity: true },
+    });
+    return reserved._sum.draftQuantity ?? 0;
+  }
+
   async list() {
     const ipos = await this.prisma.ipo.findMany({
       include: {
@@ -112,40 +145,67 @@ export class IpoService {
       },
     });
 
+    const reservedRows =
+      ipos.length === 0
+        ? []
+        : await this.prisma.ipoApplication.groupBy({
+            by: ['ipoId'],
+            where: {
+              ipoId: { in: ipos.map((ipo) => ipo.id) },
+              status: 'PENDING',
+              publishedAt: null,
+              draftQuantity: { not: null },
+            },
+            _sum: { draftQuantity: true },
+          });
+    const reservedByIpo = new Map(
+      reservedRows.map((row) => [row.ipoId, row._sum.draftQuantity ?? 0]),
+    );
+
     return {
       total: ipos.length,
 
-      data: ipos.map((ipo) => ({
-        id: ipo.id,
+      data: ipos.map((ipo) => {
+        const reservedDraftShares = reservedByIpo.get(ipo.id) ?? 0;
+        return {
+          id: ipo.id,
 
-        symbol: ipo.symbol,
+          symbol: ipo.symbol,
 
-        companyName: ipo.companyName,
+          companyName: ipo.companyName,
 
-        exchange: ipo.exchange,
+          exchange: ipo.exchange,
 
-        issuePrice: ipo.issuePrice.toFixed(2),
+          issuePrice: ipo.issuePrice.toFixed(2),
 
-        marketPrice: this.resolveDisplayMarketPrice(ipo),
+          marketPrice: this.resolveDisplayMarketPrice(ipo),
 
-        lotSize: ipo.lotSize,
+          lotSize: ipo.lotSize,
 
-        totalShares: ipo.totalShares,
+          totalShares: ipo.totalShares,
 
-        availableShares: ipo.availableShares,
+          availableShares: ipo.availableShares,
 
-        openDate: ipo.openDate,
+          reservedDraftShares,
 
-        closeDate: ipo.closeDate,
+          remainingShares: IpoService.remainingAfterDrafts(
+            ipo.availableShares,
+            reservedDraftShares,
+          ),
 
-        status: ipo.status,
+          openDate: ipo.openDate,
 
-        applicationCount: ipo._count.applications,
+          closeDate: ipo.closeDate,
 
-        createdAt: ipo.createdAt,
+          status: ipo.status,
 
-        updatedAt: ipo.updatedAt,
-      })),
+          applicationCount: ipo._count.applications,
+
+          createdAt: ipo.createdAt,
+
+          updatedAt: ipo.updatedAt,
+        };
+      }),
     };
   }
 
@@ -725,18 +785,15 @@ export class IpoService {
           );
         // Draft allocations reserve against remaining inventory so over-allotment
         // is caught before publish. Other PENDING drafts on the same IPO count.
-        const reserved = await tx.ipoApplication.aggregate({
-          where: {
-            ipoId: application.ipo.id,
-            status: 'PENDING',
-            publishedAt: null,
-            id: { not: applicationId },
-            draftQuantity: { not: null },
-          },
-          _sum: { draftQuantity: true },
-        });
-        const reservedQty = reserved._sum.draftQuantity ?? 0;
-        const remaining = application.ipo.availableShares - reservedQty;
+        const reservedQty = await this.reservedDraftQuantity(
+          tx,
+          application.ipo.id,
+          applicationId,
+        );
+        const remaining = IpoService.remainingAfterDrafts(
+          application.ipo.availableShares,
+          reservedQty,
+        );
         if (quantity > remaining) {
           throw new BadRequestException(
             `Allocation exceeds remaining IPO shares (${remaining} available)`,

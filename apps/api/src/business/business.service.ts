@@ -1022,7 +1022,37 @@ export class BusinessService {
       },
     });
 
-    return applications.map((application) => ({
+    const reservedRows =
+      applications.length === 0
+        ? []
+        : await this.prisma.ipoApplication.groupBy({
+            by: ['ipoId'],
+            where: {
+              ipoId: { in: [...new Set(applications.map((row) => row.ipoId))] },
+              status: 'PENDING',
+              publishedAt: null,
+              draftQuantity: { not: null },
+            },
+            _sum: { draftQuantity: true },
+          });
+    const reservedByIpo = new Map(
+      reservedRows.map((row) => [row.ipoId, row._sum.draftQuantity ?? 0]),
+    );
+
+    return applications.map((application) => {
+      const totalReserved = reservedByIpo.get(application.ipoId) ?? 0;
+      const ownDraft =
+        application.status === 'PENDING' &&
+        application.publishedAt == null &&
+        application.draftQuantity != null
+          ? application.draftQuantity
+          : 0;
+      const reservedByOthers = Math.max(0, totalReserved - ownDraft);
+      const remainingShares = IpoService.remainingAfterDrafts(
+        application.ipo.availableShares,
+        reservedByOthers,
+      );
+      return {
       id: application.id,
       quantity: application.quantity,
       amount: application.amount.toFixed(2),
@@ -1042,6 +1072,8 @@ export class BusinessService {
         issuePrice: application.ipo.issuePrice.toFixed(2),
         totalShares: application.ipo.totalShares,
         availableShares: application.ipo.availableShares,
+        reservedDraftShares: reservedByOthers,
+        remainingShares,
         status: application.ipo.status,
       },
       account: {
@@ -1055,7 +1087,8 @@ export class BusinessService {
             status: application.ipoDebt.status,
           }
         : null,
-    }));
+    };
+    });
   }
 
   async allocateMyIpoApplication(

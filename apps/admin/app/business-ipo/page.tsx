@@ -44,6 +44,8 @@ type IpoApplication = {
     issuePrice: string;
     totalShares?: number;
     availableShares?: number;
+    reservedDraftShares?: number;
+    remainingShares?: number;
     status: string;
   };
   account: {
@@ -157,14 +159,22 @@ export default function BusinessIpoPage() {
             。保存分配不扣款，公布后才执行扣款、欠款及持仓处理。
           </Text>
           <Text type="secondary">
-            剩余可分配股数：{record.ipo.availableShares ?? "—"}
+            剩余可分配股数：
+            {record.ipo.remainingShares ?? record.ipo.availableShares ?? "—"}
             {record.ipo.totalShares != null
               ? ` / 发行总量 ${record.ipo.totalShares}`
+              : ""}
+            {record.ipo.reservedDraftShares
+              ? `（其他草稿已占用 ${record.ipo.reservedDraftShares}）`
               : ""}
           </Text>
           <InputNumber
             min={1}
-            max={record.ipo.availableShares ?? undefined}
+            max={
+              record.ipo.remainingShares ??
+              record.ipo.availableShares ??
+              undefined
+            }
             precision={0}
             defaultValue={record.draftQuantity ?? undefined}
             style={{ width: "100%" }}
@@ -177,7 +187,7 @@ export default function BusinessIpoPage() {
             结算价（申购价）：{formatMoney(record.ipo.issuePrice)}
           </Text>
           <Text type="secondary">
-            分配结算固定使用超管申购价；不可超过剩余可分配股数。
+            分配结算固定使用超管申购价；不可超过剩余可分配股数（已扣除其他未公布草稿）。
           </Text>
         </Space>
       ),
@@ -194,11 +204,14 @@ export default function BusinessIpoPage() {
           throw new Error("Invalid IPO allocation values");
         }
         if (
-          record.ipo.availableShares != null &&
-          Number(quantity) > record.ipo.availableShares
+          (record.ipo.remainingShares ?? record.ipo.availableShares) != null &&
+          Number(quantity) >
+            Number(record.ipo.remainingShares ?? record.ipo.availableShares)
         ) {
           message.error(
-            `分配数量不能超过剩余可分配股数（${record.ipo.availableShares}）`,
+            `分配数量不能超过剩余可分配股数（${
+              record.ipo.remainingShares ?? record.ipo.availableShares
+            }）`,
           );
           throw new Error("IPO allocation exceeds remaining shares");
         }

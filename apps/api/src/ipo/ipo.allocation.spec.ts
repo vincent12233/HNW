@@ -94,6 +94,12 @@ describe('IpoService allocation safety', () => {
     expect(tx.ipoApplication.updateMany).not.toHaveBeenCalled();
   });
 
+  it('computes remaining shares after excluding the current draft', () => {
+    expect(IpoService.remainingAfterDrafts(100, 30)).toBe(70);
+    expect(IpoService.remainingAfterDrafts(100, 0)).toBe(100);
+    expect(IpoService.remainingAfterDrafts(10, 25)).toBe(0);
+  });
+
   it('does not debit cash or create debt when another operator claimed the application', async () => {
     const tx = {
       ipoApplication: {

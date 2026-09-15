@@ -65,6 +65,14 @@ const OTC_ERROR_ZH: Record<string, string> = {
     '该 OTC 订单不在当前业务员名下',
   'OTC order is outside the dedicated operator scope':
     '该 OTC 订单不在当前专用运营范围内',
+  'Provide issuePrice and/or openDate/closeDate to update':
+    '请提供申购价和/或申购期间',
+  'IPO pricing can only be edited while DRAFT or before any applications':
+    '仅草稿或尚无申购时可修改申购价',
+  'IPO pricing cannot be edited after close, listing, or allotment':
+    '已下架、上市或分配完成后不可修改申购价',
+  'openDate must be earlier than closeDate': '申购开始时间须早于结束时间',
+  'IPO not found': '未找到 IPO',
 };
 
 /** Prefer Nest `message`, with known OTC English strings mapped to Chinese. */

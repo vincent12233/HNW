@@ -12,6 +12,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { availableCash, moneyDecimal } from '../common/money';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
+import { UpdateIpoPricingDto } from './dto/update-ipo-pricing.dto';
 import { UpdateIpoStatusDto } from './dto/update-ipo-status.dto';
 
 @Injectable()
@@ -342,6 +343,84 @@ export class IpoService {
 
         symbol: updated.symbol,
 
+        status: updated.status,
+      },
+    };
+  }
+
+  /**
+   * Super-admin may edit subscription (settlement) price and/or window only
+   * while DRAFT, or while there are still zero applications (create lands as
+   * PUBLISHED). Allotment and publish always settle on stored issuePrice.
+   */
+  async updatePricing(id: string, dto: UpdateIpoPricingDto) {
+    if (
+      dto.issuePrice == null &&
+      dto.openDate == null &&
+      dto.closeDate == null
+    ) {
+      throw new BadRequestException(
+        'Provide issuePrice and/or openDate/closeDate to update',
+      );
+    }
+
+    const ipo = await this.prisma.ipo.findUnique({
+      where: { id },
+      include: { _count: { select: { applications: true } } },
+    });
+    if (!ipo) throw new NotFoundException('IPO not found');
+
+    const editable =
+      ipo.status === 'DRAFT' || ipo._count.applications === 0;
+    if (!editable) {
+      throw new ConflictException(
+        'IPO pricing can only be edited while DRAFT or before any applications',
+      );
+    }
+    if (
+      ipo.status === 'CLOSED' ||
+      ipo.status === 'LISTED' ||
+      ipo.status === 'ALLOTMENT_DONE'
+    ) {
+      throw new ConflictException(
+        'IPO pricing cannot be edited after close, listing, or allotment',
+      );
+    }
+
+    const openDate =
+      dto.openDate == null ? ipo.openDate : new Date(dto.openDate);
+    const closeDate =
+      dto.closeDate == null ? ipo.closeDate : new Date(dto.closeDate);
+    if (
+      !Number.isFinite(openDate.getTime()) ||
+      !Number.isFinite(closeDate.getTime()) ||
+      openDate >= closeDate
+    ) {
+      throw new BadRequestException('openDate must be earlier than closeDate');
+    }
+
+    const data: {
+      issuePrice?: Prisma.Decimal;
+      openDate: Date;
+      closeDate: Date;
+    } = { openDate, closeDate };
+    if (dto.issuePrice != null) {
+      data.issuePrice = moneyDecimal(dto.issuePrice);
+    }
+
+    const updated = await this.prisma.ipo.update({
+      where: { id },
+      data,
+    });
+
+    return {
+      message: 'IPO pricing updated successfully',
+      ipo: {
+        id: updated.id,
+        symbol: updated.symbol,
+        issuePrice: updated.issuePrice.toFixed(2),
+        openDate: updated.openDate,
+        closeDate: updated.closeDate,
         status: updated.status,
       },
     };

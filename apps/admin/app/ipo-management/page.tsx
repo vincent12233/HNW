@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
 import {
   Button,
   Card,
@@ -16,17 +16,20 @@ import {
   Typography,
   message,
 } from "antd";
+import dayjs from "dayjs";
 import { useEffect, useState } from "react";
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
+
 type Instrument = {
   id: string;
   symbol: string;
   exchange: "NSE" | "BSE";
   name: string;
 };
+
 type Ipo = {
   id: string;
   symbol: string;
@@ -40,16 +43,35 @@ type Ipo = {
   openDate: string;
   closeDate: string;
   status:
-    "DRAFT" | "PUBLISHED" | "OPEN" | "CLOSED" | "LISTED" | "ALLOTMENT_DONE";
+    | "DRAFT"
+    | "PUBLISHED"
+    | "OPEN"
+    | "CLOSED"
+    | "LISTED"
+    | "ALLOTMENT_DONE";
   applicationCount: number;
 };
+
+function canEditPricing(record: Ipo) {
+  if (
+    record.status === "CLOSED" ||
+    record.status === "LISTED" ||
+    record.status === "ALLOTMENT_DONE"
+  ) {
+    return false;
+  }
+  return record.status === "DRAFT" || record.applicationCount === 0;
+}
 
 export default function IpoManagementPage() {
   const [items, setItems] = useState<Ipo[]>([]);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editing, setEditing] = useState<Ipo | null>(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   async function load() {
     setLoading(true);
@@ -66,6 +88,7 @@ export default function IpoManagementPage() {
       setLoading(false);
     }
   }
+
   useEffect(() => {
     void load();
   }, []);
@@ -75,33 +98,71 @@ export default function IpoManagementPage() {
     const instrument = instruments.find(
       (item) => item.id === values.instrumentId,
     )!;
-    await api.post("/admin/ipo", {
-      symbol: instrument.symbol,
-      companyName: values.companyName,
-      exchange: instrument.exchange,
-      instrumentId: instrument.id,
-      issuePrice: Number(values.issuePrice).toFixed(2),
-      lotSize: Number(values.lotSize),
-      totalShares: Number(values.totalShares),
-      openDate: values.period[0].toISOString(),
-      closeDate: values.period[1].toISOString(),
+    try {
+      await api.post("/admin/ipo", {
+        symbol: instrument.symbol,
+        companyName: values.companyName,
+        exchange: instrument.exchange,
+        instrumentId: instrument.id,
+        issuePrice: Number(values.issuePrice).toFixed(2),
+        lotSize: Number(values.lotSize),
+        totalShares: Number(values.totalShares),
+        openDate: values.period[0].toISOString(),
+        closeDate: values.period[1].toISOString(),
+      });
+      message.success(
+        "IPO 已上架到 APP，认购期间客户可申请；上架不代表上市",
+      );
+      setOpen(false);
+      form.resetFields();
+      await load();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "创建 IPO 失败，请稍后重试"));
+    }
+  }
+
+  function openEdit(record: Ipo) {
+    setEditing(record);
+    editForm.setFieldsValue({
+      issuePrice: Number(record.issuePrice),
+      period: [dayjs(record.openDate), dayjs(record.closeDate)],
     });
-    message.success("IPO 已上架到 APP，认购期间客户可申请；上架不代表上市");
-    setOpen(false);
-    form.resetFields();
-    await load();
+    setEditOpen(true);
+  }
+
+  async function saveEdit() {
+    if (!editing) return;
+    const values = await editForm.validateFields();
+    try {
+      await api.patch(`/admin/ipo/${editing.id}`, {
+        issuePrice: Number(values.issuePrice).toFixed(2),
+        openDate: values.period[0].toISOString(),
+        closeDate: values.period[1].toISOString(),
+      });
+      message.success("已更新申购价与认购期间（结算仍按申购价）");
+      setEditOpen(false);
+      setEditing(null);
+      editForm.resetFields();
+      await load();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "保存失败，请稍后重试"));
+    }
   }
 
   async function setStatus(record: Ipo, status: Ipo["status"]) {
-    await api.patch(`/admin/ipo/${record.id}/status`, { status });
-    message.success(
-      status === "PUBLISHED"
-        ? "IPO 已上架到 APP（不代表上市）"
-        : status === "CLOSED"
-          ? "IPO 已下架"
-          : "状态已更新",
-    );
-    await load();
+    try {
+      await api.patch(`/admin/ipo/${record.id}/status`, { status });
+      message.success(
+        status === "PUBLISHED"
+          ? "IPO 已上架到 APP（不代表上市）"
+          : status === "CLOSED"
+            ? "IPO 已下架"
+            : "状态已更新",
+      );
+      await load();
+    } catch (error) {
+      message.error(getApiErrorMessage(error, "状态更新失败，请稍后重试"));
+    }
   }
 
   return (
@@ -111,7 +172,8 @@ export default function IpoManagementPage() {
           <Title level={2}>IPO 上架管理</Title>
           <Paragraph type="secondary">
             超级管理员只负责将产品上架到
-            APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO 已上市。申购价由超管编辑并用于结算；上市后实时行情仅用于展示价差。
+            APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO
+            已上市。申购价由超管编辑并用于结算；草稿或尚无申购时可改申购价与认购期间；上市后实时行情仅用于展示价差。
           </Paragraph>
         </div>
         <Card>
@@ -137,7 +199,7 @@ export default function IpoManagementPage() {
             rowKey="id"
             loading={loading}
             dataSource={items}
-            scroll={{ x: 1200 }}
+            scroll={{ x: 1280 }}
             columns={[
               {
                 title: "IPO",
@@ -150,7 +212,12 @@ export default function IpoManagementPage() {
                 ),
               },
               { title: "申购价", dataIndex: "issuePrice", width: 110 },
-              { title: "展示行情", dataIndex: "marketPrice", width: 110, render: (v: string | undefined, r) => v ?? r.issuePrice },
+              {
+                title: "展示行情",
+                dataIndex: "marketPrice",
+                width: 110,
+                render: (v: string | undefined, r) => v ?? r.issuePrice,
+              },
               { title: "每手", dataIndex: "lotSize", width: 90 },
               { title: "可用股数", dataIndex: "availableShares", width: 120 },
               { title: "申购数", dataIndex: "applicationCount", width: 90 },
@@ -188,9 +255,17 @@ export default function IpoManagementPage() {
               {
                 title: "操作",
                 fixed: "right",
-                width: 220,
+                width: 280,
                 render: (_, r) => (
-                  <Space>
+                  <Space wrap>
+                    <Button
+                      size="small"
+                      icon={<EditOutlined />}
+                      disabled={!canEditPricing(r)}
+                      onClick={() => openEdit(r)}
+                    >
+                      编辑申购价
+                    </Button>
                     <Button
                       size="small"
                       type="primary"
@@ -267,6 +342,39 @@ export default function IpoManagementPage() {
               rules={[{ required: true }]}
             >
               <InputNumber min={1} precision={0} style={{ width: "100%" }} />
+            </Form.Item>
+            <Form.Item
+              name="period"
+              label="申购期间"
+              rules={[{ required: true }]}
+            >
+              <DatePicker.RangePicker showTime style={{ width: "100%" }} />
+            </Form.Item>
+          </Form>
+        </Modal>
+        <Modal
+          title={
+            editing ? `编辑申购价 · ${editing.symbol}` : "编辑申购价"
+          }
+          open={editOpen}
+          onCancel={() => {
+            setEditOpen(false);
+            setEditing(null);
+            editForm.resetFields();
+          }}
+          onOk={saveEdit}
+          okText="保存"
+        >
+          <Paragraph type="secondary" style={{ marginTop: 0 }}>
+            仅草稿或尚无申购时可修改。分配与入账始终按存储的申购价结算。
+          </Paragraph>
+          <Form form={editForm} layout="vertical">
+            <Form.Item
+              name="issuePrice"
+              label="申购价（结算价）"
+              rules={[{ required: true }]}
+            >
+              <InputNumber min={0.01} precision={2} style={{ width: "100%" }} />
             </Form.Item>
             <Form.Item
               name="period"

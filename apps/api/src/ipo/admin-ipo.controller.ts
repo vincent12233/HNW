@@ -15,6 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { SetIpoInstrumentDto } from './dto/set-ipo-instrument.dto';
 import { CreateIpoDto } from './dto/create-ipo.dto';
+import { UpdateIpoPricingDto } from './dto/update-ipo-pricing.dto';
 import { UpdateIpoStatusDto } from './dto/update-ipo-status.dto';
 import { AllocateIpoDto } from './dto/allocate-ipo.dto';
 
@@ -33,7 +34,7 @@ export class AdminIpoController {
 
   @Post('applications/publish')
   @Roles('ADMIN')
-  publish(@Req() req: any, @Body() body: {ids: string[]}) {
+  publish(@Req() req: any, @Body() body: { ids: string[] }) {
     return this.ipoService.publish(body.ids, req.user.userId);
   }
 
@@ -61,11 +62,17 @@ export class AdminIpoController {
     return this.ipoService.updateStatus(id, dto);
   }
 
-
   @Patch(':id/instrument')
   @Roles('ADMIN')
   setInstrument(@Param('id') id: string, @Body() dto: SetIpoInstrumentDto) {
     return this.ipoService.setInstrument(id, dto.instrumentId);
+  }
+
+  /** Edit subscription/settlement price and/or offer window (super-admin). */
+  @Patch(':id')
+  @Roles('ADMIN')
+  updatePricing(@Param('id') id: string, @Body() dto: UpdateIpoPricingDto) {
+    return this.ipoService.updatePricing(id, dto);
   }
 
   @Patch('application/:id/allocate')

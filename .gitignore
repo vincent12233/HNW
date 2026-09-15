@@ -16,9 +16,11 @@ apps/**/.windsurf/
 .env
 .env.*
 !.env.example
+!.env.*.example
 apps/**/.env
 apps/**/.env.*
 !apps/**/.env.example
+!apps/**/.env.*.example
 apps/api/uploads/
 apps/api/private-objects/
 

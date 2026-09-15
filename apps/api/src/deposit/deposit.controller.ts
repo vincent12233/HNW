@@ -19,6 +19,7 @@ import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scop
 import { AppContentService } from '../app-content/app-content.service';
 import { DepositService } from './deposit.service';
 import { SupportDepositSubmitDto } from './dto/support-deposit-submit.dto';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('deposit')
 @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
@@ -30,7 +31,7 @@ export class DepositController {
 
   @Post('request')
   @Roles(UserRole.CLIENT)
-  async createRequest(@Req() req: any) {
+  async createRequest(@Req() req: AuthenticatedRequest) {
     const header = String(req.headers['accept-language'] || 'en')
       .split(',')[0]
       .trim()
@@ -43,19 +44,22 @@ export class DepositController {
 
   @Post('support-submit')
   @Roles(UserRole.SUPPORT)
-  supportSubmit(@Req() req: any, @Body() body: SupportDepositSubmitDto) {
+  supportSubmit(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: SupportDepositSubmitDto,
+  ) {
     return this.depositService.submitToFinanceBySupport(req.user.userId, body);
   }
 
   @Get('me')
   @Roles(UserRole.CLIENT)
-  myDeposits(@Req() req: any) {
+  myDeposits(@Req() req: AuthenticatedRequest) {
     return this.depositService.myDeposits(req.user.userId);
   }
 
   @Get('pending')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
-  listPending(@Req() req: any) {
+  listPending(@Req() req: AuthenticatedRequest) {
     return this.depositService.listPendingDeposits(
       req.user.role,
       req.user.userId,
@@ -64,7 +68,10 @@ export class DepositController {
 
   @Get('history')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
-  listHistory(@Req() req: any, @Query('status') status?: string) {
+  listHistory(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: string,
+  ) {
     return this.depositService.listDepositHistory(
       req.user.role,
       req.user.userId,
@@ -74,7 +81,7 @@ export class DepositController {
 
   @Patch(':id/approve')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
-  approve(@Param('id') id: string, @Req() req: any) {
+  approve(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.depositService.approveDeposit(
       id,
       req.user.userId,
@@ -87,7 +94,7 @@ export class DepositController {
   reject(
     @Param('id') id: string,
     @Body() body: { note?: string },
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.depositService.rejectDeposit(
       id,

@@ -15,6 +15,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 import { WithdrawalService } from './withdrawal.service';
 import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('withdrawal')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -24,7 +25,7 @@ export class WithdrawalController {
   @Post('request')
   @Roles(UserRole.CLIENT)
   createRequest(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body()
     body: CreateWithdrawalRequestDto,
   ) {
@@ -42,25 +43,28 @@ export class WithdrawalController {
 
   @Get('me')
   @Roles(UserRole.CLIENT)
-  myWithdrawals(@Req() req: any) {
+  myWithdrawals(@Req() req: AuthenticatedRequest) {
     return this.withdrawalService.myWithdrawals(req.user.userId);
   }
 
   @Get('pending')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  listPending(@Req() req: any) {
+  listPending(@Req() req: AuthenticatedRequest) {
     return this.withdrawalService.listPendingWithdrawals(req.user.role);
   }
 
   @Get('history')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  listHistory(@Req() req: any, @Query('status') status?: string) {
+  listHistory(
+    @Req() req: AuthenticatedRequest,
+    @Query('status') status?: string,
+  ) {
     return this.withdrawalService.listWithdrawalHistory(req.user.role, status);
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  approve(@Param('id') id: string, @Req() req: any) {
+  approve(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.withdrawalService.approveWithdrawal(
       id,
       req.user.userId,
@@ -73,7 +77,7 @@ export class WithdrawalController {
   reject(
     @Param('id') id: string,
     @Body() body: { note?: string },
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.withdrawalService.rejectWithdrawal(
       id,

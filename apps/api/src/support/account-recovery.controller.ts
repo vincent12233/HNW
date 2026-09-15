@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('auth/recovery')
 export class AccountRecoveryController {
@@ -56,7 +57,7 @@ export class StaffRecoveryController {
   }
   @Post(':id/issue') issue(
     @Param('id') id: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Body() body: { identityVerified: boolean },
   ) {
     return this.service.issue(id, req.user.userId, body.identityVerified);

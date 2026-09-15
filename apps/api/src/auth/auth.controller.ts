@@ -13,6 +13,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import type { AuthenticatedRequest } from './authenticated-request';
 
 const backendRoles = new Set([
   'ADMIN',
@@ -128,13 +129,16 @@ export class AuthController {
 
   @Post('google/link')
   @UseGuards(JwtAuthGuard)
-  linkGoogle(@Req() req: any, @Body() body: { idToken: string }) {
+  linkGoogle(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { idToken: string },
+  ) {
     return this.authService.linkGoogle(req.user.userId, body.idToken);
   }
 
   @Post('biometric/token')
   @UseGuards(JwtAuthGuard)
-  biometricToken(@Req() req: any) {
+  biometricToken(@Req() req: AuthenticatedRequest) {
     return this.authService.createBiometricToken(req.user.userId);
   }
 
@@ -145,7 +149,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  me(@Req() req: any) {
+  me(@Req() req: AuthenticatedRequest) {
     return this.authService.currentUser(req.user.userId);
   }
 }

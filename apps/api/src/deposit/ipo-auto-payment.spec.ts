@@ -6,13 +6,11 @@ describe('IPO automatic payment from approved deposits', () => {
     const tx = {
       depositRequest: { updateMany: jest.fn().mockResolvedValue({ count: 1 }) },
       account: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({
-            id: 'account',
-            userId: 'client',
-            cashBalance: 0,
-          }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account',
+          userId: 'client',
+          cashBalance: 0,
+        }),
         update: jest.fn(),
       },
       user: { count: jest.fn().mockResolvedValue(1) },
@@ -49,13 +47,11 @@ describe('IPO automatic payment from approved deposits', () => {
     };
     const prisma = {
       depositRequest: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({
-            status: 'PENDING',
-            amount,
-            accountId: 'account',
-          }),
+        findUnique: jest.fn().mockResolvedValue({
+          status: 'PENDING',
+          amount,
+          accountId: 'account',
+        }),
       },
       $transaction: (fn: any) => fn(tx),
     };

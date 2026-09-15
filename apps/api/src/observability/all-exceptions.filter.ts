@@ -43,19 +43,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
       status === HttpStatus.UNAUTHORIZED && raw && typeof raw === 'object'
         ? (raw as Record<string, unknown>)
         : {};
-    response
-      .status(status)
-      .json({
-        statusCode: status,
-        message,
-        requestId,
-        timestamp: new Date().toISOString(),
-        ...(authentication.twoFactorRequired === true
-          ? { twoFactorRequired: true }
-          : {}),
-        ...(typeof authentication.kycToken === 'string'
-          ? { kycToken: authentication.kycToken }
-          : {}),
-      });
+    response.status(status).json({
+      statusCode: status,
+      message,
+      requestId,
+      timestamp: new Date().toISOString(),
+      ...(authentication.twoFactorRequired === true
+        ? { twoFactorRequired: true }
+        : {}),
+      ...(typeof authentication.kycToken === 'string'
+        ? { kycToken: authentication.kycToken }
+        : {}),
+    });
   }
 }

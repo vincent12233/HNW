@@ -4,13 +4,11 @@ describe('Team editing scope', () => {
   it('requires an owned business account for manager edits', async () => {
     const prisma = {
       user: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({
-            id: 'manager',
-            role: 'MANAGER',
-            status: 'ACTIVE',
-          }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'manager',
+          role: 'MANAGER',
+          status: 'ACTIVE',
+        }),
         findFirst: jest.fn().mockResolvedValue(null),
       },
     };

@@ -18,14 +18,7 @@ import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
 import { MarketNewsService } from './market-news.service';
 import { UpdateMarketQuoteDto } from './dto/update-market-quote.dto';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('market-data')
 export class MarketDataController {

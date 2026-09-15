@@ -20,13 +20,7 @@ import { MarketService } from './market.service';
 import { ListAdminInstrumentsQueryDto } from './dto/list-admin-instruments-query.dto';
 import { UpdateInstrumentStatusDto } from './dto/update-instrument-status.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin/market')
 @UseGuards(JwtAuthGuard, RolesGuard)

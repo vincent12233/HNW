@@ -16,6 +16,7 @@ import { CreateOtcOfferDto } from './dto/create-otc-offer.dto';
 import { SubmitOtcOrderDto } from './dto/submit-otc-order.dto';
 import { UpdateOtcOfferDto } from './dto/update-otc-offer.dto';
 import { OtcService } from './otc.service';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('otc')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -30,7 +31,7 @@ export class OtcController {
 
   @Post('orders')
   @Roles(UserRole.CLIENT)
-  submit(@Req() req: any, @Body() body: SubmitOtcOrderDto) {
+  submit(@Req() req: AuthenticatedRequest, @Body() body: SubmitOtcOrderDto) {
     return this.otc.submit(
       req.user.userId,
       body.offerId,
@@ -41,13 +42,13 @@ export class OtcController {
 
   @Get('orders/me')
   @Roles(UserRole.CLIENT)
-  mine(@Req() req: any) {
+  mine(@Req() req: AuthenticatedRequest) {
     return this.otc.myOrders(req.user.userId);
   }
 
   @Get('orders/pending')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  pending(@Req() req: any) {
+  pending(@Req() req: AuthenticatedRequest) {
     return this.otc.pendingOrders(req.user.userId);
   }
 
@@ -71,14 +72,14 @@ export class OtcController {
 
   @Patch('orders/:id/approve')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  approve(@Req() req: any, @Param('id') id: string) {
+  approve(@Req() req: AuthenticatedRequest, @Param('id') id: string) {
     return this.otc.approve(req.user.userId, id);
   }
 
   @Patch('orders/:id/reject')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
   reject(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: { note?: string },
   ) {

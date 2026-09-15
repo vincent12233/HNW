@@ -6,6 +6,7 @@ import type { Request } from 'express';
 
 import { UserRole, UserStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import type { AuthUser } from './authenticated-request';
 
 interface JwtPayload {
   sub: string;
@@ -52,7 +53,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: JwtPayload): Promise<AuthUser> {
     if (!payload.sub || payload.purpose) {
       throw new UnauthorizedException('Invalid access token');
     }

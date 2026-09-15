@@ -17,6 +17,7 @@ import { ApproveLoanDto } from './dto/approve-loan.dto';
 import { CreateLoanDto } from './dto/create-loan.dto';
 import { RepayLoanDto } from './dto/repay-loan.dto';
 import { LoansService } from './loans.service';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('loans')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -25,20 +26,20 @@ export class LoansController {
 
   @Get('mine')
   @Roles(UserRole.CLIENT)
-  mine(@Req() req: any) {
+  mine(@Req() req: AuthenticatedRequest) {
     return this.loansService.clientLoans(req.user.userId);
   }
 
   @Post('apply')
   @Roles(UserRole.CLIENT)
-  apply(@Req() req: any) {
+  apply(@Req() req: AuthenticatedRequest) {
     return this.loansService.apply(req.user.userId);
   }
 
   @Get()
   @Roles(UserRole.ADMIN, UserRole.FINANCE, UserRole.BUSINESS)
   list(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Query('search') search?: string,
     @Query('status') status?: LoanStatus,
   ) {
@@ -50,14 +51,14 @@ export class LoansController {
 
   @Post()
   @Roles(UserRole.FINANCE)
-  create(@Req() req: any, @Body() body: CreateLoanDto) {
+  create(@Req() req: AuthenticatedRequest, @Body() body: CreateLoanDto) {
     return this.loansService.create(req.user.userId, req.user.role, body);
   }
 
   @Patch(':id/approve')
   @Roles(UserRole.FINANCE)
   approve(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: ApproveLoanDto,
   ) {
@@ -67,7 +68,7 @@ export class LoansController {
   @Patch(':id/reject')
   @Roles(UserRole.FINANCE)
   reject(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: { note?: string },
   ) {
@@ -82,7 +83,7 @@ export class LoansController {
   @Patch(':id/disburse')
   @Roles(UserRole.FINANCE)
   disburse(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: { note?: string },
   ) {
@@ -96,7 +97,11 @@ export class LoansController {
 
   @Patch(':id/repay')
   @Roles(UserRole.FINANCE)
-  repay(@Req() req: any, @Param('id') id: string, @Body() body: RepayLoanDto) {
+  repay(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: RepayLoanDto,
+  ) {
     return this.loansService.repay(
       id,
       req.user.userId,
@@ -108,7 +113,7 @@ export class LoansController {
 
   @Patch(':id/overdue')
   @Roles(UserRole.FINANCE)
-  overdue(@Param('id') id: string, @Req() req: any) {
+  overdue(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
     return this.loansService.markOverdue(id, req.user.role);
   }
 }

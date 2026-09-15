@@ -15,10 +15,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { Exchange, UserRole } from '../generated/prisma/enums';
 import { WatchlistService } from './watchlist.service';
-
-interface AuthenticatedRequest extends Request {
-  user: { userId: string };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('watchlist')
 @UseGuards(JwtAuthGuard, RolesGuard)

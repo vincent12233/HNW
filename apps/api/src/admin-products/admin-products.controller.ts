@@ -14,6 +14,7 @@ import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 import { AdminProductsService } from './admin-products.service';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin-products')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -22,7 +23,7 @@ export class AdminProductsController {
 
   @Get('watchlist')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  watchlist(@Req() request: any) {
+  watchlist(@Req() request: AuthenticatedRequest) {
     return this.service.listWatchlist(request.user?.role);
   }
 
@@ -55,7 +56,7 @@ export class AdminProductsController {
 
   @Get('block-trades')
   @Roles(UserRole.ADMIN, UserRole.BUSINESS, UserRole.SUPPORT)
-  blockTrades(@Req() request: any) {
+  blockTrades(@Req() request: AuthenticatedRequest) {
     return this.service.listBlockTrades(request.user?.role);
   }
 

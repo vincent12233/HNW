@@ -16,13 +16,7 @@ import { AdminAccountService } from './admin-account.service';
 import { AdjustBalanceDto } from './dto/adjust-balance.dto';
 import { ListAdminAccountsQueryDto } from './dto/list-admin-accounts-query.dto';
 import { ListAdminAccountTransactionsQueryDto } from './dto/list-admin-account-transactions-query.dto';
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin/accounts')
 @UseGuards(JwtAuthGuard, RolesGuard)

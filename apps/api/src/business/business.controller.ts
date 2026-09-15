@@ -22,6 +22,7 @@ import { BusinessService } from './business.service';
 import { DedicatedOperatorScopeGuard } from './dedicated-operator-scope.guard';
 import { TeamService } from './team.service';
 import { CreateTeamStaffDto, InvitePoolDto } from './team.dto';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('business')
 @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
@@ -73,7 +74,10 @@ export class BusinessController {
 
   @Post()
   @Roles(UserRole.MANAGER)
-  createBusiness(@Req() req: any, @Body() body: CreateTeamStaffDto) {
+  createBusiness(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: CreateTeamStaffDto,
+  ) {
     return this.team.create(req.user.userId, body);
   }
 
@@ -83,10 +87,7 @@ export class BusinessController {
 
   @Get('my-risk-dashboard')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  async myRiskDashboard(
-    @Req()
-    req: any,
-  ) {
+  async myRiskDashboard(@Req() req: AuthenticatedRequest) {
     return this.businessService.myRiskDashboard(req.user.userId);
   }
 
@@ -96,10 +97,7 @@ export class BusinessController {
 
   @Get('my-deposits')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myDeposits(
-    @Req()
-    req: any,
-  ) {
+  myDeposits(@Req() req: AuthenticatedRequest) {
     return this.businessService.myDeposits(req.user.userId);
   }
 
@@ -109,18 +107,14 @@ export class BusinessController {
 
   @Get('my-withdrawals')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myWithdrawals(
-    @Req()
-    req: any,
-  ) {
+  myWithdrawals(@Req() req: AuthenticatedRequest) {
     return this.businessService.myWithdrawals(req.user.userId);
   }
 
   @Get('my-orders')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   myOrders(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Query()
     query: ListAdminOrdersQueryDto,
@@ -130,14 +124,14 @@ export class BusinessController {
 
   @Get('my-ipo-applications')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myIpoApplications(@Req() req: any) {
+  myIpoApplications(@Req() req: AuthenticatedRequest) {
     return this.businessService.myIpoApplications(req.user.userId);
   }
 
   @Patch('my-ipo-applications/:applicationId/allocate')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   allocateMyIpoApplication(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('applicationId') applicationId: string,
     @Body() dto: AllocateIpoDto,
   ) {
@@ -152,8 +146,7 @@ export class BusinessController {
   @Get('my-trades')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   myTrades(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Query()
     query: ListAdminTradesQueryDto,
@@ -163,15 +156,17 @@ export class BusinessController {
 
   @Get('my-trade-pairs')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myTradePairs(@Req() req: any, @Query('customerId') customerId?: string) {
+  myTradePairs(
+    @Req() req: AuthenticatedRequest,
+    @Query('customerId') customerId?: string,
+  ) {
     return this.businessService.myTradePairs(req.user.userId, customerId);
   }
 
   @Get('my-positions')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   myPositions(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Query('category')
     category?: string,
@@ -191,10 +186,7 @@ export class BusinessController {
 
   @Get('my-customers')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myCustomers(
-    @Req()
-    req: any,
-  ) {
+  myCustomers(@Req() req: AuthenticatedRequest) {
     return this.businessService.myCustomers(req.user.userId);
   }
 
@@ -204,10 +196,7 @@ export class BusinessController {
 
   @Get('my-dashboard')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  myDashboard(
-    @Req()
-    req: any,
-  ) {
+  myDashboard(@Req() req: AuthenticatedRequest) {
     return this.businessService.myDashboard(req.user.userId);
   }
 
@@ -218,8 +207,7 @@ export class BusinessController {
   @Get('customers/:customerId/login')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   customerLastLogin(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Param('customerId')
     customerId: string,
@@ -230,8 +218,7 @@ export class BusinessController {
   @Get('customers/:customerId/login-audits')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   customerLoginAudits(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Param('customerId')
     customerId: string,
@@ -245,8 +232,7 @@ export class BusinessController {
   @Get('customers/:customerId/login-risk')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   customerLoginRisk(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Param('customerId')
     customerId: string,
@@ -257,8 +243,7 @@ export class BusinessController {
   @Patch('customers/:customerId/status')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   updateMyCustomerStatus(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Param('customerId')
     customerId: string,
@@ -275,7 +260,10 @@ export class BusinessController {
 
   @Post('my-ipo-applications/publish')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  publishMyIpoApplications(@Req() req: any, @Body() body: { ids: string[] }) {
+  publishMyIpoApplications(
+    @Req() req: AuthenticatedRequest,
+    @Body() body: { ids: string[] },
+  ) {
     return this.businessService.publishMyIpoApplications(
       req.user.userId,
       body.ids,
@@ -285,7 +273,7 @@ export class BusinessController {
   @Patch('customers/:customerId/tier')
   @Roles(UserRole.BUSINESS)
   updateCustomerTier(
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
     @Param('customerId') customerId: string,
     @Body() body: { tier: unknown },
   ) {
@@ -302,19 +290,13 @@ export class BusinessController {
 
   @Get('shared-ip-risks')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  sharedIpRisks(
-    @Req()
-    req: any,
-  ) {
+  sharedIpRisks(@Req() req: AuthenticatedRequest) {
     return this.businessService.sharedIpRisks(req.user.userId);
   }
 
   @Get('shared-device-risks')
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
-  sharedDeviceRisks(
-    @Req()
-    req: any,
-  ) {
+  sharedDeviceRisks(@Req() req: AuthenticatedRequest) {
     return this.businessService.sharedDeviceRisks(req.user.userId);
   }
 
@@ -325,8 +307,7 @@ export class BusinessController {
   @Get('invite-codes')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
   listInviteCodes(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Query('businessUserId')
     businessUserId?: string,
@@ -341,8 +322,7 @@ export class BusinessController {
   @Post(':businessUserId/invite-codes')
   @Roles(UserRole.MANAGER)
   async generateInviteCodes(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Param('businessUserId')
     businessUserId: string,
@@ -365,15 +345,17 @@ export class BusinessController {
 
   @Get('my-invite-code')
   @Roles(UserRole.BUSINESS)
-  currentInvite(@Req() req: any, @Query('previousId') previousId?: string) {
+  currentInvite(
+    @Req() req: AuthenticatedRequest,
+    @Query('previousId') previousId?: string,
+  ) {
     return this.businessService.currentInviteCode(req.user.userId, previousId);
   }
 
   @Patch('invite-codes/:codeId/disable')
   @Roles(UserRole.ADMIN)
   disableInviteCode(
-    @Req()
-    req: any,
+    @Req() req: AuthenticatedRequest,
 
     @Param('codeId')
     codeId: string,

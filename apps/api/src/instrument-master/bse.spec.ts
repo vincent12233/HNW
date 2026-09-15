@@ -11,11 +11,9 @@ describe('BSE equity management', () => {
     await expect(service.syncBseEquities()).rejects.toThrow('not configured');
   });
   it('imports BSE independently and preserves existing activation', async () => {
-    jest
-      .spyOn(axios, 'get')
-      .mockResolvedValue({
-        data: 'SECURITY CODE,SECURITY NAME,ISIN\n500325,"Company, Limited",INE002A01018\n500112,Other,INE062A01020',
-      });
+    jest.spyOn(axios, 'get').mockResolvedValue({
+      data: 'SECURITY CODE,SECURITY NAME,ISIN\n500325,"Company, Limited",INE002A01018\n500112,Other,INE062A01020',
+    });
     const instrument = {
       findUnique: jest
         .fn()

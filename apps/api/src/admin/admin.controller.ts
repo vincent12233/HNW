@@ -6,6 +6,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 
 import { AdminService } from './admin.service';
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -14,19 +15,25 @@ export class AdminController {
 
   @Get('customers')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customers(@Req() req: any) {
+  customers(@Req() req: AuthenticatedRequest) {
     return this.adminService.customers(req.user.role);
   }
 
   @Get('customers/:customerId/overview')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerOverview(@Param('customerId') customerId: string, @Req() req: any) {
+  customerOverview(
+    @Param('customerId') customerId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.adminService.customerOverview(customerId, req.user.role);
   }
 
   @Get('customers/:customerId/login')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerLastLogin(@Param('customerId') customerId: string, @Req() req: any) {
+  customerLastLogin(
+    @Param('customerId') customerId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.adminService.customerLastLogin(customerId, req.user.role);
   }
 
@@ -34,14 +41,17 @@ export class AdminController {
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
   customerLoginAudits(
     @Param('customerId') customerId: string,
-    @Req() req: any,
+    @Req() req: AuthenticatedRequest,
   ) {
     return this.adminService.customerLoginAudits(customerId, req.user.role);
   }
 
   @Get('customers/:customerId/login-risk')
   @Roles(UserRole.ADMIN, UserRole.SUPPORT, UserRole.FINANCE)
-  customerLoginRisk(@Param('customerId') customerId: string, @Req() req: any) {
+  customerLoginRisk(
+    @Param('customerId') customerId: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
     return this.adminService.customerLoginRisk(customerId, req.user.role);
   }
 
@@ -65,7 +75,7 @@ export class AdminController {
     UserRole.FINANCE,
     UserRole.SUPPORT,
   )
-  pendingCounts(@Req() req: any) {
+  pendingCounts(@Req() req: AuthenticatedRequest) {
     return this.adminService.pendingCounts(req.user.role, req.user.userId);
   }
 }

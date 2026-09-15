@@ -51,18 +51,16 @@ describe('Free news provider', () => {
   });
   it('keeps RSS usable when GDELT is unavailable and caches the response', async () => {
     const service = new MarketNewsService();
-    const feed = jest
-      .spyOn(service as any, 'fetchFeed')
-      .mockResolvedValue([
-        {
-          id: '1',
-          title: 'Market update',
-          source: 'test',
-          url: 'https://example.com',
-          imageUrl: null,
-          publishedAt: '2026-09-10T12:00:00Z',
-        },
-      ]);
+    const feed = jest.spyOn(service as any, 'fetchFeed').mockResolvedValue([
+      {
+        id: '1',
+        title: 'Market update',
+        source: 'test',
+        url: 'https://example.com',
+        imageUrl: null,
+        publishedAt: '2026-09-10T12:00:00Z',
+      },
+    ]);
     jest
       .spyOn(service as any, 'fetchGdelt')
       .mockRejectedValue(new Error('timeout'));

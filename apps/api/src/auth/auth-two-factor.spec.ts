@@ -13,13 +13,11 @@ describe('Authentication second-factor enforcement', () => {
     };
     const jwt = {
       signAsync: jest.fn().mockResolvedValue('token'),
-      verifyAsync: jest
-        .fn()
-        .mockResolvedValue({
-          sub: 'client',
-          version: 2,
-          purpose: 'BIOMETRIC_LOGIN',
-        }),
+      verifyAsync: jest.fn().mockResolvedValue({
+        sub: 'client',
+        version: 2,
+        purpose: 'BIOMETRIC_LOGIN',
+      }),
     };
     const prisma = {
       user: {

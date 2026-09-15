@@ -170,13 +170,11 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
       !!origin &&
       isLocalDevelopmentOrigin(origin);
     if (!origin || (!allowedOrigins.includes(origin) && !localOrigin)) {
-      res
-        .status(403)
-        .json({
-          statusCode: 403,
-          message: 'Origin verification failed',
-          requestId,
-        });
+      res.status(403).json({
+        statusCode: 403,
+        message: 'Origin verification failed',
+        requestId,
+      });
       return;
     }
   }

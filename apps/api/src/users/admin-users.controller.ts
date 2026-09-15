@@ -16,14 +16,7 @@ import { AdminUsersService } from './admin-users.service';
 import { ListAdminUsersQueryDto } from './dto/list-admin-users-query.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
 import { UpdateUserStatusDto } from './dto/update-user-status.dto';
-
-interface AuthenticatedRequest extends Request {
-  user: {
-    userId: string;
-    phone?: string | null;
-    role: string;
-  };
-}
+import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)

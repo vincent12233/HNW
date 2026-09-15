@@ -2,7 +2,7 @@
 // Creates one isolated fixture account and removes only that account in finally.
 const assert = require('node:assert/strict');
 const { randomUUID, randomInt } = require('node:crypto');
-const { PrismaClient } = require(process.cwd() + '/dist/src/generated/prisma/client.js');
+const { PrismaClient } = require(process.cwd() + '/dist/generated/prisma/client.js');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');

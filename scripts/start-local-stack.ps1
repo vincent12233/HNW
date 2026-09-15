@@ -48,7 +48,7 @@ $apiListener = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction S
 if (-not $apiListener) {
   $apiOut = Join-Path $env:TEMP "india-api.out.log"
   $apiErr = Join-Path $env:TEMP "india-api.err.log"
-  Start-Process node -WorkingDirectory $apiRoot -ArgumentList "dist/src/main.js" -RedirectStandardOutput $apiOut -RedirectStandardError $apiErr -WindowStyle Hidden | Out-Null
+  Start-Process node -WorkingDirectory $apiRoot -ArgumentList "dist/main.js" -RedirectStandardOutput $apiOut -RedirectStandardError $apiErr -WindowStyle Hidden | Out-Null
   Write-Host "API 已启动: http://localhost:3000/health"
 }
 

@@ -6,7 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
-import { api } from "@/lib/api";
+import { api, formatCreditSuccessMessage, getApiErrorMessage } from "@/lib/api";
 import { getBackendRole } from "@/lib/backend-role";
 
 const { Text } = Typography;
@@ -83,10 +83,17 @@ export default function DepositsPage() {
     processing.current = true;
     setProcessingId(row.id);
     try {
-      await api.patch(`/deposit/${row.id}/approve`);
-      message.success(dedicatedOperator ? "专用运营入金审核完成" : "财务上分完成");
+      const { data } = await api.patch(`/deposit/${row.id}/approve`);
+      message.success(
+        formatCreditSuccessMessage(
+          data,
+          dedicatedOperator ? "专用运营入金审核完成" : "财务上分完成",
+        ),
+      );
       await load();
-    } catch (error: any) { message.error(error.response?.data?.message || "上分失败"); }
+    } catch (error: any) {
+      message.error(getApiErrorMessage(error, "上分失败"));
+    }
     finally { processing.current = false; setProcessingId(""); }
   }
   async function reject() {
@@ -98,7 +105,9 @@ export default function DepositsPage() {
       await api.patch(`/deposit/${rejecting.id}/reject`, { note: rejectNote.trim() });
       message.success("已拒绝并通知客户");
       setRejecting(null); setRejectNote(""); await load();
-    } catch (error: any) { message.error(error.response?.data?.message || "拒绝失败"); }
+    } catch (error: any) {
+      message.error(getApiErrorMessage(error, "拒绝失败"));
+    }
     finally { processing.current = false; setProcessingId(""); }
   }
 
@@ -107,17 +116,16 @@ export default function DepositsPage() {
     setCreating(true);
     try {
       const accountNumber = values.accountNumber.trim().toUpperCase();
-      await api.post(`/admin/accounts/${accountNumber}/credit`, {
+      const { data } = await api.post(`/admin/accounts/${accountNumber}/credit`, {
         amount: Number(values.amount).toFixed(2),
         referenceId: values.referenceId.trim(),
         note: values.note.trim(),
       });
-      message.success("上分订单已创建并入账");
+      message.success(formatCreditSuccessMessage(data, "上分订单已创建并入账"));
       setCreateOpen(false);
       createForm.resetFields();
     } catch (error: any) {
-      const responseMessage = error.response?.data?.message;
-      message.error(Array.isArray(responseMessage) ? responseMessage.join("，") : responseMessage || "创建上分订单失败");
+      message.error(getApiErrorMessage(error, "创建上分订单失败"));
     } finally {
       setCreating(false);
     }

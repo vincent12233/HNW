@@ -87,7 +87,7 @@ describe('AdminAccountService credit applies IPO debt', () => {
     const { service, tx } = setup(150);
     const result = await service.credit(
       'ACC1',
-      { amount: '150', referenceId: 'REF-FULL' },
+      { amount: '150', referenceId: 'REF-FULL', note: 'Wire ABC123' },
       'finance-1',
       'FINANCE',
     );
@@ -105,6 +105,13 @@ describe('AdminAccountService credit applies IPO debt', () => {
         buyingPower: { increment: new Prisma.Decimal(50) },
       },
     });
+    expect(tx.accountTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          note: 'Wire ABC123; 100.00 applied to IPO debt',
+        }),
+      }),
+    );
   });
 
   it('credit without debts credits the full amount', async () => {

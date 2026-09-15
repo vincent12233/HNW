@@ -7,7 +7,7 @@ import { isAxiosError } from "axios";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, formatCreditSuccessMessage, getApiErrorMessage } from "@/lib/api";
 import { getBackendRole } from "@/lib/backend-role";
 
 const { Title, Paragraph, Text } = Typography;
@@ -131,16 +131,22 @@ export default function BusinessFundsPage() {
     setAdjustmentError("");
     setAdjustmentSubmitting(true);
     try {
-      await api.post(`/admin/accounts/${encodeURIComponent(adjustment.accountNumber)}/${adjustment.direction}`, values);
-      message.success(adjustment.direction === "credit" ? "专用运营上分已执行" : "专用运营扣款已执行");
+      const { data } = await api.post(
+        `/admin/accounts/${encodeURIComponent(adjustment.accountNumber)}/${adjustment.direction}`,
+        values,
+      );
+      message.success(
+        adjustment.direction === "credit"
+          ? formatCreditSuccessMessage(data, "专用运营上分已执行")
+          : "专用运营扣款已执行",
+      );
       setAdjustment(null); adjustmentForm.resetFields(); await loadRecords();
     } catch (requestError: unknown) {
       const response = isAxiosError<{ message?: string | string[] }>(requestError) ? requestError.response : undefined;
-      const detail = response?.data?.message;
       const uncertain = !response || response.status >= 500;
       const text = uncertain
         ? "资金调整结果未确认，请先核对账户资金流水；保留原流水号，不要更换流水号重复提交。"
-        : Array.isArray(detail) ? detail.join("，") : detail || "资金调整未完成，请检查输入和权限";
+        : getApiErrorMessage(requestError, "资金调整未完成，请检查输入和权限");
       setAdjustmentError(text);
       message.error(text);
     } finally { adjustmentLock.current = false; setAdjustmentSubmitting(false); }

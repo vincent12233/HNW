@@ -186,20 +186,18 @@ export class AdminProductsService {
       .toUpperCase();
     if (!['UP', 'DOWN'].includes(direction))
       throw new BadRequestException('Direction must be UP or DOWN');
-    const referencePrice =
-      body.referencePrice == null || body.referencePrice === ''
-        ? null
-        : new Prisma.Decimal(body.referencePrice);
-    const expectedReturn =
-      body.expectedReturn == null || body.expectedReturn === ''
-        ? null
-        : new Prisma.Decimal(body.expectedReturn);
-    if (referencePrice && referencePrice.lte(0))
-      throw new BadRequestException('Reference price must be positive');
-    if (expectedReturn && (expectedReturn.lte(0) || expectedReturn.gt(100)))
-      throw new BadRequestException(
-        'Expected return must be between 0 and 100',
-      );
+    const referencePrice = this.moneyValue(
+      body.referencePrice,
+      'Reference price',
+      4,
+      { optional: true },
+    );
+    const expectedReturn = this.moneyValue(
+      body.expectedReturn,
+      'Expected return',
+      2,
+      { optional: true, max: 100 },
+    );
     return {
       symbol: String(body.symbol).trim().toUpperCase(),
       name: String(body.name).trim(),
@@ -219,9 +217,9 @@ export class AdminProductsService {
     return {
       symbol: String(body.symbol).trim().toUpperCase(),
       side: String(body.side || '买入').trim(),
-      quantity: Number(body.quantity),
-      price: new Prisma.Decimal(body.price),
-      minTicket: new Prisma.Decimal(body.minTicket),
+      quantity: this.positiveInteger(body.quantity, 'Quantity'),
+      price: this.moneyValue(body.price, 'Price', 4)!,
+      minTicket: this.moneyValue(body.minTicket, 'Minimum ticket', 2)!,
       note: body.note?.trim() || null,
     };
   }
@@ -231,8 +229,8 @@ export class AdminProductsService {
       code: String(body.code).trim().toUpperCase(),
       name: String(body.name).trim(),
       type: String(body.type || '股票型').trim(),
-      nav: new Prisma.Decimal(body.nav),
-      minSubscribe: new Prisma.Decimal(body.minSubscribe),
+      nav: this.moneyValue(body.nav, 'NAV', 4)!,
+      minSubscribe: this.moneyValue(body.minSubscribe, 'Minimum subscription', 2)!,
       risk: String(body.risk || '中').trim(),
       manager: body.manager?.trim() || null,
     };
@@ -244,9 +242,69 @@ export class AdminProductsService {
       name: String(body.name).trim(),
       market: String(body.market || 'NSE').trim(),
       risk: String(body.risk || '中').trim(),
-      annualReturn: new Prisma.Decimal(body.annualReturn),
-      maxDrawdown: new Prisma.Decimal(body.maxDrawdown),
+      annualReturn: this.moneyValue(body.annualReturn, 'Annual return', 2, { allowZero: true })!,
+      maxDrawdown: this.moneyValue(body.maxDrawdown, 'Max drawdown', 2, { allowZero: true, max: 100 })!,
     };
+  }
+
+
+  private moneyValue(
+    value: unknown,
+    label: string,
+    maxDecimals: 2 | 4,
+    options: { optional?: boolean; allowZero?: boolean; max?: number } = {},
+  ): Prisma.Decimal | null {
+    if (value == null || value === '') {
+      if (options.optional) return null;
+      throw new BadRequestException(`${label} is required`);
+    }
+    const text =
+      typeof value === 'number' && Number.isFinite(value)
+        ? value.toFixed(maxDecimals)
+        : String(value).trim();
+    const pattern =
+      maxDecimals === 4
+        ? /^(?:0|[1-9]\d*)(?:\.\d{1,4})?$/
+        : /^(?:0|[1-9]\d*)(?:\.\d{1,2})?$/;
+    if (!pattern.test(text)) {
+      throw new BadRequestException(
+        `${label} must be a monetary value with up to ${maxDecimals} decimals`,
+      );
+    }
+    let decimal: Prisma.Decimal;
+    try {
+      decimal = new Prisma.Decimal(text);
+    } catch {
+      throw new BadRequestException(`${label} is invalid`);
+    }
+    if (!decimal.isFinite()) {
+      throw new BadRequestException(`${label} is invalid`);
+    }
+    if (!options.allowZero && decimal.lte(0)) {
+      throw new BadRequestException(`${label} must be greater than zero`);
+    }
+    if (options.allowZero && decimal.lt(0)) {
+      throw new BadRequestException(`${label} cannot be negative`);
+    }
+    if (options.max != null && decimal.gt(options.max)) {
+      throw new BadRequestException(`${label} exceeds the allowed maximum`);
+    }
+    return decimal;
+  }
+
+  private positiveInteger(value: unknown, label: string, max = 1_000_000_000) {
+    const text =
+      typeof value === 'number' && Number.isFinite(value)
+        ? String(Math.trunc(value))
+        : String(value ?? '').trim();
+    if (!/^\d+$/.test(text)) {
+      throw new BadRequestException(`${label} must be a positive whole number`);
+    }
+    const quantity = Number(text);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > max) {
+      throw new BadRequestException(`${label} must be a positive whole number`);
+    }
+    return quantity;
   }
 
   private require(value: unknown, message: string) {

@@ -65,11 +65,16 @@ export default function QuantPage() {
 
   async function submitStrategy() {
     const values = form.getFieldsValue();
+    const payload = {
+      ...values,
+      annualReturn: Number(values.annualReturn).toFixed(2),
+      maxDrawdown: Number(values.maxDrawdown).toFixed(2),
+    };
     if (editing) {
-      await api.patch(`/admin-products/quant/${editing.id}`, values);
+      await api.patch(`/admin-products/quant/${editing.id}`, payload);
       message.success("量化策略已更新");
     } else {
-      await api.post("/admin-products/quant", values);
+      await api.post("/admin-products/quant", payload);
       message.success("量化策略已新增");
     }
     setOpen(false);

@@ -2,6 +2,7 @@ import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import { Prisma } from '../../generated/prisma/client';
 import {
   MarketDataProvider,
   MarketHistoryPoint,
@@ -228,39 +229,67 @@ export class IndiaStockMcpProvider
   }
 
   private toQuote(payload: QuotePayload, requestedSymbol: string): MarketQuoteResult {
-    const price = this.number(payload.price ?? payload.last ?? payload.lastPrice);
-    if (price === null || price <= 0) {
+    const priceText = this.stringNumber(
+      payload.price ?? payload.last ?? payload.lastPrice,
+    );
+    if (priceText == null) {
+      throw new Error(`Invalid price returned for ${requestedSymbol}`);
+    }
+    const price = new Prisma.Decimal(priceText);
+    if (price.lte(0)) {
       throw new Error(`Invalid price returned for ${requestedSymbol}`);
     }
 
-    const absoluteChange = this.number(payload.change ?? payload.variation);
+    const absoluteChangeText = this.stringNumber(
+      payload.change ?? payload.variation,
+    );
     const explicitChangePct = this.number(
       payload.changePct ?? payload.percentChange ?? payload.pChange,
     );
-    const explicitPreviousClose = this.number(
+    const explicitPreviousCloseText = this.stringNumber(
       payload.previousClose ?? payload.prevClose,
     );
-    const previousClose =
-      explicitPreviousClose ??
-      (absoluteChange !== null ? price - absoluteChange : null) ??
-      (explicitChangePct !== null && explicitChangePct !== -100
-        ? price / (1 + explicitChangePct / 100)
-        : price);
+    const previousClose = explicitPreviousCloseText
+      ? new Prisma.Decimal(explicitPreviousCloseText)
+      : absoluteChangeText != null
+        ? price.sub(absoluteChangeText)
+        : explicitChangePct !== null && explicitChangePct !== -100
+          ? price.div(
+              new Prisma.Decimal(1).add(
+                new Prisma.Decimal(explicitChangePct).div(100),
+              ),
+            )
+          : price;
     const changePct =
       explicitChangePct ??
-      (previousClose > 0 ? ((price - previousClose) / previousClose) * 100 : 0);
+      (previousClose.gt(0)
+        ? Number(
+            price
+              .sub(previousClose)
+              .div(previousClose)
+              .mul(100)
+              .toDecimalPlaces(2)
+              .toFixed(),
+          )
+        : 0);
 
     return {
       symbol: this.cleanSymbol(payload.symbol, requestedSymbol),
-      price: String(price),
-      previousClose: String(previousClose),
+      price: priceText,
+      previousClose: previousClose
+        .toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP)
+        .toFixed(),
       openPrice: this.stringNumber(payload.open ?? payload.openPrice),
-      highPrice: this.stringNumber(payload.dayHigh ?? payload.high ?? payload.highPrice),
-      lowPrice: this.stringNumber(payload.dayLow ?? payload.low ?? payload.lowPrice),
+      highPrice: this.stringNumber(
+        payload.dayHigh ?? payload.high ?? payload.highPrice,
+      ),
+      lowPrice: this.stringNumber(
+        payload.dayLow ?? payload.low ?? payload.lowPrice,
+      ),
       bidPrice: this.stringNumber(payload.bid ?? payload.bidPrice),
       askPrice: this.stringNumber(payload.ask ?? payload.askPrice),
-      volume: String(this.number(payload.volume) ?? 0),
-      change: Number(changePct.toFixed(2)),
+      volume: this.stringNumber(payload.volume) ?? '0',
+      change: Number(new Prisma.Decimal(changePct).toDecimalPlaces(2).toFixed()),
       source: this.name,
       updatedAt: new Date(),
     };
@@ -295,14 +324,21 @@ export class IndiaStockMcpProvider
   }
 
   private stringNumber(value: unknown): string | null {
-    const parsed = this.number(value);
-    return parsed === null ? null : String(parsed);
+    try {
+      const decimal = new Prisma.Decimal(
+        typeof value === 'string' ? value.replace(/,/g, '').trim() : (value as any),
+      );
+      if (!decimal.isFinite()) return null;
+      return decimal.toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP).toFixed();
+    } catch {
+      return null;
+    }
   }
 
   private number(value: unknown): number | null {
-    if (typeof value === 'number') return Number.isFinite(value) ? value : null;
-    if (typeof value !== 'string') return null;
-    const parsed = Number(value.replace(/,/g, '').trim());
+    const text = this.stringNumber(value);
+    if (text == null) return null;
+    const parsed = Number(text);
     return Number.isFinite(parsed) ? parsed : null;
   }
 }

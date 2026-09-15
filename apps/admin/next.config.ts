@@ -2,10 +2,24 @@ import type { NextConfig } from "next";
 
 const isDev = process.env.NODE_ENV === "development";
 const devScriptPolicy = isDev ? " 'unsafe-eval'" : "";
-// Local API hosts only in development; production connect-src is self + HTTPS.
-const connectSrc = isDev
-  ? "'self' https: http://localhost:3000 http://127.0.0.1:3000"
-  : "'self' https:";
+
+function resolveConnectSrc() {
+  if (isDev) {
+    return "'self' https: http://localhost:3000 http://127.0.0.1:3000";
+  }
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (apiUrl?.startsWith("https://")) {
+    try {
+      return `'self' ${new URL(apiUrl).origin}`;
+    } catch {
+      // Fall through to HTTPS-any if the URL is malformed at build time.
+    }
+  }
+  // CI / unset API URL: still block cleartext; pin when NEXT_PUBLIC_API_URL is set.
+  return "'self' https:";
+}
+
+const connectSrc = resolveConnectSrc();
 
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || '.next',

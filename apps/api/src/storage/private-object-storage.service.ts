@@ -154,11 +154,18 @@ export class PrivateObjectStorageService implements OnModuleInit {
         );
       return;
     }
+    const headers: Record<string, string> = {
+      'content-type': 'application/octet-stream',
+    };
+    const bearer = process.env.VIRUS_SCAN_BEARER_TOKEN?.trim();
+    if (bearer) {
+      headers.authorization = `Bearer ${bearer}`;
+    }
     let response: Response;
     try {
       response = await fetch(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/octet-stream' },
+        headers,
         body: new Uint8Array(bytes),
         signal: AbortSignal.timeout(15_000),
       });

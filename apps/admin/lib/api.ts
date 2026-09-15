@@ -2,9 +2,10 @@ import axios from 'axios';
 import { getBackendRole } from './backend-role';
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
-const isLoopbackHttp = !!configuredApiUrl && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/i.test(configuredApiUrl);
-const isPrivateLanHttp = !!configuredApiUrl && /^http:\/\/(?:10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)?\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3}\.\d{1,3})(:\d+)?$/i.test(configuredApiUrl);
-if (process.env.NODE_ENV === 'production' && (!configuredApiUrl || (!configuredApiUrl.startsWith('https://') && !isLoopbackHttp && !isPrivateLanHttp))) {
+if (
+  process.env.NODE_ENV === 'production' &&
+  (!configuredApiUrl || !configuredApiUrl.startsWith('https://'))
+) {
   throw new Error('NEXT_PUBLIC_API_URL must be an HTTPS URL in production');
 }
 const API_URL = configuredApiUrl || 'http://localhost:3000';

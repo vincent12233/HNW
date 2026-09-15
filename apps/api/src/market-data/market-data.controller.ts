@@ -17,6 +17,7 @@ import { HistoricalMarketDataService } from './historical-market-data.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataService } from './market-data.service';
 import { MarketNewsService } from './market-news.service';
+import { UpdateMarketQuoteDto } from './dto/update-market-quote.dto';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -106,14 +107,7 @@ export class MarketDataController {
   @Patch('quote')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  updateQuote(
-    @Body()
-    body: {
-      symbol: string;
-      price: string;
-      volume?: string;
-    },
-  ) {
+  updateQuote(@Body() body: UpdateMarketQuoteDto) {
     return this.marketDataService.updateQuote(
       body.symbol,
       body.price,

@@ -1,10 +1,11 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
   Exchange,
   InstrumentType,
   OrderStatus,
 } from '../generated/prisma/enums';
+import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 
@@ -238,29 +239,46 @@ export class MarketDataService {
     });
     if (!instrument) throw new NotFoundException('Instrument not found');
 
+    let priceDecimal: Prisma.Decimal;
+    try {
+      priceDecimal = new Prisma.Decimal(price);
+    } catch {
+      throw new BadRequestException('price must be a positive price with up to 4 decimals');
+    }
+    if (
+      !priceDecimal.isFinite() ||
+      !priceDecimal.greaterThan(0) ||
+      !priceDecimal.equals(priceDecimal.toDecimalPlaces(4))
+    ) {
+      throw new BadRequestException('price must be a positive price with up to 4 decimals');
+    }
+
     const previousClose =
       instrument.quote?.previousClose?.toString() ??
       instrument.quote?.lastPrice?.toString() ??
       price;
-    const previousCloseNumber = Number(previousClose);
-    const priceNumber = Number(price);
-    const change =
-      previousCloseNumber > 0
-        ? ((priceNumber - previousCloseNumber) / previousCloseNumber) * 100
-        : 0;
+    const previousCloseDecimal = new Prisma.Decimal(previousClose);
+    const change = previousCloseDecimal.greaterThan(0)
+      ? priceDecimal
+          .sub(previousCloseDecimal)
+          .div(previousCloseDecimal)
+          .mul(100)
+          .toDecimalPlaces(2)
+          .toNumber()
+      : 0;
     const updatedAt = new Date();
 
     await this.ingestion.ingest(instrument.exchange, {
       symbol: instrument.symbol,
-      price,
+      price: priceDecimal.toFixed(),
       previousClose,
       openPrice: instrument.quote?.openPrice?.toString() ?? null,
       highPrice: instrument.quote?.highPrice?.toString() ?? null,
       lowPrice: instrument.quote?.lowPrice?.toString() ?? null,
-      bidPrice: instrument.quote?.bidPrice?.toString() ?? price,
-      askPrice: instrument.quote?.askPrice?.toString() ?? price,
+      bidPrice: instrument.quote?.bidPrice?.toString() ?? priceDecimal.toFixed(),
+      askPrice: instrument.quote?.askPrice?.toString() ?? priceDecimal.toFixed(),
       volume: volume ?? instrument.quote?.volume?.toString() ?? '0',
-      change: Number(change.toFixed(2)),
+      change,
       source: 'LIVE',
       updatedAt,
     });
@@ -268,7 +286,7 @@ export class MarketDataService {
     return {
       symbol: instrument.symbol,
       exchange: instrument.exchange,
-      price: priceNumber,
+      price: priceDecimal.toFixed(),
       volume: volume ?? instrument.quote?.volume?.toString() ?? '0',
       updatedAt,
     };

@@ -102,20 +102,24 @@ export class ClientExperienceService {
   async reconciliation(userId: string) {
     const account = await this.prisma.account.findUnique({ where: { userId }, include: { positions: { include: { instrument: { include: { quote: true } } } }, transactions: { where: { status: 'COMPLETED' }, orderBy: { createdAt: 'desc' }, take: 100 } } });
     if (!account) throw new NotFoundException('Trading account not found');
-    const categories: Record<string, number> = { INST: 0, OTC: 0, IPO: 0 };
-    let positionsValue = 0;
+    const categories = {
+      INST: new Prisma.Decimal(0),
+      OTC: new Prisma.Decimal(0),
+      IPO: new Prisma.Decimal(0),
+    };
+    let positionsValue = new Prisma.Decimal(0);
     for (const position of account.positions) {
-      const quote = Number(position.instrument.quote?.lastPrice);
-      const price = Number.isFinite(quote) && quote > 0 ? quote : Number(position.averagePrice);
-      const value = position.quantity * price;
-      positionsValue += value;
+      const quote = moneyDecimal(position.instrument.quote?.lastPrice ?? 0);
+      const price = quote.gt(0) ? quote : moneyDecimal(position.averagePrice);
+      const value = moneyDecimal(new Prisma.Decimal(position.quantity).mul(price));
+      positionsValue = positionsValue.add(value);
       const category = productCategory(position.instrument.category);
-      if (category === 'OTC') categories.OTC += value;
-      else if (category === 'IPO') categories.IPO += value;
-      else if (category === 'Institutional') categories.INST += value;
+      if (category === 'OTC') categories.OTC = categories.OTC.add(value);
+      else if (category === 'IPO') categories.IPO = categories.IPO.add(value);
+      else if (category === 'Institutional') categories.INST = categories.INST.add(value);
     }
     const cash = moneyDecimal(account.cashBalance);
-    const totalAssets = cash.add(moneyDecimal(positionsValue));
+    const totalAssets = cash.add(positionsValue);
     await this.prisma.portfolioSnapshot.create({ data: { accountId: account.id, cashValue: cash, instValue: moneyDecimal(categories.INST), otcValue: moneyDecimal(categories.OTC), ipoValue: moneyDecimal(categories.IPO), totalValue: totalAssets } });
     const history = await this.prisma.portfolioSnapshot.findMany({ where: { accountId: account.id }, orderBy: { capturedAt: 'desc' }, take: 90 });
     return { asOf: new Date(), cash, positionsValue, totalAssets, categories, balanced: true, transactions: account.transactions, history: history.reverse() };
@@ -161,12 +165,12 @@ export class ClientExperienceService {
         ipoValue: new Prisma.Decimal(0),
       };
       for (const position of account.positions) {
-        const quote = Number(position.instrument.quote?.lastPrice);
-        const price = Number.isFinite(quote) && quote > 0 ? quote : Number(position.averagePrice);
+        const quote = moneyDecimal(position.instrument.quote?.lastPrice ?? 0);
+        const price = quote.gt(0) ? quote : moneyDecimal(position.averagePrice);
         const marketValue = moneyDecimal(new Prisma.Decimal(position.quantity).mul(price));
         value = value.add(marketValue);
         const positionProfit = moneyDecimal(
-          new Prisma.Decimal(price)
+          price
             .sub(position.averagePrice)
             .mul(position.quantity)
             .add(position.realizedPnl),

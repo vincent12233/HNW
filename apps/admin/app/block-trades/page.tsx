@@ -76,6 +76,16 @@ export default function OtcOffersPage() {
     [editing],
   );
 
+  const listedInstrumentIds = useMemo(
+    () => new Set(offers.map((offer) => offer.instrument.id)),
+    [offers],
+  );
+
+  const creatableInstruments = useMemo(
+    () => instruments.filter((item) => !listedInstrumentIds.has(item.id)),
+    [instruments, listedInstrumentIds],
+  );
+
   async function load() {
     setLoading(true);
     try {
@@ -169,8 +179,25 @@ export default function OtcOffersPage() {
   }
 
   async function toggle(record: Offer, isActive: boolean) {
-    await api.patch(`/otc/admin/offers/${record.id}`, { isActive });
+    const response = await api.patch<Offer>(`/otc/admin/offers/${record.id}`, {
+      isActive,
+    });
     await load();
+    if (isActive && response.data.transactionKey) {
+      Modal.success({
+        title: "已重新上架 · 新交易密钥",
+        content: (
+          <Space orientation="vertical">
+            <Text>
+              下架会清空旧密钥；重新上架会生成新的 4 位交易密钥。
+            </Text>
+            <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
+              {response.data.transactionKey}
+            </Title>
+          </Space>
+        ),
+      });
+    }
   }
 
   return (
@@ -179,8 +206,8 @@ export default function OtcOffersPage() {
         <div>
           <Title level={2}>OTC 上架管理</Title>
           <Paragraph type="secondary">
-            实时行情仅作参考；上架/编辑时填写折扣结算价（成交按此价格结算）。新上架会生成
-            4 位交易密钥；编辑价格或有效期不会更换密钥。
+            实时行情仅作参考；上架/编辑时填写折扣结算价（成交按此价格结算）。新上架与重新上架会生成
+            4 位交易密钥；编辑价格或有效期不会更换密钥。已上架标的请用「编辑」，勿重复上架。
           </Paragraph>
         </div>
         <Card>
@@ -290,7 +317,12 @@ export default function OtcOffersPage() {
               <Select
                 showSearch
                 optionFilterProp="label"
-                options={instruments.map((i) => ({
+                placeholder={
+                  creatableInstruments.length
+                    ? "选择尚未上架的股票"
+                    : "当前股票均已上架，请用编辑"
+                }
+                options={creatableInstruments.map((i) => ({
                   value: i.id,
                   label: `${i.exchange}:${i.symbol} · ${i.name}`,
                 }))}

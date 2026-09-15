@@ -195,7 +195,28 @@ export class OtcService {
       throw new BadRequestException('Valid price and offer period are required');
     }
     const isActive = body.isActive ?? existing.isActive;
+    const reactivating = isActive && !existing.isActive;
     // Editing settlement price / validity keeps the existing 4-digit key.
+    // Deactivate clears the key; reactivate (or repair a keyless active offer)
+    // mints a new 4-digit key so the offer is tradeable again.
+    let mintedKey: string | null = null;
+    let keyPatch: {
+      transactionKeyEncrypted: string | null;
+      keyHashTier1: string | null;
+      keyHashTier2?: null;
+      keyHashTier3?: null;
+    } | Record<string, never> = {};
+    if (!isActive) {
+      keyPatch = { transactionKeyEncrypted: null, keyHashTier1: null };
+    } else if (reactivating || !existing.transactionKeyEncrypted) {
+      mintedKey = randomInt(1000, 10000).toString();
+      keyPatch = {
+        keyHashTier1: await bcrypt.hash(mintedKey, 12),
+        keyHashTier2: null,
+        keyHashTier3: null,
+        transactionKeyEncrypted: this.encryptKey(mintedKey),
+      };
+    }
     const saved = await this.prisma.otcOffer.update({
       where: { id },
       data: {
@@ -203,9 +224,7 @@ export class OtcService {
         validFrom,
         validUntil,
         isActive,
-        ...(isActive
-          ? {}
-          : { transactionKeyEncrypted: null, keyHashTier1: null }),
+        ...keyPatch,
       },
       include: { instrument: { include: { quote: true } } },
     });
@@ -220,9 +239,10 @@ export class OtcService {
       ...offer,
       marketPrice: saved.instrument.quote?.lastPrice ?? null,
       transactionKey:
-        isActive && transactionKeyEncrypted
+        mintedKey ??
+        (isActive && transactionKeyEncrypted
           ? this.decryptKey(transactionKeyEncrypted)
-          : null,
+          : null),
     };
   }
 

@@ -75,7 +75,27 @@ const OTC_ERROR_ZH: Record<string, string> = {
   'IPO not found': '未找到 IPO',
 };
 
-/** Prefer Nest `message`, with known OTC English strings mapped to Chinese. */
+const OTC_ERROR_ZH_PREFIX: Array<[string, string]> = [
+  [
+    'Allocation exceeds remaining IPO shares',
+    '分配数量超过剩余可分配股数',
+  ],
+  [
+    'Insufficient IPO shares remaining for this allotment',
+    '剩余可分配股数不足，无法公布该分配',
+  ],
+];
+
+/** Map a Nest error message string (exact or known prefix) to Chinese when possible. */
+export function mapApiErrorText(text: string): string {
+  if (OTC_ERROR_ZH[text]) return OTC_ERROR_ZH[text];
+  for (const [prefix, zh] of OTC_ERROR_ZH_PREFIX) {
+    if (text.startsWith(prefix)) return zh;
+  }
+  return text;
+}
+
+/** Prefer Nest `message`, with known OTC/IPO English strings mapped to Chinese. */
 export function getApiErrorMessage(error: unknown, fallback: string): string {
   const raw = (error as { response?: { data?: { message?: unknown } } })
     ?.response?.data?.message;
@@ -85,5 +105,5 @@ export function getApiErrorMessage(error: unknown, fallback: string): string {
       ? ''
       : String(raw);
   if (!text) return fallback;
-  return OTC_ERROR_ZH[text] ?? text;
+  return mapApiErrorText(text);
 }

@@ -23,7 +23,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage, mapApiErrorText } from "@/lib/api";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -42,6 +42,8 @@ type IpoApplication = {
     symbol: string;
     companyName: string;
     issuePrice: string;
+    totalShares?: number;
+    availableShares?: number;
     status: string;
   };
   account: {
@@ -94,12 +96,25 @@ export default function BusinessIpoPage() {
       message.success(`已公布 ${data.published} 条分配结果并完成结算`);
       await loadItems();
       setSelected(failed.map((row) => row.id));
-      if (failed.length)
+      if (failed.length) {
+        const reasons = [
+          ...new Set(
+            failed
+              .map((row) => row.message)
+              .filter(Boolean)
+              .map((msg) => mapApiErrorText(String(msg))),
+          ),
+        ];
         setError(
-          `${failed.length} 条未公布，请检查是否已分配、是否已处理及客户归属后重试。成功的申请不会重复扣款。`,
+          `${failed.length} 条未公布${
+            reasons.length ? `：${reasons.join('；')}` : ""
+          }。请检查是否已分配、剩余股数、是否已处理及客户归属后重试。成功的申请不会重复扣款。`,
         );
-    } catch {
-      message.error("公布未完成，请刷新状态确认后重试。");
+      }
+    } catch (error) {
+      message.error(
+        getApiErrorMessage(error, "公布未完成，请刷新状态确认后重试。"),
+      );
     } finally {
       setPublishing(false);
     }
@@ -141,8 +156,15 @@ export default function BusinessIpoPage() {
             客户现金：{formatMoney(record.account.cashBalance)}
             。保存分配不扣款，公布后才执行扣款、欠款及持仓处理。
           </Text>
+          <Text type="secondary">
+            剩余可分配股数：{record.ipo.availableShares ?? "—"}
+            {record.ipo.totalShares != null
+              ? ` / 发行总量 ${record.ipo.totalShares}`
+              : ""}
+          </Text>
           <InputNumber
             min={1}
+            max={record.ipo.availableShares ?? undefined}
             precision={0}
             defaultValue={record.draftQuantity ?? undefined}
             style={{ width: "100%" }}
@@ -155,7 +177,7 @@ export default function BusinessIpoPage() {
             结算价（申购价）：{formatMoney(record.ipo.issuePrice)}
           </Text>
           <Text type="secondary">
-            分配结算固定使用超管申购价，实时行情仅用于展示价差。
+            分配结算固定使用超管申购价；不可超过剩余可分配股数。
           </Text>
         </Space>
       ),
@@ -171,12 +193,31 @@ export default function BusinessIpoPage() {
           message.error("请输入有效的分配数量和价格");
           throw new Error("Invalid IPO allocation values");
         }
-        await api.patch(`/business/my-ipo-applications/${record.id}/allocate`, {
-          quantity: Number(quantity),
-          price: Number(price).toFixed(2),
-        });
-        message.success("分配已保存，公布后才会扣款");
-        await loadItems();
+        if (
+          record.ipo.availableShares != null &&
+          Number(quantity) > record.ipo.availableShares
+        ) {
+          message.error(
+            `分配数量不能超过剩余可分配股数（${record.ipo.availableShares}）`,
+          );
+          throw new Error("IPO allocation exceeds remaining shares");
+        }
+        try {
+          await api.patch(
+            `/business/my-ipo-applications/${record.id}/allocate`,
+            {
+              quantity: Number(quantity),
+              price: Number(price).toFixed(2),
+            },
+          );
+          message.success("分配已保存，公布后才会扣款");
+          await loadItems();
+        } catch (error) {
+          message.error(
+            getApiErrorMessage(error, "分配失败，请检查剩余股数后重试"),
+          );
+          throw error;
+        }
       },
     });
   }

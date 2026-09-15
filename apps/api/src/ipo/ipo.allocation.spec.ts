@@ -25,9 +25,11 @@ describe('IpoService allocation safety', () => {
           status: 'PENDING',
           accountId: 'account-1',
           ipo: {
+            id: 'ipo-1',
             symbol: 'VALIANTLAB',
             instrumentId: 'instrument-1',
             issuePrice: new Prisma.Decimal('100.50'),
+            availableShares: 1000,
           },
           account: {
             id: 'account-1',
@@ -36,6 +38,7 @@ describe('IpoService allocation safety', () => {
             user: { assignedBusinessId: 'business-owner' },
           },
         }),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { draftQuantity: 0 } }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
       },
     };
@@ -58,6 +61,39 @@ describe('IpoService allocation safety', () => {
     expect(call.data.draftPrice.toFixed(2)).toBe('100.50');
   });
 
+  it('rejects draft allocation that exceeds remaining IPO shares', async () => {
+    const tx = {
+      ipoApplication: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'application-1',
+          status: 'PENDING',
+          ipo: {
+            id: 'ipo-1',
+            issuePrice: new Prisma.Decimal('100'),
+            availableShares: 50,
+          },
+          account: {
+            id: 'account-1',
+            user: { assignedBusinessId: 'business-owner' },
+          },
+        }),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { draftQuantity: 40 } }),
+        updateMany: jest.fn(),
+      },
+    };
+    const prisma = {
+      $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
+        callback(tx),
+      ),
+    };
+    const service = new IpoService(prisma as any);
+
+    await expect(
+      service.allocate('application-1', 20, 100),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(tx.ipoApplication.updateMany).not.toHaveBeenCalled();
+  });
+
   it('does not debit cash or create debt when another operator claimed the application', async () => {
     const tx = {
       ipoApplication: {
@@ -66,9 +102,11 @@ describe('IpoService allocation safety', () => {
           status: 'PENDING',
           accountId: 'account-1',
           ipo: {
+            id: 'ipo-1',
             symbol: 'VALIANTLAB',
             instrumentId: 'instrument-1',
             issuePrice: new Prisma.Decimal('79.1'),
+            availableShares: 1000,
           },
           account: {
             id: 'account-1',
@@ -77,6 +115,7 @@ describe('IpoService allocation safety', () => {
             user: { assignedBusinessId: 'business-owner' },
           },
         }),
+        aggregate: jest.fn().mockResolvedValue({ _sum: { draftQuantity: 0 } }),
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       account: { update: jest.fn() },
@@ -105,8 +144,10 @@ describe('IpoService allocation safety', () => {
           id: 'application-1',
           status: 'PENDING',
           ipo: {
+            id: 'ipo-1',
             instrumentId: 'instrument-1',
             issuePrice: new Prisma.Decimal('79.1'),
+            availableShares: 1000,
           },
           account: {
             id: 'account-1',
@@ -114,6 +155,7 @@ describe('IpoService allocation safety', () => {
             user: { assignedBusinessId: 'business-owner' },
           },
         }),
+        aggregate: jest.fn(),
         updateMany: jest.fn(),
       },
       account: { update: jest.fn() },

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
+import type { ReactNode } from "react";
 import AppProviders from "@/components/AppProviders";
 import "./globals.css";
 
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
   description: "Role-isolated operations consoles for India Trading",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="zh-CN" className={`${dmSans.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">

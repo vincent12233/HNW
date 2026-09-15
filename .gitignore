@@ -22,7 +22,6 @@ apps/**/.env.*
 !apps/**/.env.example
 apps/api/uploads/
 apps/api/private-objects/
-apps/api/private-objects/
 
 # Local Flutter/Node helper caches used during checks
 .pub-cache/

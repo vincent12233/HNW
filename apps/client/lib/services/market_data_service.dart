@@ -110,7 +110,7 @@ class MarketDataService {
     try {
       final session = await _authService.restoreSession();
       if (session == null || session.accessToken.isEmpty) {
-        return _cachedSnapshot();
+        return await _cachedSnapshot();
       }
 
       final normalizedSymbols = symbols
@@ -130,7 +130,7 @@ class MarketDataService {
 
       final decoded = jsonDecode(response.body);
       if (decoded is! List) {
-        return _cachedSnapshot();
+        return await _cachedSnapshot();
       }
 
       await LocalDataCache.saveJson(LocalDataCache.marketSnapshot, decoded);

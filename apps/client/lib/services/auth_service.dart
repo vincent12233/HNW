@@ -1,12 +1,12 @@
 import 'dart:convert';
 
-import 'package:file_picker/file_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_config.dart';
 import '../models/auth_session.dart';
+import '../models/picked_bytes_file.dart';
 import '../models/withdrawal_request.dart';
 import 'local_data_cache.dart';
 import 'session_expiry_service.dart';
@@ -218,17 +218,17 @@ class AuthService {
   Future<String> submitKyc({
     String? accessToken,
     required String documentType,
-    required PlatformFile file,
-    PlatformFile? backFile,
-    required PlatformFile selfieFile,
-    required PlatformFile signatureFile,
+    required PickedBytesFile file,
+    PickedBytesFile? backFile,
+    required PickedBytesFile selfieFile,
+    required PickedBytesFile signatureFile,
     String? fullName,
     Map<String, String>? bankDetails,
   }) async {
     final bytes = file.bytes;
     final backBytes = backFile?.bytes;
 
-    if (bytes == null || bytes.isEmpty) {
+    if (bytes.isEmpty) {
       throw AuthException('Unable to read selected KYC file');
     }
 
@@ -251,13 +251,15 @@ class AuthService {
               'documentType': documentType,
               'fullName': ?fullName,
               'bankDetails': ?bankDetails,
-              'selfieContentBase64': base64Encode(selfieFile.bytes!),
+              'selfieContentBase64': base64Encode(selfieFile.bytes),
               'selfieMimeType': _mimeTypeForFile(selfieFile.name),
-              'signatureContentBase64': base64Encode(signatureFile.bytes!),
+              'signatureContentBase64': base64Encode(signatureFile.bytes),
               'fileName': file.name,
               'mimeType': _mimeTypeForFile(file.name),
               'contentBase64': base64Encode(bytes),
-              if (backFile != null && backBytes != null) ...{
+              if (backFile != null &&
+                  backBytes != null &&
+                  backBytes.isNotEmpty) ...{
                 'backFileName': backFile.name,
                 'backMimeType': _mimeTypeForFile(backFile.name),
                 'backContentBase64': base64Encode(backBytes),

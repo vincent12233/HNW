@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1.7
-FROM ghcr.io/cirruslabs/flutter:stable AS builder
+# Pin to match Flutter CI (see .github/workflows/flutter-ci.yml).
+FROM ghcr.io/cirruslabs/flutter:3.47.4 AS builder
 
 WORKDIR /app
 COPY pubspec.yaml pubspec.lock ./

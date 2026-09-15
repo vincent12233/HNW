@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /apps/api
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      nest-ecosystem:
+        patterns:
+          - '@nestjs/*'
+      prisma:
+        patterns:
+          - 'prisma'
+          - '@prisma/*'
+
+  - package-ecosystem: npm
+    directory: /apps/admin
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns:
+          - 'next'
+          - 'react'
+          - 'react-dom'
+          - 'eslint-config-next'
+      antd:
+        patterns:
+          - 'antd'
+          - '@ant-design/*'
+
+  - package-ecosystem: pub
+    directory: /apps/client
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3

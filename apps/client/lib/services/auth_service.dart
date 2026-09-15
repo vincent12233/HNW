@@ -17,7 +17,10 @@ class AuthService {
   static const String _biometricSessionKey = 'biometric_auth_session';
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
   static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    aOptions: AndroidOptions(
+      migrateOnAlgorithmChange: true,
+      migrateWithBackup: true,
+    ),
   );
 
   Future<AuthSession> login({

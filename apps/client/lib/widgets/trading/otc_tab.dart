@@ -236,9 +236,13 @@ class _OtcTabState extends State<OtcTab> {
               label,
               style: TextStyle(color: color, fontWeight: FontWeight.w700),
             ),
-            AppText(
+            const AppText(
+              'Discount settlement price',
+              style: TextStyle(fontSize: 11, color: Colors.black54),
+            ),
+            Text(
               formatPrice(order.price),
-              style: const TextStyle(fontSize: 12),
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ],
         ),

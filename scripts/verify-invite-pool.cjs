@@ -2,7 +2,7 @@
 const assert = require('node:assert/strict');
 const { randomUUID, randomBytes } = require('node:crypto');
 const bcrypt = require('bcrypt');
-const { PrismaClient } = require('/app/dist/src/generated/prisma/client.js');
+const { PrismaClient } = require('/app/dist/generated/prisma/client.js');
 const { PrismaPg } = require('@prisma/adapter-pg');
 const db = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL }) });
 const ids = [];

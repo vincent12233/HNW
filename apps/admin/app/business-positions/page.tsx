@@ -21,7 +21,7 @@ import {
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api, getApiErrorMessage } from '@/lib/api';
@@ -94,8 +94,12 @@ export default function BusinessPositionsPage() {
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const keywordRef = useRef(keyword);
+  useEffect(() => {
+    keywordRef.current = keyword;
+  });
 
-  async function loadPositions(nextCategory = category) {
+  const loadPositions = useCallback(async (nextCategory = category) => {
     setLoading(true);
     setError("");
 
@@ -103,7 +107,7 @@ export default function BusinessPositionsPage() {
       const response = await api.get<PositionsResponse>("/business/my-positions", {
         params: {
           category: nextCategory,
-          search: keyword.trim() || undefined,
+          search: keywordRef.current.trim() || undefined,
         },
       });
 
@@ -116,12 +120,11 @@ export default function BusinessPositionsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [category]);
 
   useEffect(() => {
-    loadPositions(category);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [category]);
+    void loadPositions(category);
+  }, [category, loadPositions]);
 
   const totalPnl = Number(summary?.unrealizedPnl ?? 0);
 

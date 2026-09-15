@@ -13,7 +13,7 @@
 | 业务员后台 | `apps/admin` | 自有客户与业务数据，端口 `3006` |
 | 专用运营员后台 | `apps/admin` | 超级管理员固定邀请码客户，端口 `3007` |
 | 客户 App | `apps/client` | Flutter 客户端，界面英文 |
-| 数据库 | `compose.yaml` | 本地 PostgreSQL |
+| 数据库 | PostgreSQL 17.x | 生产部署在服务器；本地可用 `compose.yaml` 联调 |
 
 ## 核心规则
 

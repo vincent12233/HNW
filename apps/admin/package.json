@@ -5,11 +5,11 @@
   "scripts": {
     "dev": "next dev -p 3002",
     "build": "next build",
-    "start": "next start",
-    "start:admin": "next start -p 3002",
-    "start:manager": "next start -p 3004",
-    "start:finance": "next start -p 3005",
-    "start:business": "next start -p 3006",
+    "start": "next start -H 0.0.0.0",
+    "start:admin": "next start -p 3002 -H 0.0.0.0",
+    "start:manager": "next start -p 3004 -H 0.0.0.0",
+    "start:finance": "next start -p 3005 -H 0.0.0.0",
+    "start:business": "next start -p 3006 -H 0.0.0.0",
     "start:support": "next start -p 3007 -H 0.0.0.0",
     "lint": "eslint",
     "test": "node --experimental-strip-types --test tests/**/*.test.mjs"

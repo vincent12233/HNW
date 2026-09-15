@@ -237,7 +237,7 @@ const supportFields: FieldDef[] = [
   { key: "composer_hint", label: "输入框提示文案（Web/桌面）", rows: 1 },
   { key: "chat_preset.help", label: "帮助入口预填消息", rows: 2 },
   { key: "chat_preset.deposit", label: "快捷主题「入金」预填消息", rows: 2 },
-  { key: "salesmartly_script_url", label: "SaleSmartly Script URL", rows: 2 },
+  { key: "salesmartly_script_url", label: "SaleSmartly Script URL（en/hi 共用，两端客服入口共用）", rows: 2 },
 ];
 
 const supportTagField = {
@@ -704,8 +704,8 @@ export default function AppOpsContentPage() {
                 children: (
                   <Form form={supportForm} layout="vertical">
                     <Paragraph type="secondary">
-                      侧边悬浮按钮/面板标题/欢迎语/服务时间滚动公告/快捷主题/预填消息/SaleSmartly URL 按运营文案语言编辑（当前{" "}
-                      {opsLocale === "hi" ? "Hindi" : "English"}）；标签与快捷回复固定为中文，供后台客服台使用。
+                      侧边悬浮按钮/面板标题/欢迎语/服务时间滚动公告/快捷主题/预填消息按运营文案语言编辑（当前{" "}
+                      {opsLocale === "hi" ? "Hindi" : "English"}）；SaleSmartly Script URL 保存时自动同步 en/hi，供充值页联系客服与侧边悬浮客服共用；标签与快捷回复固定为中文，供后台客服台使用。
                     </Paragraph>
                     <FieldGroup title="客户端客服文案" fields={supportFields} />
                     <Divider />

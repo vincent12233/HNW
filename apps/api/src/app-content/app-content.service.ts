@@ -69,11 +69,14 @@ export class AppContentService {
     });
 
     const preferred = this.pickLocale(entries, locale);
+    const support = this.applySaleSmartlyScriptFallback(
+      this.moduleMap(preferred.rows, AppContentModule.SUPPORT),
+    );
     return {
       locale: preferred.localeUsed,
       home: this.moduleMap(preferred.rows, AppContentModule.HOME),
       deposit: this.moduleMap(preferred.rows, AppContentModule.DEPOSIT),
-      support: this.moduleMap(preferred.rows, AppContentModule.SUPPORT),
+      support,
       trading: this.moduleMap(preferred.rows, AppContentModule.TRADING),
       legal: this.moduleMap(preferred.rows, AppContentModule.LEGAL),
       about: this.moduleMap(preferred.rows, AppContentModule.ABOUT),
@@ -103,19 +106,23 @@ export class AppContentService {
     if (!key) throw new BadRequestException('Content key is required');
     if (body.body == null) throw new BadRequestException('Content body is required');
 
-    return this.prisma.appContentEntry.upsert({
+    const data = {
+      module,
+      key,
+      title: body.title?.trim() || null,
+      body: String(body.body),
+      metadata: body.metadata ?? Prisma.JsonNull,
+      isActive: body.isActive ?? true,
+      sortOrder: Number(body.sortOrder ?? 0),
+    };
+
+    const result = await this.prisma.appContentEntry.upsert({
       where: {
         module_key_locale: { module, key, locale },
       },
       create: {
-        module,
-        key,
-        title: body.title?.trim() || null,
-        body: String(body.body),
+        ...data,
         locale,
-        metadata: body.metadata ?? Prisma.JsonNull,
-        isActive: body.isActive ?? true,
-        sortOrder: Number(body.sortOrder ?? 0),
       },
       update: {
         title: body.title === undefined ? undefined : body.title?.trim() || null,
@@ -129,6 +136,31 @@ export class AppContentService {
           body.sortOrder === undefined ? undefined : Number(body.sortOrder),
       },
     });
+
+    // SaleSmartly script URL is locale-agnostic — keep en/hi in sync.
+    if (
+      module === AppContentModule.SUPPORT &&
+      key === 'salesmartly_script_url'
+    ) {
+      for (const otherLocale of ['en', 'hi']) {
+        if (otherLocale === locale) continue;
+        await this.prisma.appContentEntry.upsert({
+          where: {
+            module_key_locale: { module, key, locale: otherLocale },
+          },
+          create: {
+            ...data,
+            locale: otherLocale,
+          },
+          update: {
+            body: String(body.body),
+            isActive: body.isActive ?? true,
+          },
+        });
+      }
+    }
+
+    return result;
   }
 
   async bulkUpsert(entries: AppContentUpsertInput[]) {
@@ -218,6 +250,33 @@ export class AppContentService {
       };
     }
     return map;
+  }
+
+  /** Prefer CMS URL; fall back to SALESMARTLY_SCRIPT_URL for ops/deploy. */
+  private applySaleSmartlyScriptFallback(
+    support: Record<
+      string,
+      {
+        title: string | null;
+        body: string;
+        locale: string;
+        metadata: Prisma.JsonValue | null;
+        sortOrder: number;
+      }
+    >,
+  ) {
+    const current = support.salesmartly_script_url;
+    if (current && String(current.body ?? '').trim()) return support;
+    const envUrl = String(process.env.SALESMARTLY_SCRIPT_URL ?? '').trim();
+    if (!envUrl) return support;
+    support.salesmartly_script_url = {
+      title: current?.title ?? null,
+      body: envUrl,
+      locale: current?.locale ?? 'en',
+      metadata: current?.metadata ?? null,
+      sortOrder: current?.sortOrder ?? 40,
+    };
+    return support;
   }
 
   private pickLocale<

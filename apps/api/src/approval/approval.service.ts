@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException, ForbiddenException, Injectable,
 import { AuditService } from '../audit/audit.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { applyIncomingFundsToIpoDebts, settleIpoHoldings } from '../common/ipo-debt-repay';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { availableCash, moneyDecimal } from '../common/money';
 
@@ -55,8 +56,61 @@ export class ApprovalService {
       if (debit && (account.buyingPower.lt(amount) || availableCash(account).lt(amount))) throw new BadRequestException('Insufficient available balance');
       const existing = await tx.accountTransaction.findFirst({ where: { referenceId: payload.referenceId } });
       if (existing) throw new ConflictException('Reference number already processed');
-      const updated = await tx.account.update({ where: { id: account.id }, data: debit ? { cashBalance: { decrement: amount }, buyingPower: { decrement: amount } } : { cashBalance: { increment: amount }, buyingPower: { increment: amount } } });
-      await tx.accountTransaction.create({ data: { accountId: account.id, type: debit ? 'ADMIN_DEBIT' : 'ADMIN_CREDIT', status: 'COMPLETED', amount, balanceBefore: account.cashBalance, balanceAfter: updated.cashBalance, referenceId: payload.referenceId, note: payload.note, createdById: deciderId } });
+
+      const balanceBefore = moneyDecimal(account.cashBalance);
+      let creditedAmount = amount;
+      let ipoRepayment = new Prisma.Decimal(0);
+      if (!debit) {
+        const applied = await applyIncomingFundsToIpoDebts(
+          tx,
+          {
+            accountId: account.id,
+            userId: account.userId,
+            amount,
+            balanceBefore,
+          },
+          settleIpoHoldings,
+        );
+        ipoRepayment = applied.repayAmount;
+        creditedAmount = applied.remainingAmount;
+      }
+
+      if (debit) {
+        await tx.account.update({
+          where: { id: account.id },
+          data: {
+            cashBalance: { decrement: amount },
+            buyingPower: { decrement: amount },
+          },
+        });
+      } else if (creditedAmount.gt(0)) {
+        await tx.account.update({
+          where: { id: account.id },
+          data: {
+            cashBalance: { increment: creditedAmount },
+            buyingPower: { increment: creditedAmount },
+          },
+        });
+      }
+
+      await tx.accountTransaction.create({
+        data: {
+          accountId: account.id,
+          type: debit ? 'ADMIN_DEBIT' : 'ADMIN_CREDIT',
+          status: 'COMPLETED',
+          amount: debit ? amount : creditedAmount,
+          balanceBefore,
+          balanceAfter: debit
+            ? balanceBefore.sub(amount)
+            : balanceBefore.add(creditedAmount),
+          referenceId: payload.referenceId,
+          note:
+            !debit && ipoRepayment.gt(0)
+              ? `${payload.note || 'Approved credit'}; ${ipoRepayment.toFixed(2)} applied to IPO debt`
+              : payload.note,
+          createdById: deciderId,
+        },
+      });
       return tx.approvalRequest.update({ where: { id }, data: { status: 'APPROVED', decidedById: deciderId, decisionNote: note, decidedAt: new Date() } });
     }, { isolationLevel: Prisma.TransactionIsolationLevel.Serializable });
     await this.audit.createLog({ actorId: deciderId, action: `APPROVAL_${decision}`, resource: 'APPROVAL', resourceId: id, description: `Independent reviewer ${decision.toLowerCase()} the operation`, metadata: { note: note || null } });

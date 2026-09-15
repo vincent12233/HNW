@@ -1,5 +1,6 @@
-// Run in the local API container: Get-Content -Raw scripts/verify-client-modules.cjs | docker compose exec -T api node
-// Creates one isolated fixture account and removes only that account in finally.
+// Run against a built API tree: node scripts/verify-client-modules.cjs
+// (cwd should be apps/api with dist/ present). Creates one isolated fixture
+// account and removes only that account in finally.
 const assert = require('node:assert/strict');
 const { randomUUID, randomInt } = require('node:crypto');
 const { PrismaClient } = require(process.cwd() + '/dist/generated/prisma/client.js');

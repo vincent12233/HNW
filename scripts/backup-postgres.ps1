@@ -1,23 +1,29 @@
-param([string]$OutputDirectory = ".\backups", [int]$RetentionDays = 14)
+param(
+  [Parameter(Mandatory = $true)]
+  [string]$OutputPath,
+  [string]$DatabaseUrl = $env:DATABASE_URL
+)
+
 $ErrorActionPreference = "Stop"
-$resolved = [System.IO.Path]::GetFullPath($OutputDirectory)
-New-Item -ItemType Directory -Force -Path $resolved | Out-Null
-$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$target = Join-Path $resolved "india-trading-$stamp.dump"
-$containerTarget = "/tmp/india-trading-backup.dump"
-try {
-  docker compose exec -T postgres pg_dump -U hnw_user --format=custom --compress=9 --file=$containerTarget hnw_trading
-  if ($LASTEXITCODE -ne 0) { throw "Database backup failed" }
-  docker compose exec -T postgres pg_restore -U hnw_user --list $containerTarget | Out-Null
-  if ($LASTEXITCODE -ne 0) { throw "Backup archive is unreadable" }
-  docker compose cp "postgres:$containerTarget" $target
-  if ($LASTEXITCODE -ne 0 -or (Get-Item -LiteralPath $target).Length -lt 100) { throw "Backup validation failed" }
-} finally {
-  docker compose exec -T postgres rm -f $containerTarget | Out-Null
+
+if (-not $DatabaseUrl) {
+  throw "缺少 DATABASE_URL。请传入 -DatabaseUrl 或设置环境变量。"
 }
-if ($RetentionDays -gt 0) {
-  Get-ChildItem -LiteralPath $resolved -Filter "india-trading-*.dump" -File |
-    Where-Object LastWriteTime -lt (Get-Date).AddDays(-$RetentionDays) |
-    Remove-Item -Force
+
+$pgDump = Get-Command pg_dump -ErrorAction SilentlyContinue
+if (-not $pgDump) {
+  throw "未找到 pg_dump，请先安装 PostgreSQL 客户端工具并加入 PATH。"
 }
-Write-Output $target
+
+$resolved = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputPath)
+$parent = Split-Path -Parent $resolved
+if ($parent -and -not (Test-Path -LiteralPath $parent)) {
+  New-Item -ItemType Directory -Path $parent | Out-Null
+}
+
+& $pgDump.Source --dbname=$DatabaseUrl --format=custom --compress=9 --file=$resolved
+if ($LASTEXITCODE -ne 0) {
+  throw "pg_dump 失败，退出码 $LASTEXITCODE"
+}
+
+Write-Host "备份完成: $resolved"

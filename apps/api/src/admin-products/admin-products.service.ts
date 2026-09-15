@@ -186,12 +186,6 @@ export class AdminProductsService {
       .toUpperCase();
     if (!['UP', 'DOWN'].includes(direction))
       throw new BadRequestException('Direction must be UP or DOWN');
-    const referencePrice = this.moneyValue(
-      body.referencePrice,
-      'Reference price',
-      4,
-      { optional: true },
-    );
     const expectedReturn = this.moneyValue(
       body.expectedReturn,
       'Expected return',
@@ -208,7 +202,6 @@ export class AdminProductsService {
       risk: String(body.risk || '中').trim(),
       reason: body.reason?.trim() || null,
       direction,
-      referencePrice,
       expectedReturn,
     };
   }

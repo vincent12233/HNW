@@ -5,7 +5,6 @@ class InstitutionalStock {
     required this.companyName,
     required this.price,
     this.marketPrice = 0,
-    this.referencePrice,
     this.expectedReturn,
     this.minimumQuantity,
     required this.status,
@@ -19,7 +18,6 @@ class InstitutionalStock {
   /// Live settlement / trade price (realtime lastPrice).
   final double price;
   final double marketPrice;
-  final double? referencePrice;
   final double? expectedReturn;
   @Deprecated('Quantity limits are not used for Inst. or OTC orders')
   final int? minimumQuantity;
@@ -50,8 +48,6 @@ class InstitutionalStock {
         price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
         marketPrice:
             double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
-        referencePrice:
-            double.tryParse(json['referencePrice']?.toString() ?? ''),
         expectedReturn:
             double.tryParse(json['expectedReturn']?.toString() ?? ''),
         status: json['status']?.toString() ?? '',

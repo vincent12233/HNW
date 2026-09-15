@@ -18,6 +18,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scope.guard';
 import { AppContentService } from '../app-content/app-content.service';
 import { DepositService } from './deposit.service';
+import { SupportDepositSubmitDto } from './dto/support-deposit-submit.dto';
 
 @Controller('deposit')
 @UseGuards(JwtAuthGuard, RolesGuard, DedicatedOperatorScopeGuard)
@@ -38,6 +39,12 @@ export class DepositController {
     throw new BadRequestException(
       await this.appContent.getDepositRejectMessage(locale),
     );
+  }
+
+  @Post('support-submit')
+  @Roles(UserRole.SUPPORT)
+  supportSubmit(@Req() req: any, @Body() body: SupportDepositSubmitDto) {
+    return this.depositService.submitToFinanceBySupport(req.user.userId, body);
   }
 
   @Get('me')

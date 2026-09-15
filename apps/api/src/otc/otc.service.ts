@@ -79,7 +79,21 @@ export class OtcService {
   async updateOffer(id: string, body: { price?: string; validFrom?: string; validUntil?: string; isActive?: boolean }) {
     const existing = await this.prisma.otcOffer.findUnique({ where: { id } });
     if (!existing) throw new NotFoundException('OTC offer not found');
-    const price = body.price == null ? existing.price : new Prisma.Decimal(body.price);
+    let price = existing.price;
+    if (body.price != null) {
+      try {
+        price = new Prisma.Decimal(body.price);
+      } catch {
+        throw new BadRequestException('Valid price and offer period are required');
+      }
+      if (
+        !price.isFinite() ||
+        !price.greaterThan(0) ||
+        !price.equals(price.toDecimalPlaces(4))
+      ) {
+        throw new BadRequestException('Valid price and offer period are required');
+      }
+    }
     const validFrom = body.validFrom == null ? existing.validFrom : new Date(body.validFrom);
     const validUntil = body.validUntil == null ? existing.validUntil : new Date(body.validUntil);
     if (!price.greaterThan(0) || !Number.isFinite(validFrom.getTime()) || validUntil <= validFrom) {

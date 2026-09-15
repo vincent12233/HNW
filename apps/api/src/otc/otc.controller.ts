@@ -3,6 +3,8 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
+import { SubmitOtcOrderDto } from './dto/submit-otc-order.dto';
+import { UpdateOtcOfferDto } from './dto/update-otc-offer.dto';
 import { OtcService } from './otc.service';
 
 @Controller('otc')
@@ -16,8 +18,8 @@ export class OtcController {
 
   @Post('orders')
   @Roles(UserRole.CLIENT)
-  submit(@Req() req: any, @Body() body: { offerId: string; quantity: number; transactionKey: string }) {
-    return this.otc.submit(req.user.userId, body.offerId, Number(body.quantity), body.transactionKey);
+  submit(@Req() req: any, @Body() body: SubmitOtcOrderDto) {
+    return this.otc.submit(req.user.userId, body.offerId, body.quantity, body.transactionKey);
   }
 
   @Get('orders/me')
@@ -40,7 +42,7 @@ export class OtcController {
 
   @Patch('admin/offers/:id')
   @Roles(UserRole.ADMIN)
-  updateOffer(@Param('id') id: string, @Body() body: { price?: string; validFrom?: string; validUntil?: string; isActive?: boolean }) {
+  updateOffer(@Param('id') id: string, @Body() body: UpdateOtcOfferDto) {
     return this.otc.updateOffer(id, body);
   }
 

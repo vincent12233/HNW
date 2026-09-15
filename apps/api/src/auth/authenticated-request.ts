@@ -6,6 +6,7 @@ export type AuthUser = {
   userId: string;
   phone?: string | null;
   role: UserRole;
+  onboarding?: boolean;
 };
 
 export type AuthenticatedRequest = Request & {

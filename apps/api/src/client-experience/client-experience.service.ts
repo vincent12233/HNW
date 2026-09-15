@@ -34,7 +34,8 @@ export class ClientExperienceService {
   }
 
   async updateProfile(userId: string, body: Record<string, unknown>) {
-    const fullName = typeof body.fullName === 'string' ? body.fullName.trim() : '';
+    const fullName =
+      typeof body.fullName === 'string' ? body.fullName.trim() : '';
     if (fullName.length < 2 || fullName.length > 120)
       throw new BadRequestException('Enter your full name (2-120 characters)');
     return this.prisma.user.update({
@@ -121,7 +122,8 @@ export class ClientExperienceService {
     });
   }
   async addBank(userId: string, body: Record<string, unknown>) {
-    const bankName = typeof body.bankName === 'string' ? body.bankName.trim() : '';
+    const bankName =
+      typeof body.bankName === 'string' ? body.bankName.trim() : '';
     const accountHolder =
       typeof body.accountHolder === 'string' ? body.accountHolder.trim() : '';
     const accountNumber =

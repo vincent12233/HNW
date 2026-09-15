@@ -79,7 +79,9 @@ export class IndiaStockMcpProvider
       parsed = JSON.parse(text);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Unable to parse India Stock MCP history: ${message}`);
+      throw new Error(`Unable to parse India Stock MCP history: ${message}`, {
+        cause: error,
+      });
     }
 
     const rows = this.historyRows(parsed);
@@ -150,14 +152,16 @@ export class IndiaStockMcpProvider
     if (text.startsWith('Error:')) throw new Error(text.slice(6).trim());
 
     try {
-      const parsed = JSON.parse(text);
+      const parsed: unknown = JSON.parse(text);
       if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
         throw new Error('Unexpected quote payload');
       }
       return parsed as QuotePayload;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Unable to parse India Stock MCP quote: ${message}`);
+      throw new Error(`Unable to parse India Stock MCP quote: ${message}`, {
+        cause: error,
+      });
     }
   }
 
@@ -345,11 +349,15 @@ export class IndiaStockMcpProvider
 
   private stringNumber(value: unknown): string | null {
     try {
-      const decimal = new Prisma.Decimal(
-        typeof value === 'string'
-          ? value.replace(/,/g, '').trim()
-          : (value as any),
-      );
+      let input: string | number;
+      if (typeof value === 'string') {
+        input = value.replace(/,/g, '').trim();
+      } else if (typeof value === 'number') {
+        input = value;
+      } else {
+        return null;
+      }
+      const decimal = new Prisma.Decimal(input);
       if (!decimal.isFinite()) return null;
       return decimal.toDecimalPlaces(4, Prisma.Decimal.ROUND_HALF_UP).toFixed();
     } catch {

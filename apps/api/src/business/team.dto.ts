@@ -15,13 +15,15 @@ export class InvitePoolDto {
   @IsInt() @Min(1) @Max(100) count: number;
 }
 export class CreateTeamStaffDto {
-  @Transform(({ value }) =>
-    typeof value === 'string' ? value.trim().toUpperCase() : value,
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim().toUpperCase() : '',
   )
   @IsString()
   @Matches(/^[A-Z0-9_-]{3,32}$/)
   employeeNo: string;
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : '',
+  )
   @IsString()
   @Length(2, 100)
   fullName: string;

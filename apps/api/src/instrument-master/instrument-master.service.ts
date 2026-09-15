@@ -82,7 +82,14 @@ export class InstrumentMasterService {
         Accept: 'text/csv,*/*',
         'User-Agent': 'india-trading-platform/1.0',
       },
-      transformResponse: [(value) => value],
+      transformResponse: [
+        (value: unknown) =>
+          typeof value === 'string'
+            ? value
+            : typeof value === 'number' || typeof value === 'boolean'
+              ? String(value)
+              : '',
+      ],
     });
 
     const rows = this.parseNseEquityCsv(response.data).filter(
@@ -335,7 +342,14 @@ export class InstrumentMasterService {
       responseType: 'text',
       timeout: 20000,
       maxContentLength: 10 * 1024 * 1024,
-      transformResponse: [(value) => value],
+      transformResponse: [
+        (value: unknown) =>
+          typeof value === 'string'
+            ? value
+            : typeof value === 'number' || typeof value === 'boolean'
+              ? String(value)
+              : '',
+      ],
     });
     const rows = this.parseBseEquityCsv(response.data);
     if (!rows.length)

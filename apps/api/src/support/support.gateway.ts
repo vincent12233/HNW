@@ -64,7 +64,7 @@ export class SupportGateway implements OnGatewayInit {
       if (count >= this.maxConnectionsPerUser)
         throw new Error('Connection limit exceeded');
       this.connections.set(payload.sub, count + 1);
-      socket.data.userId = payload.sub;
+      (socket.data as { userId?: string }).userId = payload.sub;
       await socket.join(`user:${payload.sub}`);
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();

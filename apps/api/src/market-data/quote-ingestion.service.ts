@@ -1,4 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Exchange } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketQuoteResult } from './providers/market-data-provider.interface';
@@ -34,10 +35,11 @@ export class QuoteIngestionService {
       return;
     }
 
+    const normalizedExchange = this.parseExchange(exchange);
     const instrument = await this.prisma.instrument.findUnique({
       where: {
         exchange_symbol: {
-          exchange: exchange as any,
+          exchange: normalizedExchange,
           symbol: quote.symbol,
         },
       },
@@ -111,5 +113,13 @@ export class QuoteIngestionService {
       askPrice: quote.askPrice !== null ? Number(quote.askPrice) : null,
       updatedAt: quote.updatedAt,
     };
+  }
+
+  private parseExchange(value: string): Exchange {
+    const normalized = value.trim().toUpperCase();
+    if (normalized === Exchange.NSE || normalized === Exchange.BSE) {
+      return normalized;
+    }
+    throw new NotFoundException(`Unsupported exchange: ${value}`);
   }
 }

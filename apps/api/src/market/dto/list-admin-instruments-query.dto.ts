@@ -24,7 +24,7 @@ export class ListAdminInstrumentsQueryDto {
   type?: InstrumentType;
 
   @IsOptional()
-  @Transform(({ value }) => {
+  @Transform(({ value }: { value: unknown }) => {
     if (value === true || value === 'true') {
       return true;
     }
@@ -33,7 +33,7 @@ export class ListAdminInstrumentsQueryDto {
       return false;
     }
 
-    return value;
+    return undefined;
   })
   @IsBoolean()
   isActive?: boolean;

@@ -1467,7 +1467,25 @@ export class BusinessService {
 
     type Lot = { trade: (typeof trades)[number]; remaining: number };
     const queues = new Map<string, Lot[]>();
-    const rows: any[] = [];
+    type TradePairRow = {
+      id: string;
+      status: string;
+      quantity: number;
+      customer: (typeof trades)[number]['account']['user'];
+      accountNumber: string;
+      instrument: (typeof trades)[number]['instrument'];
+      buyExecutionId: string;
+      buyTime: Date;
+      buyPrice: number;
+      buyFee: number;
+      sellExecutionId: string | null;
+      sellTime: Date | null;
+      sellPrice: number | null;
+      sellFee: number | null;
+      holdingSeconds: number | null;
+      realizedPnl: number | null;
+    };
+    const rows: TradePairRow[] = [];
     for (const trade of trades) {
       const key = `${trade.account.id}:${trade.instrument.id}`;
       const queue = queues.get(key) ?? [];
@@ -2029,7 +2047,18 @@ export class BusinessService {
       },
     });
 
-    const deviceMap = new Map<string, Map<string, any>>();
+    const deviceMap = new Map<
+      string,
+      Map<
+        string,
+        {
+          id: string;
+          fullName: string;
+          phone: string;
+          lastLoginAt: Date;
+        }
+      >
+    >();
 
     for (const audit of audits) {
       if (!audit.userAgent) {
@@ -2048,7 +2077,7 @@ export class BusinessService {
         customers.set(audit.user.id, {
           id: audit.user.id,
           fullName: audit.user.fullName,
-          phone: audit.user.phone,
+          phone: audit.user.phone ?? '',
           lastLoginAt: audit.createdAt,
         });
       }

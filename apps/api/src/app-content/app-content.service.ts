@@ -9,7 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
 
 export type AppContentUpsertInput = {
-  module: AppContentModule | string;
+  module: AppContentModule;
   key: string;
   title?: string | null;
   body: string;
@@ -236,7 +236,7 @@ export class AppContentService {
     );
   }
 
-  private parseModule(value: AppContentModule | string): AppContentModule {
+  private parseModule(value: string): AppContentModule {
     const normalized = String(value || '')
       .trim()
       .toUpperCase();

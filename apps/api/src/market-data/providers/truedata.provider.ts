@@ -25,7 +25,7 @@ export class TrueDataProvider implements StreamingMarketDataProvider {
     private readonly transport: TrueDataNodeTransportService,
   ) {}
 
-  async connect(): Promise<void> {
+  connect(): Promise<void> {
     if (this.subscriptions.length === 0) {
       throw new Error('TrueData requires at least one staged subscription');
     }
@@ -34,17 +34,19 @@ export class TrueDataProvider implements StreamingMarketDataProvider {
       this.ingestRawTick(values),
     );
     this.connected = true;
+    return Promise.resolve();
   }
 
-  async disconnect(): Promise<void> {
+  disconnect(): Promise<void> {
     this.transport.disconnect();
     this.connected = false;
     this.subscriptions = [];
     this.subscriptionBatches = [];
     this.exchangeByProviderSymbol.clear();
+    return Promise.resolve();
   }
 
-  async subscribe(subscriptions: MarketSubscription[]): Promise<void> {
+  subscribe(subscriptions: MarketSubscription[]): Promise<void> {
     const providerSymbols = subscriptions.map((item) => {
       const providerSymbol = this.symbols.toProviderSymbol(
         item.symbol,
@@ -71,6 +73,7 @@ export class TrueDataProvider implements StreamingMarketDataProvider {
         this.transport.subscribe(batch);
       }
     }
+    return Promise.resolve();
   }
 
   onQuote(handler: (quote: MarketQuoteResult & { exchange: string }) => void) {
@@ -94,7 +97,12 @@ export class TrueDataProvider implements StreamingMarketDataProvider {
   }
 
   ingestRawTick(values: unknown[]) {
-    const providerSymbol = String(values[0] ?? '')
+    const rawSymbol = values[0];
+    const providerSymbol = (
+      typeof rawSymbol === 'string' || typeof rawSymbol === 'number'
+        ? String(rawSymbol)
+        : ''
+    )
       .trim()
       .toUpperCase();
     const exchange = this.exchangeByProviderSymbol.get(providerSymbol);

@@ -72,7 +72,7 @@ export class MarketDataGateway
       if (count >= this.maxConnectionsPerUser)
         throw new Error('Connection limit exceeded');
       this.connections.set(payload.sub, count + 1);
-      socket.data.userId = payload.sub;
+      (socket.data as { userId?: string }).userId = payload.sub;
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();
     } catch {
@@ -98,7 +98,11 @@ export class MarketDataGateway
     if (this.heartbeatTimer) clearInterval(this.heartbeatTimer);
   }
 
-  emitQuoteUpdate(data: any) {
+  emitQuoteUpdate(data: {
+    symbol: string;
+    price: string | number;
+    [key: string]: unknown;
+  }) {
     if (!this.server) {
       return;
     }

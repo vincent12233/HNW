@@ -354,7 +354,7 @@ class AuthService {
       }
 
       if (decoded is! List) {
-        return _cachedWithdrawals();
+        return await _cachedWithdrawals();
       }
 
       await LocalDataCache.saveJson(LocalDataCache.withdrawals, decoded);

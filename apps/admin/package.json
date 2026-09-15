@@ -11,7 +11,8 @@
     "start:finance": "next start -p 3005",
     "start:business": "next start -p 3006",
     "start:support": "next start -p 3007 -H 0.0.0.0",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "node --experimental-strip-types --test tests/**/*.test.mjs"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.4",
@@ -23,7 +24,7 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^26.5.1",
+    "@types/node": "^24.13.4",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^10.10.0",

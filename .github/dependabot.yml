@@ -23,6 +23,9 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "@prisma/*"
         update-types: ["version-update:semver-major"]
+      # Keep @types/node on the Node 24 line (runtime/Docker/CI are 24).
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: npm
     directory: /apps/admin
@@ -43,6 +46,8 @@ updates:
     ignore:
       # Next/admin stay on TS 6 until Nest/Next ecosystem ships TS 7 API support.
       - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
         update-types: ["version-update:semver-major"]
 
   - package-ecosystem: pub
@@ -85,3 +90,9 @@ updates:
       # Stay on nginx 1.30 stable (skip 1.31+ mainline)
       - dependency-name: nginx
         versions: [">=1.31.0"]
+
+  - package-ecosystem: docker-compose
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2

@@ -35,7 +35,7 @@ class IpoService {
       }
 
       final data = decoded is Map ? decoded['data'] : null;
-      if (data is! List) return _cachedOpenIpos();
+      if (data is! List) return await _cachedOpenIpos();
 
       await LocalDataCache.saveJson(LocalDataCache.openIpos, data);
 
@@ -70,7 +70,7 @@ class IpoService {
       }
 
       final data = decoded is Map ? decoded['data'] : null;
-      if (data is! List) return _cachedApplications();
+      if (data is! List) return await _cachedApplications();
 
       await LocalDataCache.saveJson(LocalDataCache.ipoApplications, data);
 

@@ -1,15 +1,6 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import reactPlugin from "eslint-plugin-react";
-
-// eslint-plugin-react 7.37.x still calls removed ESLint 10 RuleContext APIs
-// (context.getFilename). Upstream fix: jsx-eslint/eslint-plugin-react#4022.
-// Until a compatible release ships, keep the plugin installed via
-// eslint-config-next but turn every react/* rule off so ESLint 10 can run.
-const reactRulesOff = Object.fromEntries(
-  Object.keys(reactPlugin.rules ?? {}).map((name) => [`react/${name}`, "off"]),
-);
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -23,8 +14,16 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
   ]),
   {
+    settings: {
+      react: {
+        // eslint-plugin-react 7.37 still autodetects the React version via
+        // removed ESLint 10 RuleContext APIs (getFilename). Pinning the version
+        // skips that path so react/* rules work again until upstream
+        // jsx-eslint/eslint-plugin-react#4022 ships.
+        version: "19.3.0",
+      },
+    },
     rules: {
-      ...reactRulesOff,
       // Existing admin UI uses `any` at API boundaries; keep visible as warnings.
       "@typescript-eslint/no-explicit-any": "warn",
       "@typescript-eslint/no-unused-vars": [

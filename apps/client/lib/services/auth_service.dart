@@ -681,8 +681,10 @@ class AuthService {
 
   Future<void> clearSession() async {
     await _secureStorage.delete(key: _sessionKey);
+    await disableBiometricQuickLogin();
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
+    await preferences.remove(_biometricSessionKey);
     await SaleSmartlyService().clearUser();
   }
 }

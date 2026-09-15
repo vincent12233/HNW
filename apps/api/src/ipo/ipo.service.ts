@@ -685,11 +685,17 @@ export class IpoService {
         const account = application.account;
 
         // Reserved withdrawal/order funds must not be consumed by IPO settlement.
+        // Keep cash and buying-power ledgers aligned on every debit.
         const cashAvailable = availableCash(account);
-        const debitAmount = cashAvailable.lt(totalAmount)
-          ? cashAvailable
-          : totalAmount;
+        const buyingPowerAvailable = moneyDecimal(account.buyingPower ?? 0);
+        const payable = Prisma.Decimal.min(
+          cashAvailable,
+          buyingPowerAvailable,
+          totalAmount,
+        );
+        const debitAmount = payable.gt(0) ? moneyDecimal(payable) : new Prisma.Decimal(0);
         let debtAmount = new Prisma.Decimal(0);
+        const fullyPaid = debitAmount.gte(totalAmount);
 
         const claimed = await tx.ipoApplication.updateMany({
           where: { id: application.id, status: 'PENDING', publishedAt: null },
@@ -699,7 +705,7 @@ export class IpoService {
             allocatedAmount: totalAmount,
             status: 'ALLOTTED',
             publishedAt: new Date(),
-            paymentStatus: cashAvailable.gte(totalAmount) ? 'PAID' : 'PENDING',
+            paymentStatus: fullyPaid ? 'PAID' : 'PENDING',
           },
         });
         if (claimed.count !== 1)
@@ -707,14 +713,9 @@ export class IpoService {
             'IPO application was processed by another operator',
           );
 
-        const buyingPowerAfter = moneyDecimal(account.buyingPower ?? 0).sub(
-          debitAmount,
-        );
-        const nextBuyingPower = buyingPowerAfter.gt(0)
-          ? buyingPowerAfter
-          : new Prisma.Decimal(0);
+        const nextBuyingPower = buyingPowerAvailable.sub(debitAmount);
 
-        if (cashAvailable.gte(totalAmount)) {
+        if (fullyPaid) {
           await tx.account.update({
             where: {
               id: account.id,
@@ -727,7 +728,7 @@ export class IpoService {
             },
           });
         } else {
-          debtAmount = totalAmount.sub(cashAvailable);
+          debtAmount = totalAmount.sub(debitAmount);
 
           await tx.account.update({
             where: {

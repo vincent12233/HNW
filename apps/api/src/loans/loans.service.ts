@@ -20,15 +20,30 @@ export class LoansService {
     return `LN${stamp}${suffix}`;
   }
 
-  private validateLoanAmount(value: unknown): number {
-    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+  private validateLoanAmount(value: unknown): Prisma.Decimal {
+    if (
+      (typeof value !== 'number' && typeof value !== 'string') ||
+      value === '' ||
+      (typeof value === 'number' && !Number.isFinite(value))
+    ) {
       throw new BadRequestException('金额必须为有效正数');
     }
-    const amount = new Prisma.Decimal(value);
-    if (amount.decimalPlaces() > 2 || amount.mul(100).greaterThan(Number.MAX_SAFE_INTEGER)) {
+    let amount: Prisma.Decimal;
+    try {
+      amount = new Prisma.Decimal(value);
+    } catch {
+      throw new BadRequestException('金额必须为有效正数');
+    }
+    if (!amount.isFinite() || amount.lte(0)) {
+      throw new BadRequestException('金额必须为有效正数');
+    }
+    if (
+      !amount.equals(amount.toDecimalPlaces(2)) ||
+      amount.mul(100).greaterThan(Number.MAX_SAFE_INTEGER)
+    ) {
       throw new BadRequestException('金额最多保留两位小数且不能超出精度范围');
     }
-    return value;
+    return moneyDecimal(amount);
   }
 
   async clientLoans(userId: string) {
@@ -133,7 +148,6 @@ export class LoansService {
     if (role !== UserRole.FINANCE) throw new ForbiddenException('Only finance can create loans');
     const amount = this.validateLoanAmount(body.amount);
     if (!body.accountNumber?.trim()) throw new BadRequestException('请输入交易账号');
-    if (!Number.isFinite(amount) || amount <= 0) throw new BadRequestException('贷款金额不正确');
 
     const account = await this.prisma.account.findUnique({
       where: {
@@ -157,7 +171,7 @@ export class LoansService {
         orderNo: this.generateOrderNo(),
         accountId: account.id,
         requestedAmount: amount,
-        interestRate: Number(body.interestRate ?? 0),
+        interestRate: moneyDecimal(body.interestRate ?? 0),
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
         note: body.note?.trim() || undefined,
       },
@@ -188,9 +202,6 @@ export class LoansService {
     const requestBody = typeof roleOrBody === 'string' ? body : roleOrBody;
     if (!requestBody) throw new BadRequestException('批准参数不完整');
     const approvedAmount = this.validateLoanAmount(requestBody.approvedAmount);
-    if (!Number.isFinite(approvedAmount) || approvedAmount <= 0) {
-      throw new BadRequestException('批准金额不正确');
-    }
 
     const result = await this.prisma.$transaction(async (tx) => {
       const loan = await tx.loanApplication.findUnique({
@@ -201,15 +212,18 @@ export class LoansService {
       this.assertFinanceLoanVisible(role, loan.account.user?.usedInviteCode?.code);
       if (loan.status !== LoanStatus.PENDING) throw new ConflictException('贷款申请已被处理');
 
-      const before = loan.account.cashBalance;
+      const before = moneyDecimal(loan.account.cashBalance);
       const after = before.add(approvedAmount);
+      const interestRate = moneyDecimal(
+        requestBody.interestRate ?? loan.interestRate ?? 0,
+      );
 
       const claimed = await tx.loanApplication.updateMany({
         where: { id, status: LoanStatus.PENDING },
         data: {
           approvedAmount,
           outstandingAmount: approvedAmount,
-          interestRate: Number(requestBody.interestRate ?? loan.interestRate),
+          interestRate,
           dueDate: requestBody.dueDate ? new Date(requestBody.dueDate) : loan.dueDate,
           note: requestBody.note?.trim() || loan.note,
           status: LoanStatus.DISBURSED,

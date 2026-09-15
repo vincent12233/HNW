@@ -30,7 +30,7 @@ export class WithdrawalController {
   ) {
     return this.withdrawalService.createRequest(
       req.user.userId,
-      Number(body.amount),
+      body.amount,
       body.bankName,
       body.accountNumber,
       body.ifscCode,

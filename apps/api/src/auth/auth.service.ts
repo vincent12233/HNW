@@ -335,20 +335,14 @@ export class AuthService {
   }
 
   async googleLogin(idToken: string) {
-    const { subject, email } = await this.verifyGoogleToken(idToken);
-    let user = await this.prisma.user.findFirst({
+    const { subject } = await this.verifyGoogleToken(idToken);
+    // Require an explicit prior linkGoogle binding — do not auto-claim by email.
+    const user = await this.prisma.user.findFirst({
       where: { googleSubject: subject },
       include: { account: true },
     });
-    if (!user) {
-      user = await this.prisma.user.findFirst({
-        where: { email },
-        include: { account: true },
-      });
-    }
     if (!user || user.status !== UserStatus.ACTIVE) throw new UnauthorizedException('Google account is not linked to an active trading account');
     if ((await this.twoFactor.status(user.id)).enabled) throw new UnauthorizedException('Use password sign in with your authenticator code');
-    if (!user.googleSubject) await this.prisma.user.update({ where: { id: user.id }, data: { googleSubject: subject } });
     const accessToken = await this.issueAccessToken(user);
     return {
       message: 'Login successful',
@@ -383,11 +377,23 @@ export class AuthService {
     const subject = String(response.data?.sub || '');
     const email = String(response.data?.email || '').toLowerCase();
     const audience = String(response.data?.aud || '');
+    const issuer = String(response.data?.iss || '');
     const clientId = this.config.get<string>('GOOGLE_CLIENT_ID')?.trim();
     const emailVerified =
       response.data?.email_verified === true ||
       response.data?.email_verified === 'true';
-    if (!subject || !email || !clientId || audience !== clientId || !emailVerified) {
+    const allowedIssuers = new Set([
+      'accounts.google.com',
+      'https://accounts.google.com',
+    ]);
+    if (
+      !subject ||
+      !email ||
+      !clientId ||
+      audience !== clientId ||
+      !emailVerified ||
+      !allowedIssuers.has(issuer)
+    ) {
       throw new UnauthorizedException('Google account could not be verified');
     }
     return { subject, email };

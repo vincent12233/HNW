@@ -177,7 +177,7 @@ export default function BusinessIpoPage() {
         }
         await api.patch(`/business/my-ipo-applications/${record.id}/allocate`, {
           quantity: Number(quantity),
-          price: Number(price),
+          price: Number(price).toFixed(2),
         });
         message.success("分配已保存，公布后才会扣款");
         await loadItems();

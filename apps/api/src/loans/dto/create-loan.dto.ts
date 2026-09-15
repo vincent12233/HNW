@@ -1,14 +1,15 @@
 import {
+  IsDateString,
   IsOptional,
   IsString,
   Matches,
   MaxLength,
 } from 'class-validator';
 
-export class CreateWithdrawalRequestDto {
+export class CreateLoanDto {
   @IsString()
-  @Matches(/^\d{6}$/)
-  withdrawalPin!: string;
+  @MaxLength(64)
+  accountNumber!: string;
 
   @IsString()
   @Matches(/^(?!0+(?:\.0{1,2})?$)\d+(?:\.\d{1,2})?$/, {
@@ -18,23 +19,14 @@ export class CreateWithdrawalRequestDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(120)
-  bankName?: string;
+  @Matches(/^(?:\d+)(?:\.\d{1,2})?$/, {
+    message: 'interestRate must be a non-negative rate with up to 2 decimals',
+  })
+  interestRate?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(80)
-  accountNumber?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(32)
-  ifscCode?: string;
-
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  upiId?: string;
+  @IsDateString()
+  dueDate?: string;
 
   @IsOptional()
   @IsString()

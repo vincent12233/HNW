@@ -68,7 +68,10 @@ export default function LoansPage() {
           message.error('请输入交易账号和有效金额'); throw new Error('Invalid loan');
         }
         try {
-          await api.post('/loans', { accountNumber: accountNumber.trim(), amount });
+          await api.post('/loans', {
+            accountNumber: accountNumber.trim(),
+            amount: Number(amount).toFixed(2),
+          });
         } catch (error) {
           message.error('创建结果未确认，请先核对贷款记录'); throw error;
         }
@@ -122,7 +125,11 @@ export default function LoansPage() {
           message.error("请输入有效的批准金额和到期日");
           throw new Error("Invalid loan approval values");
         }
-        await api.patch(`/loans/${record.id}/approve`, { approvedAmount: Number(amount), dueDate: dueDate || undefined, note });
+        await api.patch(`/loans/${record.id}/approve`, {
+          approvedAmount: Number(amount).toFixed(2),
+          dueDate: dueDate || undefined,
+          note,
+        });
         message.success("贷款已审核通过并自动到账");
         await loadItems();
       },
@@ -148,7 +155,10 @@ export default function LoansPage() {
           message.error("还款金额必须大于零且不能超过未还金额");
           throw new Error("Invalid repayment amount");
         }
-        await api.patch(`/loans/${record.id}/repay`, { amount: Number(amount), note });
+        await api.patch(`/loans/${record.id}/repay`, {
+          amount: Number(amount).toFixed(2),
+          note,
+        });
         message.success("还款已登记");
         await loadItems();
       },

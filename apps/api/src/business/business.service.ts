@@ -18,6 +18,7 @@ import { ListAdminTradesQueryDto } from '../orders/dto/list-admin-trades-query.d
 import { IpoService } from '../ipo/ipo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { moneyDecimal } from '../common/money';
 
 type CreateBusinessInput = {
   password: string;
@@ -273,11 +274,15 @@ export class BusinessService {
       }),
     ]);
 
-    const totalAssets = accounts.reduce(
-      (sum, account) =>
-        sum + Number(account.cashBalance) + Number(account.frozenBalance),
-      0,
-    );
+    const totalAssets = accounts
+      .reduce(
+        (sum, account) =>
+          sum
+            .add(moneyDecimal(account.cashBalance))
+            .add(moneyDecimal(account.frozenBalance)),
+        new Prisma.Decimal(0),
+      )
+      .toFixed(2);
 
     const pendingKycRows = await this.prisma.$queryRaw<{ count: bigint }[]>`
       SELECT COUNT(*)::bigint AS count
@@ -315,9 +320,9 @@ export class BusinessService {
       todayWithdrawalCount: todayWithdrawalTotals._count,
       pendingIpoApplications,
       ipoDebtCustomers: openIpoDebts._count,
-      ipoDebtAmount:
-        Number(openIpoDebts._sum.amount ?? 0) -
-        Number(openIpoDebts._sum.paidAmount ?? 0),
+      ipoDebtAmount: moneyDecimal(openIpoDebts._sum.amount ?? 0)
+        .sub(moneyDecimal(openIpoDebts._sum.paidAmount ?? 0))
+        .toFixed(2),
       loanOutstandingAmount: loanOutstanding._sum.outstandingAmount?.toFixed(2) ?? '0.00',
       loanOutstandingCount: loanOutstanding._count,
       totalAssets,
@@ -1055,7 +1060,7 @@ export class BusinessService {
     businessUserId: string,
     applicationId: string,
     quantity: number,
-    price: number,
+    price: number | string,
   ) {
     const ownedApplication = await this.prisma.ipoApplication.findFirst({
       where: {

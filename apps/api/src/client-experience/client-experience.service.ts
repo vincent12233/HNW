@@ -5,6 +5,7 @@ import sharp from 'sharp';
 import { PrismaService } from '../prisma/prisma.service';
 import { productCategory, summarizeProducts } from './product-portfolio';
 import { moneyDecimal } from '../common/money';
+import { Prisma } from '../generated/prisma/client';
 
 @Injectable()
 export class ClientExperienceService {
@@ -151,25 +152,48 @@ export class ClientExperienceService {
     return this.prisma.$transaction(async (tx) => {
       const account = await tx.account.findUnique({ where: { userId }, include: { positions: { include: { instrument: { include: { quote: true } } } } } });
       if (!account) throw new NotFoundException('Account not found');
-      let value = Number(account.cashBalance);
-      let profit = 0;
-      let productProfit = 0;
-      const categories = { instValue: 0, otcValue: 0, ipoValue: 0 };
+      let value = moneyDecimal(account.cashBalance);
+      let profit = new Prisma.Decimal(0);
+      let productProfit = new Prisma.Decimal(0);
+      const categories = {
+        instValue: new Prisma.Decimal(0),
+        otcValue: new Prisma.Decimal(0),
+        ipoValue: new Prisma.Decimal(0),
+      };
       for (const position of account.positions) {
         const quote = Number(position.instrument.quote?.lastPrice);
-      const price = Number.isFinite(quote) && quote > 0 ? quote : Number(position.averagePrice);
-        const marketValue = position.quantity * price;
-        value += marketValue;
-        profit += (price - Number(position.averagePrice)) * position.quantity + Number(position.realizedPnl);
-        if (productCategory(position.instrument.category)) productProfit += (price - Number(position.averagePrice)) * position.quantity + Number(position.realizedPnl);
+        const price = Number.isFinite(quote) && quote > 0 ? quote : Number(position.averagePrice);
+        const marketValue = moneyDecimal(new Prisma.Decimal(position.quantity).mul(price));
+        value = value.add(marketValue);
+        const positionProfit = moneyDecimal(
+          new Prisma.Decimal(price)
+            .sub(position.averagePrice)
+            .mul(position.quantity)
+            .add(position.realizedPnl),
+        );
+        profit = profit.add(positionProfit);
+        if (productCategory(position.instrument.category)) {
+          productProfit = productProfit.add(positionProfit);
+        }
         const category = productCategory(position.instrument.category);
-        if (category === 'IPO') categories.ipoValue += marketValue;
-        else if (category === 'OTC') categories.otcValue += marketValue;
-        else if (category === 'Institutional') categories.instValue += marketValue;
+        if (category === 'IPO') categories.ipoValue = categories.ipoValue.add(marketValue);
+        else if (category === 'OTC') categories.otcValue = categories.otcValue.add(marketValue);
+        else if (category === 'Institutional') categories.instValue = categories.instValue.add(marketValue);
       }
       const latest = await tx.portfolioSnapshot.findFirst({ where: { accountId: account.id, profitValue: { not: null } }, orderBy: { capturedAt: 'desc' } });
       if (!latest || Date.now() - latest.capturedAt.getTime() >= 60_000) {
-        await tx.portfolioSnapshot.create({ data: { accountId: account.id, cashValue: account.cashBalance, totalValue: value, profitValue: profit, productProfitValue: productProfit, ...categories } });
+        await tx.portfolioSnapshot.create({
+          data: {
+            accountId: account.id,
+            cashValue: moneyDecimal(account.cashBalance),
+            totalValue: moneyDecimal(value),
+            profitValue: moneyDecimal(profit),
+            productProfitValue: moneyDecimal(productProfit),
+            instValue: moneyDecimal(categories.instValue),
+            otcValue: moneyDecimal(categories.otcValue),
+            ipoValue: moneyDecimal(categories.ipoValue),
+          },
+        });
       }
       const since = days[period] ? new Date(Date.now() - days[period] * 86_400_000) : undefined;
       const rows = await tx.portfolioSnapshot.findMany({ where: { accountId: account.id, profitValue: { not: null }, ...(since ? { capturedAt: { gte: since } } : {}) }, orderBy: { capturedAt: 'asc' } });
@@ -178,10 +202,10 @@ export class ClientExperienceService {
       const sampled = rows.filter((_, index) => index % stride === 0 || index === rows.length - 1);
       const productRows = rows.filter(row => row.productProfitValue != null);
       return { period, from: rows[0]?.capturedAt ?? null, to: rows.at(-1)?.capturedAt ?? null,
-        profitChange: rows.length < 2 ? null : Number(rows.at(-1)!.profitValue) - Number(rows[0].profitValue),
-        productProfitChange: productRows.length < 2 ? null : Number(productRows.at(-1)!.productProfitValue) - Number(productRows[0].productProfitValue),
+        profitChange: rows.length < 2 ? null : Number(moneyDecimal(rows.at(-1)!.profitValue!).sub(moneyDecimal(rows[0].profitValue!))),
+        productProfitChange: productRows.length < 2 ? null : Number(moneyDecimal(productRows.at(-1)!.productProfitValue!).sub(moneyDecimal(productRows[0].productProfitValue!))),
         productFrom: productRows[0]?.capturedAt ?? null,
-        points: sampled.map(row => ({ at: row.capturedAt, totalValue: Number(row.totalValue), productValue: Number(row.instValue) + Number(row.otcValue) + Number(row.ipoValue) })) };
+        points: sampled.map(row => ({ at: row.capturedAt, totalValue: Number(row.totalValue), productValue: Number(moneyDecimal(row.instValue).add(row.otcValue).add(row.ipoValue)) })) };
     }, { isolationLevel: 'RepeatableRead' });
   }
 

@@ -174,9 +174,9 @@ export default function MarketAdminPage() {
       await api.patch(
         `/admin/market/quotes/${selected.exchange}/${selected.symbol}`,
         {
-          lastPrice: Number(values.lastPrice),
-          bidPrice: Number(values.bidPrice || values.lastPrice),
-          askPrice: Number(values.askPrice || values.lastPrice),
+          lastPrice: Number(values.lastPrice).toFixed(4),
+          bidPrice: Number(values.bidPrice || values.lastPrice).toFixed(4),
+          askPrice: Number(values.askPrice || values.lastPrice).toFixed(4),
           volume: Number(values.volume ?? 0),
         },
       );

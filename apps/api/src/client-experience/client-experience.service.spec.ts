@@ -53,7 +53,10 @@ describe('Client profile and asset history', () => {
     };
     const service = new ClientExperienceService({ $transaction: (fn: any) => fn(tx) } as any);
     const result = await service.assetHistory('client', '1W');
-    expect(create.mock.calls[0][0].data).toMatchObject({ totalValue: 199, ipoValue: 75, profitValue: 24 });
+    const snapshot = create.mock.calls[0][0].data;
+    expect(snapshot.totalValue.toString()).toBe('199');
+    expect(snapshot.ipoValue.toString()).toBe('75');
+    expect(snapshot.profitValue.toString()).toBe('24');
     expect(result.profitChange).toBe(14);
     expect(result.points[1].productValue).toBe(75);
   });

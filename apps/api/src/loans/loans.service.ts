@@ -46,6 +46,32 @@ export class LoansService {
     return moneyDecimal(amount);
   }
 
+  private validateNonNegativeRate(value: unknown): Prisma.Decimal {
+    if (
+      (typeof value !== 'number' && typeof value !== 'string') ||
+      value === '' ||
+      (typeof value === 'number' && !Number.isFinite(value))
+    ) {
+      throw new BadRequestException('利率必须为有效非负数');
+    }
+    let rate: Prisma.Decimal;
+    try {
+      rate = new Prisma.Decimal(value);
+    } catch {
+      throw new BadRequestException('利率必须为有效非负数');
+    }
+    if (!rate.isFinite() || rate.lt(0)) {
+      throw new BadRequestException('利率必须为有效非负数');
+    }
+    if (
+      !rate.equals(rate.toDecimalPlaces(2)) ||
+      rate.mul(100).greaterThan(Number.MAX_SAFE_INTEGER)
+    ) {
+      throw new BadRequestException('利率最多保留两位小数且不能超出精度范围');
+    }
+    return moneyDecimal(rate);
+  }
+
   async clientLoans(userId: string) {
     return this.prisma.loanApplication.findMany({
       where: { account: { userId } }, orderBy: { createdAt: 'desc' },
@@ -139,8 +165,8 @@ export class LoansService {
     role: UserRole,
     body: {
       accountNumber: string;
-      amount: number;
-      interestRate?: number;
+      amount: number | string;
+      interestRate?: number | string;
       dueDate?: string;
       note?: string;
     },
@@ -166,12 +192,17 @@ export class LoansService {
     if (!account) throw new NotFoundException('交易账号不存在');
     this.assertFinanceLoanVisible(role, account.user.usedInviteCode?.code);
 
+    const interestRate =
+      body.interestRate === undefined || body.interestRate === ''
+        ? new Prisma.Decimal(0)
+        : this.validateNonNegativeRate(body.interestRate);
+
     const loan = await this.prisma.loanApplication.create({
       data: {
         orderNo: this.generateOrderNo(),
         accountId: account.id,
         requestedAmount: amount,
-        interestRate: moneyDecimal(body.interestRate ?? 0),
+        interestRate,
         dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
         note: body.note?.trim() || undefined,
       },
@@ -193,8 +224,20 @@ export class LoansService {
   async approve(
     id: string,
     operatorId: string,
-    roleOrBody: UserRole | { approvedAmount: number; interestRate?: number; dueDate?: string; note?: string },
-    body?: { approvedAmount: number; interestRate?: number; dueDate?: string; note?: string },
+    roleOrBody:
+      | UserRole
+      | {
+          approvedAmount: number | string;
+          interestRate?: number | string;
+          dueDate?: string;
+          note?: string;
+        },
+    body?: {
+      approvedAmount: number | string;
+      interestRate?: number | string;
+      dueDate?: string;
+      note?: string;
+    },
   ) {
     // Keep the pre-role service signature working for internal callers and
     // older tests while controllers use the role-aware form.
@@ -214,9 +257,10 @@ export class LoansService {
 
       const before = moneyDecimal(loan.account.cashBalance);
       const after = before.add(approvedAmount);
-      const interestRate = moneyDecimal(
-        requestBody.interestRate ?? loan.interestRate ?? 0,
-      );
+      const interestRate =
+        requestBody.interestRate === undefined || requestBody.interestRate === ''
+          ? moneyDecimal(loan.interestRate ?? 0)
+          : this.validateNonNegativeRate(requestBody.interestRate);
 
       const claimed = await tx.loanApplication.updateMany({
         where: { id, status: LoanStatus.PENDING },
@@ -354,9 +398,14 @@ export class LoansService {
     });
   }
 
-  async repay(id: string, operatorId: string, role: UserRole, amount: number, note?: string) {
-    const repayment = moneyDecimal(amount);
-    if (!repayment.isFinite() || repayment.lte(0)) throw new BadRequestException('还款金额不正确');
+  async repay(
+    id: string,
+    operatorId: string,
+    role: UserRole,
+    amount: number | string,
+    note?: string,
+  ) {
+    const repayment = this.validateLoanAmount(amount);
 
     const loan = await this.prisma.loanApplication.findUnique({ where: { id }, include: { account: { include: { user: { include: { usedInviteCode: true } } } } } });
     if (!loan) throw new NotFoundException('贷款申请不存在');

@@ -1,16 +1,22 @@
 # Final Acceptance Audit — Pre-Merge / Pre-Production
 
 **Branch:** `cursor/app-ui-ux-admin-upgrade-c5d7`  
-**Starting HEAD:** `2324c4e`  
-**Ending HEAD:** `f4b9c97`  
+**Starting HEAD (original audit):** `2324c4e`  
+**Blocker remediation start:** `4b03fa5`  
+**Ending HEAD:** see latest docs commit on branch  
 **PR:** https://github.com/vincent12233/HNW/pull/84  
 **Audit date:** 2026-09-16  
+**Remediation date:** 2026-09-16  
 
 ## Status
 
 **BLOCKED**
 
-Not production-ready. Code review of the PR may continue, but **do not merge for production** and **do not claim Production Ready** until blockers below are cleared.
+Not production-ready. Force-update dead-end **code path is fixed** (`updateUrl` + safe Continue). **Android device E2E** remains unexecuted on the Linux cloud agent and is still a release blocker.
+
+Do **not** merge for production and do **not** claim Production Ready until Android E2E PASS is recorded.
+
+See also: [`docs/FINAL_BLOCKER_REMEDIATION.md`](./FINAL_BLOCKER_REMEDIATION.md).
 
 ---
 
@@ -19,25 +25,21 @@ Not production-ready. Code review of the PR may continue, but **do not merge for
 | Item | Result |
 |------|--------|
 | Branch | `cursor/app-ui-ux-admin-upgrade-c5d7` |
-| Working tree at gate | clean @ `2324c4e` |
-| Ending HEAD | `f4b9c97` |
-| Commits vs `origin/main` (at audit start) | **30** (+ 2 audit commits after) |
-| Files changed | **113** |
-| Diff size | **+12993 / −3078** |
-| Unexpected / forbidden tracked artifacts | **None** (no `.env`, keys, build/, node_modules, dumps) |
-| Audit fix commit | `fix: apply dart format for acceptance gate` (format-only) |
+| Remediation feature commit | `feat: add safe client update destination` |
+| Unexpected / forbidden tracked artifacts | **None** |
+| Secrets in diff | **None** |
 
 ### Scope
 
-In-scope: UI/UX, design system, navigation, Home/Markets/Trade presentation/Portfolio/Profile, AppContent CMS, structured content, Admin management, Flutter integration, tests/docs, SaleSmartly support plumbing (early commit on branch).
+In-scope: UI/UX, design system, navigation, Home/Markets/Trade presentation/Portfolio/Profile, AppContent CMS, structured content, Admin management, Flutter integration, tests/docs, SaleSmartly support plumbing (early commit on branch), **safe `updateUrl` client update destination**.
 
 API touch set is limited to:
 
 - `app-content/*`
-- `ops-content/*` (new)
+- `ops-content/*` (including `updateUrl`)
 - `market/*` placement + public featured filters
 - `app.module.ts` wiring
-- Prisma additive migration + schema
+- Prisma additive migrations + schema
 
 **No** matching engine, KYC business, fund ledger, quote ingestion, or instrument-master sync redesign paths in the PR diff.
 
@@ -49,41 +51,38 @@ API touch set is limited to:
 |-------|--------|
 | Secret filenames in PR | PASS |
 | Tracked credential files | PASS |
-| Diff credential patterns | PASS (`.env.example` placeholders only) |
+| Diff credential patterns | PASS |
 | Real secrets found | **NO** |
 
 ---
 
-## Flutter
+## Flutter (revalidated after updateUrl)
 
 | Check | Result |
 |-------|--------|
-| `dart format --set-exit-if-changed lib test` | **FAIL at `2324c4e`** → fixed in format commit → **PASS** |
+| `dart format --set-exit-if-changed lib test` | **PASS** |
 | `flutter analyze` | PASS (1 info: curly braces in `market_data_service.dart`) |
-| `flutter test` | **149 passed**, **18 skipped**, 0 failed |
-| `flutter build apk --debug` | **PASS** (`app-debug.apk`) |
+| `flutter test` | **157 passed**, **18 skipped**, 0 failed |
+| `flutter build apk --debug` | **PASS** |
 | `flutter build web --dart-define=API_BASE_URL=https://example.invalid` | **PASS** — LOCAL BUILD VALIDATION ONLY |
-| Android device / emulator | **NO** (Linux + Chrome only; no AVD) |
+| Android device / emulator | **NO** (Linux + Chrome only; no AVD; no adb device) |
 | Live Android visual gate | **NOT EXECUTED** → required gate **FAILED** |
 
 ---
 
-## Force update gap (PRODUCTION BLOCKER)
+## Force update / updateUrl (remediated)
 
 | Question | Answer |
 |----------|--------|
-| A. Dead-end possible? | **YES** — if `forceUpdate=true` and `current < minVersion`, UI blocks the app. With empty `supportUrl`, user only has Retry (useful if admin turns force off). No store install path. |
-| B. Is `supportUrl` used as update URL? | **YES** — sole outbound action is “Open support / update link”. |
-| C. Safe Play/App Store jump? | **NO** — no `storeUrl`; no hardcoded store links (correctly avoided). |
+| A. Dead-end possible? | **NO (code)** — missing/invalid `updateUrl` shows **Continue** (`continueWithoutUpdateDestination`) so the session is not irreversibly locked. Retry remains. |
+| B. Is `supportUrl` used as update URL? | **NO** — Update CTA uses `updateUrl` only. |
+| C. Safe Play/App Store jump? | **YES when configured** — Admin sets platform `updateUrl` (http/https). No hardcoded store links. |
+| Field | `AppClientSetting.updateUrl String?` (additive migration `20260916120000_add_app_client_update_url`) |
+| Public API | Returned from `GET /app-settings` |
+| Admin | Configurable on App Settings page |
+| Fail-open | API failure → `safeDefaults` (forceUpdate false) |
 
-**Minimal fix proposal (not implemented in this audit):**
-
-1. Add optional `storeUrl` (or platform-specific store URLs) to `AppClientSetting` + Admin UI + public API.  
-2. Force-update primary CTA opens store URL when present.  
-3. Keep `supportUrl` secondary.  
-4. Product policy: refuse to enable `forceUpdate` in Admin without a store URL (confirmation + validation).
-
-Until then: **do not enable forceUpdate in production.**
+**Ops note:** Prefer setting a real `updateUrl` before enabling Force Update in any environment.
 
 ---
 
@@ -91,8 +90,8 @@ Until then: **do not enable forceUpdate in production.**
 
 | Check | Result |
 |-------|--------|
-| lint | PASS (0 errors; prettier warnings in ops-content) |
-| full test suite | **327 passed / 79 suites** |
+| lint | PASS (0 errors; prettier warnings elsewhere) |
+| full test suite | **328 passed / 79 suites** |
 | build (`nest build`) | PASS |
 
 ---
@@ -105,6 +104,7 @@ Until then: **do not enable forceUpdate in production.**
 | typecheck (`tsc --noEmit`) | PASS |
 | build with `NEXT_PUBLIC_API_URL=https://example.invalid` | PASS — LOCAL BUILD VALIDATION ONLY |
 | APP Management routes in shell | Present under ADMIN-only menu group |
+| updateUrl field on App Settings | Present |
 
 ### RBAC (code review)
 
@@ -122,9 +122,9 @@ Live multi-role browser exercise not run in this environment.
 | Check | Result |
 |-------|--------|
 | `prisma validate` | PASS |
-| Migration `20260916100000_structured_app_content` | **Additive only** (no DROP/TRUNCATE) |
+| Migration `20260916100000_structured_app_content` | **Additive only** |
+| Migration `20260916120000_add_app_client_update_url` | **Additive only** (`ADD COLUMN "updateUrl"`) |
 | Production migrate executed | **NO** |
-| Local migrate status | 3 pending migrations including structured content (dev env not fully migrated — expected; do not `reset`/`db push` prod) |
 
 ---
 
@@ -137,14 +137,11 @@ Live multi-role browser exercise not run in this environment.
 | Insights FAILURE fallback | `listResult` + client tests | COMPLETE (unit) |
 | Announcements schedule | Public filters published + starts/ends window; Home max 1 | COMPLETE (unit/code) |
 | App Settings safe fail | safeDefaults + gate tests | COMPLETE (unit) |
+| updateUrl / force Continue | Flutter + API unit tests | COMPLETE (unit) |
 | Featured Home/Markets | Public filters + client sections hide when empty | COMPLETE (code/unit) |
 | Legal | Privacy/Terms; Risk Disclosure deferred | PARTIAL |
-| Admin unpublished → not shown | Public queries filter `isPublished` | COMPLETE (API) |
-| Live Admin→DB→App loop | Not exercised against running stack in this audit | **GAP** |
-
-### Insights note
-
-Legacy import upsert uses `update: {}`, so **unpublish** of imported rows is preserved. **Hard-delete** of imported rows can be recreated on next public read from legacy seed — follow-up hardening recommended (not changed in this audit).
+| Live Admin→DB→App loop | Not exercised against running stack | **GAP** |
+| Android device E2E | Cloud Linux — no device | **BLOCKER** |
 
 ---
 
@@ -165,8 +162,11 @@ Legacy import upsert uses `update: {}`, so **unpublish** of imported rows is pre
 
 ### Production blockers
 
-1. **Android device/emulator visual acceptance not executed** (required gate).  
-2. **Force update lacks store URL** — enabling forceUpdate can create a non-updatable dead-end.
+1. **Android device/emulator visual acceptance not executed** (required gate).
+
+### Cleared
+
+2. ~~Force update lacks store URL~~ → **`updateUrl` shipped**; dead-end soft-continue path added.
 
 ### Follow-ups / reviews
 
@@ -187,13 +187,12 @@ Legacy import upsert uses `update: {}`, so **unpublish** of imported rows is pre
 |-------|--------|
 | Final status | **BLOCKED** |
 | Merge / production | **BLOCKED** — do **not** merge PR #84 for production; do **not** deploy |
-| Review | Engineering review of the PR may continue for awareness, but release gate remains blocked |
+| Review | Engineering review of the PR may continue; release gate waits on Android E2E |
 
-**Clear blockers by:**
+**Clear remaining blocker by:**
 
-1. Running full Android device/emulator visual checklist and recording evidence.  
-2. Shipping a real store update path (`storeUrl` + Admin guard) before any production forceUpdate.  
-3. Completing compliance decision on Risk Disclosure.
+1. Running full Android device/emulator visual checklist on the Windows host and recording evidence.  
+2. Completing compliance decision on Risk Disclosure (separate from READY_FOR_REVIEW engineering gate once Android E2E passes).
 
 ---
 

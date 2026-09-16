@@ -13,7 +13,7 @@ class ForceUpdatePage extends StatelessWidget {
   Widget build(BuildContext context) {
     final service = AppClientSettingsService.instance;
     final settings = service.settings;
-    final support = settings.supportUrl?.trim();
+    final updateUri = settings.validUpdateUri;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -51,9 +51,9 @@ class ForceUpdatePage extends StatelessWidget {
               _MetaRow(label: 'Required', value: settings.minVersion),
               _MetaRow(label: 'Latest', value: settings.latestVersion),
               const SizedBox(height: 12),
-              if (support == null || support.isEmpty)
+              if (updateUri == null)
                 AppText(
-                  'No store update link is configured. Contact support if you need help updating. (Gap: AppClientSetting has supportUrl only — no storeUrl.)',
+                  'No update download link is configured for this platform. You can continue for now, or contact support separately.',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: AppColors.textSecondary,
@@ -62,18 +62,20 @@ class ForceUpdatePage extends StatelessWidget {
                   ),
                 ),
               const Spacer(),
-              if (support != null && support.isNotEmpty)
+              if (updateUri != null)
                 FilledButton(
                   onPressed: () async {
-                    final uri = Uri.tryParse(support);
-                    if (uri != null) {
-                      await launchUrl(
-                        uri,
-                        mode: LaunchMode.externalApplication,
-                      );
-                    }
+                    await launchUrl(
+                      updateUri,
+                      mode: LaunchMode.externalApplication,
+                    );
                   },
-                  child: const AppText('Open support / update link'),
+                  child: const AppText('Update'),
+                )
+              else
+                FilledButton(
+                  onPressed: () => service.continueWithoutUpdateDestination(),
+                  child: const AppText('Continue'),
                 ),
               const SizedBox(height: 8),
               OutlinedButton(
@@ -174,7 +176,7 @@ Future<void> maybeShowOptionalUpdateDialog(BuildContext context) async {
   if (service.optionalUpdateDismissed) return;
   if (!context.mounted) return;
 
-  final support = service.settings.supportUrl?.trim();
+  final updateUri = service.settings.validUpdateUri;
   await showDialog<void>(
     context: context,
     builder: (ctx) {
@@ -191,13 +193,13 @@ Future<void> maybeShowOptionalUpdateDialog(BuildContext context) async {
             },
             child: const AppText('Later'),
           ),
-          if (support != null && support.isNotEmpty)
+          if (updateUri != null)
             TextButton(
               onPressed: () async {
-                final uri = Uri.tryParse(support);
-                if (uri != null) {
-                  await launchUrl(uri, mode: LaunchMode.externalApplication);
-                }
+                await launchUrl(
+                  updateUri,
+                  mode: LaunchMode.externalApplication,
+                );
                 service.dismissOptionalUpdate();
                 if (ctx.mounted) Navigator.of(ctx).pop();
               },

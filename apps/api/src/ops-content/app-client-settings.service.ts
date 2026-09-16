@@ -46,6 +46,7 @@ export class AppClientSettingsService {
       maintenanceMode: row.maintenanceMode,
       maintenanceMessage: row.maintenanceMessage,
       supportUrl: row.supportUrl,
+      updateUrl: row.updateUrl,
       updatedAt: row.updatedAt,
     };
   }
@@ -82,6 +83,10 @@ export class AppClientSettingsService {
           dto.supportUrl === undefined
             ? undefined
             : dto.supportUrl?.trim() || null,
+        updateUrl:
+          dto.updateUrl === undefined
+            ? undefined
+            : dto.updateUrl?.trim() || null,
         updatedById: actor.userId,
       },
     });
@@ -111,6 +116,7 @@ export class AppClientSettingsService {
       maintenanceMode: false,
       maintenanceMessage: null as string | null,
       supportUrl: null as string | null,
+      updateUrl: null as string | null,
       updatedAt: null as Date | null,
     };
   }
@@ -134,6 +140,7 @@ export class AppClientSettingsService {
     maintenanceMode: boolean;
     maintenanceMessage: string | null;
     supportUrl: string | null;
+    updateUrl: string | null;
   }) {
     return { ...row };
   }

@@ -36,6 +36,7 @@ type AppClientSetting = {
   maintenanceMode: boolean;
   maintenanceMessage?: string | null;
   supportUrl?: string | null;
+  updateUrl?: string | null;
   updatedAt: string;
 };
 
@@ -47,6 +48,7 @@ type FormValues = {
   maintenanceMode?: boolean;
   maintenanceMessage?: string;
   supportUrl?: string;
+  updateUrl?: string;
 };
 
 /** Matches API UpsertAppClientSettingDto VERSION pattern. */
@@ -78,6 +80,7 @@ export default function AppSettingsAdminPage() {
           maintenanceMode: preferred.maintenanceMode,
           maintenanceMessage: preferred.maintenanceMessage ?? undefined,
           supportUrl: preferred.supportUrl ?? undefined,
+          updateUrl: preferred.updateUrl ?? undefined,
         });
       } else {
         form.setFieldsValue({
@@ -110,6 +113,7 @@ export default function AppSettingsAdminPage() {
       maintenanceMode: row?.maintenanceMode ?? false,
       maintenanceMessage: row?.maintenanceMessage ?? undefined,
       supportUrl: row?.supportUrl ?? undefined,
+      updateUrl: row?.updateUrl ?? undefined,
     });
   }
 
@@ -130,6 +134,7 @@ export default function AppSettingsAdminPage() {
           maintenanceMode: Boolean(values.maintenanceMode),
           maintenanceMessage: values.maintenanceMessage?.trim() || null,
           supportUrl: values.supportUrl?.trim() || null,
+          updateUrl: values.updateUrl?.trim() || null,
         });
         message.success("已保存");
         await load();
@@ -203,6 +208,12 @@ export default function AppSettingsAdminPage() {
       render: (v: boolean) => (v ? "开" : "关"),
     },
     {
+      title: "更新链接",
+      dataIndex: "updateUrl",
+      ellipsis: true,
+      render: (v?: string | null) => v?.trim() || "—",
+    },
+    {
       title: "更新时间",
       dataIndex: "updatedAt",
       render: (v: string) => new Date(v).toLocaleString("zh-CN"),
@@ -215,7 +226,7 @@ export default function AppSettingsAdminPage() {
         <OpsPageHeader
           eyebrow="APP MANAGEMENT"
           title="客户端设置"
-          description="按 ANDROID / IOS / WEB 分别配置版本门禁与维护开关。不含 API URL、行情源或 secrets。本阶段不做客户端强制更新 UI。"
+          description="按 ANDROID / IOS / WEB 分别配置版本门禁、维护开关与 updateUrl（商店/下载链接）。不含 API URL、行情源或 secrets。"
           extra={
             <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
               刷新
@@ -227,7 +238,7 @@ export default function AppSettingsAdminPage() {
           type="warning"
           showIcon
           title="危险配置"
-          description="Force Update 与 Maintenance Mode 开启前会二次确认。每次只保存所选平台，避免误开全平台维护。"
+          description="Force Update 与 Maintenance Mode 开启前会二次确认。开启 Force Update 前请配置有效 http(s) updateUrl，否则客户端会提供 Continue 以避免死锁。每次只保存所选平台。"
         />
 
         {error ? (
@@ -308,8 +319,31 @@ export default function AppSettingsAdminPage() {
             <Form.Item name="maintenanceMessage" label="维护说明">
               <TextArea rows={3} />
             </Form.Item>
+            <Form.Item
+              name="updateUrl"
+              label="更新链接 (updateUrl)"
+              extra="Play Store / App Store / 下载页。必须 http 或 https。客户端 Update 按钮仅打开此链接，不会使用支持链接。"
+              rules={[
+                {
+                  validator: async (_, value) => {
+                    const v = typeof value === "string" ? value.trim() : "";
+                    if (!v) return;
+                    try {
+                      const u = new URL(v);
+                      if (u.protocol !== "http:" && u.protocol !== "https:") {
+                        throw new Error("protocol");
+                      }
+                    } catch {
+                      throw new Error("请输入有效的 http(s) URL");
+                    }
+                  },
+                },
+              ]}
+            >
+              <Input placeholder="https://play.google.com/store/apps/details?id=…" />
+            </Form.Item>
             <Form.Item name="supportUrl" label="支持链接">
-              <Input placeholder="可选 HTTPS" />
+              <Input placeholder="可选 HTTPS（客服/帮助，不作更新跳转）" />
             </Form.Item>
             <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
               保存所选平台

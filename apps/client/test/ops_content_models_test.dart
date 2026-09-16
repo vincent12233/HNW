@@ -52,9 +52,12 @@ void main() {
       'maintenanceMode': false,
       'maintenanceMessage': null,
       'supportUrl': 'https://example.com/support',
+      'updateUrl': 'https://play.example/app',
     });
     expect(parsed.platform, 'ANDROID');
     expect(parsed.forceUpdate, isTrue);
     expect(parsed.supportUrl, 'https://example.com/support');
+    expect(parsed.updateUrl, 'https://play.example/app');
+    expect(parsed.validUpdateUri, isNotNull);
   });
 }

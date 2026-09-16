@@ -1008,6 +1008,8 @@ model AppClientSetting {
   maintenanceMode    Boolean           @default(false)
   maintenanceMessage String?           @db.Text
   supportUrl         String?
+  /// Client update destination (Play Store / App Store / web download). Optional; http/https only.
+  updateUrl          String?
   createdAt          DateTime          @default(now())
   updatedAt          DateTime          @updatedAt
   updatedById        String?

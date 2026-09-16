@@ -195,6 +195,7 @@ describe('AppClientSettingsService', () => {
       maintenanceMode: false,
       maintenanceMessage: null,
       supportUrl: null,
+      updateUrl: 'https://play.example/app',
       updatedAt: new Date(),
     });
     const service = new AppClientSettingsService(
@@ -205,9 +206,49 @@ describe('AppClientSettingsService', () => {
     expect(upsert).toHaveBeenCalledTimes(3);
     expect(row.forceUpdate).toBe(false);
     expect(row.maintenanceMode).toBe(false);
+    expect(row.updateUrl).toBe('https://play.example/app');
   });
 
-  it('audits settings updates', async () => {
+  it('returns Android and iOS updateUrl on public shape', async () => {
+    const upsert = jest.fn().mockResolvedValue({});
+    const findUnique = jest
+      .fn()
+      .mockResolvedValueOnce({
+        id: 'a',
+        platform: AppClientPlatform.ANDROID,
+        minVersion: '1.0.0',
+        latestVersion: '1.1.0',
+        forceUpdate: true,
+        maintenanceMode: false,
+        maintenanceMessage: null,
+        supportUrl: 'https://support.example',
+        updateUrl: 'https://play.google.com/store/apps/details?id=com.example',
+        updatedAt: new Date(),
+      })
+      .mockResolvedValueOnce({
+        id: 'i',
+        platform: AppClientPlatform.IOS,
+        minVersion: '1.0.0',
+        latestVersion: '1.1.0',
+        forceUpdate: true,
+        maintenanceMode: false,
+        maintenanceMessage: null,
+        supportUrl: null,
+        updateUrl: 'https://apps.apple.com/app/id123',
+        updatedAt: new Date(),
+      });
+    const service = new AppClientSettingsService(
+      { appClientSetting: { upsert, findUnique } } as any,
+      { createLog: jest.fn() } as any,
+    );
+    const android = await service.getPublic('ANDROID');
+    const ios = await service.getPublic('IOS');
+    expect(android.updateUrl).toContain('play.google.com');
+    expect(ios.updateUrl).toContain('apps.apple.com');
+    expect(android.supportUrl).not.toBe(android.updateUrl);
+  });
+
+  it('audits settings updates including updateUrl', async () => {
     const before = {
       id: 's1',
       platform: AppClientPlatform.WEB,
@@ -217,12 +258,14 @@ describe('AppClientSettingsService', () => {
       maintenanceMode: false,
       maintenanceMessage: null,
       supportUrl: null,
+      updateUrl: null,
     };
     const findUnique = jest.fn().mockResolvedValue(before);
     const update = jest.fn().mockResolvedValue({
       ...before,
       maintenanceMode: true,
       maintenanceMessage: 'Upgrading',
+      updateUrl: 'https://example.com/download',
     });
     const createLog = jest.fn().mockResolvedValue({});
     const service = new AppClientSettingsService(
@@ -242,24 +285,36 @@ describe('AppClientSettingsService', () => {
         latestVersion: '1.0.0',
         maintenanceMode: true,
         maintenanceMessage: 'Upgrading',
+        updateUrl: 'https://example.com/download',
       },
       { userId: 'admin', role: 'ADMIN' },
+    );
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          updateUrl: 'https://example.com/download',
+        }),
+      }),
     );
     expect(createLog).toHaveBeenCalledWith(
       expect.objectContaining({
         action: 'APP_CLIENT_SETTING_UPDATE',
         metadata: expect.objectContaining({
           before: expect.objectContaining({ maintenanceMode: false }),
-          after: expect.objectContaining({ maintenanceMode: true }),
+          after: expect.objectContaining({
+            maintenanceMode: true,
+            updateUrl: 'https://example.com/download',
+          }),
         }),
       }),
     );
   });
 
-  it('safeDefaults never force-lock clients', () => {
+  it('safeDefaults never force-lock clients and omit updateUrl', () => {
     const service = new AppClientSettingsService({} as any, {} as any);
     const defaults = service.safeDefaults(AppClientPlatform.IOS);
     expect(defaults.forceUpdate).toBe(false);
     expect(defaults.maintenanceMode).toBe(false);
+    expect(defaults.updateUrl).toBeNull();
   });
 });

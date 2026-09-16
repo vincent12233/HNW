@@ -164,4 +164,122 @@ void main() {
       );
     });
   });
+
+  group('parseValidUpdateUrl', () {
+    test('accepts Android Play Store https URL', () {
+      final uri = parseValidUpdateUrl(
+        'https://play.google.com/store/apps/details?id=com.example.hnw',
+      );
+      expect(uri, isNotNull);
+      expect(uri!.scheme, 'https');
+      expect(uri.host, 'play.google.com');
+    });
+
+    test('accepts iOS App Store https URL', () {
+      final uri = parseValidUpdateUrl('https://apps.apple.com/app/id123456');
+      expect(uri, isNotNull);
+      expect(uri!.host, 'apps.apple.com');
+    });
+
+    test('missing URL is safe null', () {
+      expect(parseValidUpdateUrl(null), isNull);
+      expect(parseValidUpdateUrl(''), isNull);
+      expect(parseValidUpdateUrl('   '), isNull);
+    });
+
+    test('invalid URL rejected', () {
+      expect(parseValidUpdateUrl('not-a-url'), isNull);
+      expect(parseValidUpdateUrl('ftp://example.com/app'), isNull);
+      expect(parseValidUpdateUrl('javascript:alert(1)'), isNull);
+      expect(parseValidUpdateUrl('/relative/path'), isNull);
+    });
+  });
+
+  group('force update with updateUrl', () {
+    tearDown(() {
+      AppClientSettingsService.instance.applyForTest(
+        settings: AppClientSettings.safeDefaults,
+        currentVersion: '1.0.5',
+      );
+    });
+
+    test('force update with valid URL keeps force gate', () {
+      final service = AppClientSettingsService.instance;
+      service.applyForTest(
+        settings: const AppClientSettings(
+          platform: 'ANDROID',
+          minVersion: '2.0.0',
+          latestVersion: '2.1.0',
+          forceUpdate: true,
+          maintenanceMode: false,
+          updateUrl:
+              'https://play.google.com/store/apps/details?id=com.example',
+        ),
+        currentVersion: '1.0.0',
+      );
+      expect(service.gate, AppSettingsGate.forceUpdate);
+      expect(service.settings.validUpdateUri, isNotNull);
+      expect(
+        service.settings.validUpdateUri!.toString(),
+        contains('play.google.com'),
+      );
+    });
+
+    test('force update without URL allows session Continue (no dead-end)', () {
+      final service = AppClientSettingsService.instance;
+      service.applyForTest(
+        settings: const AppClientSettings(
+          platform: 'IOS',
+          minVersion: '2.0.0',
+          latestVersion: '2.1.0',
+          forceUpdate: true,
+          maintenanceMode: false,
+          supportUrl: 'https://support.example/help',
+        ),
+        currentVersion: '1.0.0',
+      );
+      expect(service.gate, AppSettingsGate.forceUpdate);
+      expect(service.settings.validUpdateUri, isNull);
+      // supportUrl must NOT be treated as update destination
+      expect(service.settings.supportUrl, isNotNull);
+
+      service.continueWithoutUpdateDestination();
+      expect(service.gate, AppSettingsGate.none);
+      expect(service.forceUpdateContinued, isTrue);
+    });
+
+    test('invalid updateUrl does not unlock Update CTA path', () {
+      final service = AppClientSettingsService.instance;
+      service.applyForTest(
+        settings: const AppClientSettings(
+          platform: 'WEB',
+          minVersion: '9.0.0',
+          latestVersion: '9.1.0',
+          forceUpdate: true,
+          maintenanceMode: false,
+          updateUrl: 'ftp://bad.example/app',
+        ),
+        currentVersion: '1.0.0',
+      );
+      expect(service.gate, AppSettingsGate.forceUpdate);
+      expect(service.settings.validUpdateUri, isNull);
+      service.continueWithoutUpdateDestination();
+      expect(service.gate, AppSettingsGate.none);
+    });
+
+    test('fromJson maps updateUrl and ignores support as update', () {
+      final parsed = AppClientSettings.fromJson({
+        'platform': 'ANDROID',
+        'minVersion': '1.0.0',
+        'latestVersion': '1.2.0',
+        'forceUpdate': true,
+        'maintenanceMode': false,
+        'supportUrl': 'https://support.example',
+        'updateUrl': 'https://play.example/app',
+      });
+      expect(parsed.updateUrl, 'https://play.example/app');
+      expect(parsed.validUpdateUri!.host, 'play.example');
+      expect(parsed.supportUrl, isNot(equals(parsed.updateUrl)));
+    });
+  });
 }

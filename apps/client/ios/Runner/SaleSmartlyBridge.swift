@@ -54,9 +54,8 @@ final class SaleSmartlyBridge: NSObject, FlutterPlugin {
               phone: arguments["phone"] as? String ?? "",
               email: "",
               description: "India Trading customer",
-              labelNames: ["mobile-app", "ios"],
+              labelNames: ["hnw", "ios"],
               customFieldsExt: [
-                "account_number": arguments["accountNumber"] as? String ?? "",
                 "source": "india-trading-ios",
               ]
             )

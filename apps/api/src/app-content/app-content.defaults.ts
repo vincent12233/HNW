@@ -1310,14 +1310,16 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
   {
     module: AppContentModule.SUPPORT,
     key: 'salesmartly_script_url',
-    body: 'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
+    // Intentionally empty: production must set CMS or SALESMARTLY_SCRIPT_URL.
+    // Do not ship a concrete tenant project_*.js as a silent fallback.
+    body: '',
     locale: 'en',
     sortOrder: 40,
   },
   {
     module: AppContentModule.SUPPORT,
     key: 'salesmartly_script_url',
-    body: 'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
+    body: '',
     locale: 'hi',
     sortOrder: 40,
   },

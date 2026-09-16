@@ -32,10 +32,10 @@ class _SupportChatPageState extends State<SupportChatPage>
   bool _noticeVisible = true;
   String? _selectedMessage;
 
-  bool get _nativeChatAvailable =>
-      !kIsWeb &&
-      (defaultTargetPlatform == TargetPlatform.android ||
-          defaultTargetPlatform == TargetPlatform.iOS);
+  bool get _chatAvailable =>
+      kIsWeb ||
+      defaultTargetPlatform == TargetPlatform.android ||
+      defaultTargetPlatform == TargetPlatform.iOS;
 
   @override
   void initState() {
@@ -48,7 +48,7 @@ class _SupportChatPageState extends State<SupportChatPage>
     _appContent.addListener(_onContentChanged);
     unawaited(_appContent.load());
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_nativeChatAvailable) {
+      if (_chatAvailable) {
         unawaited(_open());
       }
     });
@@ -72,7 +72,7 @@ class _SupportChatPageState extends State<SupportChatPage>
     }
     final launchMessage = _selectedMessage?.trim();
 
-    if (!_nativeChatAvailable) {
+    if (!_chatAvailable) {
       return;
     }
 
@@ -125,7 +125,7 @@ class _SupportChatPageState extends State<SupportChatPage>
     final bubbleText = _error ??
         (_opening
             ? 'Connecting you to an agent…'
-            : (_nativeChatAvailable
+            : (_chatAvailable
                 ? greeting
                 : '$greeting\n\n$hours'));
 
@@ -352,7 +352,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                   AppText(
                     _opening
                         ? 'Connecting…'
-                        : (_nativeChatAvailable
+                        : (_chatAvailable
                             ? 'Online now'
                             : 'In-app support'),
                     maxLines: 1,
@@ -484,7 +484,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                         isDense: true,
                         hintText: _opening
                             ? 'Connecting…'
-                            : (_nativeChatAvailable
+                            : (_chatAvailable
                                 ? 'Message opens in live chat'
                                 : _appContent.current.text(
                                     'support',
@@ -519,7 +519,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                 width: m.sendButtonSize,
                 height: m.sendButtonSize,
                 child: Icon(
-                  _nativeChatAvailable
+                  _chatAvailable
                       ? Icons.send_rounded
                       : Icons.refresh_rounded,
                   color: Colors.white,

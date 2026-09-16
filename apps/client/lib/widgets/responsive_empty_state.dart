@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../l10n/app_language.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 
 /// A centered, width-constrained empty state that remains balanced on phones,
 /// tablets and large accessibility text sizes.
@@ -27,10 +29,15 @@ class ResponsiveEmptyState extends StatelessWidget {
     final color = iconColor ?? theme.colorScheme.primary;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final horizontal = constraints.maxWidth < 380 ? 24.0 : 32.0;
+        final horizontal = constraints.maxWidth < 380
+            ? AppSpacing.xxl
+            : AppSpacing.xxxl;
         return SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.symmetric(horizontal: horizontal, vertical: 24),
+          padding: EdgeInsets.symmetric(
+            horizontal: horizontal,
+            vertical: AppSpacing.xxl,
+          ),
           child: ConstrainedBox(
             constraints: BoxConstraints(
               minHeight: (constraints.maxHeight - 48).clamp(180.0, 420.0),
@@ -50,26 +57,25 @@ class ResponsiveEmptyState extends StatelessWidget {
                       ),
                       child: Icon(icon, size: 38, color: color),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: AppSpacing.xl),
                     AppText(
                       title,
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge?.copyWith(
+                      style: AppTypography.titleLarge.copyWith(
                         fontWeight: FontWeight.w800,
-                        color: AppConfig.textPrimaryColor,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm + 2),
                     AppText(
                       subtitle,
                       textAlign: TextAlign.center,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        color: AppConfig.textSecondaryColor,
+                      style: AppTypography.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                         height: 1.45,
                       ),
                     ),
                     if (action != null) ...[
-                      const SizedBox(height: 20),
+                      const SizedBox(height: AppSpacing.xl),
                       action!,
                     ],
                   ],

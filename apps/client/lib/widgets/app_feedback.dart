@@ -1,72 +1,57 @@
 import 'package:flutter/material.dart';
+
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
-/// Keeps nested routes readable without changing their scrolling or form state.
-class AppPageScaffold extends StatelessWidget {
-  const AppPageScaffold({
-    super.key,
-    this.appBar,
-    required this.body,
-    this.backgroundColor,
-    this.bottomNavigationBar,
-    this.maxWidth = 760,
-  });
-  final PreferredSizeWidget? appBar;
-  final Widget body;
-  final Color? backgroundColor;
-  final Widget? bottomNavigationBar;
-  final double maxWidth;
+/// Centered loading indicator with optional message.
+class AppLoadingView extends StatelessWidget {
+  const AppLoadingView({super.key, this.message});
+
+  final String? message;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: appBar,
-    backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.surface,
-    body: SafeArea(
-      top: appBar == null,
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: maxWidth),
-          child: SizedBox(width: double.infinity, child: body),
-        ),
-      ),
-    ),
-    bottomNavigationBar: bottomNavigationBar == null
-        ? null
-        : Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.viewInsetsOf(context).bottom,
-            ),
-            child: SafeArea(
-              top: false,
-              child: Align(
-                heightFactor: 1,
-                alignment: Alignment.bottomCenter,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: bottomNavigationBar,
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: AppSpacing.page,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            if (message != null) ...[
+              const SizedBox(height: AppSpacing.lg),
+              AppText(
+                message!,
+                textAlign: TextAlign.center,
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
-            ),
-          ),
-  );
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-class AppEmptyState extends StatelessWidget {
-  const AppEmptyState({
+/// Error state with optional retry — no fake financial data.
+class AppErrorView extends StatelessWidget {
+  const AppErrorView({
     super.key,
     required this.title,
     this.message,
-    this.icon = Icons.inbox_outlined,
     this.onRetry,
+    this.icon = Icons.error_outline_rounded,
   });
+
   final String title;
   final String? message;
-  final IconData icon;
   final VoidCallback? onRetry;
+  final IconData icon;
+
   @override
   Widget build(BuildContext context) {
     return Center(
@@ -81,10 +66,10 @@ class AppEmptyState extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: AppColors.brandPrimarySoft,
+                  color: AppColors.lossSoft,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 34, color: AppColors.brandPrimary),
+                child: Icon(icon, size: 34, color: AppColors.loss),
               ),
               const SizedBox(height: AppSpacing.xl - 2),
               AppText(

@@ -2,6 +2,10 @@ import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 
 /// Compact NSE session strip — mirrors Groww / Kite market-hours chrome.
 class MarketStatusCard extends StatelessWidget {
@@ -13,8 +17,7 @@ class MarketStatusCard extends StatelessWidget {
     final nowUtc = DateTime.now().toUtc();
     final indiaTime = nowUtc.add(const Duration(hours: 5, minutes: 30));
     final weekday = indiaTime.weekday;
-    final isWeekday =
-        weekday >= DateTime.monday && weekday <= DateTime.friday;
+    final isWeekday = weekday >= DateTime.monday && weekday <= DateTime.friday;
     if (!isWeekday) return false;
 
     final minutes = indiaTime.hour * 60 + indiaTime.minute;
@@ -35,10 +38,13 @@ class MarketStatusCard extends StatelessWidget {
     if (compact) {
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: tint,
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.borderSm,
           border: Border.all(color: statusColor.withValues(alpha: 0.22)),
         ),
         child: Row(
@@ -55,19 +61,16 @@ class MarketStatusCard extends StatelessWidget {
             Expanded(
               child: AppText(
                 statusText,
-                style: TextStyle(
+                style: AppTypography.labelMedium.copyWith(
                   color: statusColor,
                   fontWeight: FontWeight.w800,
-                  fontSize: 12,
                 ),
               ),
             ),
-            const AppText(
+            AppText(
               '09:15 – 15:30 IST',
-              style: TextStyle(
-                color: AppConfig.textSecondaryColor,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
+              style: AppTypography.labelSmall.copyWith(
+                color: AppColors.textSecondary,
               ),
             ),
           ],
@@ -77,11 +80,11 @@ class MarketStatusCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.card,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: AppRadius.borderMd,
         gradient: const LinearGradient(
-          colors: [Color(0xFF0B2A5B), Color(0xFF165DFF)],
+          colors: [AppColors.brandDark, AppColors.brandPrimary],
         ),
       ),
       child: Row(

@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
+import 'theme/app_colors.dart';
+
 class AppConfig {
   static const String appName = 'India Trading';
   static const String shortName = 'IT';
@@ -56,16 +58,17 @@ class AppConfig {
     return 'http://localhost:3000';
   }
 
-  static const Color primaryColor = Color(0xFF165DFF);
-  static const Color primaryDarkColor = Color(0xFF071F4A);
-  static const Color primaryGradientEnd = Color(0xFF1849A9);
-  static const Color surfaceColor = Colors.white;
-  static const Color borderColor = Color(0xFFE1E7F0);
-  static const Color gainColor = Color(0xFF087F5B);
-  static const Color lossColor = Color(0xFFD92D4B);
-  static const Color neutralColor = Color(0xFF667085);
-  static const Color backgroundColor = Color(0xFFF4F7FB);
-  static const Color textPrimaryColor = Color(0xFF101828);
-  static const Color textSecondaryColor = Color(0xFF5D6B82);
-  static const Color chartGainColor = Color(0xFF43C987);
+  // Legacy aliases — delegate to [AppColors] (single source of truth).
+  static const Color primaryColor = AppColors.brandPrimary;
+  static const Color primaryDarkColor = AppColors.brandDark;
+  static const Color primaryGradientEnd = AppColors.brandGradientEnd;
+  static const Color surfaceColor = AppColors.surface;
+  static const Color borderColor = AppColors.border;
+  static const Color gainColor = AppColors.gain;
+  static const Color lossColor = AppColors.loss;
+  static const Color neutralColor = AppColors.neutral;
+  static const Color backgroundColor = AppColors.background;
+  static const Color textPrimaryColor = AppColors.textPrimary;
+  static const Color textSecondaryColor = AppColors.textSecondary;
+  static const Color chartGainColor = AppColors.chartGain;
 }

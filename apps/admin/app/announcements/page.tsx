@@ -1,11 +1,18 @@
 "use client";
 
-import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  EditOutlined,
+  EyeOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+} from "@ant-design/icons";
 import {
   Alert,
   Button,
   Card,
   DatePicker,
+  Drawer,
   Form,
   Input,
   InputNumber,
@@ -23,9 +30,10 @@ import dayjs, { type Dayjs } from "dayjs";
 import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from "@/lib/api";
 
-const { Title, Text, Paragraph } = Typography;
+const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
 
 type Announcement = {
@@ -39,6 +47,7 @@ type Announcement = {
   startsAt?: string | null;
   endsAt?: string | null;
   sortOrder: number;
+  updatedAt: string;
 };
 
 type FormValues = {
@@ -59,11 +68,36 @@ const TYPE_OPTIONS = [
   { value: "MARKET_NOTICE", label: "MARKET_NOTICE" },
 ];
 
+type DisplayStatus = "Draft" | "Scheduled" | "Live" | "Expired";
+
+function displayStatus(row: Announcement, now = Date.now()): DisplayStatus {
+  if (!row.isPublished) return "Draft";
+  const start = row.startsAt ? new Date(row.startsAt).getTime() : null;
+  const end = row.endsAt ? new Date(row.endsAt).getTime() : null;
+  if (end != null && end < now) return "Expired";
+  if (start != null && start > now) return "Scheduled";
+  return "Live";
+}
+
+function statusColor(status: DisplayStatus) {
+  switch (status) {
+    case "Live":
+      return "green";
+    case "Scheduled":
+      return "blue";
+    case "Expired":
+      return "default";
+    default:
+      return "gold";
+  }
+}
+
 export default function AnnouncementsAdminPage() {
   const [rows, setRows] = useState<Announcement[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
+  const [preview, setPreview] = useState<Announcement | null>(null);
   const [editing, setEditing] = useState<Announcement | null>(null);
   const [form] = Form.useForm<FormValues>();
 
@@ -87,6 +121,10 @@ export default function AnnouncementsAdminPage() {
   async function save(values: FormValues) {
     const startsAt = values.range?.[0]?.toISOString() ?? null;
     const endsAt = values.range?.[1]?.toISOString() ?? null;
+    if (startsAt && endsAt && new Date(endsAt) < new Date(startsAt)) {
+      message.error("结束时间不得早于开始时间");
+      return;
+    }
     const payload = {
       locale: values.locale,
       title: values.title.trim(),
@@ -113,10 +151,31 @@ export default function AnnouncementsAdminPage() {
     }
   }
 
+  async function setPublished(row: Announcement, isPublished: boolean) {
+    try {
+      await api.put(`/admin/announcements/${row.id}`, {
+        locale: row.locale,
+        title: row.title,
+        body: row.body,
+        type: row.type,
+        priority: row.priority,
+        sortOrder: row.sortOrder,
+        startsAt: row.startsAt,
+        endsAt: row.endsAt,
+        isPublished,
+      });
+      message.success(isPublished ? "已发布" : "已下架");
+      await load();
+    } catch (e: unknown) {
+      message.error(getApiErrorMessage(e, "状态更新失败"));
+    }
+  }
+
   function remove(row: Announcement) {
     Modal.confirm({
       title: "删除公告？",
-      content: row.title,
+      content: `确认删除「${row.title}」？`,
+      okText: "删除",
       okButtonProps: { danger: true },
       onOk: async () => {
         try {
@@ -132,7 +191,7 @@ export default function AnnouncementsAdminPage() {
 
   const columns: ColumnsType<Announcement> = [
     {
-      title: "公告",
+      title: "标题",
       render: (_, row) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{row.title}</Text>
@@ -144,20 +203,37 @@ export default function AnnouncementsAdminPage() {
     },
     {
       title: "状态",
-      width: 110,
-      render: (_, row) => (
-        <Tag color={row.isPublished ? "green" : "default"}>
-          {row.isPublished ? "已发布" : "草稿"}
-        </Tag>
-      ),
+      width: 120,
+      render: (_, row) => {
+        const status = displayStatus(row);
+        return <Tag color={statusColor(status)}>{status}</Tag>;
+      },
     },
     { title: "优先级", dataIndex: "priority", width: 90 },
-    { title: "排序", dataIndex: "sortOrder", width: 80 },
+    {
+      title: "生效区间",
+      width: 220,
+      render: (_, row) => (
+        <Text type="secondary">
+          {row.startsAt ? new Date(row.startsAt).toLocaleString("zh-CN") : "—"}
+          {" → "}
+          {row.endsAt ? new Date(row.endsAt).toLocaleString("zh-CN") : "—"}
+        </Text>
+      ),
+    },
+    {
+      title: "更新",
+      width: 170,
+      render: (_, row) => new Date(row.updatedAt).toLocaleString("zh-CN"),
+    },
     {
       title: "操作",
-      width: 160,
+      width: 280,
       render: (_, row) => (
-        <Space>
+        <Space wrap>
+          <Button icon={<EyeOutlined />} onClick={() => setPreview(row)}>
+            预览
+          </Button>
           <Button
             icon={<EditOutlined />}
             onClick={() => {
@@ -183,7 +259,12 @@ export default function AnnouncementsAdminPage() {
           >
             编辑
           </Button>
-          <Button danger icon={<DeleteOutlined />} onClick={() => remove(row)} />
+          <Button onClick={() => void setPublished(row, !row.isPublished)}>
+            {row.isPublished ? "下架" : "发布"}
+          </Button>
+          <Button danger icon={<DeleteOutlined />} onClick={() => remove(row)}>
+            删除
+          </Button>
         </Space>
       ),
     },
@@ -192,46 +273,55 @@ export default function AnnouncementsAdminPage() {
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <Space style={{ justifyContent: "space-between", width: "100%" }}>
-          <div>
-            <Title level={3} style={{ margin: 0 }}>
-              平台公告
-            </Title>
-            <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-              结构化 Announcement（≠ Market News / Banner）。Phase 11B 最小管理入口。
-            </Paragraph>
-          </div>
-          <Space>
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
-              刷新
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => {
-                setEditing(null);
-                form.resetFields();
-                form.setFieldsValue({
-                  locale: "en",
-                  type: "GENERAL",
-                  isPublished: false,
-                  priority: 0,
-                  sortOrder: 0,
-                });
-                setOpen(true);
-              }}
-            >
-              新建
-            </Button>
-          </Space>
-        </Space>
+        <OpsPageHeader
+          eyebrow="APP MANAGEMENT"
+          title="平台公告"
+          description="结构化 Announcement。≠ Market News，≠ Home/Markets Banner。状态由发布开关与时间窗计算（Draft / Scheduled / Live / Expired）。"
+          extra={
+            <Space>
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+                刷新
+              </Button>
+              <Button
+                type="primary"
+                icon={<PlusOutlined />}
+                onClick={() => {
+                  setEditing(null);
+                  form.resetFields();
+                  form.setFieldsValue({
+                    locale: "en",
+                    type: "GENERAL",
+                    isPublished: false,
+                    priority: 0,
+                    sortOrder: 0,
+                  });
+                  setOpen(true);
+                }}
+              >
+                新建公告
+              </Button>
+            </Space>
+          }
+        />
 
         {error ? (
-          <Alert type="error" showIcon title={error} action={<Button onClick={() => void load()}>重试</Button>} />
+          <Alert
+            type="error"
+            showIcon
+            title={error}
+            action={<Button onClick={() => void load()}>重试</Button>}
+          />
         ) : null}
 
         <Card>
-          <Table rowKey="id" loading={loading} columns={columns} dataSource={rows} pagination={{ pageSize: 20 }} />
+          <Table
+            rowKey="id"
+            loading={loading}
+            columns={columns}
+            dataSource={rows}
+            pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
+            locale={{ emptyText: "暂无公告" }}
+          />
         </Card>
       </Space>
 
@@ -241,13 +331,13 @@ export default function AnnouncementsAdminPage() {
         onCancel={() => setOpen(false)}
         onOk={() => form.submit()}
         okText="保存"
-        width={720}
+        width={760}
         destroyOnHidden
       >
         <Form form={form} layout="vertical" onFinish={(v) => void save(v)}>
           <Space wrap style={{ width: "100%" }}>
             <Form.Item name="locale" label="Locale" rules={[{ required: true }]} style={{ minWidth: 120 }}>
-              <Select options={[{ value: "en" }, { value: "hi" }]} />
+              <Select options={[{ value: "en", label: "English" }, { value: "hi", label: "Hindi" }]} />
             </Form.Item>
             <Form.Item name="type" label="类型" style={{ minWidth: 180 }}>
               <Select options={TYPE_OPTIONS} />
@@ -265,7 +355,7 @@ export default function AnnouncementsAdminPage() {
           <Form.Item name="body" label="正文" rules={[{ required: true }]}>
             <TextArea rows={8} />
           </Form.Item>
-          <Form.Item name="range" label="生效区间">
+          <Form.Item name="range" label="生效区间（可选）">
             <DatePicker.RangePicker showTime style={{ width: "100%" }} />
           </Form.Item>
           <Form.Item name="isPublished" label="发布" valuePropName="checked">
@@ -273,6 +363,21 @@ export default function AnnouncementsAdminPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Drawer title="公告预览" open={Boolean(preview)} onClose={() => setPreview(null)} width={480}>
+        {preview ? (
+          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+            <Space>
+              <Tag color={statusColor(displayStatus(preview))}>{displayStatus(preview)}</Tag>
+              <Tag>{preview.type}</Tag>
+            </Space>
+            <Typography.Title level={4} style={{ margin: 0 }}>
+              {preview.title}
+            </Typography.Title>
+            <Paragraph style={{ whiteSpace: "pre-wrap" }}>{preview.body}</Paragraph>
+          </Space>
+        ) : null}
+      </Drawer>
     </AdminShell>
   );
 }

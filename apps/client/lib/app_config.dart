@@ -7,6 +7,10 @@ class AppConfig {
   static const String appName = 'India Trading';
   static const String shortName = 'IT';
   static const String slogan = 'Professional. Fast. Simple.';
+
+  /// Build / package version label (keep aligned with pubspec `version`).
+  /// Not sourced from CMS `about.app_version` (marketing copy only).
+  static const String appVersion = '1.0.5';
   static const String _configuredApiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '',

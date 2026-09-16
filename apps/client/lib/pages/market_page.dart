@@ -3767,11 +3767,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       'company_name',
       fallback: AppConfig.appName,
     );
-    final version = _appContent.text(
-      'about',
-      'app_version',
-      fallback: 'Version 1.0.0',
-    );
+    final marketingVersion = _appContent.text('about', 'app_version');
     final legalName = _appContent.text('about', 'legal_name');
     final address = _appContent.text('about', 'registered_address');
     final grievance = _appContent.text('about', 'grievance_contact');
@@ -3796,7 +3792,19 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
                 const SizedBox(height: 6),
-                AppText(version),
+                AppText('App version ${AppConfig.appVersion}'),
+                if (marketingVersion.isNotEmpty &&
+                    marketingVersion != 'Version ${AppConfig.appVersion}' &&
+                    marketingVersion != AppConfig.appVersion) ...[
+                  const SizedBox(height: 4),
+                  AppText(
+                    marketingVersion,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 if (summary.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   AppText(

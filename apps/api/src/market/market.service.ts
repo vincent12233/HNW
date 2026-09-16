@@ -22,11 +22,23 @@ export class MarketService {
 
   async listInstruments(query: ListInstrumentsQueryDto) {
     const search = query.search?.trim();
+    const featuredFilter =
+      query.featuredHome !== undefined || query.featuredMarkets !== undefined;
+    const take = featuredFilter
+      ? (query.limit ?? 40)
+      : query.limit;
 
     const instruments = await this.prisma.instrument.findMany({
       where: {
         isActive: true,
         ...(query.exchange ? { exchange: query.exchange } : {}),
+        ...(query.type ? { type: query.type } : {}),
+        ...(query.featuredHome !== undefined
+          ? { featuredHome: query.featuredHome }
+          : {}),
+        ...(query.featuredMarkets !== undefined
+          ? { featuredMarkets: query.featuredMarkets }
+          : {}),
         ...(search
           ? {
               OR: [
@@ -54,16 +66,35 @@ export class MarketService {
         { exchange: 'asc' },
         { symbol: 'asc' },
       ],
+      ...(take ? { take } : {}),
     });
 
     return {
       total: instruments.length,
       data: instruments.map((instrument) => ({
-        ...instrument,
+        id: instrument.id,
+        exchange: instrument.exchange,
+        symbol: instrument.symbol,
+        name: instrument.name,
+        logoUrl: instrument.logoUrl,
+        category: instrument.category,
+        type: instrument.type,
+        displayOrder: instrument.displayOrder,
+        featuredHome: instrument.featuredHome,
+        featuredMarkets: instrument.featuredMarkets,
+        isActive: instrument.isActive,
         quote: instrument.quote
           ? {
-              ...instrument.quote,
+              lastPrice: instrument.quote.lastPrice,
+              previousClose: instrument.quote.previousClose,
+              openPrice: instrument.quote.openPrice,
+              highPrice: instrument.quote.highPrice,
+              lowPrice: instrument.quote.lowPrice,
+              bidPrice: instrument.quote.bidPrice,
+              askPrice: instrument.quote.askPrice,
               volume: instrument.quote.volume.toString(),
+              asOf: instrument.quote.asOf,
+              source: instrument.quote.source,
             }
           : null,
       })),

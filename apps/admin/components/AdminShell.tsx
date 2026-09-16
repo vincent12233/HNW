@@ -266,6 +266,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("resize", sync);
   }, []);
 
+  // A responsive breakpoint change should never leave the mobile drawer
+  // logically open after returning to the desktop layout.
+  useEffect(() => {
+    if (!mobile) setDrawerOpen(false);
+  }, [mobile]);
+
   useEffect(() => {
     let active = true;
     const deploymentRole = getBackendRole();
@@ -498,6 +504,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             <Button
               type="text"
               aria-label="切换导航"
+              aria-expanded={mobile ? drawerOpen : !collapsed}
               className="ops-nav-toggle"
               icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
               onClick={() => (mobile ? setDrawerOpen(true) : setCollapsed((value) => !value))}
@@ -520,7 +527,13 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 </div>
               </>
             )}
-            <Button type="text" danger icon={<LogoutOutlined />} onClick={logout}>
+            <Button
+              type="text"
+              danger
+              aria-label="退出登录"
+              icon={<LogoutOutlined />}
+              onClick={logout}
+            >
               {mobile ? null : "退出"}
             </Button>
           </Space>

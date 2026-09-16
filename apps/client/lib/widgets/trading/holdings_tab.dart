@@ -116,10 +116,11 @@ class _HoldingsTabState extends State<HoldingsTab> {
                     );
                     final returnPercent = position.returnPercent(currentPrice);
                     final category = _positionCategory(position, stock);
-                    final dayChange = stock?.previousClose != null &&
+                    final dayChange =
+                        stock?.previousClose != null &&
                             stock!.previousClose! > 0
                         ? (currentPrice - stock.previousClose!) *
-                            position.quantity
+                              position.quantity
                         : null;
                     final dayChangePercent = stock?.change;
 
@@ -157,8 +158,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                 children: [
                                   StockLogo(
                                     symbol: position.symbol,
-                                    logoUrl:
-                                        position.logoUrl ?? stock?.logoUrl,
+                                    logoUrl: position.logoUrl ?? stock?.logoUrl,
                                     size: 38,
                                   ),
                                   const SizedBox(width: 12),
@@ -275,9 +275,11 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                     if (stacked) {
                                       return Column(
                                         children: [
-                                          for (var i = 0;
-                                              i < metrics.length;
-                                              i++) ...[
+                                          for (
+                                            var i = 0;
+                                            i < metrics.length;
+                                            i++
+                                          ) ...[
                                             if (i > 0)
                                               const SizedBox(height: 10),
                                             SizedBox(

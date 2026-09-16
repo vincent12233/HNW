@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../app_config.dart';
 import '../l10n/app_language.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 
 /// Keeps nested routes readable without changing their scrolling or form state.
 class AppPageScaffold extends StatelessWidget {
@@ -67,10 +69,9 @@ class AppEmptyState extends StatelessWidget {
   final VoidCallback? onRetry;
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Center(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(28),
+        padding: AppSpacing.page,
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 420),
           child: Column(
@@ -80,32 +81,32 @@ class AppEmptyState extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: AppConfig.primaryColor.withValues(alpha: 0.10),
+                  color: AppColors.brandPrimarySoft,
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 34, color: AppConfig.primaryColor),
+                child: Icon(icon, size: 34, color: AppColors.brandPrimary),
               ),
-              const SizedBox(height: 18),
+              const SizedBox(height: AppSpacing.xl - 2),
               AppText(
                 title,
                 textAlign: TextAlign.center,
-                style: theme.textTheme.titleLarge?.copyWith(
+                style: AppTypography.titleLarge.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
               if (message != null) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm + 2),
                 AppText(
                   message!,
                   textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppConfig.textSecondaryColor,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
                     height: 1.45,
                   ),
                 ),
               ],
               if (onRetry != null) ...[
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.xl - 2),
                 OutlinedButton.icon(
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh, size: 18),

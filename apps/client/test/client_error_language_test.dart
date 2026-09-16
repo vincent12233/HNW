@@ -7,7 +7,10 @@ void main() {
     const error = AuthException('\u64cd\u4f5c\u5931\u8d25');
     expect(error.message, 'Unable to complete this request. Please try again.');
     expect(clientErrorMessage(error), error.message);
-    expect(clientErrorMessage(Exception('\u64cd\u4f5c\u5931\u8d25')), 'Request failed');
+    expect(
+      clientErrorMessage(Exception('\u64cd\u4f5c\u5931\u8d25')),
+      'Request failed',
+    );
   });
   test('English errors retain their useful detail', () {
     const error = AuthException('Insufficient available balance');

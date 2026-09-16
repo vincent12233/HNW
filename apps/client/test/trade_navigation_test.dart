@@ -11,6 +11,7 @@ import 'package:india_trading_app/widgets/trading/holdings_tab.dart';
 import 'package:india_trading_app/widgets/trading/history_tab.dart';
 import 'package:india_trading_app/widgets/trading/pending_center_tab.dart';
 import 'package:india_trading_app/widgets/trading/funds_tab.dart';
+import 'package:india_trading_app/widgets/trading/trade_list.dart';
 
 class EmptyTradingService extends TradingService {
   @override
@@ -26,7 +27,7 @@ class EmptyTradingService extends TradingService {
 
 void main() {
   testWidgets(
-    'all four trade shortcuts fit a narrow screen and open their modules',
+    'trade module chips scroll on a narrow screen and open their modules',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       FlutterSecureStorage.setMockInitialValues({});
@@ -54,16 +55,33 @@ void main() {
         ),
       );
       await tester.pump(const Duration(seconds: 1));
+
+      final shortcutRow = find.byWidgetPredicate(
+        (widget) =>
+            widget is ListView && widget.scrollDirection == Axis.horizontal,
+      );
+
+      Future<void> tapChip(String label) async {
+        final finder = find.widgetWithText(ChoiceChip, label);
+        expect(finder, findsWidgets);
+        await tester.dragUntilVisible(
+          finder.first,
+          shortcutRow.first,
+          const Offset(-60, 0),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(finder.first);
+        await tester.pump(const Duration(seconds: 1));
+      }
+
       for (final entry in <String, Type>{
+        'Overview': TradeList,
+        'Positions': HoldingsTab,
         'Orders': OrdersTab,
         'Pending': PendingCenterTab,
-        'Holdings': HoldingsTab,
         'History': HistoryTab,
       }.entries) {
-        final label = find.text(entry.key).first;
-        expect(tester.getCenter(label).dx, inInclusiveRange(0, 320));
-        await tester.tap(label);
-        await tester.pump(const Duration(seconds: 1));
+        await tapChip(entry.key);
         expect(find.byType(entry.value), findsOneWidget);
         expect(tester.takeException(), isNull);
       }

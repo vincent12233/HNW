@@ -15,9 +15,11 @@ class InstitutionalStock {
   final String id;
   final String symbol;
   final String companyName;
+
   /// Trade/settlement price. For OTC this is the discount settlement price;
   /// for institutional offers this is typically the live lastPrice.
   final double price;
+
   /// Live market quote (reference). For OTC, trade settles at [price], not this.
   final double marketPrice;
   final double? expectedReturn;
@@ -42,20 +44,19 @@ class InstitutionalStock {
     );
   }
 
-  factory InstitutionalStock.fromInstitutionalJson(Map<String, dynamic> json) =>
-      InstitutionalStock(
-        id: json['id']?.toString() ?? '',
-        symbol: json['symbol']?.toString() ?? '',
-        companyName: json['name']?.toString() ?? '',
-        price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
-        marketPrice:
-            double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
-        expectedReturn:
-            double.tryParse(json['expectedReturn']?.toString() ?? ''),
-        status: json['status']?.toString() ?? '',
-        exchange: json['exchange']?.toString() ?? 'NSE',
-        instrumentId: json['instrumentId']?.toString(),
-      );
+  factory InstitutionalStock.fromInstitutionalJson(
+    Map<String, dynamic> json,
+  ) => InstitutionalStock(
+    id: json['id']?.toString() ?? '',
+    symbol: json['symbol']?.toString() ?? '',
+    companyName: json['name']?.toString() ?? '',
+    price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
+    marketPrice: double.tryParse(json['marketPrice']?.toString() ?? '') ?? 0,
+    expectedReturn: double.tryParse(json['expectedReturn']?.toString() ?? ''),
+    status: json['status']?.toString() ?? '',
+    exchange: json['exchange']?.toString() ?? 'NSE',
+    instrumentId: json['instrumentId']?.toString(),
+  );
 }
 
 class OtcOrderRecord {

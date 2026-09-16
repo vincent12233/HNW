@@ -3,7 +3,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
 import '../utils/number_formatters.dart';
 import '../models/institutional_opportunity.dart';
@@ -88,47 +91,47 @@ class _TradingCenterPageState extends State<TradingCenterPage>
       _TradingModule(
         label('tab.trades', 'Trades'),
         Icons.swap_horiz_rounded,
-        const Color(0xFF2563EB),
+        AppColors.brandPrimary,
       ),
       _TradingModule(
         label('tab.institutional', 'Institutional'),
         Icons.account_balance_outlined,
-        const Color(0xFF1D4ED8),
+        AppColors.brandPrimaryPressed,
       ),
       _TradingModule(
-        label('tab.holdings', 'Holdings'),
+        label('tab.holdings', 'Positions'),
         Icons.account_balance_wallet_outlined,
-        const Color(0xFF059669),
+        AppColors.gain,
       ),
       _TradingModule(
         label('tab.pending', 'Pending'),
         Icons.schedule_rounded,
-        const Color(0xFFF97316),
+        AppColors.pending,
       ),
       _TradingModule(
         label('tab.order_book', 'Order Book'),
         Icons.receipt_long_outlined,
-        const Color(0xFF0F766E),
+        AppColors.info,
       ),
       _TradingModule(
         label('tab.otc', 'OTC'),
         Icons.handshake_outlined,
-        const Color(0xFF0D9488),
+        AppColors.gain,
       ),
       _TradingModule(
         label('tab.ipo', 'IPO'),
         Icons.campaign_outlined,
-        const Color(0xFFEF4444),
+        AppColors.loss,
       ),
       _TradingModule(
         label('tab.history', 'History'),
         Icons.history_rounded,
-        const Color(0xFFF59E0B),
+        AppColors.warning,
       ),
       _TradingModule(
         label('tab.funds_ledger', 'Funds Ledger'),
         Icons.account_balance_wallet_outlined,
-        const Color(0xFF64748B),
+        AppColors.neutral,
       ),
     ];
   }
@@ -335,27 +338,33 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppConfig.backgroundColor,
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md + 2,
+                AppSpacing.lg,
+                AppSpacing.xs,
+              ),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: AppText(
                       'Trade',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w800,
-                      ),
+                      style: AppTypography.headline.copyWith(fontSize: 20),
                     ),
                   ),
                   IconButton(
                     tooltip: 'Markets',
                     onPressed: widget.onViewMarkets,
-                    icon: const Icon(Icons.search_rounded, size: 22),
+                    icon: const Icon(
+                      Icons.search_rounded,
+                      size: 22,
+                      color: AppColors.textPrimary,
+                    ),
                   ),
                   IconButton(
                     tooltip: tr('Funds Ledger'),
@@ -363,7 +372,9 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                     icon: Icon(
                       Icons.account_balance_wallet_outlined,
                       size: 22,
-                      color: selectedTab == 8 ? AppConfig.primaryColor : null,
+                      color: selectedTab == 8
+                          ? AppColors.brandPrimary
+                          : AppColors.textPrimary,
                     ),
                   ),
                   Stack(
@@ -375,6 +386,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                         icon: const Icon(
                           Icons.notifications_none_rounded,
                           size: 22,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       if (widget.notificationCount > 0)
@@ -386,18 +398,20 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                               minWidth: 17,
                               minHeight: 17,
                             ),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.xs,
+                            ),
                             alignment: Alignment.center,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFEF233C),
+                              color: AppColors.loss,
                               shape: BoxShape.circle,
                             ),
                             child: AppText(
                               widget.notificationCount > 9
                                   ? '9+'
                                   : widget.notificationCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textInverse,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -410,9 +424,14 @@ class _TradingCenterPageState extends State<TradingCenterPage>
               ),
             ),
             Container(
-              margin: const EdgeInsets.fromLTRB(16, 6, 16, 12),
-              padding: const EdgeInsets.all(18),
-              decoration: AppUi.heroGradient(radius: AppUi.radiusLg),
+              margin: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm - 2,
+                AppSpacing.lg,
+                AppSpacing.md,
+              ),
+              padding: const EdgeInsets.all(AppSpacing.lg + 2),
+              decoration: AppUi.heroGradient(radius: AppRadius.lg),
               child: Row(
                 children: [
                   Expanded(
@@ -423,7 +442,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                           'Available Funds',
                           _accountSnapshot?.availableBalance,
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: AppSpacing.md),
                         _balanceMetric(
                           'Buying Power',
                           _accountSnapshot?.buyingPower,
@@ -431,7 +450,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                       ],
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,8 +460,8 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                           _accountSnapshot?.realizedProfitLoss,
                           valueColor:
                               (_accountSnapshot?.realizedProfitLoss ?? 0) >= 0
-                              ? const Color(0xff70e0ba)
-                              : const Color(0xffffa6b1),
+                              ? AppColors.chartGain
+                              : AppColors.loss,
                         ),
                       ],
                     ),
@@ -452,10 +471,10 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             ),
             _productTabs(),
             if (![1, 5, 6].contains(selectedTab)) _tradingShortcuts(),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             if (_ordersFailed || _accountFailed)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: Row(
                   children: [
                     Expanded(
@@ -465,6 +484,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                             : _ordersFailed
                             ? 'Orders could not be updated.'
                             : 'Balances and holdings could not be updated.',
+                        style: AppTypography.bodySmall,
                       ),
                     ),
                     TextButton(
@@ -489,7 +509,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   }
 
   Widget _productTabs() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
+    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
     child: Row(
       children: [
         for (final item in <(int, String)>[
@@ -498,7 +518,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             AppContentService.instance.current.text(
               'trading',
               'tab.all',
-              fallback: 'All',
+              fallback: 'Overview',
             ),
           ),
           (
@@ -539,15 +559,14 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                   foregroundColor:
                       selectedTab == item.$1 ||
                           (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
-                      ? AppConfig.primaryColor
-                      : AppConfig.textSecondaryColor,
+                      ? AppColors.brandPrimary
+                      : AppColors.textSecondary,
                 ),
                 child: AppText(
                   item.$2,
                   textAlign: TextAlign.center,
                   maxLines: 2,
-                  style: const TextStyle(
-                    fontSize: 11,
+                  style: AppTypography.labelSmall.copyWith(
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -558,113 +577,111 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     ),
   );
 
-  Widget _tradingShortcuts() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
-      children: [
-        for (final item in <(int, String, IconData)>[
-          (
-            4,
-            AppContentService.instance.current.text(
-              'trading',
-              'shortcut.orders',
-              fallback: 'Orders',
-            ),
-            Icons.receipt_long_outlined,
-          ),
-          (
-            3,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.pending',
-              fallback: 'Pending',
-            ),
-            Icons.pending_actions_outlined,
-          ),
-          (
-            2,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.holdings',
-              fallback: 'Holdings',
-            ),
-            Icons.account_balance_outlined,
-          ),
-          (
-            7,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.history',
-              fallback: 'History',
-            ),
-            Icons.history,
-          ),
-        ])
-          Expanded(
-            child: Semantics(
-              selected: selectedTab == item.$1,
-              child: Tooltip(
-                message: tr(tabs[item.$1].label),
-                child: InkWell(
-                  onTap: () => _selectTab(item.$1),
-                  child: SizedBox(
-                    height: MediaQuery.textScalerOf(context).scale(1) > 1.2
-                        ? 68
-                        : 64,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          item.$3,
-                          size: 21,
-                          color: selectedTab == item.$1
-                              ? AppConfig.primaryColor
-                              : const Color(0xFF0F9D92),
-                        ),
-                        const SizedBox(height: 6),
-                        AppText(
-                          item.$2,
-                          maxLines: 2,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: selectedTab == item.$1
-                                ? AppConfig.primaryColor
-                                : AppConfig.textSecondaryColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+  Widget _tradingShortcuts() {
+    final items = <(int, String)>[
+      (
+        0,
+        AppContentService.instance.current.text(
+          'trading',
+          'shortcut.overview',
+          fallback: 'Overview',
+        ),
+      ),
+      (
+        2,
+        AppContentService.instance.current.text(
+          'trading',
+          'tab.holdings',
+          fallback: 'Positions',
+        ),
+      ),
+      (
+        4,
+        AppContentService.instance.current.text(
+          'trading',
+          'shortcut.orders',
+          fallback: 'Orders',
+        ),
+      ),
+      (
+        3,
+        AppContentService.instance.current.text(
+          'trading',
+          'tab.pending',
+          fallback: 'Pending',
+        ),
+      ),
+      (
+        7,
+        AppContentService.instance.current.text(
+          'trading',
+          'tab.history',
+          fallback: 'History',
+        ),
+      ),
+    ];
+
+    return SizedBox(
+      height: 42,
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+        scrollDirection: Axis.horizontal,
+        itemCount: items.length,
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        itemBuilder: (context, index) {
+          final item = items[index];
+          final selected = selectedTab == item.$1;
+          return Semantics(
+            selected: selected,
+            child: Tooltip(
+              message: tr(tabs[item.$1].label),
+              child: ChoiceChip(
+                label: AppText(item.$2),
+                selected: selected,
+                selectedColor: AppColors.brandPrimary,
+                backgroundColor: AppColors.surface,
+                labelStyle: AppTypography.labelMedium.copyWith(
+                  color: selected
+                      ? AppColors.textInverse
+                      : AppColors.textPrimary,
+                  fontWeight: FontWeight.w700,
                 ),
+                side: BorderSide(
+                  color: selected ? AppColors.brandPrimary : AppColors.border,
+                ),
+                onSelected: (_) => _selectTab(item.$1),
               ),
             ),
-          ),
-      ],
-    ),
-  );
+          );
+        },
+      ),
+    );
+  }
+
   Widget _balanceMetric(String label, double? value, {Color? valueColor}) =>
       Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppText(
             label,
-            style: const TextStyle(color: Colors.white70, fontSize: 11),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textInverse.withValues(alpha: 0.7),
+            ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: AppSpacing.xs),
           FittedBox(
             fit: BoxFit.scaleDown,
             child: AppText(
               value == null ? '--' : formatPrice(value),
-              style: TextStyle(
-                color: valueColor ?? Colors.white,
-                fontSize: 18,
+              style: AppTypography.numericMedium.copyWith(
+                color: valueColor ?? AppColors.textInverse,
                 fontWeight: FontWeight.w800,
               ),
             ),
           ),
         ],
       );
+
   Widget _buildContent() {
     final missingOrders = _orders.isEmpty && [0, 4, 7].contains(selectedTab);
     final missingAccount = _positions.isEmpty && [0, 2].contains(selectedTab);
@@ -698,8 +715,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             StockQuote? match;
             for (final item in widget.stocks) {
               if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
-                  item.exchange.toUpperCase() ==
-                      stock.exchange.toUpperCase()) {
+                  item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
                 match = item;
                 break;
               }

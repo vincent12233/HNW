@@ -13,6 +13,10 @@ import '../services/market_socket_service.dart';
 import '../services/market_data_service.dart';
 import '../services/trading_service.dart';
 import '../services/watchlist_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/stock_history_chart.dart';
 import '../widgets/stock_logo.dart';
@@ -265,7 +269,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: AppText(isBuy ? 'Confirm Buy Order' : 'Confirm Sell Order'),
+        title: AppText(isBuy ? 'Confirm Buy' : 'Confirm Sell'),
         content: AppText(
           '${isBuy ? 'Buy' : 'Sell'} $quantity shares of ${liveStock.symbol}\n\n'
           '${isLimit ? 'Limit Order' : 'Market Order'} • $timeInForce\n'
@@ -944,16 +948,21 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   Widget _stickyTradeBar() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm + 2,
+        AppSpacing.lg,
+        AppSpacing.sm + 2,
+      ),
       decoration: const BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE8EDF5))),
+        color: AppColors.surface,
+        border: Border(top: BorderSide(color: AppColors.divider)),
       ),
       child: Row(
         children: [
           Expanded(
             child: SizedBox(
-              height: 48,
+              height: AppSpacing.buttonHeight + 4,
               child: FilledButton(
                 onPressed: isSubmitting
                     ? null
@@ -962,23 +971,28 @@ class _StockDetailPageState extends State<StockDetailPage> {
                         placeOrder();
                       },
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppConfig.gainColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.buy,
+                  foregroundColor: AppColors.textInverse,
+                  disabledBackgroundColor: AppColors.disabled,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: AppRadius.borderMd,
                   ),
                 ),
-                child: const AppText(
+                child: AppText(
                   'BUY',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                  style: AppTypography.labelLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: AppColors.textInverse,
+                  ),
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: AppSpacing.sm + 2),
           Expanded(
             child: SizedBox(
-              height: 48,
+              height: AppSpacing.buttonHeight + 4,
               child: FilledButton(
                 onPressed: isSubmitting
                     ? null
@@ -987,15 +1001,20 @@ class _StockDetailPageState extends State<StockDetailPage> {
                         placeOrder();
                       },
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppConfig.lossColor,
-                  foregroundColor: Colors.white,
+                  backgroundColor: AppColors.sell,
+                  foregroundColor: AppColors.textInverse,
+                  disabledBackgroundColor: AppColors.disabled,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: AppRadius.borderMd,
                   ),
                 ),
-                child: const AppText(
+                child: AppText(
                   'SELL',
-                  style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                  style: AppTypography.labelLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 15,
+                    color: AppColors.textInverse,
+                  ),
                 ),
               ),
             ),

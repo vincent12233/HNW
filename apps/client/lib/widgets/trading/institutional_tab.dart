@@ -95,36 +95,36 @@ class InstitutionalTab extends StatelessWidget {
               onTrade: settlementPrice <= 0 && onOpen != null
                   ? null
                   : () {
-                if (onOpen != null && settlementPrice > 0) {
-                  onOpen!(stock);
-                  return;
-                }
-                showDialog<void>(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: AppText(stock.companyName),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText('${stock.symbol} · ${stock.exchange}'),
-                        const SizedBox(height: 16),
-                        AppText(
-                          'Settlement price (live): ${formatPrice(settlementPrice)}',
+                      if (onOpen != null && settlementPrice > 0) {
+                        onOpen!(stock);
+                        return;
+                      }
+                      showDialog<void>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: AppText(stock.companyName),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText('${stock.symbol} · ${stock.exchange}'),
+                              const SizedBox(height: 16),
+                              AppText(
+                                'Settlement price (live): ${formatPrice(settlementPrice)}',
+                              ),
+                              if (!live && settlementPrice <= 0)
+                                const AppText('Live quote unavailable'),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const AppText('Close'),
+                            ),
+                          ],
                         ),
-                        if (!live && settlementPrice <= 0)
-                          const AppText('Live quote unavailable'),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const AppText('Close'),
-                      ),
-                    ],
-                  ),
-                );
-              },
+                      );
+                    },
             );
           },
         );

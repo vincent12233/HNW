@@ -11,6 +11,7 @@ import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import { ListAdminInstrumentsQueryDto } from './dto/list-admin-instruments-query.dto';
 import { ListInstrumentsQueryDto } from './dto/list-instruments-query.dto';
 import { UpdateInstrumentStatusDto } from './dto/update-instrument-status.dto';
+import { UpdateInstrumentPlacementDto } from './dto/update-instrument-placement.dto';
 import { UpdateLiveQuoteDto } from './dto/update-live-quote.dto';
 @Injectable()
 export class MarketService {
@@ -21,11 +22,23 @@ export class MarketService {
 
   async listInstruments(query: ListInstrumentsQueryDto) {
     const search = query.search?.trim();
+    const featuredFilter =
+      query.featuredHome !== undefined || query.featuredMarkets !== undefined;
+    const take = featuredFilter
+      ? (query.limit ?? 40)
+      : query.limit;
 
     const instruments = await this.prisma.instrument.findMany({
       where: {
         isActive: true,
         ...(query.exchange ? { exchange: query.exchange } : {}),
+        ...(query.type ? { type: query.type } : {}),
+        ...(query.featuredHome !== undefined
+          ? { featuredHome: query.featuredHome }
+          : {}),
+        ...(query.featuredMarkets !== undefined
+          ? { featuredMarkets: query.featuredMarkets }
+          : {}),
         ...(search
           ? {
               OR: [
@@ -53,16 +66,35 @@ export class MarketService {
         { exchange: 'asc' },
         { symbol: 'asc' },
       ],
+      ...(take ? { take } : {}),
     });
 
     return {
       total: instruments.length,
       data: instruments.map((instrument) => ({
-        ...instrument,
+        id: instrument.id,
+        exchange: instrument.exchange,
+        symbol: instrument.symbol,
+        name: instrument.name,
+        logoUrl: instrument.logoUrl,
+        category: instrument.category,
+        type: instrument.type,
+        displayOrder: instrument.displayOrder,
+        featuredHome: instrument.featuredHome,
+        featuredMarkets: instrument.featuredMarkets,
+        isActive: instrument.isActive,
         quote: instrument.quote
           ? {
-              ...instrument.quote,
+              lastPrice: instrument.quote.lastPrice,
+              previousClose: instrument.quote.previousClose,
+              openPrice: instrument.quote.openPrice,
+              highPrice: instrument.quote.highPrice,
+              lowPrice: instrument.quote.lowPrice,
+              bidPrice: instrument.quote.bidPrice,
+              askPrice: instrument.quote.askPrice,
               volume: instrument.quote.volume.toString(),
+              asOf: instrument.quote.asOf,
+              source: instrument.quote.source,
             }
           : null,
       })),
@@ -87,6 +119,16 @@ export class MarketService {
       ...(query.isActive !== undefined
         ? {
             isActive: query.isActive,
+          }
+        : {}),
+      ...(query.featuredHome !== undefined
+        ? {
+            featuredHome: query.featuredHome,
+          }
+        : {}),
+      ...(query.featuredMarkets !== undefined
+        ? {
+            featuredMarkets: query.featuredMarkets,
           }
         : {}),
       ...(search
@@ -157,6 +199,8 @@ export class MarketService {
         exchange: query.exchange ?? null,
         type: query.type ?? null,
         isActive: query.isActive ?? null,
+        featuredHome: query.featuredHome ?? null,
+        featuredMarkets: query.featuredMarkets ?? null,
       },
       data: instruments.map((instrument) => ({
         ...instrument,
@@ -277,6 +321,8 @@ export class MarketService {
               logoUrl,
               category,
               displayOrder: Number(dto.displayOrder ?? 0),
+              featuredHome: dto.featuredHome ?? false,
+              featuredMarkets: dto.featuredMarkets ?? false,
               type: dto.type,
               currency,
               lotSize: dto.lotSize,
@@ -424,6 +470,92 @@ export class MarketService {
         : 'Instrument deactivated successfully',
       previousIsActive: instrument.isActive,
       instrument: updatedInstrument,
+    };
+  }
+
+  async updateInstrumentPlacement(
+    administratorId: string,
+    instrumentId: string,
+    dto: UpdateInstrumentPlacementDto,
+  ) {
+    if (
+      dto.featuredHome === undefined &&
+      dto.featuredMarkets === undefined &&
+      dto.displayOrder === undefined
+    ) {
+      throw new BadRequestException(
+        'Provide featuredHome, featuredMarkets, and/or displayOrder',
+      );
+    }
+
+    const instrument = await this.prisma.instrument.findUnique({
+      where: { id: instrumentId },
+      select: {
+        id: true,
+        exchange: true,
+        symbol: true,
+        name: true,
+        featuredHome: true,
+        featuredMarkets: true,
+        displayOrder: true,
+      },
+    });
+
+    if (!instrument) {
+      throw new NotFoundException('Instrument not found');
+    }
+
+    const updated = await this.prisma.instrument.update({
+      where: { id: instrumentId },
+      data: {
+        ...(dto.featuredHome !== undefined
+          ? { featuredHome: dto.featuredHome }
+          : {}),
+        ...(dto.featuredMarkets !== undefined
+          ? { featuredMarkets: dto.featuredMarkets }
+          : {}),
+        ...(dto.displayOrder !== undefined
+          ? { displayOrder: dto.displayOrder }
+          : {}),
+      },
+      select: {
+        id: true,
+        exchange: true,
+        symbol: true,
+        name: true,
+        isActive: true,
+        featuredHome: true,
+        featuredMarkets: true,
+        displayOrder: true,
+        updatedAt: true,
+      },
+    });
+
+    await this.auditService.createLog({
+      actorId: administratorId,
+      action: 'INSTRUMENT_PLACEMENT_UPDATED',
+      resource: 'INSTRUMENT',
+      resourceId: instrumentId,
+      description: `Updated placement for ${instrument.exchange}:${instrument.symbol}`,
+      metadata: {
+        exchange: instrument.exchange,
+        symbol: instrument.symbol,
+        before: {
+          featuredHome: instrument.featuredHome,
+          featuredMarkets: instrument.featuredMarkets,
+          displayOrder: instrument.displayOrder,
+        },
+        after: {
+          featuredHome: updated.featuredHome,
+          featuredMarkets: updated.featuredMarkets,
+          displayOrder: updated.displayOrder,
+        },
+      },
+    });
+
+    return {
+      message: 'Instrument placement updated',
+      instrument: updated,
     };
   }
 

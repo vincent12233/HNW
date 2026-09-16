@@ -1,11 +1,16 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../app_config.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_page_scaffold.dart';
 
 class ProductPortfolioPage extends StatefulWidget {
   const ProductPortfolioPage({
@@ -28,11 +33,20 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   bool _loading = false;
   bool _hidden = false;
   int _request = 0;
-  static const _colors = {
-    'Institutional': Color(0xFF2563EB),
-    'OTC': Color(0xFF0F9D92),
-    'IPO': Color(0xFF9333EA),
-  };
+
+  static Color _categoryColor(Object? category) {
+    switch ('$category') {
+      case 'Institutional':
+        return AppColors.brandPrimary;
+      case 'OTC':
+        return AppColors.gain;
+      case 'IPO':
+        return AppColors.warning;
+      default:
+        return AppColors.neutral;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -80,10 +94,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   }
 
   Color _pnlColor(dynamic value) => _number(value) == 0
-      ? AppConfig.textSecondaryColor
+      ? AppColors.textSecondary
       : _number(value) > 0
-      ? AppConfig.gainColor
-      : AppConfig.lossColor;
+      ? AppColors.gain
+      : AppColors.loss;
 
   @override
   Widget build(BuildContext context) {
@@ -92,18 +106,32 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       onRefresh: _load,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.page,
         children: [
           Row(
             children: [
               Expanded(
-                child: AppText(
-                  AppContentService.instance.current.text(
-                    'trading',
-                    'portfolio.page_title',
-                    fallback: 'Portfolio',
-                  ),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      AppContentService.instance.current.text(
+                        'trading',
+                        'portfolio.page_title',
+                        fallback: 'Portfolio',
+                      ),
+                      style: AppTypography.headline.copyWith(fontSize: 20),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    AppText(
+                      AppContentService.instance.current.text(
+                        'trading',
+                        'portfolio.page_subtitle',
+                        fallback: 'Institutional · OTC · IPO',
+                      ),
+                      style: AppTypography.caption,
+                    ),
+                  ],
                 ),
               ),
               IconButton(
@@ -121,12 +149,12 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           if (_loading) const LinearProgressIndicator(minHeight: 2),
           if (_error != null)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 14),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
               child: Column(
                 children: [
                   AppText(
                     _error!,
-                    style: TextStyle(
+                    style: AppTypography.bodyMedium.copyWith(
                       color: Theme.of(context).colorScheme.error,
                     ),
                   ),
@@ -151,23 +179,27 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         : <String, dynamic>{};
     final points = _rows(history['points']);
     final empty = _number(data['positionCount']) == 0;
+    final inverseMuted = AppColors.textInverse.withValues(alpha: 0.7);
     return [
-      const SizedBox(height: 12),
+      const SizedBox(height: AppSpacing.md),
+      // PRIMARY: hero Total Portfolio Value + Total Returns + period/sparkline
       Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(AppSpacing.md + 2),
         decoration: BoxDecoration(
-          color: AppConfig.primaryDarkColor,
-          borderRadius: BorderRadius.circular(8),
+          color: AppColors.brandDark,
+          borderRadius: AppRadius.borderSm,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               children: [
-                const Expanded(
+                Expanded(
                   child: AppText(
                     'Total Portfolio Value',
-                    style: TextStyle(color: Colors.white70),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: inverseMuted,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -177,7 +209,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                     _hidden
                         ? Icons.visibility_off_outlined
                         : Icons.visibility_outlined,
-                    color: Colors.white70,
+                    color: inverseMuted,
                     size: 20,
                   ),
                 ),
@@ -192,25 +224,27 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   children: [
                     for (final period in ['1D', '1W', '1M', '3M', '1Y', 'All'])
                       Padding(
-                        padding: const EdgeInsets.only(left: 3),
+                        padding: const EdgeInsets.only(
+                          left: AppSpacing.xxs + 1,
+                        ),
                         child: ChoiceChip(
                           label: AppText(period),
                           selected: _period == period,
                           onSelected: (_) => _load(period),
                           showCheckmark: false,
-                          selectedColor: Colors.white,
+                          selectedColor: AppColors.textInverse,
                           backgroundColor: Colors.transparent,
                           side: BorderSide.none,
                           visualDensity: VisualDensity.compact,
-                          labelStyle: TextStyle(
+                          labelStyle: AppTypography.labelSmall.copyWith(
                             fontSize: 10,
                             color: _period == period
-                                ? AppConfig.primaryDarkColor
-                                : Colors.white70,
+                                ? AppColors.brandDark
+                                : inverseMuted,
                           ),
                           padding: EdgeInsets.zero,
                           labelPadding: const EdgeInsets.symmetric(
-                            horizontal: 5,
+                            horizontal: AppSpacing.xs + 1,
                           ),
                         ),
                       ),
@@ -220,18 +254,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             ),
             AppText(
               _money(data['currentValue']),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.w800,
-              ),
+              style: AppTypography.numericInverse.copyWith(fontSize: 24),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: AppSpacing.sm),
             AppText(
               '${tr('Total Returns')}: ${_money(data['totalPnl'])}',
-              style: const TextStyle(color: Colors.white70),
+              style: AppTypography.bodyMedium.copyWith(color: inverseMuted),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: AppSpacing.lg),
             if (!empty && !_hidden)
               SizedBox(
                 height: 64,
@@ -239,15 +269,17 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 child: _loading
                     ? const Center(
                         child: CircularProgressIndicator(
-                          color: Colors.white,
+                          color: AppColors.textInverse,
                           strokeWidth: 2,
                         ),
                       )
                     : points.length < 2
-                    ? const Center(
+                    ? Center(
                         child: AppText(
                           'Insufficient history',
-                          style: TextStyle(color: Colors.white70),
+                          style: AppTypography.bodyMedium.copyWith(
+                            color: inverseMuted,
+                          ),
                         ),
                       )
                     : CustomPaint(
@@ -261,7 +293,8 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           ],
         ),
       ),
-      const SizedBox(height: 18),
+      const SizedBox(height: AppSpacing.lg + 2),
+      // SECONDARY: Investment Summary metrics in AppCard
       _heading(
         AppContentService.instance.current.text(
           'trading',
@@ -271,81 +304,64 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ),
       AppText(
         '${tr('As of')} ${_date(data['asOf'])}',
-        style: const TextStyle(
-          color: AppConfig.textSecondaryColor,
-          fontSize: 11,
-        ),
+        style: AppTypography.caption,
       ),
-      const SizedBox(height: 12),
-      _metrics([
-        ('Total Invested', data['invested']),
-        ('Current Value', data['currentValue']),
-        ('Total Returns', data['totalPnl']),
-      ]),
-      const Divider(height: 20),
-      _heading(
-        AppContentService.instance.current.text(
-          'trading',
-          'portfolio.allocation_heading',
-          fallback: 'Asset Allocation',
+      const SizedBox(height: AppSpacing.md),
+      AppCard(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md + 2,
         ),
-        action: empty ? null : () => _showHoldings(categories),
+        child: _metrics([
+          ('Current Value', data['currentValue']),
+          ('Invested', data['invested']),
+          ('Total Returns', data['totalPnl']),
+        ]),
       ),
-      if (empty)
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          child: Builder(
-            builder: (context) {
-              final content = AppContentService.instance.current;
-              return Column(
-                children: [
-                  const Icon(
-                    Icons.account_balance_outlined,
-                    size: 42,
-                    color: Color(0xFF0F9D92),
-                  ),
-                  const SizedBox(height: 12),
-                  AppText(
-                    content.text(
-                      'trading',
-                      'portfolio.empty_title',
-                      fallback: 'No investments yet',
-                    ),
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  AppText(
-                    content.text(
-                      'trading',
-                      'portfolio.empty_subtitle',
-                      fallback:
-                          'No Institutional, OTC or IPO holdings yet.',
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 14),
-                  FilledButton.icon(
-                    onPressed: widget.onExplore,
-                    icon: const Icon(Icons.arrow_forward),
-                    label: AppText(
-                      content.text(
-                        'trading',
-                        'portfolio.explore_cta',
-                        fallback: 'Explore offers',
-                      ),
-                    ),
-                  ),
-                ],
-              );
-            },
+      if (empty) ...[
+        const SizedBox(height: AppSpacing.sectionGap),
+        SizedBox(
+          height: 280,
+          child: AppEmptyState(
+            icon: Icons.account_balance_outlined,
+            title: AppContentService.instance.current.text(
+              'trading',
+              'portfolio.empty_title',
+              fallback: 'No investments yet',
+            ),
+            message: AppContentService.instance.current.text(
+              'trading',
+              'portfolio.empty_subtitle',
+              fallback: 'No Institutional, OTC or IPO holdings yet.',
+            ),
           ),
-        )
-      else
+        ),
+        Center(
+          child: FilledButton.icon(
+            onPressed: widget.onExplore,
+            icon: const Icon(Icons.arrow_forward),
+            label: AppText(
+              AppContentService.instance.current.text(
+                'trading',
+                'portfolio.explore_cta',
+                fallback: 'Explore offers',
+              ),
+            ),
+          ),
+        ),
+      ] else ...[
+        const SizedBox(height: AppSpacing.sectionGap),
+        // DETAIL: Asset Allocation
+        _heading(
+          AppContentService.instance.current.text(
+            'trading',
+            'portfolio.allocation_heading',
+            fallback: 'Asset Allocation',
+          ),
+          action: () => _showHoldings(categories),
+        ),
         Padding(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final legend = Column(
@@ -354,32 +370,32 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                       (category) => InkWell(
                         onTap: () => _showHoldings([category]),
                         child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.md - 2,
+                          ),
                           child: Row(
                             children: [
                               Icon(
                                 Icons.circle,
                                 size: 9,
-                                color: _colors[category['category']],
+                                color: _categoryColor(category['category']),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: AppSpacing.sm),
                               Expanded(
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     AppText(
                                       category['category'].toString(),
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                      ),
+                                      style: AppTypography.labelSmall,
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: AppSpacing.xs),
                                     AppText(
                                       _money(category['currentValue']),
-                                      style: const TextStyle(fontSize: 10),
+                                      style: AppTypography.numericSmall
+                                          .copyWith(fontSize: 10),
                                     ),
-                                    const SizedBox(height: 4),
+                                    const SizedBox(height: AppSpacing.xs),
                                     if (!_hidden)
                                       LinearProgressIndicator(
                                         value:
@@ -389,10 +405,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                                     100)
                                                 .clamp(0.0, 1.0),
                                         minHeight: 2,
-                                        color: _colors[category['category']],
-                                        backgroundColor: const Color(
-                                          0xffedf1f6,
+                                        color: _categoryColor(
+                                          category['category'],
                                         ),
+                                        backgroundColor:
+                                            AppColors.surfaceSecondary,
                                       ),
                                   ],
                                 ),
@@ -401,8 +418,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                 _hidden
                                     ? '--'
                                     : '${_number(category['allocationPercent']).toStringAsFixed(1)}%',
+                                style: AppTypography.numericSmall,
                               ),
-                              const SizedBox(width: 4),
+                              const SizedBox(width: AppSpacing.xs),
                               const Icon(Icons.chevron_right, size: 18),
                             ],
                           ),
@@ -416,11 +434,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 child: CustomPaint(
                   painter: _AllocationPainter(
                     categories.map((c) => _number(c['currentValue'])).toList(),
-                    _colors.values.toList(),
+                    categories
+                        .map((c) => _categoryColor(c['category']))
+                        .toList(),
                   ),
                   child: Center(
                     child: Padding(
-                      padding: const EdgeInsets.all(18),
+                      padding: const EdgeInsets.all(AppSpacing.lg + 2),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -428,19 +448,16 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                             fit: BoxFit.scaleDown,
                             child: AppText(
                               _money(data['currentValue']),
-                              style: const TextStyle(
+                              style: AppTypography.numericSmall.copyWith(
                                 fontWeight: FontWeight.w700,
                                 fontSize: 12,
                               ),
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          const AppText(
+                          const SizedBox(height: AppSpacing.xs),
+                          AppText(
                             '100%',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: AppConfig.textSecondaryColor,
-                            ),
+                            style: AppTypography.caption.copyWith(fontSize: 10),
                           ),
                         ],
                       ),
@@ -452,109 +469,135 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               if (constraints.maxWidth < 320 ||
                   MediaQuery.textScalerOf(context).scale(1) > 1.2) {
                 return Column(
-                  children: [donut, const SizedBox(height: 10), legend],
+                  children: [
+                    donut,
+                    const SizedBox(height: AppSpacing.md - 2),
+                    legend,
+                  ],
                 );
               }
               return Row(
                 children: [
                   donut,
-                  const SizedBox(width: 14),
+                  const SizedBox(width: AppSpacing.md + 2),
                   Expanded(child: legend),
                 ],
               );
             },
           ),
         ),
-      _heading('Asset Details'),
-      const SizedBox(height: 8),
-      ...categories.map(
-        (category) => Container(
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: Color(0xffe9edf3))),
-          ),
-          child: InkWell(
+        // DETAIL: Asset Details
+        _heading('Asset Details'),
+        const SizedBox(height: AppSpacing.sm),
+        ...categories.map(
+          (category) => AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.md,
+              vertical: AppSpacing.md,
+            ),
             onTap: () => _showHoldings([category]),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        radius: 16,
-                        backgroundColor:
-                            (_colors[category['category']] ?? Colors.grey)
-                                .withValues(alpha: .1),
-                        child: Icon(
-                          category['category'] == 'OTC'
-                              ? Icons.verified_user_outlined
-                              : category['category'] == 'IPO'
-                              ? Icons.rocket_launch_outlined
-                              : Icons.account_balance_outlined,
-                          color: _colors[category['category']],
-                          size: 19,
-                        ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 16,
+                      backgroundColor: _categoryColor(
+                        category['category'],
+                      ).withValues(alpha: .1),
+                      child: Icon(
+                        category['category'] == 'OTC'
+                            ? Icons.verified_user_outlined
+                            : category['category'] == 'IPO'
+                            ? Icons.rocket_launch_outlined
+                            : Icons.account_balance_outlined,
+                        color: _categoryColor(category['category']),
+                        size: 19,
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: AppText(
-                          category['category'].toString(),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                      ),
-                      const Icon(Icons.chevron_right, size: 20),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  _metrics([
-                    ('Current Value', category['currentValue']),
-                    ('Allocation', category['allocationPercent']),
-                    ('Invested', category['invested']),
-                    ('Total Returns', category['totalPnl']),
-                  ]),
-                  if (!_hidden && !empty) ...[
-                    const SizedBox(height: 10),
-                    LinearProgressIndicator(
-                      value: (_number(category['allocationPercent']) / 100)
-                          .clamp(0.0, 1.0),
-                      minHeight: 3,
-                      color: _colors[category['category']],
-                      backgroundColor: const Color(0xffedf1f6),
                     ),
+                    const SizedBox(width: AppSpacing.md - 2),
+                    Expanded(
+                      child: AppText(
+                        category['category'].toString(),
+                        style: AppTypography.titleSmall,
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right, size: 20),
                   ],
+                ),
+                const SizedBox(height: AppSpacing.sm - 2),
+                _metrics([
+                  ('Current Value', category['currentValue']),
+                  ('Allocation', category['allocationPercent']),
+                  ('Invested', category['invested']),
+                  ('Total Returns', category['totalPnl']),
+                ]),
+                if (!_hidden) ...[
+                  const SizedBox(height: AppSpacing.md - 2),
+                  LinearProgressIndicator(
+                    value: (_number(category['allocationPercent']) / 100).clamp(
+                      0.0,
+                      1.0,
+                    ),
+                    minHeight: 3,
+                    color: _categoryColor(category['category']),
+                    backgroundColor: AppColors.surfaceSecondary,
+                  ),
                 ],
-              ),
+              ],
             ),
           ),
         ),
-      ),
-      const SizedBox(height: 12),
-      _heading('Performance', action: () => _showPerformance(data, history)),
-      const SizedBox(height: 12),
-      _metrics([
-        ('Unrealized P&L', data['unrealizedPnl']),
-        ('Realized P&L', data['realizedPnl']),
-        ('Recorded P&L', _loading ? null : history['productProfitChange']),
-      ]),
-      const SizedBox(height: 12),
-      AppText(
-        '${tr('Best Segment')}: ${tr(data['bestSegment']?.toString() ?? '--')}',
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      const SizedBox(height: 24),
-      _heading(
-        'Recent Activity',
-        action: () => _showActivity(_rows(data['activity'])),
-      ),
-      if (_rows(data['activity']).isEmpty)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: AppText('No product activity yet'),
+        const SizedBox(height: AppSpacing.md),
+        // DETAIL: Performance
+        _heading('Performance', action: () => _showPerformance(data, history)),
+        const SizedBox(height: AppSpacing.md),
+        AppCard(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.md + 2,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _metrics([
+                ('Unrealized P&L', data['unrealizedPnl']),
+                ('Realized P&L', data['realizedPnl']),
+                (
+                  'Recorded P&L',
+                  _loading ? null : history['productProfitChange'],
+                ),
+              ]),
+              const SizedBox(height: AppSpacing.md),
+              AppText(
+                '${tr('Best Segment')}: ${tr(data['bestSegment']?.toString() ?? '--')}',
+                style: AppTypography.labelLarge,
+              ),
+            ],
+          ),
         ),
-      ..._rows(data['activity']).take(5).map(_activityTile),
-      const SizedBox(height: 24),
+        const SizedBox(height: AppSpacing.xxl),
+        // DETAIL: Recent Activity
+        _heading(
+          'Recent Activity',
+          action: () => _showActivity(_rows(data['activity'])),
+        ),
+        if (_rows(data['activity']).isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+            child: Center(
+              child: AppText(
+                'No product activity yet',
+                style: AppTypography.bodyMedium,
+              ),
+            ),
+          )
+        else
+          ..._rows(data['activity']).take(5).map(_activityTile),
+      ],
+      const SizedBox(height: AppSpacing.xxl),
     ];
   }
 
@@ -563,13 +606,17 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       Expanded(
         child: AppText(
           title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          style: AppTypography.sectionTitle.copyWith(
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+          ),
         ),
       ),
       if (action != null)
         TextButton(onPressed: action, child: const AppText('View Details')),
     ],
   );
+
   Widget _metrics(List<(String, dynamic)> items) => LayoutBuilder(
     builder: (context, constraints) {
       final columns =
@@ -578,24 +625,25 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           ? 2
           : items.length;
       return Wrap(
-        runSpacing: 14,
+        runSpacing: AppSpacing.md + 2,
         children: items
             .map(
               (item) => SizedBox(
                 width: constraints.maxWidth / columns,
                 child: Padding(
-                  padding: const EdgeInsets.only(right: 10),
+                  padding: const EdgeInsets.only(right: AppSpacing.md - 2),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       AppText(
                         item.$1,
-                        style: const TextStyle(
+                        style: AppTypography.caption.copyWith(
                           fontSize: 10,
-                          color: AppConfig.textSecondaryColor,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.textSecondary,
                         ),
                       ),
-                      const SizedBox(height: 5),
+                      const SizedBox(height: AppSpacing.xs + 1),
                       FittedBox(
                         fit: BoxFit.scaleDown,
                         child: AppText(
@@ -604,14 +652,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                     ? '--'
                                     : '${_number(item.$2).toStringAsFixed(1)}%')
                               : _money(item.$2),
-                          style: TextStyle(
+                          style: AppTypography.numericSmall.copyWith(
                             fontSize: 12,
                             fontWeight: FontWeight.w700,
                             color:
                                 item.$1.contains('P&L') ||
                                     item.$1.contains('Returns')
                                 ? _pnlColor(item.$2)
-                                : AppConfig.textPrimaryColor,
+                                : AppColors.textPrimary,
                           ),
                         ),
                       ),
@@ -624,6 +672,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       );
     },
   );
+
   void _showHoldings(List<Map<String, dynamic>> categories) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
@@ -636,55 +685,64 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             ),
           ),
           body: ListView(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.page,
             children: [
               for (final category in categories) ...[
                 AppText(
                   category['category'].toString(),
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.titleLarge,
                 ),
                 if (_rows(category['positions']).isEmpty)
                   const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 24),
-                    child: AppText('No holdings'),
-                  ),
-                for (final position in _rows(category['positions']))
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            '${position['symbol']} · ${position['exchange']}',
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          AppText(position['name'].toString()),
-                          const SizedBox(height: 12),
-                          AppText(
-                            '${tr('Quantity')}: ${position['quantity']} · ${tr('Available')}: ${position['availableQuantity']}',
-                          ),
-                          const SizedBox(height: 12),
-                          _metrics([
-                            ('Average price', position['averagePrice']),
-                            ('Current Value', position['currentValue']),
-                            ('Unrealized P&L', position['unrealizedPnl']),
-                          ]),
-                          if (position['valuationSource'] == 'COST')
-                            const Padding(
-                              padding: EdgeInsets.only(top: 10),
-                              child: AppText(
-                                'Valued at cost. Market quote unavailable.',
-                              ),
-                            ),
-                        ],
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                    child: Center(
+                      child: AppText(
+                        'No holdings',
+                        style: AppTypography.bodyMedium,
                       ),
                     ),
                   ),
-                const SizedBox(height: 20),
+                for (final position in _rows(category['positions']))
+                  AppCard(
+                    margin: const EdgeInsets.only(top: AppSpacing.md),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          '${position['symbol']} · ${position['exchange']}',
+                          style: AppTypography.titleSmall.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        AppText(
+                          position['name'].toString(),
+                          style: AppTypography.bodyMedium,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        AppText(
+                          '${tr('Quantity')}: ${position['quantity']} · ${tr('Available')}: ${position['availableQuantity']}',
+                          style: AppTypography.bodySmall,
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                        _metrics([
+                          ('Average price', position['averagePrice']),
+                          ('Current Value', position['currentValue']),
+                          ('Unrealized P&L', position['unrealizedPnl']),
+                        ]),
+                        if (position['valuationSource'] == 'COST')
+                          Padding(
+                            padding: const EdgeInsets.only(
+                              top: AppSpacing.md - 2,
+                            ),
+                            child: AppText(
+                              'Valued at cost. Market quote unavailable.',
+                              style: AppTypography.caption,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: AppSpacing.xl),
               ],
             ],
           ),
@@ -697,15 +755,15 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     contentPadding: EdgeInsets.zero,
     leading: Icon(
       activity['type'] == 'IPO' ? Icons.trending_up : Icons.swap_horiz,
-      color: _colors[activity['category']],
+      color: _categoryColor(activity['category']),
     ),
     title: AppText(
       '${activity['symbol']} · ${tr(activity['category']?.toString() ?? '')}',
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+      style: AppTypography.labelLarge,
     ),
     subtitle: AppText(
       '${tr(activity['status'].toString())} · ${_date(activity['at'])}',
-      style: const TextStyle(fontSize: 11),
+      style: AppTypography.caption,
     ),
     trailing: const Icon(Icons.chevron_right, size: 18),
     onTap: () => showDialog<void>(
@@ -718,15 +776,15 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               AppText('${tr('Status')}: ${tr(activity['status'].toString())}'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               AppText('${tr('Quantity')}: ${activity['quantity']}'),
               AppText(
                 '${tr('Filled / allocated')}: ${activity['filledQuantity']}',
               ),
               AppText('${tr('Amount')}: ${_money(activity['amount'])}'),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               AppText(_date(activity['at'])),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               SelectableText(activity['reference'].toString()),
             ],
           ),
@@ -740,20 +798,32 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ),
     ),
   );
+
   void _showActivity(List<Map<String, dynamic>> rows) =>
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => Scaffold(
             appBar: AppBar(title: const AppText('Recent Activity')),
             body: ListView(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(AppSpacing.xl),
               children: rows.isEmpty
-                  ? [const AppText('No product activity yet')]
+                  ? [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                        child: Center(
+                          child: AppText(
+                            'No product activity yet',
+                            style: AppTypography.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ]
                   : rows.map(_activityTile).toList(),
             ),
           ),
         ),
       );
+
   void _showPerformance(
     Map<String, dynamic> data,
     Map<String, dynamic> history,
@@ -763,26 +833,23 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     showDragHandle: true,
     builder: (_) => SafeArea(
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const AppText(
-              'Performance',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-            ),
-            const SizedBox(height: 16),
+            AppText('Performance', style: AppTypography.headline),
+            const SizedBox(height: AppSpacing.lg),
             _metrics([
               ('Unrealized P&L', data['unrealizedPnl']),
               ('Realized P&L', data['realizedPnl']),
               ('Recorded P&L', history['productProfitChange']),
             ]),
-            const SizedBox(height: 20),
+            const SizedBox(height: AppSpacing.xl),
             AppText('${tr('Period')}: $_period'),
             AppText('${tr('Since')}: ${_date(history['productFrom'])}'),
             AppText('${tr('As of')}: ${_date(history['to'])}'),
-            const SizedBox(height: 12),
+            const SizedBox(height: AppSpacing.md),
             const AppText(
               'Returns cover recorded observations only. Deposits and ordinary stocks are excluded.',
             ),
@@ -845,7 +912,7 @@ class _ValueHistoryPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = const Color(0xFF5EEAD4)
+        ..color = AppColors.chartGain
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );

@@ -87,10 +87,7 @@ class SupportUiMetrics {
       largePhone ? 128.0 : 118.0,
     );
     // Sit above the bottom navigation bar on phones of different heights.
-    final fabBottom = (height * 0.1).clamp(
-      shortHeight ? 64.0 : 72.0,
-      96.0,
-    );
+    final fabBottom = (height * 0.1).clamp(shortHeight ? 64.0 : 72.0, 96.0);
 
     final hInset = (width * (smallWidth ? 0.04 : 0.07)).clamp(
       smallWidth ? 10.0 : 14.0,
@@ -102,10 +99,7 @@ class SupportUiMetrics {
         viewInsets.bottom +
         (height * 0.09).clamp(shortHeight ? 56.0 : 64.0, 92.0);
 
-    final usableHeight = math.max(
-      240.0,
-      height - padding.top - bottomInset,
-    );
+    final usableHeight = math.max(240.0, height - padding.top - bottomInset);
     final heightFraction = shortHeight
         ? 0.84
         : (largePhone ? 0.64 : (tablet ? 0.58 : 0.70));

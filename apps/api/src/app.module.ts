@@ -31,6 +31,7 @@ import { ClientExperienceModule } from './client-experience/client-experience.mo
 import { StorageModule } from './storage/storage.module';
 import { AppContentModule } from './app-content/app-content.module';
 import { CompanyShowcaseModule } from './company-showcase/company-showcase.module';
+import { OpsContentModule } from './ops-content/ops-content.module';
 
 @Module({
   imports: [
@@ -69,6 +70,7 @@ import { CompanyShowcaseModule } from './company-showcase/company-showcase.modul
     StorageModule,
     AppContentModule,
     CompanyShowcaseModule,
+    OpsContentModule,
   ],
   controllers: [HealthController],
 })

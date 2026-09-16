@@ -90,8 +90,9 @@ class _ScrollingNoticeTextState extends State<ScrollingNoticeText>
           final width = constraints.maxWidth;
           if ((width - _viewportWidth).abs() > 0.5) {
             _viewportWidth = width;
-            WidgetsBinding.instance
-                .addPostFrameCallback((_) => _measureAndStart());
+            WidgetsBinding.instance.addPostFrameCallback(
+              (_) => _measureAndStart(),
+            );
           }
 
           final needsScroll = _textWidth > width - 4;
@@ -114,10 +115,7 @@ class _ScrollingNoticeTextState extends State<ScrollingNoticeText>
                 final dx = -_controller.value * (_textWidth + widget.gap);
                 return Stack(
                   children: [
-                    Transform.translate(
-                      offset: Offset(dx, 0),
-                      child: child,
-                    ),
+                    Transform.translate(offset: Offset(dx, 0), child: child),
                     Transform.translate(
                       offset: Offset(dx + _textWidth + widget.gap, 0),
                       child: child,

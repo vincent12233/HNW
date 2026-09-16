@@ -90,7 +90,7 @@ export default function SupportConsolePage() {
     try {
       const response = await api.get<{
         support?: Record<string, { body?: string }>;
-      }>("/app-content", { params: { locale: "zh" } });
+      }>("/support/desk-content", { params: { locale: "zh" } });
       const support = response.data?.support ?? {};
       const keys = [
         "quick_reply.deposit",

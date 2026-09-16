@@ -3,7 +3,10 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 
 class MarketHeader extends StatelessWidget {
   const MarketHeader({
@@ -42,7 +45,7 @@ class MarketHeader extends StatelessWidget {
               customBorder: const CircleBorder(),
               child: CircleAvatar(
                 radius: 20,
-                backgroundColor: const Color(0xFFEAF3FF),
+                backgroundColor: AppColors.brandPrimarySoft,
                 backgroundImage: avatarBytes == null
                     ? null
                     : MemoryImage(avatarBytes!),
@@ -52,45 +55,30 @@ class MarketHeader extends StatelessWidget {
                         accountName.trim().isEmpty
                             ? 'C'
                             : accountName.trim()[0].toUpperCase(),
-                        style: const TextStyle(
-                          color: AppConfig.primaryColor,
-                          fontSize: 16,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.brandPrimary,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.sm + 2),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Row(
-                    children: [
-                      AppText(
-                        greeting,
-                        style: const TextStyle(
-                          color: AppConfig.textSecondaryColor,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: 5),
-                      const Icon(
-                        Icons.waving_hand_rounded,
-                        size: 15,
-                        color: Color(0xFFF59E0B),
-                      ),
-                    ],
+                  AppText(
+                    greeting,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppSpacing.xxs),
                   AppText(
                     accountName,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: AppConfig.textPrimaryColor,
-                      fontSize: 16,
+                    style: AppTypography.titleMedium.copyWith(
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -105,7 +93,7 @@ class MarketHeader extends StatelessWidget {
                   onPressed: onNotificationTap,
                   icon: const Icon(
                     Icons.notifications_none_rounded,
-                    color: Color(0xFF334155),
+                    color: AppColors.textPrimary,
                     size: 22,
                   ),
                 ),
@@ -118,15 +106,15 @@ class MarketHeader extends StatelessWidget {
                       height: 17,
                       alignment: Alignment.center,
                       decoration: const BoxDecoration(
-                        color: Color(0xFFEF4444),
+                        color: AppColors.loss,
                         shape: BoxShape.circle,
                       ),
                       child: AppText(
                         notificationCount > 9
                             ? '9+'
                             : notificationCount.toString(),
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textInverse,
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
                         ),
@@ -137,29 +125,35 @@ class MarketHeader extends StatelessWidget {
             ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: onSearchTap,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: AppRadius.borderSm,
             child: Ink(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm + 3,
               ),
-              child: const Row(
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                borderRadius: AppRadius.borderSm,
+                border: Border.all(color: AppColors.border),
+              ),
+              child: Row(
                 children: [
-                  Icon(Icons.search_rounded, size: 20, color: Color(0xFF94A3B8)),
-                  SizedBox(width: 8),
+                  const Icon(
+                    Icons.search_rounded,
+                    size: 20,
+                    color: AppColors.textTertiary,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: AppText(
                       'Search stocks, indices…',
-                      style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 13,
+                      style: AppTypography.labelLarge.copyWith(
+                        color: AppColors.textTertiary,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

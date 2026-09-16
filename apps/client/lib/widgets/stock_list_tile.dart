@@ -1,11 +1,15 @@
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../models/stock_quote.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
 import 'stock_logo.dart';
 
+/// Standard equity row used across Markets, Search, and Watchlist.
 class StockListTile extends StatelessWidget {
   const StockListTile({
     super.key,
@@ -32,20 +36,28 @@ class StockListTile extends StatelessWidget {
     return stock.price - previous;
   }
 
+  Color get _changeColor {
+    if (stock.change == 0) return AppColors.textSecondary;
+    return stock.change > 0 ? AppColors.gain : AppColors.loss;
+  }
+
   @override
   Widget build(BuildContext context) {
-    final positive = stock.change >= 0;
-    final changeColor = positive ? AppConfig.gainColor : AppConfig.lossColor;
     final absolute = _absoluteChange;
+    final positive = stock.change > 0;
+    final changeColor = _changeColor;
 
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 12),
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
+        margin: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          vertical: AppSpacing.md + 2,
+          horizontal: AppSpacing.xs,
+        ),
         decoration: const BoxDecoration(
-          color: Colors.white,
-          border: Border(bottom: BorderSide(color: AppConfig.borderColor)),
+          color: AppColors.surface,
+          border: Border(bottom: BorderSide(color: AppColors.divider)),
         ),
         child: Row(
           children: [
@@ -55,7 +67,7 @@ class StockListTile extends StatelessWidget {
               logoUrl: stock.logoUrl,
               onLoadFailed: onLogoLoadFailed,
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: AppSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -66,76 +78,73 @@ class StockListTile extends StatelessWidget {
                         child: AppText(
                           stock.symbol,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: AppTypography.titleSmall.copyWith(
                             fontWeight: FontWeight.w800,
-                            fontSize: 14,
                             letterSpacing: 0.15,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: AppSpacing.sm - 2),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 5,
+                          horizontal: AppSpacing.xs + 1,
                           vertical: 1,
                         ),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(3),
+                          color: AppColors.neutralSoft,
+                          borderRadius: AppRadius.borderSm,
                         ),
                         child: AppText(
                           stock.exchange,
-                          style: const TextStyle(
-                            color: AppConfig.textSecondaryColor,
-                            fontSize: 10,
+                          style: AppTypography.caption.copyWith(
+                            color: AppColors.textSecondary,
                             fontWeight: FontWeight.w700,
+                            fontSize: 10,
                           ),
                         ),
                       ),
                       if (!stock.quoteFresh) ...[
-                        const SizedBox(width: 6),
+                        const SizedBox(width: AppSpacing.sm - 2),
                         const Icon(
                           Icons.schedule,
                           size: 12,
-                          color: Color(0xFFF59E0B),
+                          color: AppColors.warning,
                         ),
                       ],
                     ],
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppSpacing.xxs),
                   AppText(
                     stock.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 12,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: AppColors.textTertiary,
                       fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.sm + 2),
             Column(
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 AppText(
                   formatPrice(stock.price),
-                  style: const TextStyle(
-                    fontSize: 14,
+                  style: AppTypography.numericSmall.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 3),
+                const SizedBox(height: AppSpacing.xxs + 1),
                 AppText(
                   absolute == null
                       ? '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%'
                       : '${formatSignedPrice(absolute)}  (${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%)',
-                  style: TextStyle(
+                  style: AppTypography.labelSmall.copyWith(
                     color: changeColor,
-                    fontSize: 11,
                     fontWeight: FontWeight.w700,
+                    fontFeatures: AppTypography.tabularFeatures,
                   ),
                 ),
               ],
@@ -143,12 +152,17 @@ class StockListTile extends StatelessWidget {
             if (onFavorite != null)
               IconButton(
                 onPressed: onFavorite,
+                tooltip: isFavorite
+                    ? 'Remove from watchlist'
+                    : 'Add to watchlist',
                 visualDensity: VisualDensity.compact,
-                constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+                constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
                 icon: Icon(
                   isFavorite ? Icons.star : Icons.star_border,
                   size: 20,
-                  color: isFavorite ? Colors.amber : Colors.grey,
+                  color: isFavorite
+                      ? AppColors.warning
+                      : AppColors.textTertiary,
                 ),
               ),
           ],

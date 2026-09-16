@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
+import '../theme/app_colors.dart';
 
 class LanguagePage extends StatefulWidget {
   const LanguagePage({super.key, this.accountService});
@@ -42,7 +43,7 @@ class _LanguagePageState extends State<LanguagePage> {
           ListTile(
             title: Text(entry.value),
             trailing: AppLanguage.instance.code == entry.key
-                ? const Icon(Icons.check, color: Colors.green)
+                ? const Icon(Icons.check, color: AppColors.gain)
                 : null,
             enabled: !_saving,
             onTap: () => _select(entry.key),

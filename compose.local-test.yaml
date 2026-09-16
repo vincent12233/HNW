@@ -1,0 +1,85 @@
+name: hnw-local-e2e
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: hnw_test
+      POSTGRES_PASSWORD: ${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}
+      POSTGRES_DB: hnw_e2e
+    ports: ["127.0.0.1:55432:5432"]
+    volumes: ["postgres-data:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hnw_test -d hnw_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+    environment:
+      NODE_ENV: development
+      HOST: 0.0.0.0
+      PORT: 3100
+      DATABASE_URL: postgresql://hnw_test:${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}@postgres:5432/hnw_e2e?schema=public
+      SHADOW_DATABASE_URL: postgresql://hnw_test:${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}@postgres:5432/hnw_e2e_shadow?schema=public
+      JWT_SECRET: ${HNW_E2E_JWT_SECRET:-local-e2e-jwt-secret-change-before-production}
+      OTC_KEY_ENCRYPTION_SECRET: ${HNW_E2E_OTC_SECRET:-local-e2e-otc-secret-change-before-production}
+      OBJECT_SIGNING_SECRET: ${HNW_E2E_OBJECT_SECRET:-local-e2e-object-secret-change-before-production}
+      TWO_FACTOR_ENCRYPTION_KEY: ${HNW_E2E_2FA_SECRET:-local-e2e-2fa-secret-change-before-production}
+      ADMIN_FIXED_INVITE_CODE: ${HNW_E2E_FIXED_INVITE:-LOCALFIXED2026}
+      ADMIN_INITIAL_PASSWORD: ${HNW_E2E_ADMIN_PASSWORD:-LocalAdmin2026!}
+      MANAGER_INITIAL_PASSWORD: ${HNW_E2E_MANAGER_PASSWORD:-LocalManager2026!}
+      FINANCE_INITIAL_PASSWORD: ${HNW_E2E_FINANCE_PASSWORD:-LocalFinance2026!}
+      SUPPORT_INITIAL_PASSWORD: ${HNW_E2E_SUPPORT_PASSWORD:-LocalSupport2026!}
+      BUSINESS_INITIAL_PASSWORD: ${HNW_E2E_BUSINESS_PASSWORD:-LocalBusiness2026!}
+      PRIVATE_OBJECT_ROOT: /app/private-objects
+      CORS_ORIGINS: http://localhost:3002,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007
+      MARKET_DATA_STREAMING_ENABLED: "false"
+    ports: ["127.0.0.1:3100:3100"]
+    volumes: ["private-objects:/app/private-objects"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 90s
+  admin: &admin
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+    environment: &admin-environment
+      NODE_ENV: development
+      NEXT_PUBLIC_API_URL: http://localhost:3100
+      NEXT_PUBLIC_BACKEND_ROLE: ADMIN
+    command: ["npx", "next", "dev", "-p", "3002", "-H", "0.0.0.0"]
+    ports: ["127.0.0.1:3002:3002"]
+    depends_on:
+      api:
+        condition: service_healthy
+  manager:
+    <<: *admin
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: MANAGER }
+    command: ["npx", "next", "dev", "-p", "3004", "-H", "0.0.0.0"]
+    ports: ["127.0.0.1:3004:3004"]
+  finance:
+    <<: *admin
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: FINANCE }
+    command: ["npx", "next", "dev", "-p", "3005", "-H", "0.0.0.0"]
+    ports: ["127.0.0.1:3005:3005"]
+  business:
+    <<: *admin
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: BUSINESS }
+    command: ["npx", "next", "dev", "-p", "3006", "-H", "0.0.0.0"]
+    ports: ["127.0.0.1:3006:3006"]
+  support:
+    <<: *admin
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: SUPPORT }
+    command: ["npx", "next", "dev", "-p", "3007", "-H", "0.0.0.0"]
+    ports: ["127.0.0.1:3007:3007"]
+volumes:
+  postgres-data:
+  private-objects:

@@ -7,12 +7,19 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
+import '../widgets/app_card.dart';
 import '../widgets/home/home_action_button.dart';
 import '../widgets/home/mini_line_chart_painter.dart';
+import '../widgets/profile_menu.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
 import '../models/ipo.dart';
@@ -22,8 +29,14 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../models/withdrawal_request.dart';
 import '../services/app_content_service.dart';
+import '../services/announcements_service.dart';
+import '../services/featured_instruments_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_settings_gates.dart';
+import '../widgets/home_announcement_banner.dart';
+import '../widgets/stock_list_tile.dart';
 import '../services/client_account_service.dart';
+import '../services/device_biometrics.dart';
 import '../services/ipo_service.dart';
 import '../services/ipo_notice_store.dart';
 import '../services/market_data_service.dart';
@@ -82,6 +95,9 @@ class _MarketHomePageState extends State<MarketHomePage>
   String? _historyFrom;
   String? _historyError;
   Map<String, dynamic> _profileData = {};
+  DeviceBiometric? _biometricCapability;
+  bool _biometricEnabled = false;
+  bool _biometricBusy = false;
   bool isLoading = true;
   bool _ipoAllocationDialogOpen = false;
   final Set<String> _shownIpoAllotments = {};
@@ -123,7 +139,6 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   final List<TradingOrder> orders = <TradingOrder>[];
 
-
   final List<WithdrawalRequest> withdrawalRequests = <WithdrawalRequest>[];
 
   final List<InstitutionalStock> institutionalStocks = <InstitutionalStock>[];
@@ -136,11 +151,14 @@ class _MarketHomePageState extends State<MarketHomePage>
       <String, PortfolioPosition>{};
 
   final List<StockQuote> stocks = <StockQuote>[];
+  final List<StockQuote> _homeFeatured = <StockQuote>[];
+  AnnouncementItem? _homeAnnouncement;
   final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
   final List<CompanyShowcase> companyShowcases = <CompanyShowcase>[];
   final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
   AppContentBundle _appContent = AppContentBundle.empty;
+  bool _optionalUpdatePrompted = false;
 
   Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
@@ -480,6 +498,29 @@ class _MarketHomePageState extends State<MarketHomePage>
     _loadAppData();
     unawaited(_loadHomeIndexHistory());
     unawaited(_loadAppContent());
+    unawaited(_loadHomeOpsContent());
+  }
+
+  Future<void> _loadHomeOpsContent() async {
+    final results = await Future.wait<dynamic>([
+      AnnouncementsService.instance.list(),
+      FeaturedInstrumentsService.instance.homeFeatured(),
+    ]);
+    if (!mounted) return;
+    final announcements = results[0] as List<AnnouncementItem>;
+    final featured = results[1] as List<StockQuote>;
+    setState(() {
+      _homeAnnouncement = pickTopAnnouncement(announcements);
+      _homeFeatured
+        ..clear()
+        ..addAll(featured);
+    });
+    if (!_optionalUpdatePrompted) {
+      _optionalUpdatePrompted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(maybeShowOptionalUpdateDialog(context));
+      });
+    }
   }
 
   Future<void> _loadAppContent({bool force = false}) async {
@@ -932,17 +973,17 @@ class _MarketHomePageState extends State<MarketHomePage>
         top: false,
         child: Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: AppConfig.borderColor)),
+            color: AppColors.surface,
+            border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
               child: NavigationBar(
-                height: MediaQuery.sizeOf(context).height < 650 ? 68 : 72,
+                height: AppSpacing.navHeight,
                 elevation: 0,
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.surface,
                 surfaceTintColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -950,42 +991,42 @@ class _MarketHomePageState extends State<MarketHomePage>
                 onDestinationSelected: _onDestinationSelected,
                 destinations: [
                   NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: const Icon(
                       Icons.home,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Home'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.bar_chart_outlined),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.bar_chart_outlined),
+                    selectedIcon: const Icon(
                       Icons.bar_chart,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Markets'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.swap_horiz_rounded),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    selectedIcon: const Icon(
                       Icons.swap_horiz_rounded,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Trade'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.pie_chart_outline),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.pie_chart_outline),
+                    selectedIcon: const Icon(
                       Icons.pie_chart,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Portfolio'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.person_outline),
+                    selectedIcon: const Icon(
                       Icons.person,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Profile'),
                   ),
@@ -1016,6 +1057,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       unawaited(_refreshMembership());
       unawaited(_refreshUnreadNotificationCount());
       unawaited(_refreshAccountSnapshot());
+      unawaited(_loadBiometricSettings());
     }
 
     if (index == 0) {
@@ -1036,6 +1078,56 @@ class _MarketHomePageState extends State<MarketHomePage>
       setState(() => _profileData = profile);
     } catch (_) {
       // Retain the last server-confirmed profile during a network interruption.
+    }
+  }
+
+  Future<void> _loadBiometricSettings() async {
+    final capability = await DeviceBiometrics.available();
+    var enabled = false;
+    if (capability != null) {
+      final token = await AuthService().restoreBiometricToken();
+      enabled = token != null && token.isNotEmpty;
+    }
+    if (!mounted) return;
+    setState(() {
+      _biometricCapability = capability;
+      _biometricEnabled = enabled;
+    });
+  }
+
+  Future<void> _setBiometricQuickLogin(bool enable) async {
+    if (_biometricBusy || _biometricCapability == null) return;
+    setState(() => _biometricBusy = true);
+    try {
+      if (enable) {
+        final verified = await LocalAuthentication().authenticate(
+          localizedReason: 'Enable biometric quick login',
+          biometricOnly: true,
+          persistAcrossBackgrounding: true,
+        );
+        if (!verified) return;
+        await AuthService().enableBiometricQuickLogin();
+        if (mounted) setState(() => _biometricEnabled = true);
+      } else {
+        await AuthService().disableBiometricQuickLogin();
+        if (mounted) setState(() => _biometricEnabled = false);
+      }
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: AppText(
+            clientErrorMessage(
+              error,
+              fallback: enable
+                  ? 'Unable to enable biometric quick login'
+                  : 'Unable to disable biometric quick login',
+            ),
+          ),
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _biometricBusy = false);
     }
   }
 
@@ -1124,7 +1216,7 @@ class _MarketHomePageState extends State<MarketHomePage>
         Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(18, 16, 14, 18),
-          decoration: AppUi.heroGradient(radius: AppUi.radiusLg),
+          decoration: AppUi.heroGradient(radius: AppRadius.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1137,9 +1229,8 @@ class _MarketHomePageState extends State<MarketHomePage>
                         'funds.total_asset_label',
                         fallback: 'Total Asset Value',
                       ),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
+                      style: AppTypography.labelLarge.copyWith(
+                        color: AppColors.textInverse.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -1151,7 +1242,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       _amountsHidden
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: Colors.white70,
+                      color: AppColors.textInverse.withValues(alpha: 0.7),
                       size: 20,
                     ),
                   ),
@@ -1172,11 +1263,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                       children: [
                         AppText(
                           _portfolioPeriod,
-                          style: const TextStyle(color: Colors.white),
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.textInverse,
+                          ),
                         ),
                         const Icon(
                           Icons.expand_more,
-                          color: Colors.white,
+                          color: AppColors.textInverse,
                           size: 18,
                         ),
                       ],
@@ -1184,7 +1277,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1193,35 +1286,36 @@ class _MarketHomePageState extends State<MarketHomePage>
                       _amountsHidden
                           ? '******'
                           : formatPrice(totalPortfolioValue),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: AppTypography.numericInverse.copyWith(
                         fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   SizedBox(
                     width: MediaQuery.sizeOf(context).width < 360 ? 90 : 116,
                     height: 38,
                     child: !_amountsHidden && _portfolioSeries.length >= 2
                         ? CustomPaint(
                             painter: MiniLineChartPainter(
-                              color: AppConfig.chartGainColor,
+                              color: AppColors.chartGain,
                               values: _portfolioSeries,
                             ),
                           )
-                        : const Center(
+                        : Center(
                             child: AppText(
                               '--',
-                              style: TextStyle(color: Colors.white70),
+                              style: AppTypography.labelMedium.copyWith(
+                                color: AppColors.textInverse.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
                             ),
                           ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               AppText(
                 _amountsHidden
                     ? '******'
@@ -1230,63 +1324,59 @@ class _MarketHomePageState extends State<MarketHomePage>
                     : _periodProfit == null
                     ? 'Insufficient history'
                     : '${formatPrice(_periodProfit!)} · $_portfolioPeriod',
-                style: TextStyle(
+                style: AppTypography.labelLarge.copyWith(
                   color: (_periodProfit ?? 0) == 0
-                      ? Colors.white70
+                      ? AppColors.textInverse.withValues(alpha: 0.7)
                       : (_periodProfit ?? 0) > 0
-                      ? const Color(0xFF86EFAC)
+                      ? AppColors.chartGain
                       : const Color(0xFFFCA5A5),
-                  fontSize: 13,
                   fontWeight: FontWeight.w700,
+                  fontFeatures: AppTypography.tabularFeatures,
                 ),
               ),
               if (_historyError != null)
                 AppText(
                   _historyError!,
-                  style: const TextStyle(color: Colors.white70),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textInverse.withValues(alpha: 0.7),
+                  ),
                 ),
               if (_historyFrom != null && !_amountsHidden)
                 AppText(
                   'Since $_historyFrom',
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textInverse.withValues(alpha: 0.7),
+                  ),
                 ),
               if (outstandingIpo > 0) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm + 2),
                 AppText(
                   _amountsHidden
                       ? '******'
                       : 'IPO Funds Required ${formatPrice(outstandingIpo)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textInverse.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         _homeQuickActions(),
-        if (companyShowcases.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          _sectionTitle(
-            _appContent.text(
-              'home',
-              'company.section_title',
-              fallback: 'Our Company',
-            ),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md + 2,
+            horizontal: AppSpacing.xs,
           ),
-          const SizedBox(height: 10),
-          _companyShowcaseCard(companyShowcases.first),
-        ],
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-          decoration: AppUi.surface(radius: AppUi.radiusMd),
           child: Row(
             children: [
               Expanded(
                 child: _homeBalanceValue(
                   'Available Funds',
                   availableBalance,
-                  AppConfig.textPrimaryColor,
+                  AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 58, child: VerticalDivider(width: 1)),
@@ -1294,7 +1384,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 child: _homeBalanceValue(
                   'Used Margin',
                   frozenBalance,
-                  AppConfig.textPrimaryColor,
+                  AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 58, child: VerticalDivider(width: 1)),
@@ -1302,20 +1392,19 @@ class _MarketHomePageState extends State<MarketHomePage>
                 child: _homeBalanceValue(
                   'Unrealized P&L',
                   todayPnl,
-                  pnlPositive ? AppConfig.gainColor : AppConfig.lossColor,
+                  pnlPositive ? AppColors.gain : AppColors.loss,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
       ],
     );
   }
 
   Widget _homeBalanceValue(String label, double value, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1323,9 +1412,13 @@ class _MarketHomePageState extends State<MarketHomePage>
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -1335,9 +1428,8 @@ class _MarketHomePageState extends State<MarketHomePage>
                   : label.contains('P&L')
                   ? formatSignedPrice(value)
                   : formatPrice(value),
-              style: TextStyle(
+              style: AppTypography.numericSmall.copyWith(
                 color: color,
-                fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1349,213 +1441,151 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Widget _companyShowcaseCard(CompanyShowcase company) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B1F44), Color(0xFF123B72), Color(0xFF176B88)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33152F5F),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -28,
-            top: -34,
-            child: Container(
-              width: 130,
-              height: 130,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: .08),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
+      decoration: AppUi.heroGradient(radius: AppRadius.lg),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .14),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: company.logoUrl?.isNotEmpty == true
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(15),
-                              child: Image.network(
-                                company.logoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => const Icon(
-                                  Icons.business_rounded,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Icon(
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.textInverse.withValues(alpha: .14),
+                    borderRadius: AppRadius.borderMd,
+                    border: Border.all(
+                      color: AppColors.textInverse.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: company.logoUrl?.isNotEmpty == true
+                      ? ClipRRect(
+                          borderRadius: AppRadius.borderMd,
+                          child: Image.network(
+                            company.logoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Icon(
                               Icons.business_rounded,
-                              color: Colors.white,
-                            ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            company.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                              color: AppColors.textInverse,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          AppText(
-                            company.tagline,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFFD5E6FF),
-                              fontSize: 12,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.verified_rounded,
-                      color: Color(0xFF8DE7D3),
-                      size: 22,
-                    ),
-                  ],
+                        )
+                      : const Icon(
+                          Icons.business_rounded,
+                          color: AppColors.textInverse,
+                        ),
                 ),
-                if (company.videoUrl?.isNotEmpty == true) ...[
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF07152F),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Color(0xFF123B72),
-                                size: 34,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            AppText(
-                              _appContent.text(
-                                'home',
-                                'company.video_cta',
-                                fallback: 'Watch our company introduction',
-                              ),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        company.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.textInverse,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.xs),
+                      AppText(
+                        company.tagline,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.textInverse.withValues(alpha: 0.85),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 16),
-                AppText(
-                  company.description,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFE7F0FF),
-                    fontSize: 13,
-                    height: 1.55,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    if (company.sector?.isNotEmpty == true)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: .12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: AppText(
-                          company.sector!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    const Spacer(),
-                    if (company.websiteUrl?.isNotEmpty == true)
-                      TextButton.icon(
-                        onPressed: () =>
-                            launchUrl(Uri.parse(company.websiteUrl!)),
-                        icon: const Icon(
-                          Icons.open_in_new_rounded,
-                          size: 15,
-                          color: Colors.white,
-                        ),
-                        label: Text(
-                          _appContent.text(
-                            'home',
-                            'company.website_cta',
-                            fallback: 'Visit website',
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            if (company.videoUrl?.isNotEmpty == true) ...[
+              const SizedBox(height: AppSpacing.md),
+              InkWell(
+                onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
+                borderRadius: AppRadius.borderMd,
+                child: Container(
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandDark.withValues(alpha: 0.55),
+                    borderRadius: AppRadius.borderMd,
+                    border: Border.all(
+                      color: AppColors.textInverse.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: AppColors.surface,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: AppColors.brandDark,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        AppText(
+                          _appContent.text(
+                            'home',
+                            'company.video_cta',
+                            fallback: 'Watch our company introduction',
+                          ),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textInverse,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            AppText(
+              company.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textInverse.withValues(alpha: 0.9),
+                height: 1.45,
+              ),
+            ),
+            if (company.websiteUrl?.isNotEmpty == true) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textInverse,
+                  ),
+                  child: AppText(
+                    _appContent.text(
+                      'home',
+                      'company.website_cta',
+                      fallback: 'Visit website',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1576,17 +1606,17 @@ class _MarketHomePageState extends State<MarketHomePage>
               fallback: 'Contact support to fund',
             ),
             icon: Icons.account_balance_wallet_outlined,
-            color: AppConfig.primaryColor,
+            color: AppColors.brandPrimary,
             onTap: _openDepositSupport,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.sm + 2),
         Expanded(
           child: HomeActionButton(
             label: _appContent.text(
               'home',
               'funds.withdraw_cta_label',
-              fallback: 'Withdraw Funds',
+              fallback: 'Withdraw',
             ),
             subtitle: _appContent.text(
               'home',
@@ -1594,8 +1624,26 @@ class _MarketHomePageState extends State<MarketHomePage>
               fallback: 'Transfer to Bank',
             ),
             icon: Icons.call_made_rounded,
-            color: const Color(0xFF0F766E),
+            color: AppColors.gain,
             onTap: _openWithdrawalRequest,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm + 2),
+        Expanded(
+          child: HomeActionButton(
+            label: _appContent.text(
+              'home',
+              'funds.trade_cta_label',
+              fallback: 'Trade',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'funds.trade_cta_subtitle',
+              fallback: 'Place orders',
+            ),
+            icon: Icons.swap_horiz_rounded,
+            color: AppColors.brandDark,
+            onTap: () => setState(() => selectedIndex = 2),
           ),
         ),
       ],
@@ -1664,55 +1712,78 @@ class _MarketHomePageState extends State<MarketHomePage>
           final available = item.$2 != '--';
           final positive = item.$3 >= 0;
           final color = !available
-              ? AppConfig.neutralColor
+              ? AppColors.neutral
               : positive
-              ? AppConfig.gainColor
-              : AppConfig.lossColor;
-          return Container(
+              ? AppColors.gain
+              : AppColors.loss;
+          return SizedBox(
             width: 148,
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE8EDF5)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  item.$1,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
+            child: AppCard(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    item.$1,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textTertiary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                AppText(
-                  item.$2,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                  const Spacer(),
+                  AppText(
+                    item.$2,
+                    style: AppTypography.numericSmall.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                AppText(
-                  available
-                      ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
-                      : 'Unavailable',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: AppSpacing.xxs),
+                  AppText(
+                    available
+                        ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
+                        : 'Unavailable',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: AppTypography.tabularFeatures,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
       ),
+    );
+  }
+
+  Widget _homeFeaturedList() {
+    return Column(
+      children: [
+        for (final stock in _homeFeatured.take(8))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: AppCard(
+              child: stock.price <= 0
+                  ? ListTile(
+                      title: AppText(stock.symbol),
+                      subtitle: AppText(
+                        stock.name.isEmpty ? stock.exchange : stock.name,
+                      ),
+                      trailing: const AppText(
+                        'Unavailable',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      onTap: () => _openStock(stock),
+                    )
+                  : StockListTile(stock: stock, onTap: () => _openStock(stock)),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1750,8 +1821,6 @@ class _MarketHomePageState extends State<MarketHomePage>
         .where(
           (stock) =>
               stock.price > 0 &&
-              stock.logoUrl?.trim().isNotEmpty == true &&
-              !_failedHomeLogoUrls.contains(stock.logoUrl) &&
               stock.change.isFinite &&
               (gainers ? stock.change > 0 : stock.change < 0),
         )
@@ -1761,19 +1830,17 @@ class _MarketHomePageState extends State<MarketHomePage>
           ? right.change.compareTo(left.change)
           : left.change.compareTo(right.change),
     );
-    return movers.take(5).toList();
+    return movers.take(3).toList();
   }
 
   Widget _compactMoverList(String title, List<StockQuote> list, bool positive) {
-    final color = positive ? AppConfig.gainColor : AppConfig.lossColor;
-    final items = list.take(5).toList();
+    final color = positive ? AppColors.gain : AppColors.loss;
+    final items = list.take(3).toList();
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
+    return AppCard(
+      padding: AppSpacing.card.copyWith(
+        top: AppSpacing.md,
+        bottom: AppSpacing.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1783,22 +1850,23 @@ class _MarketHomePageState extends State<MarketHomePage>
               Expanded(
                 child: AppText(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: AppTypography.labelMedium.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               InkWell(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: AppRadius.borderSm,
                 onTap: () => setState(() => selectedIndex = 1),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.xxs + 1,
+                  ),
                   child: AppText(
                     'View All',
-                    style: TextStyle(
-                      color: AppConfig.primaryColor,
-                      fontSize: 9,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.brandPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1806,28 +1874,28 @@ class _MarketHomePageState extends State<MarketHomePage>
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           if (items.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: AppText(
-                positive
-                    ? 'No gainers available with logos'
-                    : 'No losers available with logos',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                positive ? 'No gainers right now' : 'No losers right now',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
               ),
             ),
           ...items.map(
             (stock) => InkWell(
               onTap: () => _openStock(stock),
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm + 1),
                 child: Row(
                   children: [
                     StockLogo(
                       symbol: stock.symbol,
                       logoUrl: stock.logoUrl,
-                      size: 20,
+                      size: 22,
                       onLoadFailed: () {
                         if (!mounted ||
                             stock.logoUrl == null ||
@@ -1837,55 +1905,68 @@ class _MarketHomePageState extends State<MarketHomePage>
                         setState(() => _failedHomeLogoUrls.add(stock.logoUrl!));
                       },
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: AppText(
-                        _shortStockName(stock),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(
+                            _shortStockName(stock),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (stock.exchange.trim().isNotEmpty)
+                            AppText(
+                              stock.exchange,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption.copyWith(
+                                fontSize: 10,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     if ((stockHistory[stock.symbol]?.length ?? 0) >= 2) ...[
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppSpacing.xs),
                       SizedBox(
                         width: 34,
                         height: 16,
                         child: CustomPaint(
                           painter: MiniLineChartPainter(
                             color: stock.change >= 0
-                                ? AppConfig.gainColor
-                                : AppConfig.lossColor,
+                                ? AppColors.gain
+                                : AppColors.loss,
                             values: stockHistory[stock.symbol]!,
                           ),
                         ),
                       ),
                     ],
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     SizedBox(
-                      width: 54,
+                      width: 62,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           FittedBox(
                             child: AppText(
                               formatPrice(stock.price),
-                              style: const TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontSize: 9,
+                              style: AppTypography.numericSmall.copyWith(
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                           AppText(
                             '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                            style: TextStyle(
+                            style: AppTypography.labelSmall.copyWith(
                               color: color,
-                              fontSize: 9,
                               fontWeight: FontWeight.w800,
+                              fontFeatures: AppTypography.tabularFeatures,
                             ),
                           ),
                         ],
@@ -2564,59 +2645,95 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Widget _marketBody() {
     final horizontalPadding = MediaQuery.sizeOf(context).width < 360
-        ? 14.0
-        : 16.0;
+        ? AppSpacing.md + 2
+        : AppSpacing.lg;
     return Container(
-      color: AppConfig.backgroundColor,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          14,
-          horizontalPadding,
-          24,
+      color: AppColors.background,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await Future.wait([
+            _refreshMarketData(),
+            _refreshAccountSnapshot(),
+            _reloadNews(),
+          ]);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            AppSpacing.md + 2,
+            horizontalPadding,
+            AppSpacing.xxl,
+          ),
+          children: [
+            // PRIMARY
+            MarketHeader(
+              accountName: accountName,
+              avatarBytes: profileAvatarBytes,
+              onAvatarTap: _pickProfileAvatar,
+              onSearchTap: _openStockSearch,
+              onNotificationTap: _openNotifications,
+              notificationCount: unreadNotificationCount,
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            const MarketStatusCard(),
+            if (_homeAnnouncement != null) ...[
+              const SizedBox(height: AppSpacing.sm + 2),
+              HomeAnnouncementBanner(item: _homeAnnouncement!),
+            ],
+            const SizedBox(height: AppSpacing.md + 2),
+            _homeFundsCard(),
+            if (_homeFeatured.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl - 2),
+              _sectionTitle('Featured'),
+              const SizedBox(height: AppSpacing.sm + 2),
+              _homeFeaturedList(),
+            ],
+            // SECONDARY — market overview
+            const SizedBox(height: AppSpacing.xl - 2),
+            _sectionTitle(
+              _appContent.text(
+                'home',
+                'indices.section_title',
+                fallback: 'Market Indices',
+              ),
+              onViewAll: () => setState(() => selectedIndex = 1),
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            _marketIndicesStrip(),
+            const SizedBox(height: AppSpacing.xl - 2),
+            _compactMovers(),
+            // SECONDARY — discovery
+            const SizedBox(height: AppSpacing.xl - 2),
+            _sectionTitle(
+              _appContent.text(
+                'home',
+                'news.section_title',
+                fallback: 'Market News',
+              ),
+              onViewAll: marketNews.isEmpty
+                  ? null
+                  : () => unawaited(_openAllMarketNews()),
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            _marketNewsSection(),
+            // TERTIARY
+            if (companyShowcases.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl - 2),
+              _sectionTitle(
+                _appContent.text(
+                  'home',
+                  'company.section_title',
+                  fallback: 'Our Company',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm + 2),
+              _companyShowcaseCard(companyShowcases.first),
+            ],
+            const SizedBox(height: AppSpacing.md + 2),
+            _homeTradingBanner(),
+          ],
         ),
-        children: [
-          MarketHeader(
-            accountName: accountName,
-            avatarBytes: profileAvatarBytes,
-            onAvatarTap: _pickProfileAvatar,
-            onSearchTap: _openStockSearch,
-            onNotificationTap: _openNotifications,
-            notificationCount: unreadNotificationCount,
-          ),
-          const SizedBox(height: 10),
-          const MarketStatusCard(),
-          const SizedBox(height: 14),
-          _homeFundsCard(),
-          const SizedBox(height: 18),
-          _sectionTitle(
-            _appContent.text(
-              'home',
-              'indices.section_title',
-              fallback: 'Market Indices',
-            ),
-            onViewAll: () => setState(() => selectedIndex = 1),
-          ),
-          const SizedBox(height: 10),
-          _marketIndicesStrip(),
-          const SizedBox(height: 18),
-          _compactMovers(),
-          const SizedBox(height: 18),
-          _sectionTitle(
-            _appContent.text(
-              'home',
-              'news.section_title',
-              fallback: 'Market News',
-            ),
-            onViewAll: marketNews.isEmpty
-                ? null
-                : () => unawaited(_openAllMarketNews()),
-          ),
-          const SizedBox(height: 10),
-          _marketNewsSection(),
-          const SizedBox(height: 14),
-          _homeTradingBanner(),
-        ],
       ),
     );
   }
@@ -2658,30 +2775,29 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Widget _marketNewsSection() {
     if (marketNews.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              const Icon(Icons.newspaper_outlined, color: Color(0xFF64748B)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppText(
-                  _appContent.text(
-                    'home',
-                    'news.empty',
-                    fallback: 'Live market news is temporarily unavailable.',
-                  ),
-                  style: const TextStyle(color: Color(0xFF64748B)),
+      return AppCard(
+        child: Row(
+          children: [
+            const Icon(Icons.newspaper_outlined, color: AppColors.textTertiary),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppText(
+                _appContent.text(
+                  'home',
+                  'news.empty',
+                  fallback: 'Live market news is temporarily unavailable.',
+                ),
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textTertiary,
                 ),
               ),
-              IconButton(
-                onPressed: _reloadNews,
-                tooltip: 'Retry news',
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              onPressed: _reloadNews,
+              tooltip: 'Retry news',
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
         ),
       );
     }
@@ -2690,99 +2806,88 @@ class _MarketHomePageState extends State<MarketHomePage>
         final oneColumn = constraints.maxWidth < 340;
         final width = oneColumn
             ? constraints.maxWidth
-            : (constraints.maxWidth - 10) / 2;
+            : (constraints.maxWidth - AppSpacing.sm - 2) / 2;
         return Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: AppSpacing.sm + 2,
+          runSpacing: AppSpacing.sm + 2,
           children: marketNews
               .take(2)
               .map(
                 (item) => SizedBox(
                   width: width,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
+                  child: AppCard(
+                    padding: EdgeInsets.zero,
                     onTap: () => _openNews(item),
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      height: oneColumn ? 154 : 168,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE8EDF5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 78,
-                            child: item.imageUrl?.isNotEmpty == true
-                                ? Image.network(
-                                    item.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, progress) {
-                                      if (progress == null) return child;
-                                      return const ColoredBox(
-                                        color: Color(0xFFF2F6FC),
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 78,
+                          child: item.imageUrl?.isNotEmpty == true
+                              ? Image.network(
+                                  item.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const ColoredBox(
+                                      color: AppColors.surfaceSecondary,
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    errorBuilder: (_, _, _) => const ColoredBox(
-                                      color: Color(0xFFEEF5FF),
-                                      child: Icon(
-                                        Icons.candlestick_chart_rounded,
-                                        color: AppConfig.primaryColor,
-                                        size: 32,
                                       ),
-                                    ),
-                                  )
-                                : const ColoredBox(
-                                    color: Color(0xFFEEF5FF),
+                                    );
+                                  },
+                                  errorBuilder: (_, _, _) => const ColoredBox(
+                                    color: AppColors.brandPrimarySoft,
                                     child: Icon(
                                       Icons.candlestick_chart_rounded,
-                                      color: AppConfig.primaryColor,
+                                      color: AppColors.brandPrimary,
                                       size: 32,
                                     ),
                                   ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(11),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(
-                                  item.title,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.28,
+                                )
+                              : const ColoredBox(
+                                  color: AppColors.brandPrimarySoft,
+                                  child: Icon(
+                                    Icons.candlestick_chart_rounded,
+                                    color: AppColors.brandPrimary,
+                                    size: 32,
                                   ),
                                 ),
-                                const SizedBox(height: 7),
-                                AppText(
-                                  '${item.source}  ·  ${_newsAge(item.publishedAt)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Color(0xFF64748B),
-                                  ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm + 3),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                item.title,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.28,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              AppText(
+                                '${item.source}  ·  ${_newsAge(item.publishedAt)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption.copyWith(
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -2852,12 +2957,10 @@ class _MarketHomePageState extends State<MarketHomePage>
       'banner.subtitle',
       fallback: 'Explore equities, institutional offers, OTC and IPOs',
     );
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF5FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return AppCard(
+      backgroundColor: AppColors.brandPrimarySoft,
+      bordered: false,
+      onTap: () => setState(() => selectedIndex = 2),
       child: Row(
         children: [
           Expanded(
@@ -2866,27 +2969,25 @@ class _MarketHomePageState extends State<MarketHomePage>
               children: [
                 AppText(
                   title,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: AppTypography.labelLarge.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 AppText(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF64748B),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           const Icon(
             Icons.candlestick_chart_rounded,
-            size: 52,
-            color: AppConfig.gainColor,
+            size: 40,
+            color: AppColors.brandPrimary,
           ),
         ],
       ),
@@ -3106,11 +3207,12 @@ class _MarketHomePageState extends State<MarketHomePage>
         : accountPhone.startsWith('+')
         ? accountPhone
         : '+91 $accountPhone';
+    final mutedInverse = AppColors.textInverse.withValues(alpha: 0.70);
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
         color: AppConfig.primaryDarkColor,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: AppRadius.borderSm,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -3124,7 +3226,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   onTap: _pickProfileAvatar,
                   child: CircleAvatar(
                     radius: 28,
-                    backgroundColor: Colors.white,
+                    backgroundColor: AppColors.textInverse,
                     backgroundImage: profileAvatarBytes == null
                         ? null
                         : MemoryImage(profileAvatarBytes!),
@@ -3141,39 +3243,36 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: AppSpacing.md + 2),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AppText(
                       accountName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.w700,
+                      style: AppTypography.titleLarge.copyWith(
+                        color: AppColors.textInverse,
                       ),
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: AppSpacing.xs + 1),
                     AppText(
                       phone,
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
+                      style: AppTypography.caption.copyWith(
+                        color: mutedInverse,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xxs),
                     AppText(
                       '${tr('Account ID')}: $accountNumber',
-                      style: const TextStyle(
-                        color: Colors.white70,
+                      style: AppTypography.caption.copyWith(
+                        color: mutedInverse,
                         fontSize: 11,
                       ),
                     ),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: AppSpacing.sm + 2),
                     Wrap(
-                      spacing: 10,
-                      runSpacing: 8,
+                      spacing: AppSpacing.sm + 2,
+                      runSpacing: AppSpacing.sm,
                       crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
                         _profileStatusPill(
@@ -3181,8 +3280,8 @@ class _MarketHomePageState extends State<MarketHomePage>
                               ? Icons.verified
                               : Icons.info_outline,
                           iconColor: kycStatus == 'APPROVED'
-                              ? const Color(0xFF45D59A)
-                              : Colors.white70,
+                              ? AppColors.gain
+                              : mutedInverse,
                           label: kycStatus == 'APPROVED'
                               ? 'KYC Verified'
                               : kycStatus == 'PENDING'
@@ -3197,15 +3296,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               IconButton(
                 tooltip: tr('Edit profile'),
                 onPressed: _editProfile,
-                icon: const Icon(
-                  Icons.edit_outlined,
-                  color: Colors.white70,
-                  size: 20,
-                ),
+                icon: Icon(Icons.edit_outlined, color: mutedInverse, size: 20),
               ),
             ],
           ),
-          const SizedBox(height: 22),
+          const SizedBox(height: AppSpacing.xl + 2),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3220,24 +3315,24 @@ class _MarketHomePageState extends State<MarketHomePage>
               ])
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.only(right: 6),
+                    padding: const EdgeInsets.only(right: AppSpacing.sm - 2),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         AppText(
                           item.$1,
-                          style: const TextStyle(
-                            color: Colors.white70,
+                          style: AppTypography.caption.copyWith(
+                            color: mutedInverse,
                             fontSize: 10,
                           ),
                         ),
-                        const SizedBox(height: 5),
+                        const SizedBox(height: AppSpacing.xs + 1),
                         if (item.$1 == 'Client Tier')
                           MembershipTierBadge(tier: item.$2)
                         else
                           Wrap(
-                            spacing: 5,
-                            runSpacing: 4,
+                            spacing: AppSpacing.xs + 1,
+                            runSpacing: AppSpacing.xxs,
                             crossAxisAlignment: WrapCrossAlignment.center,
                             children: [
                               Icon(
@@ -3246,16 +3341,15 @@ class _MarketHomePageState extends State<MarketHomePage>
                                     : Icons.check_circle_outline,
                                 size: 18,
                                 color: item.$2 == 'ACTIVE'
-                                    ? const Color(0xff70e0ba)
-                                    : Colors.white70,
+                                    ? AppColors.gain
+                                    : mutedInverse,
                               ),
                               AppText(
                                 item.$2,
-                                style: TextStyle(
+                                style: AppTypography.caption.copyWith(
                                   color: item.$2 == 'ACTIVE'
-                                      ? const Color(0xff70e0ba)
-                                      : Colors.white,
-                                  fontSize: 11,
+                                      ? AppColors.gain
+                                      : AppColors.textInverse,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -3300,14 +3394,14 @@ class _MarketHomePageState extends State<MarketHomePage>
         });
 
     final horizontalPadding = MediaQuery.sizeOf(context).width < 360
-        ? 14.0
-        : 16.0;
+        ? AppSpacing.md + 2
+        : AppSpacing.lg;
     return ListView(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
-        14,
+        AppSpacing.md + 2,
         horizontalPadding,
-        24,
+        AppSpacing.xxl,
       ),
       children: [
         Row(
@@ -3319,23 +3413,17 @@ class _MarketHomePageState extends State<MarketHomePage>
                   'profile.page_title',
                   fallback: 'Profile',
                 ),
-                style: const TextStyle(
-                  fontSize: 20,
+                style: AppTypography.titleLarge.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            IconButton(
-              tooltip: 'Settings',
-              onPressed: () => _openAccountSettings('preferences'),
-              icon: const Icon(Icons.settings_outlined, size: 22),
-            ),
             _notificationButton(),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md + 2),
         _profileHeader(),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl - 2),
         AppText(
           _appContent.text(
             'home',
@@ -3344,10 +3432,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
           style: AppUi.sectionTitle,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
-          decoration: AppUi.surface(radius: AppUi.radiusMd),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.lg,
+            horizontal: AppSpacing.xs,
+          ),
+          decoration: AppUi.surface(radius: AppRadius.md),
           child: IntrinsicHeight(
             child: Row(
               children: [
@@ -3359,7 +3450,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       fallback: 'Available Balance',
                     ),
                     availableBalance,
-                    AppConfig.textPrimaryColor,
+                    AppColors.textPrimary,
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -3368,10 +3459,10 @@ class _MarketHomePageState extends State<MarketHomePage>
                     _appContent.text(
                       'home',
                       'profile.metric.portfolio',
-                      fallback: 'Total Portfolio',
+                      fallback: 'Product Holdings',
                     ),
                     productValue,
-                    AppConfig.textPrimaryColor,
+                    AppColors.textPrimary,
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -3383,365 +3474,325 @@ class _MarketHomePageState extends State<MarketHomePage>
                       fallback: 'Total Returns',
                     ),
                     totalReturns,
-                    totalReturns >= 0
-                        ? AppConfig.gainColor
-                        : AppConfig.lossColor,
+                    totalReturns >= 0 ? AppColors.gain : AppColors.loss,
                   ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 18),
-        AppText(
-          _appContent.text(
+        const SizedBox(height: AppSpacing.xl - 2),
+        ProfileSection(
+          title: _appContent.text(
+            'home',
+            'profile.section.account',
+            fallback: 'Account',
+          ),
+          children: [
+            ProfileMenuRow(
+              icon: Icons.person_outline_rounded,
+              title: 'Personal Information',
+              subtitle: 'Account ID and full name',
+              onTap: _editProfile,
+              color: AppColors.brandPrimary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.verified_user_outlined,
+              title: 'KYC Verification',
+              subtitle: 'Identity documents and verification status',
+              status: kycStatus == 'APPROVED'
+                  ? 'Verified'
+                  : kycStatus == 'PENDING'
+                  ? 'Pending'
+                  : 'Required',
+              onTap: () => _openAccountSettings('kyc'),
+              color: AppColors.gain,
+            ),
+            ProfileMenuRow(
+              icon: Icons.account_balance_outlined,
+              title: 'Bank Accounts',
+              subtitle: 'Linked bank account for withdrawals',
+              onTap: () => _openAccountSettings('banks'),
+              color: AppColors.warning,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl - 2),
+        ProfileSection(
+          title: _appContent.text(
+            'home',
+            'profile.section.funds',
+            fallback: 'Funds',
+          ),
+          children: [
+            ProfileMenuRow(
+              icon: Icons.request_quote_outlined,
+              title: 'Loan Applications',
+              subtitle: 'Application status',
+              color: AppColors.gain,
+              onTap: () => Navigator.of(
+                context,
+              ).push(MaterialPageRoute<void>(builder: (_) => const LoanPage())),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.xl - 2),
+        ProfileSection(
+          title: _appContent.text(
             'home',
             'profile.section.security',
-            fallback: 'Account & Security',
+            fallback: 'Security',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          children: [
+            ProfileMenuRow(
+              icon: Icons.password_outlined,
+              title: 'Change Password',
+              subtitle: 'Update your account password',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const AccountSecurityPage(),
+                ),
+              ),
+              color: AppColors.brandPrimary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.security_outlined,
+              title: 'Two-Factor Authentication',
+              subtitle: 'Authenticator and recovery codes',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const TwoFactorPage()),
+              ),
+              color: AppColors.info,
+            ),
+            ProfileMenuRow(
+              icon: Icons.pin_outlined,
+              title: 'Transaction PIN',
+              subtitle: 'Set or change your withdrawal password',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) =>
+                      const AccountSecurityPage(withdrawalPin: true),
+                ),
+              ),
+              color: AppColors.warning,
+            ),
+            if (_biometricCapability != null)
+              ProfileMenuRow(
+                icon: _biometricCapability == DeviceBiometric.face
+                    ? Icons.face_retouching_natural_outlined
+                    : Icons.fingerprint,
+                title: 'Biometric quick login',
+                subtitle: _biometricCapability == DeviceBiometric.face
+                    ? 'Face ID'
+                    : 'Fingerprint',
+                color: AppColors.info,
+                trailing: Switch.adaptive(
+                  value: _biometricEnabled,
+                  onChanged: _biometricBusy ? null : _setBiometricQuickLogin,
+                ),
+              ),
+          ],
         ),
-        const SizedBox(height: 10),
-        Card(
-          color: Colors.white,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              _accountTile(
-                icon: Icons.person_outline_rounded,
-                title: 'Personal Information',
-                subtitle: 'Account ID and full name',
-                onTap: _editProfile,
-                color: const Color(0xFF2563EB),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.request_quote_outlined,
-                title: 'Loan Applications',
-                subtitle: 'Application Status',
-                color: const Color(0xFF059669),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const LoanPage()),
-                ),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.verified_user_outlined,
-                title: 'KYC Verification',
-                subtitle: 'Identity documents and verification status',
-                status: kycStatus == 'APPROVED'
-                    ? 'Verified'
-                    : kycStatus == 'PENDING'
-                    ? 'Pending'
-                    : 'Required',
-                onTap: () => _openAccountSettings('kyc'),
-                color: const Color(0xFF10B981),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.password_outlined,
-                title: 'Change Password',
-                subtitle: 'Update your account password',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AccountSecurityPage(),
-                  ),
-                ),
-                color: const Color(0xFF2563EB),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.security_outlined,
-                title: 'Two-Factor Authentication',
-                subtitle: 'Authenticator and recovery codes',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const TwoFactorPage(),
-                  ),
-                ),
-                color: const Color(0xFF0F9D92),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.pin_outlined,
-                title: 'Transaction PIN',
-                subtitle: 'Set or change your withdrawal password',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) =>
-                        const AccountSecurityPage(withdrawalPin: true),
-                  ),
-                ),
-                color: const Color(0xFFF59E0B),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.account_balance_outlined,
-                title: 'Bank Accounts',
-                subtitle: 'Manage linked bank accounts and UPI',
-                onTap: () => _openAccountSettings('banks'),
-                color: const Color(0xFFF59E0B),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        AppText(
-          _appContent.text(
+        const SizedBox(height: AppSpacing.xl - 2),
+        ProfileSection(
+          title: _appContent.text(
             'home',
             'profile.section.preferences',
             fallback: 'Preferences',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          children: [
+            ProfileMenuRow(
+              icon: Icons.notifications_none_rounded,
+              title: 'Alert Preferences',
+              subtitle: 'Choose which account updates you receive',
+              onTap: () => _openAccountSettings('preferences'),
+              color: AppColors.brandPrimary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.contrast,
+              title: 'Appearance',
+              subtitle: 'Light or high contrast display',
+              status: AppearanceSettings.instance.value == 'highContrast'
+                  ? 'High contrast'
+                  : 'Light',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const AppearancePage()),
+              ),
+              color: AppColors.textSecondary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.language_rounded,
+              title: 'Language',
+              subtitle: 'Choose your preferred language',
+              status: AppLanguage.instance.code == 'hi' ? 'हिन्दी' : 'English',
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const LanguagePage()),
+              ),
+              color: AppColors.warning,
+            ),
+          ],
         ),
-        const SizedBox(height: 10),
-        Card(
-          color: Colors.white,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              _accountTile(
-                icon: Icons.notifications_none_rounded,
-                title: 'Notification Settings',
-                subtitle: 'Choose which account updates you receive',
-                onTap: () => _openAccountSettings('preferences'),
-                color: const Color(0xFF8B5CF6),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.contrast,
-                title: 'Theme',
-                subtitle: '',
-                status: AppearanceSettings.instance.value == 'highContrast'
-                    ? 'High contrast'
-                    : 'Light Theme',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const AppearancePage(),
-                  ),
-                ),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.language_rounded,
-                title: 'Language',
-                subtitle: 'Choose your preferred language',
-                status: AppLanguage.instance.code == 'hi'
-                    ? 'हिन्दी'
-                    : 'English',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const LanguagePage()),
-                ),
-                color: const Color(0xFFF59E0B),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 18),
-        AppText(
-          _appContent.text(
+        const SizedBox(height: AppSpacing.xl - 2),
+        ProfileSection(
+          title: _appContent.text(
             'home',
             'profile.section.support',
-            fallback: 'Support & More',
+            fallback: 'Support & Education',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          children: [
+            ProfileMenuRow(
+              icon: Icons.help_outline,
+              title: _appContent.text(
+                'home',
+                'profile.tile.help.title',
+                fallback: 'Help & Support',
+              ),
+              subtitle: _appContent.text(
+                'home',
+                'profile.tile.help.subtitle',
+                fallback: 'FAQs, contact support and raise a ticket',
+              ),
+              onTap: () => unawaited(
+                showSupportChatPanel(
+                  context,
+                  initialMessage: _appContent.text(
+                    'support',
+                    'chat_preset.help',
+                    fallback: 'Hello, I need help with my account.',
+                  ),
+                ),
+              ),
+              color: AppColors.brandPrimary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.menu_book_outlined,
+              title: _appContent.text(
+                'home',
+                'profile.tile.insights.title',
+                fallback: 'Wealth Insights',
+              ),
+              subtitle: _appContent.text(
+                'home',
+                'profile.tile.insights.subtitle',
+                fallback: 'Knowledge for informed investment decisions',
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const WealthInsightsPage(),
+                ),
+              ),
+              color: AppColors.gain,
+            ),
+          ],
         ),
-        const SizedBox(height: 10),
-        Card(
-          color: Colors.white,
-          clipBehavior: Clip.antiAlias,
-          child: Column(
-            children: [
-              _accountTile(
-                icon: Icons.help_outline,
-                title: _appContent.text(
-                  'home',
-                  'profile.tile.help.title',
-                  fallback: 'Help & Support',
-                ),
-                subtitle: _appContent.text(
-                  'home',
-                  'profile.tile.help.subtitle',
-                  fallback: 'FAQs, contact support and raise a ticket',
-                ),
-                onTap: () => unawaited(
-                  showSupportChatPanel(
-                    context,
-                    initialMessage: _appContent.text(
-                      'support',
-                      'chat_preset.help',
-                      fallback: 'Hello, I need help with my account.',
-                    ),
-                  ),
-                ),
-                color: const Color(0xFF2563EB),
+        const SizedBox(height: AppSpacing.xl - 2),
+        ProfileSection(
+          title: _appContent.text(
+            'home',
+            'profile.section.legal',
+            fallback: 'Legal',
+          ),
+          children: [
+            ProfileMenuRow(
+              icon: Icons.info_outline_rounded,
+              title: _appContent.text(
+                'home',
+                'profile.tile.about.title',
+                fallback: 'About Us',
               ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.menu_book_outlined,
-                title: _appContent.text(
-                  'home',
-                  'profile.tile.insights.title',
-                  fallback: 'Wealth Insights',
-                ),
-                subtitle: _appContent.text(
-                  'home',
-                  'profile.tile.insights.subtitle',
-                  fallback: 'Knowledge for informed investment decisions',
-                ),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const WealthInsightsPage(),
-                  ),
-                ),
-                color: const Color(0xFF10B981),
+              subtitle: _appContent.text(
+                'home',
+                'profile.tile.about.subtitle',
+                fallback: 'About our app, terms and policies',
               ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.info_outline_rounded,
-                title: _appContent.text(
-                  'home',
-                  'profile.tile.about.title',
-                  fallback: 'About Us',
-                ),
-                subtitle: _appContent.text(
-                  'home',
-                  'profile.tile.about.subtitle',
-                  fallback: 'About our app, terms and policies',
-                ),
-                onTap: _openAbout,
-                color: const Color(0xFF8B5CF6),
+              onTap: _openAbout,
+              color: AppColors.brandPrimary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.description_outlined,
+              title: _appContent.text(
+                'home',
+                'profile.tile.terms.title',
+                fallback: 'Terms & Conditions',
               ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.description_outlined,
-                title: _appContent.text(
-                  'home',
-                  'profile.tile.terms.title',
-                  fallback: 'Terms & Conditions',
-                ),
-                subtitle: '',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const LegalPage(title: 'Terms'),
-                  ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const LegalPage(title: 'Terms'),
                 ),
               ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.privacy_tip_outlined,
-                title: _appContent.text(
-                  'home',
-                  'profile.tile.privacy.title',
-                  fallback: 'Privacy Policy',
-                ),
-                subtitle: '',
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(
-                    builder: (_) => const LegalPage(title: 'Privacy'),
-                  ),
+              color: AppColors.textSecondary,
+            ),
+            ProfileMenuRow(
+              icon: Icons.privacy_tip_outlined,
+              title: _appContent.text(
+                'home',
+                'profile.tile.privacy.title',
+                fallback: 'Privacy Policy',
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const LegalPage(title: 'Privacy'),
                 ),
               ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.logout_rounded,
-                title: _appContent.text(
-                  'home',
-                  'profile.logout_label',
-                  fallback: 'Logout',
-                ),
-                subtitle: _appContent.text(
-                  'home',
-                  'profile.logout_subtitle',
-                  fallback: 'Securely logout from your account',
-                ),
-                onTap: _confirmSignOut,
-                color: AppConfig.lossColor,
-              ),
-            ],
+              color: AppColors.textSecondary,
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md + 2),
+        AppCard(
+          padding: EdgeInsets.zero,
+          child: ProfileMenuRow(
+            icon: Icons.logout_rounded,
+            title: _appContent.text(
+              'home',
+              'profile.logout_label',
+              fallback: 'Logout',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'profile.logout_subtitle',
+              fallback: 'Securely logout from your account',
+            ),
+            onTap: _confirmSignOut,
+            destructive: true,
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md + 2),
         AppText(
           AppConfig.appName,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
+          style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
         ),
       ],
-    );
-  }
-
-  Widget _accountTile({
-    required IconData icon,
-    required String title,
-    required String subtitle,
-    String? status,
-    VoidCallback? onTap,
-    Color color = const Color(0xFF143D8D),
-  }) {
-    return ListTile(
-      minTileHeight: 44,
-      visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-      leading: Container(
-        width: 28,
-        height: 28,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .10),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(icon, color: color, size: 18),
-      ),
-      title: AppText(
-        title,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
-      ),
-      trailing: onTap == null
-          ? null
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (status != null) ...[
-                  AppText(
-                    status,
-                    style: TextStyle(
-                      color: status == 'Verified'
-                          ? AppConfig.gainColor
-                          : AppConfig.textSecondaryColor,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(width: 3),
-                ],
-                const Icon(Icons.chevron_right, size: 20),
-              ],
-            ),
-      onTap: onTap,
     );
   }
 
   Widget _profileStatusPill({
     required IconData icon,
     required String label,
-    Color iconColor = Colors.white70,
+    required Color iconColor,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.sm - 1,
+        vertical: AppSpacing.xxs + 2,
+      ),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: .12),
+        color: AppColors.textInverse.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(6),
-        border: Border.all(color: Colors.white24),
+        border: Border.all(
+          color: AppColors.textInverse.withValues(alpha: 0.24),
+        ),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, color: iconColor, size: 12),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppSpacing.xxs + 2),
           AppText(
             label,
-            style: const TextStyle(
-              color: Colors.white,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textInverse,
               fontSize: 9,
               fontWeight: FontWeight.w700,
             ),
@@ -3783,11 +3834,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       'company_name',
       fallback: AppConfig.appName,
     );
-    final version = _appContent.text(
-      'about',
-      'app_version',
-      fallback: 'Version 1.0.0',
-    );
+    final marketingVersion = _appContent.text('about', 'app_version');
     final legalName = _appContent.text('about', 'legal_name');
     final address = _appContent.text('about', 'registered_address');
     final grievance = _appContent.text('about', 'grievance_contact');
@@ -3812,7 +3859,19 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
                 const SizedBox(height: 6),
-                AppText(version),
+                AppText('App version ${AppConfig.appVersion}'),
+                if (marketingVersion.isNotEmpty &&
+                    marketingVersion != 'Version ${AppConfig.appVersion}' &&
+                    marketingVersion != AppConfig.appVersion) ...[
+                  const SizedBox(height: 4),
+                  AppText(
+                    marketingVersion,
+                    style: const TextStyle(
+                      color: Color(0xFF64748B),
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
                 if (summary.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   AppText(

@@ -18,6 +18,7 @@ import { UpdateLiveQuoteDto } from './dto/update-live-quote.dto';
 import { MarketService } from './market.service';
 import { ListAdminInstrumentsQueryDto } from './dto/list-admin-instruments-query.dto';
 import { UpdateInstrumentStatusDto } from './dto/update-instrument-status.dto';
+import { UpdateInstrumentPlacementDto } from './dto/update-instrument-placement.dto';
 import { CreateInstrumentDto } from './dto/create-instrument.dto';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
@@ -52,6 +53,19 @@ export class AdminMarketController {
     @Body() dto: UpdateInstrumentStatusDto,
   ) {
     return this.marketService.updateInstrumentStatus(
+      request.user.userId,
+      instrumentId,
+      dto,
+    );
+  }
+
+  @Patch('instruments/:instrumentId/placement')
+  updateInstrumentPlacement(
+    @Req() request: AuthenticatedRequest,
+    @Param('instrumentId') instrumentId: string,
+    @Body() dto: UpdateInstrumentPlacementDto,
+  ) {
+    return this.marketService.updateInstrumentPlacement(
       request.user.userId,
       instrumentId,
       dto,

@@ -31,8 +31,10 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
       vsync: this,
       duration: const Duration(milliseconds: 420),
     );
-    _slide = Tween<Offset>(begin: const Offset(1.1, 0), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
+    _slide = Tween<Offset>(
+      begin: const Offset(1.1, 0),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
     _fade = CurvedAnimation(parent: _enter, curve: Curves.easeOut);
     _enter.forward();
   }

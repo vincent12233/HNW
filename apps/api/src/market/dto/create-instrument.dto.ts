@@ -1,4 +1,5 @@
 import {
+  IsBoolean,
   IsEnum,
   IsInt,
   IsOptional,
@@ -39,6 +40,14 @@ export class CreateInstrumentDto {
   @Min(0)
   @Max(1000000)
   displayOrder: number = 0;
+
+  @IsOptional()
+  @IsBoolean()
+  featuredHome?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  featuredMarkets?: boolean;
 
   @IsEnum(InstrumentType)
   type: InstrumentType;

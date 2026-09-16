@@ -52,6 +52,11 @@ model User {
   passwordResetCodes         PasswordResetCode[]
   requestedApprovals         ApprovalRequest[]     @relation("ApprovalRequester")
   decidedApprovals           ApprovalRequest[]     @relation("ApprovalDecider")
+  insightArticlesCreated     InsightArticle[]      @relation("InsightArticleCreator")
+  insightArticlesUpdated     InsightArticle[]      @relation("InsightArticleUpdater")
+  announcementsCreated       Announcement[]        @relation("AnnouncementCreator")
+  announcementsUpdated       Announcement[]        @relation("AnnouncementUpdater")
+  appClientSettingsUpdated   AppClientSetting[]    @relation("AppClientSettingUpdater")
 
   @@index([assignedBusinessId])
   @@index([businessCreatorId])
@@ -179,34 +184,40 @@ model ApprovalRequest {
 }
 
 model Instrument {
-  id        String         @id @default(uuid())
-  symbol    String
-  exchange  Exchange
-  name      String
-  isin      String?
-  logoUrl   String?
-  category  String?
-  displayOrder Int       @default(0)
-  type      InstrumentType @default(EQUITY)
-  currency  String         @default("INR")
-  lotSize   Int            @default(1)
-  tickSize  Decimal        @default(0.05) @db.Decimal(10, 2)
-  isActive  Boolean        @default(true)
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
-  quote     MarketQuote?
-  orders    Order[]
-  positions Position[]
-  trades    Trade[]
-  otcOffer  OtcOffer?
-  otcOrders OtcOrder[]
-  ipos      Ipo[]
+  id             String         @id @default(uuid())
+  symbol         String
+  exchange       Exchange
+  name           String
+  isin           String?
+  logoUrl        String?
+  category       String?
+  displayOrder   Int            @default(0)
+  /// Home surface featured flag (does not duplicate catalog data).
+  featuredHome   Boolean        @default(false)
+  /// Markets surface featured flag (does not duplicate catalog data).
+  featuredMarkets Boolean       @default(false)
+  type           InstrumentType @default(EQUITY)
+  currency       String         @default("INR")
+  lotSize        Int            @default(1)
+  tickSize       Decimal        @default(0.05) @db.Decimal(10, 2)
+  isActive       Boolean        @default(true)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  quote          MarketQuote?
+  orders         Order[]
+  positions      Position[]
+  trades         Trade[]
+  otcOffer       OtcOffer?
+  otcOrders      OtcOrder[]
+  ipos           Ipo[]
 
   @@unique([exchange, symbol])
   @@index([symbol])
   @@index([isin])
   @@index([isActive])
   @@index([displayOrder])
+  @@index([featuredHome, displayOrder])
+  @@index([featuredMarkets, displayOrder])
   @@map("instruments")
 }
 
@@ -921,6 +932,90 @@ model AppContentEntry {
   @@index([module, isActive])
   @@index([module, sortOrder])
   @@map("app_content_entries")
+}
+
+/// Structured Wealth Insights articles (replaces fixed article.01–08 KV over time).
+/// Legacy AppContentEntry INSIGHTS keys remain as temporary fallback.
+model InsightArticle {
+  id          String    @id @default(uuid())
+  slug        String
+  locale      String    @default("en")
+  title       String
+  summary     String?   @db.Text
+  body        String    @db.Text
+  imageUrl    String?
+  isPublished Boolean   @default(false)
+  sortOrder   Int       @default(0)
+  publishedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  createdBy   User?     @relation("InsightArticleCreator", fields: [createdById], references: [id])
+  updatedBy   User?     @relation("InsightArticleUpdater", fields: [updatedById], references: [id])
+
+  @@unique([slug, locale])
+  @@index([isPublished, sortOrder])
+  @@index([locale, isPublished])
+  @@map("insight_articles")
+}
+
+enum AnnouncementType {
+  GENERAL
+  MAINTENANCE
+  IMPORTANT
+  MARKET_NOTICE
+}
+
+/// Platform ops announcements — distinct from Market News RSS and Home/Markets banners.
+model Announcement {
+  id          String           @id @default(uuid())
+  locale      String           @default("en")
+  title       String
+  body        String           @db.Text
+  type        AnnouncementType @default(GENERAL)
+  isPublished Boolean          @default(false)
+  priority    Int              @default(0)
+  startsAt    DateTime?
+  endsAt      DateTime?
+  sortOrder   Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  createdById String?
+  updatedById String?
+  createdBy   User?            @relation("AnnouncementCreator", fields: [createdById], references: [id])
+  updatedBy   User?            @relation("AnnouncementUpdater", fields: [updatedById], references: [id])
+
+  @@index([isPublished, sortOrder])
+  @@index([locale, isPublished])
+  @@index([startsAt, endsAt])
+  @@map("announcements")
+}
+
+enum AppClientPlatform {
+  ANDROID
+  IOS
+  WEB
+}
+
+/// Per-platform client gates (maintenance / version). Not marketing About.app_version.
+model AppClientSetting {
+  id                 String            @id @default(uuid())
+  platform           AppClientPlatform @unique
+  minVersion         String            @default("0.0.0")
+  latestVersion      String            @default("0.0.0")
+  forceUpdate        Boolean           @default(false)
+  maintenanceMode    Boolean           @default(false)
+  maintenanceMessage String?           @db.Text
+  supportUrl         String?
+  /// Client update destination (Play Store / App Store / web download). Optional; http/https only.
+  updateUrl          String?
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+  updatedById        String?
+  updatedBy          User?             @relation("AppClientSettingUpdater", fields: [updatedById], references: [id])
+
+  @@map("app_client_settings")
 }
 
 

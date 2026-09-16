@@ -1,24 +1,31 @@
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 
 InputDecoration onboardingInput(String hint) => InputDecoration(
   hintText: tr(hint),
-  hintStyle: const TextStyle(fontSize: 13, color: AppConfig.textSecondaryColor),
+  hintStyle: AppTypography.bodySmall,
   filled: true,
-  fillColor: const Color(0xFFF8FAFC),
-  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+  fillColor: AppColors.surfaceInput,
+  contentPadding: EdgeInsets.symmetric(
+    horizontal: AppSpacing.inputPaddingH,
+    vertical: AppSpacing.inputPaddingV,
+  ),
   border: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: AppConfig.borderColor),
+    borderRadius: AppRadius.borderMd,
+    borderSide: const BorderSide(color: AppColors.border),
   ),
   enabledBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: AppConfig.borderColor),
+    borderRadius: AppRadius.borderMd,
+    borderSide: const BorderSide(color: AppColors.border),
   ),
   focusedBorder: OutlineInputBorder(
-    borderRadius: BorderRadius.circular(12),
-    borderSide: const BorderSide(color: AppConfig.primaryColor, width: 1.5),
+    borderRadius: AppRadius.borderMd,
+    borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
   ),
 );
 
@@ -92,7 +99,7 @@ class VerificationBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
-    color: const Color(0xFFF7F9FD),
+    color: AppColors.brandPrimarySoft,
     child: Row(
       children: [
         Icon(icon, size: 28, color: AppConfig.primaryColor),

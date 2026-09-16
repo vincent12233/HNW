@@ -31,7 +31,7 @@ class _AppearancePageState extends State<AppearancePage> {
 
   @override
   Widget build(BuildContext context) => AppPageScaffold(
-    appBar: AppBar(title: const AppText('Theme')),
+    appBar: AppBar(title: const AppText('Appearance')),
     body: ListView(
       children: [
         if (_busy) const LinearProgressIndicator(),

@@ -92,6 +92,33 @@ body {
   background: transparent !important;
   border: 0 !important;
   padding: 4px 10px 24px;
+  min-height: 100%;
+  color: #dbeafe !important;
+}
+
+/* The mobile navigation is rendered inside an Ant Drawer rather than the
+   desktop Sider. Keep the full menu surface dark so grouped items remain
+   readable when the drawer is taller than its initial viewport. */
+.ops-menu,
+.ops-menu .ant-menu-item-group-list {
+  background: linear-gradient(180deg, var(--sider-from), var(--sider-mid) 62%, var(--sider-to)) !important;
+}
+
+.ops-menu .ant-menu-item,
+.ops-menu .ant-menu-item a,
+.ops-menu .ant-menu-item .anticon {
+  color: #dbeafe !important;
+}
+
+.ops-menu .ant-menu-item:hover,
+.ops-menu .ant-menu-item:hover a,
+.ops-menu .ant-menu-item:hover .anticon {
+  color: #ffffff !important;
+}
+
+.ops-mobile-nav {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--sider-from), var(--sider-mid) 62%, var(--sider-to));
 }
 
 .ops-menu .ant-menu-item-group-title {

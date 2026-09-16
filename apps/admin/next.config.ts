@@ -4,10 +4,17 @@ const isDev = process.env.NODE_ENV === "development";
 const devScriptPolicy = isDev ? " 'unsafe-eval'" : "";
 
 function resolveConnectSrc() {
-  if (isDev) {
-    return "'self' https: http://localhost:3000 http://127.0.0.1:3000";
-  }
   const apiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
+  if (isDev) {
+    const localApiOrigin = (() => {
+      try {
+        return apiUrl ? new URL(apiUrl).origin : 'http://localhost:3000';
+      } catch {
+        return 'http://localhost:3000';
+      }
+    })();
+    return `'self' https: ${localApiOrigin}`;
+  }
   if (apiUrl?.startsWith("https://")) {
     try {
       return `'self' ${new URL(apiUrl).origin}`;

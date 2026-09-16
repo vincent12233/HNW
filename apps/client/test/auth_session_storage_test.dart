@@ -37,17 +37,20 @@ void main() {
     expect(restored.fullName, 'Demo Client');
   });
 
-  test('restoreSession migrates legacy plaintext prefs then scrubs them', () async {
-    const encoded =
-        '{"accessToken":"legacy-token","userId":"user-2","phone":"9000000000","fullName":"Legacy","role":"CLIENT","accountId":"acc-2","accountNumber":"100002"}';
-    SharedPreferences.setMockInitialValues({'auth_session': encoded});
-    FlutterSecureStorage.setMockInitialValues({});
+  test(
+    'restoreSession migrates legacy plaintext prefs then scrubs them',
+    () async {
+      const encoded =
+          '{"accessToken":"legacy-token","userId":"user-2","phone":"9000000000","fullName":"Legacy","role":"CLIENT","accountId":"acc-2","accountNumber":"100002"}';
+      SharedPreferences.setMockInitialValues({'auth_session': encoded});
+      FlutterSecureStorage.setMockInitialValues({});
 
-    final restored = await AuthService().restoreSession();
-    expect(restored, isNotNull);
-    expect(restored!.accessToken, 'legacy-token');
+      final restored = await AuthService().restoreSession();
+      expect(restored, isNotNull);
+      expect(restored!.accessToken, 'legacy-token');
 
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('auth_session'), isNull);
-  });
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getString('auth_session'), isNull);
+    },
+  );
 }

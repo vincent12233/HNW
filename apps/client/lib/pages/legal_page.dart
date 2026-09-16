@@ -1,6 +1,9 @@
 import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import 'package:flutter/material.dart';
 
 class LegalPage extends StatefulWidget {
@@ -14,6 +17,7 @@ class LegalPage extends StatefulWidget {
 
 class _LegalPageState extends State<LegalPage> {
   bool get _isPrivacy => widget.title.toLowerCase().contains('privacy');
+  bool get _isRisk => widget.title.toLowerCase().contains('risk');
   AppContentBundle _content = AppContentBundle.empty;
   bool _loading = true;
 
@@ -34,66 +38,88 @@ class _LegalPageState extends State<LegalPage> {
 
   @override
   Widget build(BuildContext context) {
-    final remote = _isPrivacy
+    final remote = _isRisk
+        ? _content.riskDocument()
+        : _isPrivacy
         ? _content.privacyDocument()
         : _content.termsDocument();
     final useRemote = remote.sections.isNotEmpty;
+    final fallbackHeading = _isRisk
+        ? 'Risk Disclosure'
+        : (_isPrivacy ? 'Privacy Policy' : 'Terms of Service');
     final heading = useRemote
         ? (remote.title?.isNotEmpty == true
               ? remote.title!
-              : (_isPrivacy ? 'Privacy Policy' : 'Terms of Service'))
-        : (_isPrivacy ? 'Privacy Policy' : 'Terms of Service');
+              : fallbackHeading)
+        : fallbackHeading;
     final effective = useRemote && remote.effective.isNotEmpty
         ? remote.effective
-        : 'Effective 13 August 2026  •  Version 1.0';
+        : (_isRisk
+              ? 'Effective 16 September 2026  •  Version 1.0'
+              : 'Effective 13 August 2026  •  Version 1.0');
     final sections = useRemote
         ? remote.sections
               .map((section) => _LegalSection(section.heading, section.body))
               .toList()
-        : (_isPrivacy ? _privacySections : _termsSections);
+        : (_isRisk
+              ? _riskSections
+              : (_isPrivacy ? _privacySections : _termsSections));
 
     return AppPageScaffold(
       appBar: AppBar(title: AppText(heading)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
-              children: [
-                AppText(
-                  heading,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+          : Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.md,
+                    AppSpacing.xl,
+                    AppSpacing.xxxl + 4,
                   ),
-                ),
-                const SizedBox(height: 6),
-                AppText(
-                  effective,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 20),
-                ...sections.map(
-                  (section) => Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          section.heading,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 7),
-                        AppText(
-                          section.body,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(height: 1.55),
-                        ),
-                      ],
+                  children: [
+                    AppText(
+                      heading,
+                      style: AppTypography.headline.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: AppSpacing.sm - 2),
+                    AppText(
+                      effective,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    ...sections.map(
+                      (section) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              section.heading,
+                              style: AppTypography.titleMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.sm - 1),
+                            AppText(
+                              section.body,
+                              style: AppTypography.bodyMedium.copyWith(
+                                height: 1.55,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
     );
   }
@@ -196,5 +222,48 @@ const _termsSections = <_LegalSection>[
   _LegalSection(
     '11. Changes, complaints and governing terms',
     'We may change these Terms prospectively and will show the effective date and provide required notice. Raise service or transaction complaints through Online Customer Service and keep the ticket reference. Before public release, the operator must insert its legal entity name, registered address, grievance officer, applicable licence or registration details (only if actually held), governing law, courts or arbitration venue, and escalation channels in About Us and the final version of these Terms.',
+  ),
+];
+
+const _riskSections = <_LegalSection>[
+  _LegalSection(
+    '1. Capital and market risk',
+    'Investments can rise or fall in value and you may lose some or all of the capital committed. Market prices can change rapidly because of issuer, sector, economic, political, currency or broader market events. Past performance and displayed returns do not guarantee future results.',
+  ),
+  _LegalSection(
+    '2. Volatility and liquidity risk',
+    'Some instruments may experience sharp price movements or limited trading interest. You may be unable to buy or sell the desired quantity at the displayed price, or at all. Low liquidity can increase price impact and the time required to complete or settle a transaction.',
+  ),
+  _LegalSection(
+    '3. Execution and price risk',
+    'Quotes, charts and reference prices may be delayed, corrected or differ from the final transaction or settlement price. Submitting an instruction does not guarantee acceptance, execution, allocation or approval. Review the instrument, quantity, price basis, charges and total before confirming.',
+  ),
+  _LegalSection(
+    '4. Product-specific risk',
+    'Institutional offers, IPOs and OTC products may involve restricted eligibility, uncertain allocation, limited liquidity, valuation uncertainty and additional review or settlement steps. OTC transactions remain pending until approved. Read the product details and do not treat an application or displayed position as a completed allocation or settlement.',
+  ),
+  _LegalSection(
+    '5. Settlement, custody and counterparty risk',
+    'Transactions depend on the disclosed operator, banking, custody, allocation and settlement arrangements. Delays, rejection, reconciliation issues or counterparty failure may affect when cash or assets become available. Confirm the contracting entity, ownership record, settlement timing, cancellation rules and complaint route before transacting.',
+  ),
+  _LegalSection(
+    '6. System and data risk',
+    'The application, networks, devices, market-data services, banking systems or other providers may be unavailable or contain delayed or inaccurate information. A pending screen, notification or balance display is not conclusive proof of execution or settlement. Check transaction records and contact support when information conflicts.',
+  ),
+  _LegalSection(
+    '7. Borrowing and leverage risk',
+    'Borrowing money or using leverage to invest can magnify losses and may create repayment obligations even when an investment loses value. Do not borrow or commit funds needed for essential expenses, emergencies or near-term obligations.',
+  ),
+  _LegalSection(
+    '8. Fraud and account-security risk',
+    'Fraudsters may impersonate staff or promise guaranteed returns. Never share passwords, OTPs or transaction keys, and use only verified in-app support channels. Report unauthorised activity promptly. India Trading does not guarantee returns or ask you to bypass the displayed transaction workflow.',
+  ),
+  _LegalSection(
+    '9. Regulatory and tax risk',
+    'Laws, regulatory requirements, taxes, fees and product availability may change and can affect transactions or returns. Your tax and legal position depends on your circumstances. Obtain independent professional advice where needed.',
+  ),
+  _LegalSection(
+    '10. Make an informed decision',
+    'This application provides information and transaction workflows; it does not provide personal investment, legal or tax advice unless expressly identified as such by an authorised professional. Consider your objectives, financial position, time horizon and ability to bear loss. Read all product disclosures and seek independent advice before acting if you do not understand the risks.',
   ),
 ];

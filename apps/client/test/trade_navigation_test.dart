@@ -57,7 +57,7 @@ void main() {
       for (final entry in <String, Type>{
         'Orders': OrdersTab,
         'Pending': PendingCenterTab,
-        'Holdings': HoldingsTab,
+        'Positions': HoldingsTab,
         'History': HistoryTab,
       }.entries) {
         final label = find.text(entry.key).first;

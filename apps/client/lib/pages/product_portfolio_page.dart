@@ -97,13 +97,33 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           Row(
             children: [
               Expanded(
-                child: AppText(
-                  AppContentService.instance.current.text(
-                    'trading',
-                    'portfolio.page_title',
-                    fallback: 'Portfolio',
-                  ),
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      AppContentService.instance.current.text(
+                        'trading',
+                        'portfolio.page_title',
+                        fallback: 'Portfolio',
+                      ),
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(
+                      AppContentService.instance.current.text(
+                        'trading',
+                        'portfolio.page_subtitle',
+                        fallback: 'Institutional · OTC · IPO',
+                      ),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               IconButton(
@@ -321,8 +341,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                     content.text(
                       'trading',
                       'portfolio.empty_subtitle',
-                      fallback:
-                          'No Institutional, OTC or IPO holdings yet.',
+                      fallback: 'No Institutional, OTC or IPO holdings yet.',
                     ),
                     textAlign: TextAlign.center,
                   ),

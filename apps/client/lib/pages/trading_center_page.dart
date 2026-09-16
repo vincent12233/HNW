@@ -96,7 +96,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         const Color(0xFF1D4ED8),
       ),
       _TradingModule(
-        label('tab.holdings', 'Holdings'),
+        label('tab.holdings', 'Positions'),
         Icons.account_balance_wallet_outlined,
         const Color(0xFF059669),
       ),
@@ -586,7 +586,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             AppContentService.instance.current.text(
               'trading',
               'tab.holdings',
-              fallback: 'Holdings',
+              fallback: 'Positions',
             ),
             Icons.account_balance_outlined,
           ),
@@ -698,8 +698,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             StockQuote? match;
             for (final item in widget.stocks) {
               if (item.symbol.toUpperCase() == stock.symbol.toUpperCase() &&
-                  item.exchange.toUpperCase() ==
-                      stock.exchange.toUpperCase()) {
+                  item.exchange.toUpperCase() == stock.exchange.toUpperCase()) {
                 match = item;
                 break;
               }

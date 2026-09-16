@@ -108,7 +108,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       {
         'profile': 'Personal Information',
         'banks': 'Bank Accounts',
-        'preferences': 'Preferences',
+        'preferences': 'Alert Preferences',
         'reconciliation': 'Portfolio Reconciliation',
         'kyc': 'KYC & Verification',
       }[widget.section] ??

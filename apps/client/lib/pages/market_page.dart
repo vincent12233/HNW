@@ -10,6 +10,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
 import '../widgets/home/home_action_button.dart';
 import '../widgets/home/mini_line_chart_painter.dart';
@@ -122,7 +126,6 @@ class _MarketHomePageState extends State<MarketHomePage>
   Uint8List? profileAvatarBytes;
 
   final List<TradingOrder> orders = <TradingOrder>[];
-
 
   final List<WithdrawalRequest> withdrawalRequests = <WithdrawalRequest>[];
 
@@ -932,17 +935,17 @@ class _MarketHomePageState extends State<MarketHomePage>
         top: false,
         child: Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
-            border: Border(top: BorderSide(color: AppConfig.borderColor)),
+            color: AppColors.surface,
+            border: Border(top: BorderSide(color: AppColors.border)),
           ),
           child: Center(
             heightFactor: 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
               child: NavigationBar(
-                height: MediaQuery.sizeOf(context).height < 650 ? 68 : 72,
+                height: AppSpacing.navHeight,
                 elevation: 0,
-                backgroundColor: Colors.white,
+                backgroundColor: AppColors.surface,
                 surfaceTintColor: Colors.transparent,
                 shadowColor: Colors.transparent,
                 labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
@@ -950,42 +953,42 @@ class _MarketHomePageState extends State<MarketHomePage>
                 onDestinationSelected: _onDestinationSelected,
                 destinations: [
                   NavigationDestination(
-                    icon: Icon(Icons.home_outlined),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.home_outlined),
+                    selectedIcon: const Icon(
                       Icons.home,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Home'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.bar_chart_outlined),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.bar_chart_outlined),
+                    selectedIcon: const Icon(
                       Icons.bar_chart,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Markets'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.swap_horiz_rounded),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.swap_horiz_rounded),
+                    selectedIcon: const Icon(
                       Icons.swap_horiz_rounded,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Trade'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.pie_chart_outline),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.pie_chart_outline),
+                    selectedIcon: const Icon(
                       Icons.pie_chart,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Portfolio'),
                   ),
                   NavigationDestination(
-                    icon: Icon(Icons.person_outline),
-                    selectedIcon: Icon(
+                    icon: const Icon(Icons.person_outline),
+                    selectedIcon: const Icon(
                       Icons.person,
-                      color: AppConfig.primaryColor,
+                      color: AppColors.navSelected,
                     ),
                     label: tr('Profile'),
                   ),
@@ -3300,14 +3303,14 @@ class _MarketHomePageState extends State<MarketHomePage>
         });
 
     final horizontalPadding = MediaQuery.sizeOf(context).width < 360
-        ? 14.0
-        : 16.0;
+        ? AppSpacing.md + 2
+        : AppSpacing.lg;
     return ListView(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
-        14,
+        AppSpacing.md + 2,
         horizontalPadding,
-        24,
+        AppSpacing.xxl,
       ),
       children: [
         Row(
@@ -3319,23 +3322,17 @@ class _MarketHomePageState extends State<MarketHomePage>
                   'profile.page_title',
                   fallback: 'Profile',
                 ),
-                style: const TextStyle(
-                  fontSize: 20,
+                style: AppTypography.titleLarge.copyWith(
                   fontWeight: FontWeight.w800,
                 ),
               ),
             ),
-            IconButton(
-              tooltip: 'Settings',
-              onPressed: () => _openAccountSettings('preferences'),
-              icon: const Icon(Icons.settings_outlined, size: 22),
-            ),
             _notificationButton(),
           ],
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md + 2),
         _profileHeader(),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl - 2),
         AppText(
           _appContent.text(
             'home',
@@ -3344,10 +3341,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
           style: AppUi.sectionTitle,
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 4),
-          decoration: AppUi.surface(radius: AppUi.radiusMd),
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.lg,
+            horizontal: AppSpacing.xs,
+          ),
+          decoration: AppUi.surface(radius: AppRadius.md),
           child: IntrinsicHeight(
             child: Row(
               children: [
@@ -3359,7 +3359,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       fallback: 'Available Balance',
                     ),
                     availableBalance,
-                    AppConfig.textPrimaryColor,
+                    AppColors.textPrimary,
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -3368,10 +3368,10 @@ class _MarketHomePageState extends State<MarketHomePage>
                     _appContent.text(
                       'home',
                       'profile.metric.portfolio',
-                      fallback: 'Total Portfolio',
+                      fallback: 'Product Holdings',
                     ),
                     productValue,
-                    AppConfig.textPrimaryColor,
+                    AppColors.textPrimary,
                   ),
                 ),
                 const VerticalDivider(width: 1),
@@ -3383,27 +3383,25 @@ class _MarketHomePageState extends State<MarketHomePage>
                       fallback: 'Total Returns',
                     ),
                     totalReturns,
-                    totalReturns >= 0
-                        ? AppConfig.gainColor
-                        : AppConfig.lossColor,
+                    totalReturns >= 0 ? AppColors.gain : AppColors.loss,
                   ),
                 ),
               ],
             ),
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl - 2),
         AppText(
           _appContent.text(
             'home',
-            'profile.section.security',
-            fallback: 'Account & Security',
+            'profile.section.account',
+            fallback: 'Account',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          style: AppTypography.titleSmall,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm + 2),
         Card(
-          color: Colors.white,
+          color: AppColors.surface,
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
@@ -3412,17 +3410,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 title: 'Personal Information',
                 subtitle: 'Account ID and full name',
                 onTap: _editProfile,
-                color: const Color(0xFF2563EB),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.request_quote_outlined,
-                title: 'Loan Applications',
-                subtitle: 'Application Status',
-                color: const Color(0xFF059669),
-                onTap: () => Navigator.of(context).push(
-                  MaterialPageRoute<void>(builder: (_) => const LoanPage()),
-                ),
+                color: AppColors.brandPrimary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3435,9 +3423,57 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ? 'Pending'
                     : 'Required',
                 onTap: () => _openAccountSettings('kyc'),
-                color: const Color(0xFF10B981),
+                color: AppColors.gain,
               ),
               const Divider(height: 1, indent: 56),
+              _accountTile(
+                icon: Icons.account_balance_outlined,
+                title: 'Bank Accounts',
+                subtitle: 'Manage linked bank accounts and UPI',
+                onTap: () => _openAccountSettings('banks'),
+                color: AppColors.warning,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl - 2),
+        AppText(
+          _appContent.text('home', 'profile.section.funds', fallback: 'Funds'),
+          style: AppTypography.titleSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm + 2),
+        Card(
+          color: AppColors.surface,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
+              _accountTile(
+                icon: Icons.request_quote_outlined,
+                title: 'Loan Applications',
+                subtitle: 'Application status',
+                color: AppColors.gain,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const LoanPage()),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl - 2),
+        AppText(
+          _appContent.text(
+            'home',
+            'profile.section.security',
+            fallback: 'Security',
+          ),
+          style: AppTypography.titleSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm + 2),
+        Card(
+          color: AppColors.surface,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
               _accountTile(
                 icon: Icons.password_outlined,
                 title: 'Change Password',
@@ -3447,7 +3483,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const AccountSecurityPage(),
                   ),
                 ),
-                color: const Color(0xFF2563EB),
+                color: AppColors.brandPrimary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3459,7 +3495,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const TwoFactorPage(),
                   ),
                 ),
-                color: const Color(0xFF0F9D92),
+                color: AppColors.info,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3472,54 +3508,47 @@ class _MarketHomePageState extends State<MarketHomePage>
                         const AccountSecurityPage(withdrawalPin: true),
                   ),
                 ),
-                color: const Color(0xFFF59E0B),
-              ),
-              const Divider(height: 1, indent: 56),
-              _accountTile(
-                icon: Icons.account_balance_outlined,
-                title: 'Bank Accounts',
-                subtitle: 'Manage linked bank accounts and UPI',
-                onTap: () => _openAccountSettings('banks'),
-                color: const Color(0xFFF59E0B),
+                color: AppColors.warning,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl - 2),
         AppText(
           _appContent.text(
             'home',
             'profile.section.preferences',
             fallback: 'Preferences',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          style: AppTypography.titleSmall,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm + 2),
         Card(
-          color: Colors.white,
+          color: AppColors.surface,
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
               _accountTile(
                 icon: Icons.notifications_none_rounded,
-                title: 'Notification Settings',
+                title: 'Alert Preferences',
                 subtitle: 'Choose which account updates you receive',
                 onTap: () => _openAccountSettings('preferences'),
-                color: const Color(0xFF8B5CF6),
+                color: AppColors.brandPrimary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
                 icon: Icons.contrast,
-                title: 'Theme',
-                subtitle: '',
+                title: 'Appearance',
+                subtitle: 'Light or high contrast display',
                 status: AppearanceSettings.instance.value == 'highContrast'
                     ? 'High contrast'
-                    : 'Light Theme',
+                    : 'Light',
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
                     builder: (_) => const AppearancePage(),
                   ),
                 ),
+                color: AppColors.textSecondary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3532,23 +3561,23 @@ class _MarketHomePageState extends State<MarketHomePage>
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const LanguagePage()),
                 ),
-                color: const Color(0xFFF59E0B),
+                color: AppColors.warning,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.xl - 2),
         AppText(
           _appContent.text(
             'home',
             'profile.section.support',
-            fallback: 'Support & More',
+            fallback: 'Support & Education',
           ),
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700),
+          style: AppTypography.titleSmall,
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.sm + 2),
         Card(
-          color: Colors.white,
+          color: AppColors.surface,
           clipBehavior: Clip.antiAlias,
           child: Column(
             children: [
@@ -3574,7 +3603,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ),
                   ),
                 ),
-                color: const Color(0xFF2563EB),
+                color: AppColors.brandPrimary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3594,9 +3623,22 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const WealthInsightsPage(),
                   ),
                 ),
-                color: const Color(0xFF10B981),
+                color: AppColors.gain,
               ),
-              const Divider(height: 1, indent: 56),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl - 2),
+        AppText(
+          _appContent.text('home', 'profile.section.legal', fallback: 'Legal'),
+          style: AppTypography.titleSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm + 2),
+        Card(
+          color: AppColors.surface,
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            children: [
               _accountTile(
                 icon: Icons.info_outline_rounded,
                 title: _appContent.text(
@@ -3610,7 +3652,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   fallback: 'About our app, terms and policies',
                 ),
                 onTap: _openAbout,
-                color: const Color(0xFF8B5CF6),
+                color: AppColors.brandPrimary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3626,6 +3668,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const LegalPage(title: 'Terms'),
                   ),
                 ),
+                color: AppColors.textSecondary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3641,6 +3684,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     builder: (_) => const LegalPage(title: 'Privacy'),
                   ),
                 ),
+                color: AppColors.textSecondary,
               ),
               const Divider(height: 1, indent: 56),
               _accountTile(
@@ -3656,16 +3700,16 @@ class _MarketHomePageState extends State<MarketHomePage>
                   fallback: 'Securely logout from your account',
                 ),
                 onTap: _confirmSignOut,
-                color: AppConfig.lossColor,
+                color: AppColors.loss,
               ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: AppSpacing.md + 2),
         AppText(
           AppConfig.appName,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
+          style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
         ),
       ],
     );
@@ -3677,25 +3721,36 @@ class _MarketHomePageState extends State<MarketHomePage>
     required String subtitle,
     String? status,
     VoidCallback? onTap,
-    Color color = const Color(0xFF143D8D),
+    Color color = AppColors.brandDark,
   }) {
     return ListTile(
       minTileHeight: 44,
       visualDensity: VisualDensity.compact,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.lg,
+        vertical: 0,
+      ),
       leading: Container(
         width: 28,
         height: 28,
         decoration: BoxDecoration(
           color: color.withValues(alpha: .10),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: AppRadius.borderSm,
         ),
         child: Icon(icon, color: color, size: 18),
       ),
       title: AppText(
         title,
-        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+        style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
       ),
+      subtitle: subtitle.isEmpty
+          ? null
+          : AppText(
+              subtitle,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
+            ),
       trailing: onTap == null
           ? null
           : Row(
@@ -3704,15 +3759,14 @@ class _MarketHomePageState extends State<MarketHomePage>
                 if (status != null) ...[
                   AppText(
                     status,
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       color: status == 'Verified'
-                          ? AppConfig.gainColor
-                          : AppConfig.textSecondaryColor,
-                      fontSize: 10,
+                          ? AppColors.gain
+                          : AppColors.textSecondary,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
-                  const SizedBox(width: 3),
+                  const SizedBox(width: AppSpacing.xxs + 1),
                 ],
                 const Icon(Icons.chevron_right, size: 20),
               ],

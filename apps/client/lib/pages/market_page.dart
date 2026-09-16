@@ -15,6 +15,7 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
+import '../widgets/app_card.dart';
 import '../widgets/home/home_action_button.dart';
 import '../widgets/home/mini_line_chart_painter.dart';
 import '../models/institutional_opportunity.dart';
@@ -1127,7 +1128,7 @@ class _MarketHomePageState extends State<MarketHomePage>
         Container(
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(18, 16, 14, 18),
-          decoration: AppUi.heroGradient(radius: AppUi.radiusLg),
+          decoration: AppUi.heroGradient(radius: AppRadius.lg),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1140,9 +1141,8 @@ class _MarketHomePageState extends State<MarketHomePage>
                         'funds.total_asset_label',
                         fallback: 'Total Asset Value',
                       ),
-                      style: const TextStyle(
-                        color: Colors.white70,
-                        fontSize: 13,
+                      style: AppTypography.labelLarge.copyWith(
+                        color: AppColors.textInverse.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -1154,7 +1154,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       _amountsHidden
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
-                      color: Colors.white70,
+                      color: AppColors.textInverse.withValues(alpha: 0.7),
                       size: 20,
                     ),
                   ),
@@ -1175,11 +1175,13 @@ class _MarketHomePageState extends State<MarketHomePage>
                       children: [
                         AppText(
                           _portfolioPeriod,
-                          style: const TextStyle(color: Colors.white),
+                          style: AppTypography.labelMedium.copyWith(
+                            color: AppColors.textInverse,
+                          ),
                         ),
                         const Icon(
                           Icons.expand_more,
-                          color: Colors.white,
+                          color: AppColors.textInverse,
                           size: 18,
                         ),
                       ],
@@ -1187,7 +1189,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ],
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: AppSpacing.sm),
               Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -1196,35 +1198,36 @@ class _MarketHomePageState extends State<MarketHomePage>
                       _amountsHidden
                           ? '******'
                           : formatPrice(totalPortfolioValue),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: AppTypography.numericInverse.copyWith(
                         fontSize: 26,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0,
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: AppSpacing.md),
                   SizedBox(
                     width: MediaQuery.sizeOf(context).width < 360 ? 90 : 116,
                     height: 38,
                     child: !_amountsHidden && _portfolioSeries.length >= 2
                         ? CustomPaint(
                             painter: MiniLineChartPainter(
-                              color: AppConfig.chartGainColor,
+                              color: AppColors.chartGain,
                               values: _portfolioSeries,
                             ),
                           )
-                        : const Center(
+                        : Center(
                             child: AppText(
                               '--',
-                              style: TextStyle(color: Colors.white70),
+                              style: AppTypography.labelMedium.copyWith(
+                                color: AppColors.textInverse.withValues(
+                                  alpha: 0.7,
+                                ),
+                              ),
                             ),
                           ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               AppText(
                 _amountsHidden
                     ? '******'
@@ -1233,63 +1236,59 @@ class _MarketHomePageState extends State<MarketHomePage>
                     : _periodProfit == null
                     ? 'Insufficient history'
                     : '${formatPrice(_periodProfit!)} · $_portfolioPeriod',
-                style: TextStyle(
+                style: AppTypography.labelLarge.copyWith(
                   color: (_periodProfit ?? 0) == 0
-                      ? Colors.white70
+                      ? AppColors.textInverse.withValues(alpha: 0.7)
                       : (_periodProfit ?? 0) > 0
-                      ? const Color(0xFF86EFAC)
+                      ? AppColors.chartGain
                       : const Color(0xFFFCA5A5),
-                  fontSize: 13,
                   fontWeight: FontWeight.w700,
+                  fontFeatures: AppTypography.tabularFeatures,
                 ),
               ),
               if (_historyError != null)
                 AppText(
                   _historyError!,
-                  style: const TextStyle(color: Colors.white70),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textInverse.withValues(alpha: 0.7),
+                  ),
                 ),
               if (_historyFrom != null && !_amountsHidden)
                 AppText(
                   'Since $_historyFrom',
-                  style: const TextStyle(color: Colors.white70, fontSize: 11),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textInverse.withValues(alpha: 0.7),
+                  ),
                 ),
               if (outstandingIpo > 0) ...[
-                const SizedBox(height: 10),
+                const SizedBox(height: AppSpacing.sm + 2),
                 AppText(
                   _amountsHidden
                       ? '******'
                       : 'IPO Funds Required ${formatPrice(outstandingIpo)}',
-                  style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textInverse.withValues(alpha: 0.7),
+                  ),
                 ),
               ],
             ],
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         _homeQuickActions(),
-        if (companyShowcases.isNotEmpty) ...[
-          const SizedBox(height: 18),
-          _sectionTitle(
-            _appContent.text(
-              'home',
-              'company.section_title',
-              fallback: 'Our Company',
-            ),
+        const SizedBox(height: AppSpacing.sm),
+        AppCard(
+          padding: const EdgeInsets.symmetric(
+            vertical: AppSpacing.md + 2,
+            horizontal: AppSpacing.xs,
           ),
-          const SizedBox(height: 10),
-          _companyShowcaseCard(companyShowcases.first),
-        ],
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 4),
-          decoration: AppUi.surface(radius: AppUi.radiusMd),
           child: Row(
             children: [
               Expanded(
                 child: _homeBalanceValue(
                   'Available Funds',
                   availableBalance,
-                  AppConfig.textPrimaryColor,
+                  AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 58, child: VerticalDivider(width: 1)),
@@ -1297,7 +1296,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 child: _homeBalanceValue(
                   'Used Margin',
                   frozenBalance,
-                  AppConfig.textPrimaryColor,
+                  AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 58, child: VerticalDivider(width: 1)),
@@ -1305,20 +1304,19 @@ class _MarketHomePageState extends State<MarketHomePage>
                 child: _homeBalanceValue(
                   'Unrealized P&L',
                   todayPnl,
-                  pnlPositive ? AppConfig.gainColor : AppConfig.lossColor,
+                  pnlPositive ? AppColors.gain : AppColors.loss,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 10),
       ],
     );
   }
 
   Widget _homeBalanceValue(String label, double value, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -1326,9 +1324,13 @@ class _MarketHomePageState extends State<MarketHomePage>
             label,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textTertiary,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: AppSpacing.sm),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -1338,9 +1340,8 @@ class _MarketHomePageState extends State<MarketHomePage>
                   : label.contains('P&L')
                   ? formatSignedPrice(value)
                   : formatPrice(value),
-              style: TextStyle(
+              style: AppTypography.numericSmall.copyWith(
                 color: color,
-                fontSize: 14,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -1352,213 +1353,151 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Widget _companyShowcaseCard(CompanyShowcase company) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B1F44), Color(0xFF123B72), Color(0xFF176B88)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x33152F5F),
-            blurRadius: 18,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            right: -28,
-            top: -34,
-            child: Container(
-              width: 130,
-              height: 130,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: .08),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
+      decoration: AppUi.heroGradient(radius: AppRadius.lg),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: .14),
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: company.logoUrl?.isNotEmpty == true
-                          ? ClipRRect(
-                              borderRadius: BorderRadius.circular(15),
-                              child: Image.network(
-                                company.logoUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => const Icon(
-                                  Icons.business_rounded,
-                                  color: Colors.white,
-                                ),
-                              ),
-                            )
-                          : const Icon(
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: AppColors.textInverse.withValues(alpha: .14),
+                    borderRadius: AppRadius.borderMd,
+                    border: Border.all(
+                      color: AppColors.textInverse.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: company.logoUrl?.isNotEmpty == true
+                      ? ClipRRect(
+                          borderRadius: AppRadius.borderMd,
+                          child: Image.network(
+                            company.logoUrl!,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) => const Icon(
                               Icons.business_rounded,
-                              color: Colors.white,
-                            ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            company.name,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                              color: AppColors.textInverse,
                             ),
                           ),
-                          const SizedBox(height: 4),
-                          AppText(
-                            company.tagline,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: Color(0xFFD5E6FF),
-                              fontSize: 12,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Icon(
-                      Icons.verified_rounded,
-                      color: Color(0xFF8DE7D3),
-                      size: 22,
-                    ),
-                  ],
+                        )
+                      : const Icon(
+                          Icons.business_rounded,
+                          color: AppColors.textInverse,
+                        ),
                 ),
-                if (company.videoUrl?.isNotEmpty == true) ...[
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      height: 150,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF07152F),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              width: 52,
-                              height: 52,
-                              decoration: const BoxDecoration(
-                                color: Colors.white,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.play_arrow_rounded,
-                                color: Color(0xFF123B72),
-                                size: 34,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            AppText(
-                              _appContent.text(
-                                'home',
-                                'company.video_cta',
-                                fallback: 'Watch our company introduction',
-                              ),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        company.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.titleMedium.copyWith(
+                          color: AppColors.textInverse,
+                          fontWeight: FontWeight.w800,
                         ),
                       ),
-                    ),
+                      const SizedBox(height: AppSpacing.xs),
+                      AppText(
+                        company.tagline,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.textInverse.withValues(alpha: 0.85),
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-                const SizedBox(height: 16),
-                AppText(
-                  company.description,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFFE7F0FF),
-                    fontSize: 13,
-                    height: 1.55,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    if (company.sector?.isNotEmpty == true)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: .12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: AppText(
-                          company.sector!,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                    const Spacer(),
-                    if (company.websiteUrl?.isNotEmpty == true)
-                      TextButton.icon(
-                        onPressed: () =>
-                            launchUrl(Uri.parse(company.websiteUrl!)),
-                        icon: const Icon(
-                          Icons.open_in_new_rounded,
-                          size: 15,
-                          color: Colors.white,
-                        ),
-                        label: Text(
-                          _appContent.text(
-                            'home',
-                            'company.website_cta',
-                            fallback: 'Visit website',
-                          ),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ),
-                  ],
                 ),
               ],
             ),
-          ),
-        ],
+            if (company.videoUrl?.isNotEmpty == true) ...[
+              const SizedBox(height: AppSpacing.md),
+              InkWell(
+                onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
+                borderRadius: AppRadius.borderMd,
+                child: Container(
+                  height: 110,
+                  decoration: BoxDecoration(
+                    color: AppColors.brandDark.withValues(alpha: 0.55),
+                    borderRadius: AppRadius.borderMd,
+                    border: Border.all(
+                      color: AppColors.textInverse.withValues(alpha: 0.24),
+                    ),
+                  ),
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 44,
+                          height: 44,
+                          decoration: const BoxDecoration(
+                            color: AppColors.surface,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow_rounded,
+                            color: AppColors.brandDark,
+                            size: 30,
+                          ),
+                        ),
+                        const SizedBox(height: AppSpacing.sm),
+                        AppText(
+                          _appContent.text(
+                            'home',
+                            'company.video_cta',
+                            fallback: 'Watch our company introduction',
+                          ),
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textInverse,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.md),
+            AppText(
+              company.description,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTypography.bodySmall.copyWith(
+                color: AppColors.textInverse.withValues(alpha: 0.9),
+                height: 1.45,
+              ),
+            ),
+            if (company.websiteUrl?.isNotEmpty == true) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textInverse,
+                  ),
+                  child: AppText(
+                    _appContent.text(
+                      'home',
+                      'company.website_cta',
+                      fallback: 'Visit website',
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1579,17 +1518,17 @@ class _MarketHomePageState extends State<MarketHomePage>
               fallback: 'Contact support to fund',
             ),
             icon: Icons.account_balance_wallet_outlined,
-            color: AppConfig.primaryColor,
+            color: AppColors.brandPrimary,
             onTap: _openDepositSupport,
           ),
         ),
-        const SizedBox(width: 10),
+        const SizedBox(width: AppSpacing.sm + 2),
         Expanded(
           child: HomeActionButton(
             label: _appContent.text(
               'home',
               'funds.withdraw_cta_label',
-              fallback: 'Withdraw Funds',
+              fallback: 'Withdraw',
             ),
             subtitle: _appContent.text(
               'home',
@@ -1597,8 +1536,26 @@ class _MarketHomePageState extends State<MarketHomePage>
               fallback: 'Transfer to Bank',
             ),
             icon: Icons.call_made_rounded,
-            color: const Color(0xFF0F766E),
+            color: AppColors.gain,
             onTap: _openWithdrawalRequest,
+          ),
+        ),
+        const SizedBox(width: AppSpacing.sm + 2),
+        Expanded(
+          child: HomeActionButton(
+            label: _appContent.text(
+              'home',
+              'funds.trade_cta_label',
+              fallback: 'Trade',
+            ),
+            subtitle: _appContent.text(
+              'home',
+              'funds.trade_cta_subtitle',
+              fallback: 'Place orders',
+            ),
+            icon: Icons.swap_horiz_rounded,
+            color: AppColors.brandDark,
+            onTap: () => setState(() => selectedIndex = 2),
           ),
         ),
       ],
@@ -1667,51 +1624,48 @@ class _MarketHomePageState extends State<MarketHomePage>
           final available = item.$2 != '--';
           final positive = item.$3 >= 0;
           final color = !available
-              ? AppConfig.neutralColor
+              ? AppColors.neutral
               : positive
-              ? AppConfig.gainColor
-              : AppConfig.lossColor;
-          return Container(
+              ? AppColors.gain
+              : AppColors.loss;
+          return SizedBox(
             width: 148,
-            padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: const Color(0xFFE8EDF5)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  item.$1,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Color(0xFF64748B),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w700,
+            child: AppCard(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    item.$1,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textTertiary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                    ),
                   ),
-                ),
-                const Spacer(),
-                AppText(
-                  item.$2,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
+                  const Spacer(),
+                  AppText(
+                    item.$2,
+                    style: AppTypography.numericSmall.copyWith(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                AppText(
-                  available
-                      ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
-                      : 'Unavailable',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+                  const SizedBox(height: AppSpacing.xxs),
+                  AppText(
+                    available
+                        ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
+                        : 'Unavailable',
+                    style: AppTypography.labelSmall.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w700,
+                      fontFeatures: AppTypography.tabularFeatures,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           );
         },
@@ -1753,8 +1707,6 @@ class _MarketHomePageState extends State<MarketHomePage>
         .where(
           (stock) =>
               stock.price > 0 &&
-              stock.logoUrl?.trim().isNotEmpty == true &&
-              !_failedHomeLogoUrls.contains(stock.logoUrl) &&
               stock.change.isFinite &&
               (gainers ? stock.change > 0 : stock.change < 0),
         )
@@ -1764,19 +1716,17 @@ class _MarketHomePageState extends State<MarketHomePage>
           ? right.change.compareTo(left.change)
           : left.change.compareTo(right.change),
     );
-    return movers.take(5).toList();
+    return movers.take(3).toList();
   }
 
   Widget _compactMoverList(String title, List<StockQuote> list, bool positive) {
-    final color = positive ? AppConfig.gainColor : AppConfig.lossColor;
-    final items = list.take(5).toList();
+    final color = positive ? AppColors.gain : AppColors.loss;
+    final items = list.take(3).toList();
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE8EDF5)),
+    return AppCard(
+      padding: AppSpacing.card.copyWith(
+        top: AppSpacing.md,
+        bottom: AppSpacing.md,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1786,22 +1736,23 @@ class _MarketHomePageState extends State<MarketHomePage>
               Expanded(
                 child: AppText(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12,
+                  style: AppTypography.labelMedium.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
               InkWell(
-                borderRadius: BorderRadius.circular(6),
+                borderRadius: AppRadius.borderSm,
                 onTap: () => setState(() => selectedIndex = 1),
-                child: const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: AppSpacing.xxs + 1,
+                  ),
                   child: AppText(
                     'View All',
-                    style: TextStyle(
-                      color: AppConfig.primaryColor,
-                      fontSize: 9,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.brandPrimary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1809,28 +1760,28 @@ class _MarketHomePageState extends State<MarketHomePage>
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.sm + 2),
           if (items.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: AppText(
-                positive
-                    ? 'No gainers available with logos'
-                    : 'No losers available with logos',
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                positive ? 'No gainers right now' : 'No losers right now',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textTertiary,
+                ),
               ),
             ),
           ...items.map(
             (stock) => InkWell(
               onTap: () => _openStock(stock),
               child: Padding(
-                padding: const EdgeInsets.only(bottom: 9),
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm + 1),
                 child: Row(
                   children: [
                     StockLogo(
                       symbol: stock.symbol,
                       logoUrl: stock.logoUrl,
-                      size: 20,
+                      size: 22,
                       onLoadFailed: () {
                         if (!mounted ||
                             stock.logoUrl == null ||
@@ -1840,55 +1791,68 @@ class _MarketHomePageState extends State<MarketHomePage>
                         setState(() => _failedHomeLogoUrls.add(stock.logoUrl!));
                       },
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: AppSpacing.sm),
                     Expanded(
-                      child: AppText(
-                        _shortStockName(stock),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(
+                            _shortStockName(stock),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.labelSmall.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textPrimary,
+                            ),
+                          ),
+                          if (stock.exchange.trim().isNotEmpty)
+                            AppText(
+                              stock.exchange,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption.copyWith(
+                                fontSize: 10,
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     if ((stockHistory[stock.symbol]?.length ?? 0) >= 2) ...[
-                      const SizedBox(width: 4),
+                      const SizedBox(width: AppSpacing.xs),
                       SizedBox(
                         width: 34,
                         height: 16,
                         child: CustomPaint(
                           painter: MiniLineChartPainter(
                             color: stock.change >= 0
-                                ? AppConfig.gainColor
-                                : AppConfig.lossColor,
+                                ? AppColors.gain
+                                : AppColors.loss,
                             values: stockHistory[stock.symbol]!,
                           ),
                         ),
                       ),
                     ],
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     SizedBox(
-                      width: 54,
+                      width: 62,
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.end,
                         children: [
                           FittedBox(
                             child: AppText(
                               formatPrice(stock.price),
-                              style: const TextStyle(
-                                color: Color(0xFF0F172A),
-                                fontSize: 9,
+                              style: AppTypography.numericSmall.copyWith(
+                                fontSize: 12,
                                 fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
                           AppText(
                             '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                            style: TextStyle(
+                            style: AppTypography.labelSmall.copyWith(
                               color: color,
-                              fontSize: 9,
                               fontWeight: FontWeight.w800,
+                              fontFeatures: AppTypography.tabularFeatures,
                             ),
                           ),
                         ],
@@ -2567,59 +2531,85 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Widget _marketBody() {
     final horizontalPadding = MediaQuery.sizeOf(context).width < 360
-        ? 14.0
-        : 16.0;
+        ? AppSpacing.md + 2
+        : AppSpacing.lg;
     return Container(
-      color: AppConfig.backgroundColor,
-      child: ListView(
-        padding: EdgeInsets.fromLTRB(
-          horizontalPadding,
-          14,
-          horizontalPadding,
-          24,
+      color: AppColors.background,
+      child: RefreshIndicator(
+        onRefresh: () async {
+          await Future.wait([
+            _refreshMarketData(),
+            _refreshAccountSnapshot(),
+            _reloadNews(),
+          ]);
+        },
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            horizontalPadding,
+            AppSpacing.md + 2,
+            horizontalPadding,
+            AppSpacing.xxl,
+          ),
+          children: [
+            // PRIMARY
+            MarketHeader(
+              accountName: accountName,
+              avatarBytes: profileAvatarBytes,
+              onAvatarTap: _pickProfileAvatar,
+              onSearchTap: _openStockSearch,
+              onNotificationTap: _openNotifications,
+              notificationCount: unreadNotificationCount,
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            const MarketStatusCard(),
+            const SizedBox(height: AppSpacing.md + 2),
+            _homeFundsCard(),
+            // SECONDARY — market overview
+            const SizedBox(height: AppSpacing.xl - 2),
+            _sectionTitle(
+              _appContent.text(
+                'home',
+                'indices.section_title',
+                fallback: 'Market Indices',
+              ),
+              onViewAll: () => setState(() => selectedIndex = 1),
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            _marketIndicesStrip(),
+            const SizedBox(height: AppSpacing.xl - 2),
+            _compactMovers(),
+            // SECONDARY — discovery
+            const SizedBox(height: AppSpacing.xl - 2),
+            _sectionTitle(
+              _appContent.text(
+                'home',
+                'news.section_title',
+                fallback: 'Market News',
+              ),
+              onViewAll: marketNews.isEmpty
+                  ? null
+                  : () => unawaited(_openAllMarketNews()),
+            ),
+            const SizedBox(height: AppSpacing.sm + 2),
+            _marketNewsSection(),
+            // TERTIARY
+            if (companyShowcases.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl - 2),
+              _sectionTitle(
+                _appContent.text(
+                  'home',
+                  'company.section_title',
+                  fallback: 'Our Company',
+                ),
+              ),
+              const SizedBox(height: AppSpacing.sm + 2),
+              _companyShowcaseCard(companyShowcases.first),
+            ],
+            const SizedBox(height: AppSpacing.md + 2),
+            _homeTradingBanner(),
+          ],
         ),
-        children: [
-          MarketHeader(
-            accountName: accountName,
-            avatarBytes: profileAvatarBytes,
-            onAvatarTap: _pickProfileAvatar,
-            onSearchTap: _openStockSearch,
-            onNotificationTap: _openNotifications,
-            notificationCount: unreadNotificationCount,
-          ),
-          const SizedBox(height: 10),
-          const MarketStatusCard(),
-          const SizedBox(height: 14),
-          _homeFundsCard(),
-          const SizedBox(height: 18),
-          _sectionTitle(
-            _appContent.text(
-              'home',
-              'indices.section_title',
-              fallback: 'Market Indices',
-            ),
-            onViewAll: () => setState(() => selectedIndex = 1),
-          ),
-          const SizedBox(height: 10),
-          _marketIndicesStrip(),
-          const SizedBox(height: 18),
-          _compactMovers(),
-          const SizedBox(height: 18),
-          _sectionTitle(
-            _appContent.text(
-              'home',
-              'news.section_title',
-              fallback: 'Market News',
-            ),
-            onViewAll: marketNews.isEmpty
-                ? null
-                : () => unawaited(_openAllMarketNews()),
-          ),
-          const SizedBox(height: 10),
-          _marketNewsSection(),
-          const SizedBox(height: 14),
-          _homeTradingBanner(),
-        ],
       ),
     );
   }
@@ -2661,30 +2651,29 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Widget _marketNewsSection() {
     if (marketNews.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              const Icon(Icons.newspaper_outlined, color: Color(0xFF64748B)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppText(
-                  _appContent.text(
-                    'home',
-                    'news.empty',
-                    fallback: 'Live market news is temporarily unavailable.',
-                  ),
-                  style: const TextStyle(color: Color(0xFF64748B)),
+      return AppCard(
+        child: Row(
+          children: [
+            const Icon(Icons.newspaper_outlined, color: AppColors.textTertiary),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppText(
+                _appContent.text(
+                  'home',
+                  'news.empty',
+                  fallback: 'Live market news is temporarily unavailable.',
+                ),
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textTertiary,
                 ),
               ),
-              IconButton(
-                onPressed: _reloadNews,
-                tooltip: 'Retry news',
-                icon: const Icon(Icons.refresh),
-              ),
-            ],
-          ),
+            ),
+            IconButton(
+              onPressed: _reloadNews,
+              tooltip: 'Retry news',
+              icon: const Icon(Icons.refresh),
+            ),
+          ],
         ),
       );
     }
@@ -2693,99 +2682,88 @@ class _MarketHomePageState extends State<MarketHomePage>
         final oneColumn = constraints.maxWidth < 340;
         final width = oneColumn
             ? constraints.maxWidth
-            : (constraints.maxWidth - 10) / 2;
+            : (constraints.maxWidth - AppSpacing.sm - 2) / 2;
         return Wrap(
-          spacing: 10,
-          runSpacing: 10,
+          spacing: AppSpacing.sm + 2,
+          runSpacing: AppSpacing.sm + 2,
           children: marketNews
               .take(2)
               .map(
                 (item) => SizedBox(
                   width: width,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(8),
+                  child: AppCard(
+                    padding: EdgeInsets.zero,
                     onTap: () => _openNews(item),
-                    child: Container(
-                      clipBehavior: Clip.antiAlias,
-                      height: oneColumn ? 154 : 168,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE8EDF5)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: double.infinity,
-                            height: 78,
-                            child: item.imageUrl?.isNotEmpty == true
-                                ? Image.network(
-                                    item.imageUrl!,
-                                    fit: BoxFit.cover,
-                                    loadingBuilder: (context, child, progress) {
-                                      if (progress == null) return child;
-                                      return const ColoredBox(
-                                        color: Color(0xFFF2F6FC),
-                                        child: Center(
-                                          child: SizedBox(
-                                            width: 18,
-                                            height: 18,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                            ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(
+                          width: double.infinity,
+                          height: 78,
+                          child: item.imageUrl?.isNotEmpty == true
+                              ? Image.network(
+                                  item.imageUrl!,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, progress) {
+                                    if (progress == null) return child;
+                                    return const ColoredBox(
+                                      color: AppColors.surfaceSecondary,
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
                                           ),
                                         ),
-                                      );
-                                    },
-                                    errorBuilder: (_, _, _) => const ColoredBox(
-                                      color: Color(0xFFEEF5FF),
-                                      child: Icon(
-                                        Icons.candlestick_chart_rounded,
-                                        color: AppConfig.primaryColor,
-                                        size: 32,
                                       ),
-                                    ),
-                                  )
-                                : const ColoredBox(
-                                    color: Color(0xFFEEF5FF),
+                                    );
+                                  },
+                                  errorBuilder: (_, _, _) => const ColoredBox(
+                                    color: AppColors.brandPrimarySoft,
                                     child: Icon(
                                       Icons.candlestick_chart_rounded,
-                                      color: AppConfig.primaryColor,
+                                      color: AppColors.brandPrimary,
                                       size: 32,
                                     ),
                                   ),
-                          ),
-                          Padding(
-                            padding: const EdgeInsets.all(11),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                AppText(
-                                  item.title,
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    height: 1.28,
+                                )
+                              : const ColoredBox(
+                                  color: AppColors.brandPrimarySoft,
+                                  child: Icon(
+                                    Icons.candlestick_chart_rounded,
+                                    color: AppColors.brandPrimary,
+                                    size: 32,
                                   ),
                                 ),
-                                const SizedBox(height: 7),
-                                AppText(
-                                  '${item.source}  ·  ${_newsAge(item.publishedAt)}',
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    color: Color(0xFF64748B),
-                                  ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.all(AppSpacing.sm + 3),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                item.title,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.labelMedium.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  height: 1.28,
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(height: AppSpacing.sm),
+                              AppText(
+                                '${item.source}  ·  ${_newsAge(item.publishedAt)}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTypography.caption.copyWith(
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -2855,12 +2833,10 @@ class _MarketHomePageState extends State<MarketHomePage>
       'banner.subtitle',
       fallback: 'Explore equities, institutional offers, OTC and IPOs',
     );
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: const Color(0xFFEEF5FF),
-        borderRadius: BorderRadius.circular(8),
-      ),
+    return AppCard(
+      backgroundColor: AppColors.brandPrimarySoft,
+      bordered: false,
+      onTap: () => setState(() => selectedIndex = 2),
       child: Row(
         children: [
           Expanded(
@@ -2869,27 +2845,25 @@ class _MarketHomePageState extends State<MarketHomePage>
               children: [
                 AppText(
                   title,
-                  style: const TextStyle(
-                    fontSize: 13,
+                  style: AppTypography.labelLarge.copyWith(
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: AppSpacing.xs),
                 AppText(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Color(0xFF64748B),
+                  style: AppTypography.caption.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppSpacing.md),
           const Icon(
             Icons.candlestick_chart_rounded,
-            size: 52,
-            color: AppConfig.gainColor,
+            size: 40,
+            color: AppColors.brandPrimary,
           ),
         ],
       ),

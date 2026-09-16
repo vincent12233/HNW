@@ -277,6 +277,8 @@ export class MarketService {
               logoUrl,
               category,
               displayOrder: Number(dto.displayOrder ?? 0),
+              featuredHome: dto.featuredHome ?? false,
+              featuredMarkets: dto.featuredMarkets ?? false,
               type: dto.type,
               currency,
               lotSize: dto.lotSize,

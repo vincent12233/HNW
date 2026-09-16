@@ -8,13 +8,15 @@
 **Audit date:** 2026-09-16  
 **Remediation date:** 2026-09-16  
 
+**Android E2E gate attempt:** 2026-09-16 @ `101fd0b` — **STOPPED** (no Android device/emulator on Cloud Agent; Windows host not accessible). Chrome/Web not used as substitute.
+
 ## Status
 
 **BLOCKED**
 
-Not production-ready. Force-update dead-end **code path is fixed** (`updateUrl` + safe Continue). **Android device E2E** remains unexecuted on the Linux cloud agent and is still a release blocker.
+Not production-ready. Force-update dead-end **code path is fixed** (`updateUrl` + safe Continue). **Android device E2E** remains unexecuted (no real device / emulator available to this agent) and is still a release blocker.
 
-Do **not** merge for production and do **not** claim Production Ready until Android E2E PASS is recorded.
+Do **not** merge for production and do **not** claim Production Ready until Android E2E PASS is recorded on `C:\Users\suyan\HNW` with a real Android target.
 
 See also: [`docs/FINAL_BLOCKER_REMEDIATION.md`](./FINAL_BLOCKER_REMEDIATION.md).
 
@@ -65,8 +67,8 @@ API touch set is limited to:
 | `flutter test` | **157 passed**, **18 skipped**, 0 failed |
 | `flutter build apk --debug` | **PASS** |
 | `flutter build web --dart-define=API_BASE_URL=https://example.invalid` | **PASS** — LOCAL BUILD VALIDATION ONLY |
-| Android device / emulator | **NO** (Linux + Chrome only; no AVD; no adb device) |
-| Live Android visual gate | **NOT EXECUTED** → required gate **FAILED** |
+| Android device / emulator | **NO** (Linux Cloud Agent @ `101fd0b`: Flutter 3.47.4, Android SDK 36 present, `adb devices` empty, no AVD; `C:\Users\suyan\HNW` unreachable) |
+| Live Android visual gate | **NOT EXECUTED** → required gate **FAILED** / **BLOCKED** |
 
 ---
 

@@ -64,33 +64,51 @@ Only FINAL ACCEPTANCE launch blockers. No new business features. No trading / KY
 
 ## 2. Android device E2E
 
-### Environment check (this Cloud Agent host)
+### Git gate (Android E2E acceptance attempt @ `101fd0b`)
 
 | Check | Result |
 |-------|--------|
-| Host OS | Linux (Ubuntu 24.04) — **not** user Windows |
+| Branch | `cursor/app-ui-ux-admin-upgrade-c5d7` |
+| HEAD | `101fd0b` (matches expected) |
+| Working tree | clean |
+| Host | Linux Cloud Agent — **not** `C:\Users\suyan\HNW` |
+
+### Environment check
+
+| Check | Result |
+|-------|--------|
+| Flutter | 3.47.4 (stable) / Dart 3.13.3 |
+| Android SDK | Present (android-36 / build-tools 36.0.0) — licenses accepted |
+| `adb` | Present (`platform-tools`); **no devices attached** |
 | `flutter devices` | Linux desktop + Chrome only |
-| `adb devices` | Empty |
-| `flutter emulators` | No AVD sources / no emulator configured |
+| `flutter emulators` | **No AVD sources** / no emulator configured |
 | Real Android handset | **Not attached** |
+| Windows path `C:\Users\suyan\HNW` | **Not accessible** from this agent |
+| Chrome/Web substitute | **Forbidden** — not used |
 
 ### Verdict
 
-**Android device E2E NOT EXECUTED** on this Linux cloud agent.
+**Android device E2E NOT EXECUTED — STOPPED at environment gate.**
 
-Per task rules: do **not** pretend Windows/Android E2E completed. Device name / Android version / viewport pass-fail matrix: **N/A — blocked on environment**.
+Per task rules: do **not** pretend Windows/Android E2E completed. Device name / Android version / resolution / screen PASS-FAIL matrix: **N/A — blocked on environment**.
 
-Must be run on the user’s Windows host (`C:\Users\suyan\HNW`) with:
+Must be run on the user’s Windows host (`C:\Users\suyan\HNW`) with a physical device (preferred) or configured emulator:
 
 ```text
+cd C:\Users\suyan\HNW
+git status
 flutter devices
 adb devices
-flutter run -d <device>
+# start local API on LAN IP (not production)
+cd apps\client
+flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://<WINDOWS-LAN-IP>:3000
 ```
 
-Prefer physical device; else configured emulator. Inject maintenance / optional / force update via **dev/test injection or safe local config** — do **not** mutate production DB.
+Inject maintenance / optional / force update via **dev/test injection or safe local config** — do **not** mutate production DB.
 
-Required screens (still outstanding): Login, Register, Forgot Password, Home, Markets, Search, Stock Detail, Trade, Portfolio, Profile, KYC entry, Bank Details, Deposit, Insights, Announcements, bottom nav, back, keyboard, scrolling, maintenance, optional update, force update — at ~360px and ~412px when available.
+Required screens (still outstanding): Login, Register, Forgot Password, Home, Markets, Search, Stock Detail, Trade, Portfolio, Profile, KYC entry, Bank Details, Deposit, Insights, Announcements, bottom nav, back, keyboard, scrolling, maintenance, optional update, force update (valid + missing URL) — at real device resolution (and ~360/~412 logical width if emulator available).
+
+**No code changes** made in this Android E2E attempt.
 
 ---
 

@@ -29,7 +29,12 @@ import '../models/trading_order.dart';
 import '../models/stock_quote.dart';
 import '../models/withdrawal_request.dart';
 import '../services/app_content_service.dart';
+import '../services/announcements_service.dart';
+import '../services/featured_instruments_service.dart';
 import '../services/auth_service.dart';
+import '../widgets/app_settings_gates.dart';
+import '../widgets/home_announcement_banner.dart';
+import '../widgets/stock_list_tile.dart';
 import '../services/client_account_service.dart';
 import '../services/device_biometrics.dart';
 import '../services/ipo_service.dart';
@@ -146,11 +151,14 @@ class _MarketHomePageState extends State<MarketHomePage>
       <String, PortfolioPosition>{};
 
   final List<StockQuote> stocks = <StockQuote>[];
+  final List<StockQuote> _homeFeatured = <StockQuote>[];
+  AnnouncementItem? _homeAnnouncement;
   final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
   final List<CompanyShowcase> companyShowcases = <CompanyShowcase>[];
   final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
   AppContentBundle _appContent = AppContentBundle.empty;
+  bool _optionalUpdatePrompted = false;
 
   Future<void> _applyIpo(Ipo ipo) async {
     final applicationCount = ipoApplications
@@ -490,6 +498,29 @@ class _MarketHomePageState extends State<MarketHomePage>
     _loadAppData();
     unawaited(_loadHomeIndexHistory());
     unawaited(_loadAppContent());
+    unawaited(_loadHomeOpsContent());
+  }
+
+  Future<void> _loadHomeOpsContent() async {
+    final results = await Future.wait<dynamic>([
+      AnnouncementsService.instance.list(),
+      FeaturedInstrumentsService.instance.homeFeatured(),
+    ]);
+    if (!mounted) return;
+    final announcements = results[0] as List<AnnouncementItem>;
+    final featured = results[1] as List<StockQuote>;
+    setState(() {
+      _homeAnnouncement = pickTopAnnouncement(announcements);
+      _homeFeatured
+        ..clear()
+        ..addAll(featured);
+    });
+    if (!_optionalUpdatePrompted) {
+      _optionalUpdatePrompted = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) unawaited(maybeShowOptionalUpdateDialog(context));
+      });
+    }
   }
 
   Future<void> _loadAppContent({bool force = false}) async {
@@ -1730,6 +1761,32 @@ class _MarketHomePageState extends State<MarketHomePage>
     );
   }
 
+  Widget _homeFeaturedList() {
+    return Column(
+      children: [
+        for (final stock in _homeFeatured.take(8))
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: AppCard(
+              child: stock.price <= 0
+                  ? ListTile(
+                      title: AppText(stock.symbol),
+                      subtitle: AppText(
+                        stock.name.isEmpty ? stock.exchange : stock.name,
+                      ),
+                      trailing: const AppText(
+                        'Unavailable',
+                        style: TextStyle(color: AppColors.textSecondary),
+                      ),
+                      onTap: () => _openStock(stock),
+                    )
+                  : StockListTile(stock: stock, onTap: () => _openStock(stock)),
+            ),
+          ),
+      ],
+    );
+  }
+
   Widget _compactMovers() {
     final gainers = _topMovers(gainers: true);
     final losers = _topMovers(gainers: false);
@@ -2620,8 +2677,18 @@ class _MarketHomePageState extends State<MarketHomePage>
             ),
             const SizedBox(height: AppSpacing.sm + 2),
             const MarketStatusCard(),
+            if (_homeAnnouncement != null) ...[
+              const SizedBox(height: AppSpacing.sm + 2),
+              HomeAnnouncementBanner(item: _homeAnnouncement!),
+            ],
             const SizedBox(height: AppSpacing.md + 2),
             _homeFundsCard(),
+            if (_homeFeatured.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.xl - 2),
+              _sectionTitle('Featured'),
+              const SizedBox(height: AppSpacing.sm + 2),
+              _homeFeaturedList(),
+            ],
             // SECONDARY — market overview
             const SizedBox(height: AppSpacing.xl - 2),
             _sectionTitle(

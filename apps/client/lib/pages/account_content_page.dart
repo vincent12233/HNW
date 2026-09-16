@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/insight_articles_service.dart';
+import '../services/insight_list_result.dart';
 import '../theme/app_colors.dart';
 
 class WealthInsightsPage extends StatefulWidget {
@@ -15,6 +16,7 @@ class WealthInsightsPage extends StatefulWidget {
 class _WealthInsightsPageState extends State<WealthInsightsPage> {
   AppContentBundle _content = AppContentBundle.empty;
   List<InsightArticle> _structured = const [];
+  bool _structuredApiOk = false;
   bool _loading = true;
 
   @override
@@ -24,12 +26,12 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
   }
 
   Future<void> _load() async {
-    // Prefer structured InsightArticle API; keep KV + local fallbacks.
-    final structured = await InsightArticlesService.instance.list();
+    final structured = await InsightArticlesService.instance.listResult();
     final content = await AppContentService.instance.load();
     if (!mounted) return;
     setState(() {
-      _structured = structured;
+      _structuredApiOk = structured.ok;
+      _structured = structured.articles;
       _content = content;
       _loading = false;
     });
@@ -48,20 +50,38 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
       fallback:
           'Explore essential investment concepts, portfolio strategies, market perspectives and wealth-management principles designed to help investors make more informed financial decisions.',
     );
+
+    // SUCCESS [] must NOT fall back to legacy KV — Admin unpublished everything.
+    final useStructured = _structuredApiOk;
     final kvArticles = _content.insightArticles();
-    final fallbackArticles = wealthInsightArticles;
-    final useStructured = _structured.isNotEmpty;
     final useKv = !useStructured && kvArticles.isNotEmpty;
+    final useLocal = !useStructured && !useKv;
+    final fallbackArticles = wealthInsightArticles;
     final count = useStructured
         ? _structured.length
         : useKv
         ? kvArticles.length
-        : fallbackArticles.length;
+        : useLocal
+        ? fallbackArticles.length
+        : 0;
 
     return AppPageScaffold(
       appBar: AppBar(title: const AppText('Wealth Insights')),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
+          : count == 0
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: AppText(
+                  useStructured
+                      ? 'No published insights yet.'
+                      : 'Insights are temporarily unavailable.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: AppColors.textSecondary),
+                ),
+              ),
+            )
           : ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [
@@ -102,6 +122,16 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                                 : 'Article ${index + 1}')
                           : fallbackArticles[index].$1,
                     ),
+                    subtitle:
+                        useStructured &&
+                            (_structured[index].summary?.trim().isNotEmpty ==
+                                true)
+                        ? AppText(
+                            _structured[index].summary!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          )
+                        : null,
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => Navigator.of(context).push(
                       MaterialPageRoute<void>(

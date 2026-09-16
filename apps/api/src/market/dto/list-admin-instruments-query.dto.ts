@@ -39,6 +39,36 @@ export class ListAdminInstrumentsQueryDto {
   isActive?: boolean;
 
   @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === true || value === 'true') {
+      return true;
+    }
+
+    if (value === false || value === 'false') {
+      return false;
+    }
+
+    return undefined;
+  })
+  @IsBoolean()
+  featuredHome?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) => {
+    if (value === true || value === 'true') {
+      return true;
+    }
+
+    if (value === false || value === 'false') {
+      return false;
+    }
+
+    return undefined;
+  })
+  @IsBoolean()
+  featuredMarkets?: boolean;
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)

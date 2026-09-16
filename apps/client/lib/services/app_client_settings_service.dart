@@ -1,8 +1,11 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../app_config.dart';
+import 'app_version.dart';
 
 class AppClientSettings {
   const AppClientSettings({
@@ -45,13 +48,98 @@ class AppClientSettings {
   }
 }
 
-/// Parses app settings; failures return [AppClientSettings.safeDefaults].
-class AppClientSettingsService {
+/// Bootstrap + memory-cached client settings (ChangeNotifier singleton).
+class AppClientSettingsService extends ChangeNotifier {
   AppClientSettingsService._();
 
   static final AppClientSettingsService instance = AppClientSettingsService._();
 
-  Future<AppClientSettings> load({String platform = 'WEB'}) async {
+  AppClientSettings _settings = AppClientSettings.safeDefaults;
+  String _currentVersion = AppConfig.appVersion;
+  AppSettingsGate _gate = AppSettingsGate.none;
+  bool _optionalUpdateDismissed = false;
+  bool _bootstrapped = false;
+
+  AppClientSettings get settings => _settings;
+  String get currentVersion => _currentVersion;
+  AppSettingsGate get gate => _gate;
+  bool get optionalUpdateDismissed => _optionalUpdateDismissed;
+  bool get bootstrapped => _bootstrapped;
+
+  static String detectPlatform() {
+    if (kIsWeb) return 'WEB';
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.iOS:
+        return 'IOS';
+      case TargetPlatform.android:
+        return 'ANDROID';
+      default:
+        return 'WEB';
+    }
+  }
+
+  Future<void> bootstrap({bool force = false}) async {
+    if (_bootstrapped && !force) return;
+    await refresh(force: force);
+    _bootstrapped = true;
+  }
+
+  Future<void> refresh({bool force = false}) async {
+    try {
+      final info = await PackageInfo.fromPlatform();
+      if (info.version.trim().isNotEmpty) {
+        _currentVersion = info.version.trim();
+      }
+    } catch (_) {
+      _currentVersion = AppConfig.appVersion;
+    }
+
+    final platform = detectPlatform();
+    _settings = await _fetch(platform: platform);
+    _recomputeGate();
+    notifyListeners();
+  }
+
+  void dismissOptionalUpdate() {
+    _optionalUpdateDismissed = true;
+    if (_gate == AppSettingsGate.optionalUpdate) {
+      _gate = AppSettingsGate.none;
+      notifyListeners();
+    }
+  }
+
+  /// Test/dev injection — does not hit network.
+  @visibleForTesting
+  void applyForTest({
+    required AppClientSettings settings,
+    required String currentVersion,
+    bool optionalDismissed = false,
+  }) {
+    _settings = settings;
+    _currentVersion = currentVersion;
+    _optionalUpdateDismissed = optionalDismissed;
+    _bootstrapped = true;
+    _recomputeGate();
+    notifyListeners();
+  }
+
+  void _recomputeGate() {
+    final resolved = resolveAppSettingsGate(
+      currentVersion: _currentVersion,
+      minVersion: _settings.minVersion,
+      latestVersion: _settings.latestVersion,
+      forceUpdate: _settings.forceUpdate,
+      maintenanceMode: _settings.maintenanceMode,
+    );
+    if (resolved == AppSettingsGate.optionalUpdate &&
+        _optionalUpdateDismissed) {
+      _gate = AppSettingsGate.none;
+    } else {
+      _gate = resolved;
+    }
+  }
+
+  Future<AppClientSettings> _fetch({required String platform}) async {
     final normalized = platform.trim().toUpperCase();
     try {
       final response = await http
@@ -60,15 +148,42 @@ class AppClientSettingsService {
               '${AppConfig.apiBaseUrl}/app-settings?platform=$normalized',
             ),
           )
-          .timeout(const Duration(seconds: 12));
+          .timeout(const Duration(seconds: 8));
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        return AppClientSettings.safeDefaults;
+        return AppClientSettings.safeDefaults.copyWithPlatform(normalized);
       }
       final decoded = jsonDecode(response.body);
-      if (decoded is! Map) return AppClientSettings.safeDefaults;
-      return AppClientSettings.fromJson(Map<String, dynamic>.from(decoded));
+      if (decoded is! Map) {
+        return AppClientSettings.safeDefaults.copyWithPlatform(normalized);
+      }
+      final parsed = AppClientSettings.fromJson(
+        Map<String, dynamic>.from(decoded),
+      );
+      return AppClientSettings(
+        platform: parsed.platform.isEmpty ? normalized : parsed.platform,
+        minVersion: parsed.minVersion,
+        latestVersion: parsed.latestVersion,
+        forceUpdate: parsed.forceUpdate,
+        maintenanceMode: parsed.maintenanceMode,
+        maintenanceMessage: parsed.maintenanceMessage,
+        supportUrl: parsed.supportUrl,
+      );
     } catch (_) {
-      return AppClientSettings.safeDefaults;
+      return AppClientSettings.safeDefaults.copyWithPlatform(normalized);
     }
+  }
+}
+
+extension on AppClientSettings {
+  AppClientSettings copyWithPlatform(String platform) {
+    return AppClientSettings(
+      platform: platform,
+      minVersion: minVersion,
+      latestVersion: latestVersion,
+      forceUpdate: forceUpdate,
+      maintenanceMode: maintenanceMode,
+      maintenanceMessage: maintenanceMessage,
+      supportUrl: supportUrl,
+    );
   }
 }

@@ -10,11 +10,14 @@ import 'pages/login_page.dart';
 import 'pages/market_page.dart';
 import 'pages/register_page.dart';
 import 'pages/splash_page.dart';
+import 'services/app_client_settings_service.dart';
 import 'services/auth_service.dart';
 import 'services/local_data_cache.dart';
 import 'services/session_expiry_service.dart';
 import 'theme/app_theme.dart';
 import 'theme/appearance_settings.dart';
+import 'widgets/app_settings_gates.dart';
+import 'services/app_version.dart';
 
 final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -22,6 +25,7 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await AppLanguage.instance.load();
   await AppearanceSettings.instance.load();
+  await AppClientSettingsService.instance.bootstrap();
   SessionExpiryService().onExpired = _showExpiredSessionLogin;
 
   ErrorWidget.builder = (details) {
@@ -132,7 +136,7 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
           : AppTheme.light(),
       builder: (context, child) {
         final media = MediaQuery.of(context);
-        return MediaQuery(
+        final content = MediaQuery(
           data: media.copyWith(
             // Prevent system accessibility scaling from making dense trading
             // controls unusable while retaining meaningful text enlargement.
@@ -142,6 +146,19 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
             ),
           ),
           child: child ?? const SizedBox.shrink(),
+        );
+        return ListenableBuilder(
+          listenable: AppClientSettingsService.instance,
+          builder: (context, _) {
+            final gate = AppClientSettingsService.instance.gate;
+            if (gate == AppSettingsGate.forceUpdate) {
+              return const ForceUpdatePage();
+            }
+            if (gate == AppSettingsGate.maintenance) {
+              return const MaintenancePage();
+            }
+            return content;
+          },
         );
       },
       initialRoute: kIsWeb && Uri.base.path == '/register' ? '/register' : '/',

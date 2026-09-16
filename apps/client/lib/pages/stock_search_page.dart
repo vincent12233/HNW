@@ -7,6 +7,11 @@ import '../models/stock_quote.dart';
 import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/watchlist_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/app_page_scaffold.dart';
 import '../widgets/stock_list_tile.dart';
 
 class StockSearchPage extends StatefulWidget {
@@ -250,35 +255,39 @@ class _StockSearchPageState extends State<StockSearchPage> {
               ),
             ),
           if (_failed)
-            const Padding(
-              padding: EdgeInsets.fromLTRB(16, 10, 16, 4),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.sm + 2,
+                AppSpacing.lg,
+                AppSpacing.xs,
+              ),
               child: AppText(
                 'Live search is unavailable. Showing loaded instruments.',
-                style: TextStyle(color: Color(0xFFB45309), fontSize: 12),
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.warning,
+                ),
               ),
             ),
           Expanded(
             child: visible.isEmpty && !_loading && !_hasMore
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.search_off, size: 42),
-                        const SizedBox(height: 12),
-                        AppText(
-                          _failed
-                              ? 'Unable to load stocks'
-                              : 'No matching stocks with available logos',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _retrySearch,
-                          child: const AppText('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
+                ? (_failed
+                      ? AppErrorView(
+                          title: 'Unable to load stocks',
+                          message:
+                              'Search is temporarily unavailable. Please retry.',
+                          onRetry: _retrySearch,
+                        )
+                      : AppEmptyState(
+                          title: _controller.text.trim().isEmpty
+                              ? 'No instruments available'
+                              : 'No matching stocks',
+                          message: _controller.text.trim().isEmpty
+                              ? 'Try again when market data is available.'
+                              : 'Try a different symbol or company name.',
+                          icon: Icons.search_off,
+                          onRetry: _retrySearch,
+                        ))
                 : ListView.builder(
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,

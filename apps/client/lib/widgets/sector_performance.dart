@@ -1,8 +1,12 @@
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../models/stock_quote.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/app_card.dart';
 
 class SectorPerformance extends StatelessWidget {
   const SectorPerformance({super.key, required this.stocks});
@@ -24,74 +28,88 @@ class SectorPerformance extends StatelessWidget {
       return (name: entry.key, change: change, count: entry.value.length);
     }).toList()..sort((left, right) => right.count.compareTo(left.count));
 
+    if (sectors.isEmpty) {
+      return AppCard(
+        child: Row(
+          children: [
+            const Icon(Icons.category_outlined, color: AppColors.textTertiary),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppText(
+                'Sector classifications are currently unavailable.',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppText(
+        AppText(
           'Sector Performance',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
         Wrap(
-          spacing: 12,
-          runSpacing: 12,
+          spacing: AppSpacing.md,
+          runSpacing: AppSpacing.md,
           children: sectors.map((sector) {
             final change = sector.change;
-
             final color = change > 0
-                ? AppConfig.gainColor
+                ? AppColors.gain
                 : change < 0
-                ? AppConfig.lossColor
-                : AppConfig.neutralColor;
+                ? AppColors.loss
+                : AppColors.neutral;
 
-            return Container(
+            return SizedBox(
               width: 210,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE5E7EB)),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 42,
-                    height: 42,
-                    decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(12),
+              child: AppCard(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: color.withValues(alpha: 0.10),
+                        borderRadius: AppRadius.borderMd,
+                      ),
+                      child: Icon(Icons.category_outlined, color: color),
                     ),
-                    child: Icon(Icons.category_outlined, color: color),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          sector.name,
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 4),
-                        AppText(
-                          '${change > 0 ? '+' : ''}'
-                          '${change.toStringAsFixed(2)}%',
-                          style: TextStyle(
-                            color: color,
-                            fontWeight: FontWeight.w600,
+                    const SizedBox(width: AppSpacing.md),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(
+                            sector.name,
+                            style: AppTypography.labelLarge.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
                           ),
-                        ),
-                        AppText(
-                          '${sector.count} stocks',
-                          style: const TextStyle(
-                            color: Colors.black45,
-                            fontSize: 11,
+                          const SizedBox(height: AppSpacing.xs),
+                          AppText(
+                            '${change > 0 ? '+' : ''}'
+                            '${change.toStringAsFixed(2)}%',
+                            style: AppTypography.labelMedium.copyWith(
+                              color: color,
+                              fontWeight: FontWeight.w600,
+                              fontFeatures: AppTypography.tabularFeatures,
+                            ),
                           ),
-                        ),
-                      ],
+                          AppText(
+                            '${sector.count} stocks',
+                            style: AppTypography.caption,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
           }).toList(),

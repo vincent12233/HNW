@@ -3,15 +3,19 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../models/stock_quote.dart';
 import '../services/app_content_service.dart';
 import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/market_socket_service.dart';
 import '../services/watchlist_service.dart';
-import '../theme/app_ui.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_feedback.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_logo.dart';
 import '../widgets/stock_list_tile.dart';
@@ -59,13 +63,14 @@ class _MarketsPageState extends State<MarketsPage> {
   int selectedTab = 0;
   int selectedMoverFilter = 0;
   String query = '';
-  Timer? _searchDebounce;
   List<StockQuote> _remoteSearchResults = <StockQuote>[];
   List<StockQuote> _watchlistStocks = <StockQuote>[];
   bool _searchLoading = false;
   bool _searchFailed = false;
   bool _failedSearchWasReset = true;
   bool _searchHasMore = false;
+  bool _watchlistLoading = true;
+  bool _watchlistFailed = false;
   final Map<String, List<double>> _indexHistory = <String, List<double>>{};
   final Map<String, List<double>> _stockHistory = <String, List<double>>{};
   final Map<String, (double, double)> _yearRanges =
@@ -74,16 +79,53 @@ class _MarketsPageState extends State<MarketsPage> {
   int _searchPage = 1;
   int _searchGeneration = 0;
 
-  final tabs = const [
-    'Watchlist',
-    'Indices',
-    'Stocks',
-    'Sectors',
-    'F&O',
-    'ETFs',
-    'Commodities',
-    'Currency',
-  ];
+  static const _foKeywords = ['F&O', 'FUTURE', 'OPTION', 'DERIVATIVE'];
+  static const _commodityKeywords = ['COMMODITY', 'MCX', 'METAL', 'ENERGY'];
+  static const _currencyKeywords = ['CURRENCY', 'FOREX', 'FX'];
+
+  /// Always-visible core tabs, then optional catalog tabs when instruments exist.
+  List<(int contentIndex, String label)> get _visibleTabs {
+    final tabs = <(int, String)>[
+      (0, 'Watchlist'),
+      (1, 'Indices'),
+      (2, 'Stocks'),
+      (3, 'Sectors'),
+    ];
+    if (_hasCategoryInstruments(_foKeywords)) {
+      tabs.add((4, 'F&O'));
+    }
+    if (_hasEtfInstruments()) {
+      tabs.add((5, 'ETFs'));
+    }
+    if (_hasCategoryInstruments(_commodityKeywords)) {
+      tabs.add((6, 'Commodities'));
+    }
+    if (_hasCategoryInstruments(_currencyKeywords)) {
+      tabs.add((7, 'Currency'));
+    }
+    return tabs;
+  }
+
+  bool _hasCategoryInstruments(List<String> keywords) {
+    return _remoteSearchResults.any((stock) {
+      final category = stock.category?.trim().toUpperCase() ?? '';
+      return keywords.any(category.contains);
+    });
+  }
+
+  bool _hasEtfInstruments() {
+    return _remoteSearchResults.any((stock) {
+      final category = stock.category?.toUpperCase() ?? '';
+      return category.contains('ETF') || stock.symbol.endsWith('BEES');
+    });
+  }
+
+  void _clampSelectedTab() {
+    final visible = _visibleTabs;
+    if (!visible.any((tab) => tab.$1 == selectedTab)) {
+      selectedTab = visible.first.$1;
+    }
+  }
 
   List<StockQuote> get _filteredStocks {
     return _remoteSearchResults
@@ -217,7 +259,6 @@ class _MarketsPageState extends State<MarketsPage> {
 
   @override
   void dispose() {
-    _searchDebounce?.cancel();
     _marketSocket.removeQuoteListener(_handleRealtimeQuote);
     super.dispose();
   }
@@ -241,6 +282,11 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Future<void> _loadWatchlist() async {
+    if (mounted) {
+      setState(() {
+        _watchlistLoading = true;
+      });
+    }
     try {
       final instrumentKeys = await _watchlistService.fetchSymbols();
       var stocks = <StockQuote>[];
@@ -264,9 +310,15 @@ class _MarketsPageState extends State<MarketsPage> {
       if (!mounted) return;
       setState(() {
         _watchlistStocks = stocks;
+        _watchlistLoading = false;
+        _watchlistFailed = false;
       });
     } catch (_) {
-      return;
+      if (!mounted) return;
+      setState(() {
+        _watchlistLoading = false;
+        _watchlistFailed = true;
+      });
     }
   }
 
@@ -319,6 +371,7 @@ class _MarketsPageState extends State<MarketsPage> {
         }
         _searchPage = result.page;
         _searchHasMore = result.hasMore;
+        _clampSelectedTab();
       });
     } catch (_) {
       if (!mounted || generation != _searchGeneration) return;
@@ -334,6 +387,7 @@ class _MarketsPageState extends State<MarketsPage> {
                 stock.name.toLowerCase().contains(normalized);
           }).toList();
           _searchHasMore = false;
+          _clampSelectedTab();
         });
       }
     } finally {
@@ -347,18 +401,37 @@ class _MarketsPageState extends State<MarketsPage> {
 
   @override
   Widget build(BuildContext context) {
+    final visibleTabs = _visibleTabs;
+    final effectiveTab = visibleTabs.any((tab) => tab.$1 == selectedTab)
+        ? selectedTab
+        : visibleTabs.first.$1;
+    if (effectiveTab != selectedTab) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        if (!_visibleTabs.any((tab) => tab.$1 == selectedTab)) {
+          setState(_clampSelectedTab);
+        }
+      });
+    }
+
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                AppSpacing.md + 2,
+                AppSpacing.lg,
+                AppSpacing.sm,
+              ),
               child: Row(
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: AppText(
                       'Markets',
-                      style: TextStyle(
+                      style: AppTypography.headline.copyWith(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
                       ),
@@ -372,30 +445,28 @@ class _MarketsPageState extends State<MarketsPage> {
                         onPressed: widget.onNotifications,
                         icon: const Icon(
                           Icons.notifications_none_rounded,
+                          color: AppColors.textPrimary,
                           size: 22,
                         ),
                       ),
                       if (widget.notificationCount > 0)
                         Positioned(
-                          right: 6,
-                          top: 4,
+                          right: 8,
+                          top: 7,
                           child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 17,
-                              minHeight: 17,
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 17,
+                            height: 17,
                             alignment: Alignment.center,
                             decoration: const BoxDecoration(
-                              color: Color(0xFFEF233C),
+                              color: AppColors.loss,
                               shape: BoxShape.circle,
                             ),
                             child: AppText(
                               widget.notificationCount > 9
                                   ? '9+'
                                   : widget.notificationCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textInverse,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w800,
                               ),
@@ -408,7 +479,12 @@ class _MarketsPageState extends State<MarketsPage> {
               ),
             ),
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.md - 2,
+              ),
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
@@ -421,31 +497,30 @@ class _MarketsPageState extends State<MarketsPage> {
                       ),
                     ),
                   ),
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: AppRadius.borderSm,
                   child: Ink(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 11,
+                      horizontal: AppSpacing.md,
+                      vertical: AppSpacing.sm + 3,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
+                      color: AppColors.surface,
+                      borderRadius: AppRadius.borderSm,
+                      border: Border.all(color: AppColors.border),
                     ),
-                    child: const Row(
+                    child: Row(
                       children: [
-                        Icon(
+                        const Icon(
                           Icons.search_rounded,
                           size: 20,
-                          color: Color(0xFF94A3B8),
+                          color: AppColors.textTertiary,
                         ),
-                        SizedBox(width: 8),
+                        const SizedBox(width: AppSpacing.sm),
                         Expanded(
                           child: AppText(
                             'Search stocks…',
-                            style: TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 13,
+                            style: AppTypography.labelLarge.copyWith(
+                              color: AppColors.textTertiary,
                               fontWeight: FontWeight.w500,
                             ),
                           ),
@@ -459,46 +534,43 @@ class _MarketsPageState extends State<MarketsPage> {
             SizedBox(
               height: 40,
               child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 scrollDirection: Axis.horizontal,
-                itemCount: tabs.length,
-                separatorBuilder: (_, _) => const SizedBox(width: 8),
+                itemCount: visibleTabs.length,
+                separatorBuilder: (_, _) =>
+                    const SizedBox(width: AppSpacing.sm),
                 itemBuilder: (context, index) {
-                  final selected = selectedTab == index;
+                  final tab = visibleTabs[index];
+                  final contentIndex = tab.$1;
+                  final selected = effectiveTab == contentIndex;
 
                   return InkWell(
                     onTap: () {
                       setState(() {
-                        selectedTab = index;
+                        selectedTab = contentIndex;
                       });
-                      if (query.trim().isNotEmpty) {
-                        _searchDebounce?.cancel();
-                        _searchDebounce = Timer(
-                          const Duration(milliseconds: 300),
-                          () => _searchStocks(reset: true),
-                        );
-                      }
                     },
                     child: Container(
                       alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.md,
+                      ),
                       decoration: BoxDecoration(
                         border: Border(
                           bottom: BorderSide(
                             color: selected
-                                ? AppConfig.primaryColor
+                                ? AppColors.brandPrimary
                                 : Colors.transparent,
                             width: 2,
                           ),
                         ),
                       ),
                       child: AppText(
-                        tabs[index],
-                        style: TextStyle(
+                        tab.$2,
+                        style: AppTypography.labelSmall.copyWith(
                           color: selected
-                              ? AppConfig.primaryColor
-                              : const Color(0xFF475569),
-                          fontSize: 11,
+                              ? AppColors.brandPrimary
+                              : AppColors.textSecondary,
                           fontWeight: selected
                               ? FontWeight.w700
                               : FontWeight.w500,
@@ -509,16 +581,16 @@ class _MarketsPageState extends State<MarketsPage> {
                 },
               ),
             ),
-            const SizedBox(height: 12),
-            Expanded(child: _selectedContent()),
+            const SizedBox(height: AppSpacing.md),
+            Expanded(child: _selectedContent(contentIndex: effectiveTab)),
           ],
         ),
       ),
     );
   }
 
-  Widget _selectedContent() {
-    switch (selectedTab) {
+  Widget _selectedContent({int? contentIndex}) {
+    switch (contentIndex ?? selectedTab) {
       case 0:
         return RefreshIndicator(
           onRefresh: _refreshAll,
@@ -534,28 +606,42 @@ class _MarketsPageState extends State<MarketsPage> {
       case 2:
         return RefreshIndicator(
           onRefresh: _refreshAll,
-          child: _stockList(_filteredStocks, emptyTitle: 'No stocks found'),
+          child: _stockList(
+            _filteredStocks,
+            emptyTitle: 'No instruments available',
+            emptySubtitle:
+                'Stock quotes will appear when enabled by the market catalog.',
+          ),
         );
 
       case 3:
+        final hasCategories = widget.stocks.any(
+          (stock) => stock.category?.trim().isNotEmpty == true,
+        );
         return RefreshIndicator(
           onRefresh: _refreshAll,
-          child: ListView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(16),
-            children: [
-              SectorPerformance(stocks: widget.stocks),
-              const SizedBox(height: 18),
-              _sectorBreakdown(),
-            ],
-          ),
+          child: hasCategories
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: AppSpacing.page,
+                  children: [
+                    SectorPerformance(stocks: widget.stocks),
+                    const SizedBox(height: AppSpacing.lg + 2),
+                    _sectorBreakdown(),
+                  ],
+                )
+              : _emptyState(
+                  Icons.category_outlined,
+                  'No sector data',
+                  'Sector classifications are currently unavailable for this market catalog.',
+                ),
         );
 
       case 4:
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: _categoryList(
-            const ['F&O', 'FUTURE', 'OPTION', 'DERIVATIVE'],
+            _foKeywords,
             emptyTitle: 'F&O instruments unavailable',
             emptySubtitle:
                 'Derivative contracts will appear when enabled by the market catalog.',
@@ -567,7 +653,7 @@ class _MarketsPageState extends State<MarketsPage> {
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: _categoryList(
-            const ['COMMODITY', 'MCX', 'METAL', 'ENERGY'],
+            _commodityKeywords,
             emptyTitle: 'Commodity instruments unavailable',
             emptySubtitle:
                 'Commodity quotes will appear when enabled by the market catalog.',
@@ -577,7 +663,7 @@ class _MarketsPageState extends State<MarketsPage> {
         return RefreshIndicator(
           onRefresh: _refreshAll,
           child: _categoryList(
-            const ['CURRENCY', 'FOREX', 'FX'],
+            _currencyKeywords,
             emptyTitle: 'Currency instruments unavailable',
             emptySubtitle:
                 'Currency quotes will appear when enabled by the market catalog.',
@@ -590,30 +676,64 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Widget _watchlistContent() {
+    if (_watchlistLoading && _watchlistStocks.isEmpty) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: constraints.maxHeight,
+              child: const AppLoadingView(message: 'Loading watchlist…'),
+            ),
+          );
+        },
+      );
+    }
+    if (_watchlistFailed && _watchlistStocks.isEmpty) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          return SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: SizedBox(
+              height: constraints.maxHeight,
+              child: AppErrorView(
+                title: 'Unable to load watchlist',
+                message: 'Watchlist data is unavailable. Please try again.',
+                onRetry: () => unawaited(_loadWatchlist()),
+              ),
+            ),
+          );
+        },
+      );
+    }
     if (_watchlistStocks.isEmpty) {
       return ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(AppSpacing.xxl),
         children: [
-          const SizedBox(height: 48),
+          const SizedBox(height: AppSpacing.xxxl + AppSpacing.lg),
           Icon(
             Icons.star_border_rounded,
             size: 40,
-            color: AppConfig.textSecondaryColor.withValues(alpha: 0.7),
+            color: AppColors.textSecondary.withValues(alpha: 0.7),
           ),
-          const SizedBox(height: 14),
-          const AppText(
+          const SizedBox(height: AppSpacing.md + 2),
+          AppText(
             'Your watchlist is empty',
             textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+            style: AppTypography.titleMedium.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
-          const SizedBox(height: 8),
-          const AppText(
+          const SizedBox(height: AppSpacing.sm),
+          AppText(
             'Star stocks from search or detail pages to track them here.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 13),
+            style: AppTypography.bodySmall.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: AppSpacing.lg + 2),
           Center(
             child: FilledButton.icon(
               onPressed: () => Navigator.of(context).push(
@@ -776,21 +896,25 @@ class _MarketsPageState extends State<MarketsPage> {
       Expanded(
         child: AppText(
           title,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+          style: AppTypography.titleMedium.copyWith(
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
       if (showViewAll && onViewAll != null)
         InkWell(
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: AppRadius.borderSm,
           onTap: onViewAll,
-          child: const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppSpacing.xs,
+              vertical: AppSpacing.xs + 1,
+            ),
             child: AppText(
               'View All',
-              style: TextStyle(
-                color: AppConfig.primaryColor,
+              style: AppTypography.labelMedium.copyWith(
+                color: AppColors.brandPrimary,
                 fontWeight: FontWeight.w700,
-                fontSize: 12,
               ),
             ),
           ),
@@ -839,9 +963,7 @@ class _MarketsPageState extends State<MarketsPage> {
                           width: double.infinity,
                           child: CustomPaint(
                             painter: _IndexSparklinePainter(
-                              item.$3 >= 0
-                                  ? AppConfig.gainColor
-                                  : AppConfig.lossColor,
+                              item.$3 >= 0 ? AppColors.gain : AppColors.loss,
                               _indexHistory[item.$1]!,
                             ),
                           ),
@@ -862,10 +984,10 @@ class _MarketsPageState extends State<MarketsPage> {
     final available = item.$2 > 0;
     final positive = item.$3 >= 0;
     final color = !available
-        ? AppConfig.neutralColor
+        ? AppColors.neutral
         : positive
-        ? AppConfig.gainColor
-        : AppConfig.lossColor;
+        ? AppColors.gain
+        : AppColors.loss;
     final history = _indexHistory[item.$1] ?? const <double>[];
     final venue = item.$1.toUpperCase().contains('SENSEX')
         ? 'BSE'
@@ -877,98 +999,99 @@ class _MarketsPageState extends State<MarketsPage> {
           }.contains(item.$1.toUpperCase())
         ? 'GLOBAL'
         : 'NSE';
-    return Container(
+    return AppCard(
       // Keep enough vertical room for the unavailable-quote state on narrow
       // phones; it contains both a status line and the refresh hint.
-      height: 132,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppUi.radiusMd),
-        border: Border.all(color: AppConfig.borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: AppText(
-                  item.$1,
-                  style: const TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
+      padding: const EdgeInsets.all(AppSpacing.md),
+      radius: AppRadius.md,
+      child: SizedBox(
+        height: 108,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: AppText(
+                    item.$1,
+                    style: AppTypography.labelSmall.copyWith(
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+                if (available)
+                  Icon(
+                    positive
+                        ? Icons.keyboard_arrow_up_rounded
+                        : Icons.keyboard_arrow_down_rounded,
+                    size: 15,
+                    color: color,
+                  )
+                else
+                  const Icon(
+                    Icons.schedule_rounded,
+                    size: 13,
+                    color: AppColors.neutral,
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            AppText(
+              venue,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textTertiary,
+                fontSize: 8,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs + 1),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: AppText(
+                item.$2 > 0 ? item.$2.toStringAsFixed(2) : '--',
+                style: AppTypography.numericSmall.copyWith(fontSize: 15),
+              ),
+            ),
+            AppText(
+              available
+                  ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
+                  : 'Awaiting live quote',
+              style: AppTypography.labelSmall.copyWith(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const Spacer(),
+            if (available && history.length >= 2)
+              SizedBox(
+                height: 25,
+                width: double.infinity,
+                child: CustomPaint(
+                  painter: _IndexSparklinePainter(color, history),
+                ),
+              )
+            else
+              SizedBox(
+                height: 25,
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: AppText(
+                    'Data will refresh automatically',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textTertiary,
+                      fontSize: 8,
+                    ),
                   ),
                 ),
               ),
-              if (available)
-                Icon(
-                  positive
-                      ? Icons.keyboard_arrow_up_rounded
-                      : Icons.keyboard_arrow_down_rounded,
-                  size: 15,
-                  color: color,
-                )
-              else
-                const Icon(
-                  Icons.schedule_rounded,
-                  size: 13,
-                  color: AppConfig.neutralColor,
-                ),
-            ],
-          ),
-          const SizedBox(height: 2),
-          AppText(
-            venue,
-            style: const TextStyle(
-              color: Color(0xFF94A3B8),
-              fontSize: 8,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0,
-            ),
-          ),
-          const SizedBox(height: 3),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AppText(
-              item.$2 > 0 ? item.$2.toStringAsFixed(2) : '--',
-              style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
-            ),
-          ),
-          AppText(
-            available
-                ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
-                : 'Awaiting live quote',
-            style: TextStyle(
-              color: color,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const Spacer(),
-          if (available && history.length >= 2)
-            SizedBox(
-              height: 25,
-              width: double.infinity,
-              child: CustomPaint(
-                painter: _IndexSparklinePainter(color, history),
-              ),
-            )
-          else
-            const SizedBox(
-              height: 25,
-              child: Align(
-                alignment: Alignment.bottomLeft,
-                child: AppText(
-                  'Data will refresh automatically',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 8),
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -988,31 +1111,30 @@ class _MarketsPageState extends State<MarketsPage> {
               .entries
               .map(
                 (entry) => InkWell(
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: AppRadius.borderSm,
                   onTap: () {
                     setState(() => selectedMoverFilter = entry.key);
                     if (entry.key >= 3) unawaited(_loadYearRanges());
                   },
                   child: Container(
-                    margin: const EdgeInsets.only(right: 8),
+                    margin: const EdgeInsets.only(right: AppSpacing.sm),
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 13,
-                      vertical: 9,
+                      horizontal: AppSpacing.md + 1,
+                      vertical: AppSpacing.sm + 1,
                     ),
                     decoration: BoxDecoration(
                       color: entry.key == selectedMoverFilter
-                          ? const Color(0xFFEAF3FF)
-                          : Colors.white,
-                      borderRadius: BorderRadius.circular(7),
-                      border: Border.all(color: AppConfig.borderColor),
+                          ? AppColors.brandPrimarySoft
+                          : AppColors.surface,
+                      borderRadius: AppRadius.borderSm,
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: AppText(
                       entry.value,
-                      style: TextStyle(
-                        fontSize: 11,
+                      style: AppTypography.labelSmall.copyWith(
                         color: entry.key == selectedMoverFilter
-                            ? AppConfig.primaryColor
-                            : const Color(0xFF475569),
+                            ? AppColors.brandPrimary
+                            : AppColors.textSecondary,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -1025,68 +1147,72 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Widget _moverTable(List<StockQuote> rows) {
     if (rows.isEmpty) {
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              if (_yearRangesLoading && selectedMoverFilter >= 3)
-                const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              else
-                const Icon(Icons.query_stats_rounded, color: Color(0xFF64748B)),
-              const SizedBox(width: 12),
-              Expanded(
-                child: AppText(
-                  _yearRangesLoading && selectedMoverFilter >= 3
-                      ? 'Loading one-year market history...'
-                      : selectedMoverFilter >= 3
-                      ? 'One-year history is unavailable for these instruments.'
-                      : 'No instruments match this market filter.',
-                  style: const TextStyle(color: Color(0xFF64748B)),
+      return AppCard(
+        padding: const EdgeInsets.all(AppSpacing.lg + 2),
+        child: Row(
+          children: [
+            if (_yearRangesLoading && selectedMoverFilter >= 3)
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            else
+              const Icon(
+                Icons.query_stats_rounded,
+                color: AppColors.textSecondary,
+              ),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppText(
+                _yearRangesLoading && selectedMoverFilter >= 3
+                    ? 'Loading one-year market history...'
+                    : selectedMoverFilter >= 3
+                    ? 'One-year history is unavailable for these instruments.'
+                    : 'No instruments match this market filter.',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppUi.radiusMd),
-        border: Border.all(color: AppConfig.borderColor),
-      ),
+    return AppCard(
+      padding: EdgeInsets.zero,
       child: Column(
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(12, 10, 12, 7),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md - 2,
+              AppSpacing.md,
+              AppSpacing.sm - 1,
+            ),
             child: Row(
               children: [
-                SizedBox(width: 39),
+                const SizedBox(width: 39),
                 Expanded(
                   flex: 3,
                   child: AppText(
                     'Name',
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
-                SizedBox(width: 47),
+                const SizedBox(width: 47),
                 Expanded(
                   flex: 2,
                   child: AppText(
                     'Price',
                     textAlign: TextAlign.right,
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1096,9 +1222,9 @@ class _MarketsPageState extends State<MarketsPage> {
                   child: AppText(
                     '% Change',
                     textAlign: TextAlign.right,
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1108,9 +1234,9 @@ class _MarketsPageState extends State<MarketsPage> {
                   child: AppText(
                     'Volume',
                     textAlign: TextAlign.right,
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       fontSize: 9,
-                      color: Color(0xFF64748B),
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),
@@ -1118,15 +1244,15 @@ class _MarketsPageState extends State<MarketsPage> {
               ],
             ),
           ),
-          const Divider(height: 1),
+          const Divider(height: 1, color: AppColors.divider),
           ...rows.map((stock) {
             final positive = stock.change >= 0;
             return InkWell(
               onTap: () => widget.onStockTap(stock),
               child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 11,
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.md - 1,
                 ),
                 child: Row(
                   children: [
@@ -1135,7 +1261,7 @@ class _MarketsPageState extends State<MarketsPage> {
                       logoUrl: stock.logoUrl,
                       size: 30,
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: AppSpacing.sm + 1),
                     Expanded(
                       flex: 3,
                       child: Column(
@@ -1145,16 +1271,14 @@ class _MarketsPageState extends State<MarketsPage> {
                             _displayStockName(stock),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              fontSize: 12,
+                            style: AppTypography.labelMedium.copyWith(
                               fontWeight: FontWeight.w800,
                             ),
                           ),
                           AppText(
                             stock.exchange,
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Color(0xFF64748B),
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textSecondary,
                             ),
                           ),
                         ],
@@ -1166,23 +1290,20 @@ class _MarketsPageState extends State<MarketsPage> {
                       child: (_stockHistory[stock.symbol]?.length ?? 0) >= 2
                           ? CustomPaint(
                               painter: _IndexSparklinePainter(
-                                positive
-                                    ? AppConfig.gainColor
-                                    : AppConfig.lossColor,
+                                positive ? AppColors.gain : AppColors.loss,
                                 _stockHistory[stock.symbol]!,
                               ),
                             )
                           : null,
                     ),
-                    const SizedBox(width: 5),
+                    const SizedBox(width: AppSpacing.xs + 1),
                     Expanded(
                       flex: 2,
                       child: AppText(
                         stock.price.toStringAsFixed(2),
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
+                        style: AppTypography.numericSmall.copyWith(
                           fontSize: 12,
-                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ),
@@ -1191,24 +1312,20 @@ class _MarketsPageState extends State<MarketsPage> {
                       child: AppText(
                         '${positive ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
                         textAlign: TextAlign.right,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: positive
-                              ? AppConfig.gainColor
-                              : AppConfig.lossColor,
+                        style: AppTypography.labelMedium.copyWith(
+                          color: positive ? AppColors.gain : AppColors.loss,
                           fontWeight: FontWeight.w800,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 7),
+                    const SizedBox(width: AppSpacing.sm - 1),
                     SizedBox(
                       width: 48,
                       child: AppText(
                         formatVolume(stock.volume),
                         textAlign: TextAlign.right,
-                        style: const TextStyle(
-                          color: Color(0xFF64748B),
-                          fontSize: 10,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -1237,87 +1354,85 @@ class _MarketsPageState extends State<MarketsPage> {
   Widget _marketBreadth(int advances, int declines, int unchanged) {
     final total = advances + declines + unchanged;
     if (total == 0) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: AppText(
-            'Market breadth unavailable',
-            style: TextStyle(color: AppConfig.textSecondaryColor),
+      return AppCard(
+        child: AppText(
+          'Market breadth unavailable',
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
           ),
         ),
       );
     }
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AppUi.radiusMd),
-        border: Border.all(color: AppConfig.borderColor),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.md + 2),
       child: Column(
         children: [
-          const Align(
+          Align(
             alignment: Alignment.centerLeft,
             child: AppText(
               'Loaded instruments',
-              style: TextStyle(fontSize: 10, color: Color(0xFF64748B)),
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
           ),
-          const SizedBox(height: 7),
+          const SizedBox(height: AppSpacing.sm - 1),
           Wrap(
             alignment: WrapAlignment.spaceBetween,
-            spacing: 12,
-            runSpacing: 5,
+            spacing: AppSpacing.md,
+            runSpacing: AppSpacing.xs + 1,
             children: [
               AppText(
                 'Advances  $advances',
-                style: const TextStyle(
-                  color: AppConfig.gainColor,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.gain,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               AppText(
                 'Declines  $declines',
-                style: const TextStyle(
-                  color: AppConfig.lossColor,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.loss,
                   fontWeight: FontWeight.w700,
                 ),
               ),
               AppText(
                 'Unchanged  $unchanged',
-                style: const TextStyle(
-                  color: AppConfig.neutralColor,
+                style: AppTypography.labelMedium.copyWith(
+                  color: AppColors.neutral,
                   fontWeight: FontWeight.w700,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: AppSpacing.md - 2),
           ClipRRect(
-            borderRadius: BorderRadius.circular(99),
+            borderRadius: AppRadius.borderPill,
             child: Row(
               children: [
                 if (advances > 0)
                   Expanded(
                     flex: advances,
-                    child: Container(height: 8, color: AppConfig.gainColor),
+                    child: Container(height: 8, color: AppColors.gain),
                   ),
                 if (declines > 0)
                   Expanded(
                     flex: declines,
-                    child: Container(height: 8, color: AppConfig.lossColor),
+                    child: Container(height: 8, color: AppColors.loss),
                   ),
                 if (unchanged > 0)
                   Expanded(
                     flex: unchanged,
-                    child: Container(height: 8, color: const Color(0xFF98A2B3)),
+                    child: Container(height: 8, color: AppColors.neutral),
                   ),
               ],
             ),
           ),
           AppText(
             '${(advances / total * 100).toStringAsFixed(0)}% advancing',
-            style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textSecondary,
+            ),
           ),
         ],
       ),
@@ -1339,11 +1454,12 @@ class _MarketsPageState extends State<MarketsPage> {
           'markets.banner.subtitle',
           fallback: 'Live prices, company logos and secure execution',
         );
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEEF5FF),
-            borderRadius: BorderRadius.circular(AppUi.radiusMd),
+        return AppCard(
+          backgroundColor: AppColors.brandPrimarySoft,
+          bordered: false,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.md + 2,
           ),
           child: Row(
             children: [
@@ -1353,26 +1469,24 @@ class _MarketsPageState extends State<MarketsPage> {
                   children: [
                     AppText(
                       title,
-                      style: const TextStyle(
-                        fontSize: 13,
+                      style: AppTypography.labelLarge.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: AppSpacing.xs),
                     AppText(
                       subtitle,
-                      style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFF64748B),
+                      style: AppTypography.caption.copyWith(
+                        color: AppColors.textSecondary,
                       ),
                     ),
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               const Icon(
                 Icons.candlestick_chart_rounded,
-                color: AppConfig.gainColor,
+                color: AppColors.gain,
                 size: 50,
               ),
             ],
@@ -1398,13 +1512,13 @@ class _MarketsPageState extends State<MarketsPage> {
         )
         .toList();
     if (_searchLoading && stocks.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingView();
     }
     if (allowPagination && _searchFailed && stocks.isEmpty) {
       return _emptyState(
         Icons.cloud_off,
-        'Unable to load stocks',
-        'Live search is unavailable. Please refresh to try again.',
+        'Market data unavailable',
+        'Network error or live search is unavailable. Please refresh to try again.',
       );
     }
     if (stocks.isEmpty && !(allowPagination && _searchHasMore)) {
@@ -1420,13 +1534,14 @@ class _MarketsPageState extends State<MarketsPage> {
     final showMore = allowPagination && (_searchHasMore || _searchFailed);
     return ListView.separated(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.page,
       itemCount: stocks.length + (showMore ? 1 : 0),
-      separatorBuilder: (_, _) => const Divider(height: 1),
+      separatorBuilder: (_, _) =>
+          const Divider(height: 1, color: AppColors.divider),
       itemBuilder: (context, index) {
         if (index == stocks.length) {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 12),
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
             child: Center(
               child: OutlinedButton(
                 onPressed: _searchLoading
@@ -1481,21 +1596,21 @@ class _MarketsPageState extends State<MarketsPage> {
       ..sort((left, right) => right.value.length.compareTo(left.value.length));
 
     if (rows.isEmpty) {
-      return const Card(
-        child: Padding(
-          padding: EdgeInsets.all(20),
-          child: Row(
-            children: [
-              Icon(Icons.category_outlined, color: Colors.blueGrey),
-              SizedBox(width: 12),
-              Expanded(
-                child: AppText(
-                  'Sector classifications are currently unavailable.',
-                  style: TextStyle(color: Colors.black54),
+      return AppCard(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Row(
+          children: [
+            const Icon(Icons.category_outlined, color: AppColors.textTertiary),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: AppText(
+                'Sector classifications are currently unavailable.',
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       );
     }
@@ -1503,25 +1618,35 @@ class _MarketsPageState extends State<MarketsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const AppText(
+        AppText(
           'Sector Constituents',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: AppTypography.titleLarge.copyWith(fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: AppSpacing.md - 2),
         ...rows.take(12).map((row) {
           final symbols = row.value
               .map((stock) => stock.symbol)
               .take(4)
               .join(', ');
-          return Card(
+          return AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+            padding: EdgeInsets.zero,
             child: ListTile(
               leading: const Icon(
                 Icons.category_outlined,
-                color: AppConfig.primaryColor,
+                color: AppColors.brandPrimary,
               ),
-              title: AppText(row.key),
-              subtitle: AppText(symbols),
-              trailing: AppText('${row.value.length}'),
+              title: AppText(row.key, style: AppTypography.titleSmall),
+              subtitle: AppText(
+                symbols,
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              trailing: AppText(
+                '${row.value.length}',
+                style: AppTypography.labelMedium,
+              ),
             ),
           );
         }),
@@ -1563,23 +1688,25 @@ class _MarketsPageState extends State<MarketsPage> {
   Widget _emptyState(IconData icon, String title, String subtitle) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(AppSpacing.xxxl),
       children: [
         const SizedBox(height: 100),
-        Icon(icon, size: 64, color: Colors.blueGrey),
-        const SizedBox(height: 16),
+        Icon(icon, size: 64, color: AppColors.textTertiary),
+        const SizedBox(height: AppSpacing.lg),
         AppText(
           title,
           textAlign: TextAlign.center,
-          style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+          style: AppTypography.headline.copyWith(fontWeight: FontWeight.w800),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppSpacing.sm),
         AppText(
           subtitle,
           textAlign: TextAlign.center,
-          style: const TextStyle(color: Colors.black54),
+          style: AppTypography.bodyMedium.copyWith(
+            color: AppColors.textSecondary,
+          ),
         ),
-        const SizedBox(height: 18),
+        const SizedBox(height: AppSpacing.lg + 2),
         Center(
           child: OutlinedButton.icon(
             onPressed: _searchLoading ? null : _refreshAll,

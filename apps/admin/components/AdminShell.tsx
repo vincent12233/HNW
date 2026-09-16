@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  AppstoreOutlined,
   AuditOutlined,
   BankOutlined,
   BarChartOutlined,
@@ -17,6 +18,7 @@ import {
   MobileOutlined,
   SettingOutlined,
   ShopOutlined,
+  StarOutlined,
   StockOutlined,
   TeamOutlined,
   TransactionOutlined,
@@ -82,9 +84,11 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/orders", icon: <StockOutlined />, label: "订单查询" },
     { key: "/trades", icon: <TransactionOutlined />, label: "成交查询" },
     { key: "/support-console", icon: <CustomerServiceOutlined />, label: "客服会话台" },
-    { key: "/app-content", icon: <SettingOutlined />, label: "客户端运营配置" },
+    { key: "/app-management", icon: <AppstoreOutlined />, label: "APP 管理总览" },
+    { key: "/app-content", icon: <SettingOutlined />, label: "文案配置" },
     { key: "/insights", icon: <BookOutlined />, label: "洞察文章" },
     { key: "/announcements", icon: <BellOutlined />, label: "平台公告" },
+    { key: "/featured-instruments", icon: <StarOutlined />, label: "精选标的" },
     { key: "/app-settings", icon: <MobileOutlined />, label: "客户端设置" },
     { key: "/company-showcase", icon: <ShopOutlined />, label: "平台公司信息" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
@@ -156,13 +160,15 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
       keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],
     },
     { title: "交易查询", keys: ["/orders", "/trades"] },
+    { title: "客服", keys: ["/support-console"] },
     {
-      title: "运营配置",
+      title: "APP 管理",
       keys: [
-        "/support-console",
+        "/app-management",
         "/app-content",
         "/insights",
         "/announcements",
+        "/featured-instruments",
         "/app-settings",
         "/company-showcase",
       ],

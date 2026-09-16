@@ -29,6 +29,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
 import {
   aboutFields,
@@ -54,21 +55,23 @@ import {
   type FieldDef,
 } from "./fields";
 
-const { Title, Paragraph, Text } = Typography;
+const { Paragraph, Text } = Typography;
 const { TextArea } = Input;
 
 function FieldGroup({
   title,
   hint,
   fields,
+  defaultOpen = false,
 }: {
   title: string;
   hint?: string;
   fields: ReadonlyArray<FieldDef>;
+  defaultOpen?: boolean;
 }) {
   return (
     <Collapse
-      defaultActiveKey={[title]}
+      defaultActiveKey={defaultOpen ? [title] : []}
       style={{ marginBottom: 16 }}
       items={[
         {
@@ -81,6 +84,9 @@ function FieldGroup({
                   {hint}
                 </Paragraph>
               ) : null}
+              <Paragraph type="secondary" style={{ fontSize: 12 }}>
+                仅修改展示文案，不改变业务逻辑。
+              </Paragraph>
               {fields.map((field) => (
                 <div key={field.key}>
                   {"title" in field && field.title ? (
@@ -121,6 +127,7 @@ type ContentEntry = {
   locale: string;
   isActive: boolean;
   sortOrder: number;
+  updatedAt?: string;
 };
 
 
@@ -173,6 +180,10 @@ export default function AppOpsContentPage() {
   const [insightsForm] = Form.useForm();
   const [opsLocale, setOpsLocale] = useState<"en" | "hi">("en");
   const [insightsLocale, setInsightsLocale] = useState<"en" | "hi">("en");
+  const [legalPreview, setLegalPreview] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
 
   async function loadAll() {
     setLoading(true);
@@ -342,80 +353,95 @@ export default function AppOpsContentPage() {
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>客户端运营配置</Title>
-          <Paragraph type="secondary">
-            维护 APP 可运营文案与入口文案：首页（含个人中心菜单）、充值页、客服、交易/组合、About、法律文本与 Wealth Insights。
-            首页/充值/客服客户端文案/交易说明支持 English 与 Hindi；客服标签与快捷回复仍为中文（后台客服台）。
-            公司实体图文请到{" "}
-            <Link href="/company-showcase">平台公司信息</Link>{" "}
-            维护。客户充值仍通过在线客服完成——本页可改充值说明与预填消息，不配置平台收款/银行账户。修改后客户端下次拉取配置即生效，无需发版。
-          </Paragraph>
-        </div>
-
-        {error && <Alert type="error" title={error} showIcon />}
-
-        <Card
+        <OpsPageHeader
+          eyebrow="APP MANAGEMENT"
+          title="文案配置"
+          description={
+            <>
+              KV App Content：Home / Deposit / Support / Trading / Legal / About。
+              结构化内容请使用{" "}
+              <Link href="/app-management">APP 管理总览</Link> 中的 Insights /
+              Announcements / Settings / Featured。公司图文见{" "}
+              <Link href="/company-showcase">平台公司信息</Link>。
+            </>
+          }
           extra={
             <Space>
-              <Text type="secondary">运营文案语言</Text>
+              <Text type="secondary">编辑语言</Text>
               <Select
                 value={opsLocale}
-                style={{ width: 140 }}
+                style={{ width: 160 }}
                 options={[
                   { value: "en", label: "English" },
                   { value: "hi", label: "Hindi" },
                 ]}
                 onChange={(value) => setOpsLocale(value)}
+                aria-label="运营文案语言"
               />
               <Button icon={<ReloadOutlined />} loading={loading} onClick={loadAll}>
                 刷新
               </Button>
             </Space>
           }
-        >
+        />
+
+        {error && <Alert type="error" title={error} showIcon />}
+
+        <Card loading={loading}>
           <Tabs
             items={[
               {
                 key: "home",
                 label: (
                   <span>
-                    <HomeOutlined /> 首页
+                    <HomeOutlined /> Home
                   </span>
                 ),
                 children: (
                   <Form form={homeForm} layout="vertical">
-                    <Paragraph type="secondary">
-                      当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}。按分组折叠编辑，保存时整页一并提交。
-                    </Paragraph>
+                    <Alert
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title={`当前语言：${opsLocale === "hi" ? "Hindi" : "English"}`}
+                      description="分组默认折叠。仅修改展示文案，不改变业务逻辑。"
+                    />
                     <FieldGroup
-                      title="横幅"
-                      hint="首页与行情页顶部营销文案"
+                      title="Banner"
+                      hint="首页与行情页顶部营销文案（title / subtitle / CTA）"
                       fields={homeBannerFields}
+                      defaultOpen
                     />
                     <FieldGroup
-                      title="公司展示"
-                      hint="公司卡片标题与按钮文案；图文素材在「平台公司信息」维护"
-                      fields={homeCompanyFields}
-                    />
-                    <FieldGroup
-                      title="资金入口"
+                      title="Account / Funds labels"
                       hint="Add Funds / Withdraw / Trade 与资产卡标签"
                       fields={homeFundsFields}
                     />
                     <FieldGroup
-                      title="行情与新闻"
-                      hint="指数区、查看全部与新闻空态"
-                      fields={homeNewsFields}
+                      title="Market section"
+                      hint="指数区、查看全部"
+                      fields={homeNewsFields.filter((f) =>
+                        ["indices.section_title", "view_all_cta"].includes(f.key),
+                      )}
                     />
                     <FieldGroup
-                      title="个人中心"
+                      title="News section"
+                      hint="市场新闻区标题与空态（≠ Announcement）"
+                      fields={homeNewsFields.filter((f) => f.key.startsWith("news."))}
+                    />
+                    <FieldGroup
+                      title="Company section"
+                      hint="公司卡片标题与按钮文案；素材在「平台公司信息」"
+                      fields={homeCompanyFields}
+                    />
+                    <FieldGroup
+                      title="Profile-related labels"
                       hint="Profile 分区标题、概览指标与运营入口文案"
                       fields={homeProfileFields}
                     />
                     <FieldGroup
-                      title="提现弹窗"
-                      hint="首页 Withdraw 打开的提现申请弹窗文案"
+                      title="Withdrawal dialog copy"
+                      hint="首页 Withdraw 弹窗文案"
                       fields={homeWithdrawFields}
                     />
                     <Collapse
@@ -423,11 +449,11 @@ export default function AppOpsContentPage() {
                       items={[
                         {
                           key: "legacy",
-                          label: <Text type="secondary">Legacy / 已弃用字段</Text>,
+                          label: <Text type="secondary">Legacy keys</Text>,
                           children: (
                             <FieldGroup
                               title="Legacy HOME"
-                              hint="当前 Flutter 未引用；保留数据库行以兼容旧客户端。不建议继续编辑。"
+                              hint="当前 Flutter 未引用；保留数据库行以兼容旧客户端。"
                               fields={homeLegacyFields}
                             />
                           ),
@@ -451,7 +477,7 @@ export default function AppOpsContentPage() {
                         )
                       }
                     >
-                      保存首页配置（{opsLocale.toUpperCase()}）
+                      保存 Home（{opsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -460,19 +486,23 @@ export default function AppOpsContentPage() {
                 key: "deposit",
                 label: (
                   <span>
-                    <DollarOutlined /> 充值页
+                    <DollarOutlined /> Deposit
                   </span>
                 ),
                 children: (
                   <Form form={depositForm} layout="vertical">
-                    <Paragraph type="secondary">
-                      维护 Deposit 页展示文案与打开客服时的预填消息（当前{" "}
-                      {opsLocale === "hi" ? "Hindi" : "English"}
-                      ）。不配置收款账户；入金方式由客服线下提供，财务后台手动上分。
-                    </Paragraph>
+                    <Alert
+                      type="warning"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="客户入金仍走现有 Deposit / Support 流程"
+                      description="本页只编辑展示文案与客服预填消息。不配置平台银行账户、收款账号或支付通道。KYC Bank Account 仅用于提现/出金，与本页无关。"
+                    />
                     <FieldGroup
-                      title="充值页文案"
+                      title="Deposit copy"
+                      hint={`当前语言：${opsLocale === "hi" ? "Hindi" : "English"}`}
                       fields={depositFields}
+                      defaultOpen
                     />
                     <Button
                       type="primary"
@@ -491,7 +521,7 @@ export default function AppOpsContentPage() {
                         )
                       }
                     >
-                      保存充值页配置（{opsLocale.toUpperCase()}）
+                      保存 Deposit（{opsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -500,24 +530,34 @@ export default function AppOpsContentPage() {
                 key: "support",
                 label: (
                   <span>
-                    <CustomerServiceOutlined /> 客服
+                    <CustomerServiceOutlined /> Support
                   </span>
                 ),
                 children: (
                   <Form form={supportForm} layout="vertical">
-                    <Paragraph type="secondary">
-                      侧边悬浮按钮/面板标题/欢迎语/服务时间滚动公告/快捷主题/预填消息按运营文案语言编辑（当前{" "}
-                      {opsLocale === "hi" ? "Hindi" : "English"}）；SaleSmartly Script URL 保存时自动同步 en/hi，供充值页联系客服与侧边悬浮客服共用；标签与快捷回复固定为中文，供后台客服台使用。
-                    </Paragraph>
-                    <FieldGroup title="客户端客服文案" fields={supportFields} />
+                    <Alert
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="Client Support Content"
+                      description={`问候语、服务时间、主题、预填消息、SaleSmartly Script URL（当前 ${opsLocale === "hi" ? "Hindi" : "English"}）。`}
+                    />
+                    <FieldGroup
+                      title="Client Support Content"
+                      fields={supportFields}
+                      defaultOpen
+                    />
                     <Divider />
-                    <Text strong>客服台（中文）</Text>
-                    <Paragraph type="secondary">
-                      仅后台客服工作台使用，不直接展示给 APP 用户。
-                    </Paragraph>
+                    <Alert
+                      type="warning"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="INTERNAL SUPPORT DESK ONLY"
+                      description="标签与中文快捷回复仅供后台客服台，不直接展示给 APP 用户。"
+                    />
                     <Form.Item
                       name={supportTagField.key}
-                      label={supportTagField.label}
+                      label={`${supportTagField.label} · INTERNAL`}
                       rules={[{ required: true, message: "请填写标签" }]}
                     >
                       <TextArea rows={supportTagField.rows} />
@@ -526,7 +566,7 @@ export default function AppOpsContentPage() {
                       <Form.Item
                         key={field.key}
                         name={field.key}
-                        label={field.label}
+                        label={`${field.label} · INTERNAL`}
                         rules={[{ required: true, message: "请填写快捷回复" }]}
                       >
                         <TextArea rows={3} />
@@ -549,7 +589,7 @@ export default function AppOpsContentPage() {
                         )
                       }
                     >
-                      保存客服配置（客户端 {opsLocale.toUpperCase()} + 中文快捷回复）
+                      保存 Support（客户端 {opsLocale.toUpperCase()} + 内部桌）
                     </Button>
                   </Form>
                 ),
@@ -558,34 +598,31 @@ export default function AppOpsContentPage() {
                 key: "trading",
                 label: (
                   <span>
-                    <StockOutlined /> 交易说明
+                    <StockOutlined /> Trading & Portfolio
                   </span>
                 ),
                 children: (
                   <Form form={tradingForm} layout="vertical">
-                    <Paragraph type="secondary">
-                      当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
-                    </Paragraph>
                     <Alert
                       type="warning"
                       showIcon
                       style={{ marginBottom: 16 }}
-                      title="展示文案不影响交易规则"
-                      description="交易说明 / IPO 确认文案仅用于客户端展示与教育。下单类型、撮合、冻结、限额、资格与结算以系统交易逻辑为准，CMS 不能改变业务规则。"
+                      title="Presentation only — 不改变交易规则"
+                      description="仅编辑 display / guide / empty-state 文案。不会改变 order rules、matching、price execution、limits、freeze/unfreeze、IPO allocation。"
                     />
                     <FieldGroup
-                      title="交易中心 Tab / 快捷入口"
-                      hint="Trade 页顶部筛选与快捷入口。tab.holdings / tab.all 为稳定遗留 key，展示名分别为 Positions / Overview。"
+                      title="Tabs & shortcuts"
+                      hint="tab.holdings / tab.all 为稳定遗留 key（展示名 Positions / Overview）"
                       fields={tradingTabFields}
+                      defaultOpen
                     />
                     <FieldGroup
-                      title="空状态与组合页"
-                      hint="涨停股/OTC/IPO 空态、组合页标题与 Positions 空态"
+                      title="Empty states & portfolio"
                       fields={tradingEmptyFields}
                     />
                     <FieldGroup
-                      title="交易引导"
-                      hint="可同时编辑标题与正文。内容仅供说明，不改变交易规则。"
+                      title="Guides (Presentation only)"
+                      hint="guide.institutional / otc / ipo 与确认文案仅供说明"
                       fields={tradingGuideFields}
                     />
                     <Collapse
@@ -593,11 +630,15 @@ export default function AppOpsContentPage() {
                       items={[
                         {
                           key: "legacy",
-                          label: <Text type="secondary">Legacy / 已弃用字段</Text>,
+                          label: (
+                            <Text type="secondary">
+                              Legacy keys retained for compatibility
+                            </Text>
+                          ),
                           children: (
                             <FieldGroup
                               title="Legacy TRADING"
-                              hint="当前 Flutter 未引用；保留数据库行以兼容旧客户端。"
+                              hint="当前 Flutter 未引用；保留数据库行。"
                               fields={tradingLegacyFields}
                             />
                           ),
@@ -624,7 +665,7 @@ export default function AppOpsContentPage() {
                         )
                       }
                     >
-                      保存交易说明（{opsLocale.toUpperCase()}）
+                      保存 Trading（{opsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -638,15 +679,19 @@ export default function AppOpsContentPage() {
                 ),
                 children: (
                   <Form form={aboutForm} layout="vertical">
-                    <Paragraph type="secondary">
-                      上线前请补齐法律主体、注册地址与申诉联系方式；客户端 About 页会直接展示这些字段。
-                    </Paragraph>
                     <Alert
                       type="info"
                       showIcon
                       style={{ marginBottom: 16 }}
-                      title="版本展示文案 ≠ 真实构建版本"
-                      description="app_version 仅为营销/展示文案。真实客户端版本以 App 构建元数据为准，请勿将其当作 PackageInfo。"
+                      title="Company / legal information vs marketing version"
+                      description={
+                        <>
+                          app_version 仅为营销展示文案，≠ 真实构建版本（PackageInfo）。
+                          公司展示素材请到{" "}
+                          <Link href="/company-showcase">平台公司信息</Link>。
+                          当前 ABOUT 以 English CMS 行为主。
+                        </>
+                      }
                     />
                     {aboutFields.map((field) => (
                       <Form.Item key={field.key} name={field.key} label={field.label}>
@@ -674,7 +719,7 @@ export default function AppOpsContentPage() {
                 key: "legal",
                 label: (
                   <span>
-                    <FileProtectOutlined /> 法律文本
+                    <FileProtectOutlined /> Legal
                   </span>
                 ),
                 children: (
@@ -683,11 +728,36 @@ export default function AppOpsContentPage() {
                       type="info"
                       showIcon
                       style={{ marginBottom: 16 }}
-                      title="法律文本 · Privacy / Terms"
-                      description="内容类型为对外法律文档（JSON sections）。保存后客户端下次拉取即生效。请确认文案经合规审核；本页无独立审批流。保存操作已记入 AuditLog。"
+                      title="Privacy Policy / Terms of Service"
+                      description={
+                        <>
+                          English available
+                          {entries.some(
+                            (e) =>
+                              e.module === "LEGAL" &&
+                              e.locale === "hi" &&
+                              e.body.trim(),
+                          )
+                            ? " · Hindi configured"
+                            : " · Hindi not configured"}
+                          。本 Phase 不创建 Risk Disclosure。
+                          {" "}
+                          Last updated：
+                          {(() => {
+                            const legalRows = entries.filter(
+                              (e) => e.module === "LEGAL" && e.updatedAt,
+                            );
+                            if (!legalRows.length) return "不可用（条目无 updatedAt）";
+                            const latest = legalRows
+                              .map((e) => new Date(e.updatedAt!).getTime())
+                              .reduce((a, b) => Math.max(a, b), 0);
+                            return new Date(latest).toLocaleString("zh-CN");
+                          })()}
+                        </>
+                      }
                     />
                     <Paragraph type="secondary">
-                      正文请使用 JSON：{`{"effective":"...","sections":[{"heading":"...","body":"..."}]}`}
+                      正文 JSON：{`{"effective":"...","sections":[{"heading":"...","body":"..."}]}`}
                     </Paragraph>
                     <Form.Item name="privacy.document__title" label="隐私政策标题">
                       <Input />
@@ -699,6 +769,19 @@ export default function AppOpsContentPage() {
                     >
                       <TextArea rows={12} />
                     </Form.Item>
+                    <Button
+                      style={{ marginBottom: 16 }}
+                      onClick={() =>
+                        setLegalPreview({
+                          title:
+                            legalForm.getFieldValue("privacy.document__title") ||
+                            "Privacy Policy",
+                          body: legalForm.getFieldValue("privacy.document") || "",
+                        })
+                      }
+                    >
+                      预览隐私政策
+                    </Button>
                     <Form.Item name="terms.document__title" label="服务条款标题">
                       <Input />
                     </Form.Item>
@@ -709,6 +792,19 @@ export default function AppOpsContentPage() {
                     >
                       <TextArea rows={12} />
                     </Form.Item>
+                    <Button
+                      style={{ marginBottom: 16, marginRight: 8 }}
+                      onClick={() =>
+                        setLegalPreview({
+                          title:
+                            legalForm.getFieldValue("terms.document__title") ||
+                            "Terms of Service",
+                          body: legalForm.getFieldValue("terms.document") || "",
+                        })
+                      }
+                    >
+                      预览服务条款
+                    </Button>
                     <Button
                       type="primary"
                       icon={<SaveOutlined />}
@@ -722,22 +818,35 @@ export default function AppOpsContentPage() {
                         )
                       }
                     >
-                      保存法律文本
+                      保存 Legal
                     </Button>
                   </Form>
                 ),
               },
               {
-                key: "insights",
+                key: "insights-legacy",
                 label: (
                   <span>
-                    <BookOutlined /> Wealth Insights
+                    <BookOutlined /> Legacy Insights
                   </span>
                 ),
                 children: (
                   <Form form={insightsForm} layout="vertical">
+                    <Alert
+                      type="warning"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="Legacy / Compatibility"
+                      description={
+                        <>
+                          新文章请在{" "}
+                          <Link href="/insights">Insights 管理</Link>{" "}
+                          中维护。此处 article.01–08 仅保留兼容，不要作为主要编辑入口。
+                        </>
+                      }
+                    />
                     <Space style={{ marginBottom: 16 }}>
-                      <Text>编辑语言</Text>
+                      <Text>兼容编辑语言</Text>
                       <Select
                         value={insightsLocale}
                         style={{ width: 160 }}
@@ -748,31 +857,41 @@ export default function AppOpsContentPage() {
                         onChange={(value) => setInsightsLocale(value)}
                       />
                     </Space>
-                    {insightIntroFields.map((field) => (
-                      <Form.Item key={field.key} name={field.key} label={field.label}>
-                        <TextArea rows={field.rows} />
-                      </Form.Item>
-                    ))}
-                    {insightArticleKeys.map((key, index) => (
-                      <div key={key}>
-                        <Form.Item
-                          name={`${key}__title`}
-                          label={`文章 ${index + 1} 标题`}
-                          rules={[{ required: true, message: "请填写标题" }]}
-                        >
-                          <Input />
-                        </Form.Item>
-                        <Form.Item
-                          name={key}
-                          label={`文章 ${index + 1} 正文`}
-                          rules={[{ required: true, message: "请填写正文" }]}
-                        >
-                          <TextArea rows={5} />
-                        </Form.Item>
-                      </div>
-                    ))}
+                    <Collapse
+                      items={[
+                        {
+                          key: "intro",
+                          label: "Intro（仍可用于列表页介绍文案）",
+                          children: insightIntroFields.map((field) => (
+                            <Form.Item
+                              key={field.key}
+                              name={field.key}
+                              label={field.label}
+                            >
+                              <TextArea rows={field.rows} />
+                            </Form.Item>
+                          )),
+                        },
+                        {
+                          key: "articles",
+                          label: "article.01–08（兼容 KV）",
+                          children: insightArticleKeys.map((key, index) => (
+                            <div key={key}>
+                              <Form.Item
+                                name={`${key}__title`}
+                                label={`文章 ${index + 1} 标题`}
+                              >
+                                <Input />
+                              </Form.Item>
+                              <Form.Item name={key} label={`文章 ${index + 1} 正文`}>
+                                <TextArea rows={5} />
+                              </Form.Item>
+                            </div>
+                          )),
+                        },
+                      ]}
+                    />
                     <Button
-                      type="primary"
                       icon={<SaveOutlined />}
                       loading={saving}
                       onClick={() =>
@@ -795,7 +914,7 @@ export default function AppOpsContentPage() {
                         )
                       }
                     >
-                      保存 Insights（{insightsLocale.toUpperCase()}）
+                      保存 Legacy Insights（{insightsLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -805,6 +924,30 @@ export default function AppOpsContentPage() {
         </Card>
       </Space>
 
+      {legalPreview ? (
+        <Card
+          title={`预览 · ${legalPreview.title}`}
+          extra={
+            <Button type="link" onClick={() => setLegalPreview(null)}>
+              关闭
+            </Button>
+          }
+          style={{
+            position: "fixed",
+            right: 24,
+            bottom: 24,
+            width: 420,
+            maxHeight: "70vh",
+            overflow: "auto",
+            zIndex: 1000,
+            boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
+          }}
+        >
+          <Paragraph style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>
+            {legalPreview.body}
+          </Paragraph>
+        </Card>
+      ) : null}
     </AdminShell>
   );
 }

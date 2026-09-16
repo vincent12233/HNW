@@ -1,5 +1,7 @@
 # App Content CMS Audit (Phase 10)
 
+> **Phase 11A updates (RESOLVED_11A):** ADMIN-only writes + AuditLog before/after; public locale fallback tightened to requested→en (no any); SUPPORT desk keys filtered from public GET (`/support/desk-content`); missing Flutter keys added; Positions/Overview/Product Holdings labels/defaults aligned without renaming keys; stale keys moved to Admin Legacy sections (DB rows kept); Admin save preserves isActive/sortOrder; About version clarified. See `docs/APP_CONTENT_PHASE_11A.md`.
+
 **Scope:** Read-only audit of the existing Super Admin / App Content system.  
 **Branch baseline:** `8bc8e52` (Phases 0–9 complete).  
 **No code, Prisma, or migration changes in this phase.**
@@ -67,7 +69,8 @@ Each module: `Record<key, { title, body, locale, metadata, sortOrder }>`.
 
 ### Locale pick (API)
 
-Preferred locale with non-empty body → `en` non-empty → preferred any → `en` any → first row.  
+**RESOLVED_11A:** Preferred locale with non-empty body → `en` non-empty → preferred empty → `en` empty.  
+**No fallthrough to arbitrary locales** (prevents zh desk copy on hi/en clients). Keys with neither requested nor en content are omitted.  
 Flutter then applies local string fallbacks if body still empty.
 
 ---
@@ -97,7 +100,7 @@ Admin UI labels `ADMIN` as “超级管理员” (`AdminShell.tsx`). Treat curre
 | Domain | Uses `AuditLog` / `AuditService`? |
 |--------|-----------------------------------|
 | Deposit / Withdrawal / IPO / Loans / Support tickets / Market instruments / Business | Yes (various services) |
-| **App content upsert/bulk/delete** | **No** |
+| **App content upsert/bulk/delete** | **RESOLVED_11A** — AuditLog with before/after |
 
 `AuditLog` fields: `actorId`, `action`, `resource`, `resourceId`, `description`, `metadata`, `createdAt`.  
 Even if wired later, content writes today store **neither before nor after** snapshots.
@@ -134,11 +137,11 @@ Status values: `COMPLETE` | `ADMIN_ONLY` | `CLIENT_ONLY` | `API_ONLY` | `STALE_C
 | `markets.banner.*` | Y | Markets page | Y | Y | Local | COMPLETE | KEEP_AS_KEY_VALUE / Banner entity | Low | 11B |
 | `company.section_title` / CTAs | Y | Home company block | Y | Y | Local | COMPLETE | Labels KV; **media from CompanyShowcase** | Low | keep |
 | `funds.cta_*` / `withdraw_cta_*` / `total_asset_label` | Y | Home funds | Y | Y | Local | COMPLETE | KEEP_AS_KEY_VALUE | Low | keep |
-| `funds.available_label` | Y | **No** | Y | Y | — | ADMIN_ONLY / STALE_CANDIDATE | Drop from Admin UI label or wire; do not delete DB yet | Low | 11A |
-| `funds.trade_cta_label` / `subtitle` | **No** | Home Trade CTA | — | — | Hardcoded | CLIENT_ONLY / MISSING | Add Admin fields **or** hardcode permanently | Low | 11A |
+| `funds.available_label` | Y | **No** | Y | Y | — | STALE_CANDIDATE → **RESOLVED_11A** (Legacy Admin section; DB kept) | — | Low | done |
+| `funds.trade_cta_label` / `subtitle` | Y | Home Trade CTA | Y | Y | Local | **RESOLVED_11A** | Added defaults + Admin | Low | done |
 | `indices.section_title` / `view_all_cta` / `news.*` | Y | Home | Y | Y | Local; news empty ≠ fake news | COMPLETE | Labels only; **news items are RSS** | Low | keep |
 | `profile.page_title` / `section.overview|security|preferences|support` | Y | Profile | Y | Y | Local | COMPLETE | KEEP; update Admin **labels** for Phase 4 names | Low | 11A |
-| `profile.section.account|funds|legal` | **No** | Profile sections | — | — | Hardcoded EN | CLIENT_ONLY / MISSING | Add to Admin+defaults | Low | 11A |
+| `profile.section.account|funds|legal` | Y | Profile sections | Y | Y | Local | **RESOLVED_11A** | Added defaults + Admin | Low | done |
 | `profile.metric.*` | Y | Overview chips | Y | Y | Local (“Product Holdings”) | COMPLETE | Keep key; Admin default body already product-oriented | Low | 11A copy |
 | `profile.tile.*` / logout | Y | Profile tiles | Y | Y | Local | COMPLETE | KEEP | Low | keep |
 | Alert Preferences / Appearance / Language / KYC / Bank / PIN rows | **No** | Hardcoded titles | — | — | Local | CLIENT_ONLY | Optional Phase 11A keys; not required | Low | 11A optional |
@@ -169,14 +172,14 @@ Status values: `COMPLETE` | `ADMIN_ONLY` | `CLIENT_ONLY` | `API_ONLY` | `STALE_C
 
 | Key | Admin default / label | Flutter fallback | Status | Action |
 |-----|----------------------|------------------|--------|--------|
-| `tab.holdings` | Body/label still “Holdings” | Offline fallback **“Positions”** | DUPLICATE / rename drift | **Keep key**; update Admin default/label to Positions (Phase 11A) — do not rename DB key casually |
-| `tab.all` | “All” | Fallback **“Overview”** | Drift | Keep key; update Admin body/label to Overview |
-| `shortcut.overview` | **Missing in Admin** | Used | CLIENT_ONLY / MISSING | Add Admin field |
+| `tab.holdings` | Default/label **Positions** | Offline fallback **“Positions”** | **RESOLVED_11A** (stable key retained) | Keep key; Admin + defaults updated |
+| `tab.all` | “Overview” | Fallback **“Overview”** | **RESOLVED_11A** | Keep key; Admin + defaults updated |
+| `shortcut.overview` | Y | Used | **RESOLVED_11A** | Added |
 | `shortcut.orders` | Y | Y | COMPLETE | keep |
 | Other `tab.*` | Y | Y | COMPLETE | Labels only |
 | Empty states / portfolio headings / explore CTA | Y | Y | COMPLETE | keep |
-| `portfolio.value_label` | Y | **No** | STALE_CANDIDATE | Review |
-| `portfolio.page_subtitle` | **No** | Y | CLIENT_ONLY | Add or hardcode |
+| `portfolio.value_label` | Y (Legacy) | **No** | **RESOLVED_11A** (Legacy section; DB kept) | — |
+| `portfolio.page_subtitle` | Y | Y | **RESOLVED_11A** | Added |
 | `guide.institutional|otc|ipo` | Title+body editable | Shown if non-empty | OVER_CONFIGURED risk | Copy-only; ops can drift from engine rules |
 | `ipo.confirm_template` | Editable | Used | OVER_CONFIGURED risk | Template must not invent payment automation facts |
 | Order type / matching / freeze / limits | Not in CMS as controls | Hardcoded engines | KEEP_OUT_OF_CMS | — |
@@ -210,13 +213,13 @@ Status values: `COMPLETE` | `ADMIN_ONLY` | `CLIENT_ONLY` | `API_ONLY` | `STALE_C
 
 | UI (Phases 4–9) | CMS key | Current CMS body/label | Action |
 |-----------------|---------|------------------------|--------|
-| Positions | `trading.tab.holdings` | Holdings | Keep key; update default/Admin label |
-| Overview (product filter) | `trading.tab.all` | All | Keep key; update body/label |
-| Overview shortcut | `trading.shortcut.overview` | Missing | Add key |
+| Positions | `trading.tab.holdings` | Positions | **RESOLVED_11A** |
+| Overview (product filter) | `trading.tab.all` | Overview | **RESOLVED_11A** |
+| Overview shortcut | `trading.shortcut.overview` | Overview | **RESOLVED_11A** |
 | Alert Preferences | (none) | Hardcoded | Optional CMS later |
 | Appearance | (none) | Hardcoded | Optional CMS later |
-| Product Holdings metric | `home.profile.metric.portfolio` | Check default body | Align Admin label |
-| Profile Account / Funds / Legal sections | `profile.section.account|funds|legal` | Missing in Admin | Add |
+| Product Holdings metric | `home.profile.metric.portfolio` | Product Holdings | **RESOLVED_11A** |
+| Profile Account / Funds / Legal sections | `profile.section.account|funds|legal` | Present | **RESOLVED_11A** |
 
 **Rule:** do not rename stable API keys without a migration plan; prefer Admin label + default body updates.
 

@@ -30,17 +30,32 @@ import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import { api } from "@/lib/api";
+import {
+  aboutFields,
+  depositFields,
+  homeBannerFields,
+  homeCompanyFields,
+  homeFields,
+  homeFundsFields,
+  homeLegacyFields,
+  homeNewsFields,
+  homeProfileFields,
+  homeWithdrawFields,
+  insightArticleKeys,
+  insightIntroFields,
+  supportFields,
+  supportQuickReplies,
+  supportTagField,
+  tradingEmptyFields,
+  tradingFields,
+  tradingGuideFields,
+  tradingLegacyFields,
+  tradingTabFields,
+  type FieldDef,
+} from "./fields";
 
 const { Title, Paragraph, Text } = Typography;
 const { TextArea } = Input;
-
-type FieldDef = {
-  key: string;
-  label: string;
-  rows: number;
-  title?: boolean;
-  locale?: string;
-};
 
 function FieldGroup({
   title,
@@ -108,235 +123,6 @@ type ContentEntry = {
   sortOrder: number;
 };
 
-
-const homeBannerFields: FieldDef[] = [
-  { key: "banner.title", label: "首页横幅标题", rows: 2 },
-  { key: "banner.subtitle", label: "首页横幅副标题", rows: 2 },
-  { key: "markets.banner.title", label: "行情页横幅标题", rows: 2 },
-  { key: "markets.banner.subtitle", label: "行情页横幅副标题", rows: 2 },
-];
-
-const homeCompanyFields: FieldDef[] = [
-  { key: "company.section_title", label: "公司展示区标题", rows: 1 },
-  { key: "company.video_cta", label: "公司视频按钮文案", rows: 1 },
-  { key: "company.website_cta", label: "公司官网按钮文案", rows: 1 },
-];
-
-const homeFundsFields: FieldDef[] = [
-  { key: "funds.cta_label", label: "Add Funds 按钮标题", rows: 1 },
-  { key: "funds.cta_subtitle", label: "Add Funds 按钮副标题", rows: 1 },
-  { key: "funds.withdraw_cta_label", label: "Withdraw 按钮标题", rows: 1 },
-  { key: "funds.withdraw_cta_subtitle", label: "Withdraw 按钮副标题", rows: 1 },
-  { key: "funds.total_asset_label", label: "总资产文案", rows: 1 },
-  { key: "funds.available_label", label: "可用资金文案", rows: 1 },
-];
-
-const homeNewsFields: FieldDef[] = [
-  { key: "indices.section_title", label: "指数区标题", rows: 1 },
-  { key: "view_all_cta", label: "「查看全部」按钮", rows: 1 },
-  { key: "news.section_title", label: "市场新闻区标题", rows: 1 },
-  { key: "news.empty", label: "市场新闻空状态", rows: 2 },
-];
-
-const homeProfileFields: FieldDef[] = [
-  { key: "profile.page_title", label: "个人中心页标题", rows: 1 },
-  { key: "profile.section.overview", label: "概览分区标题", rows: 1 },
-  { key: "profile.section.security", label: "账户安全分区标题", rows: 1 },
-  { key: "profile.section.preferences", label: "偏好设置分区标题", rows: 1 },
-  { key: "profile.section.support", label: "支持与更多分区标题", rows: 1 },
-  { key: "profile.metric.available", label: "概览 · 可用余额", rows: 1 },
-  { key: "profile.metric.portfolio", label: "概览 · 总组合", rows: 1 },
-  { key: "profile.metric.returns", label: "概览 · 总收益", rows: 1 },
-  { key: "profile.tile.help.title", label: "帮助入口标题", rows: 1 },
-  { key: "profile.tile.help.subtitle", label: "帮助入口副标题", rows: 2 },
-  { key: "profile.tile.insights.title", label: "Insights 入口标题", rows: 1 },
-  {
-    key: "profile.tile.insights.subtitle",
-    label: "Insights 入口副标题",
-    rows: 2,
-  },
-  { key: "profile.tile.about.title", label: "About 入口标题", rows: 1 },
-  { key: "profile.tile.about.subtitle", label: "About 入口副标题", rows: 2 },
-  { key: "profile.tile.terms.title", label: "服务条款入口标题", rows: 1 },
-  { key: "profile.tile.privacy.title", label: "隐私政策入口标题", rows: 1 },
-  { key: "profile.logout_label", label: "退出登录标题", rows: 1 },
-  { key: "profile.logout_subtitle", label: "退出登录副标题", rows: 1 },
-];
-
-const homeWithdrawFields: FieldDef[] = [
-  { key: "withdraw.dialog_title", label: "提现弹窗标题", rows: 1 },
-  { key: "withdraw.available_label", label: "可用资金标签", rows: 1 },
-  {
-    key: "withdraw.frozen_template",
-    label: "冻结金额文案（可用 {amount}）",
-    rows: 1,
-  },
-  { key: "withdraw.amount_label", label: "提现金额字段标签", rows: 1 },
-  { key: "withdraw.min_hint", label: "最低提现提示", rows: 1 },
-  { key: "withdraw.pin_label", label: "提现 PIN 字段标签", rows: 1 },
-  { key: "withdraw.bank_section_title", label: "银行信息区标题", rows: 1 },
-  { key: "withdraw.bank_picker_label", label: "银行账户下拉标签", rows: 1 },
-  { key: "withdraw.holder_label", label: "户名标签", rows: 1 },
-  { key: "withdraw.account_label", label: "账号标签", rows: 1 },
-  { key: "withdraw.status_label", label: "银行状态标签", rows: 1 },
-  { key: "withdraw.notice", label: "提现说明正文", rows: 4 },
-  { key: "withdraw.records_title", label: "提现记录标题", rows: 1 },
-  { key: "withdraw.cancel", label: "取消按钮", rows: 1 },
-  { key: "withdraw.submit", label: "提交按钮", rows: 1 },
-  { key: "withdraw.bank_incomplete", label: "银行信息不完整提示", rows: 2 },
-  { key: "withdraw.submitting", label: "提交中提示", rows: 1 },
-  { key: "withdraw.min_error", label: "低于最低金额错误", rows: 1 },
-  {
-    key: "withdraw.max_error_template",
-    label: "超过可用余额错误（可用 {amount}）",
-    rows: 1,
-  },
-  { key: "withdraw.bank_error", label: "未选完整银行账户错误", rows: 1 },
-  { key: "withdraw.pin_error", label: "PIN 格式错误", rows: 1 },
-];
-
-const homeFields: FieldDef[] = [
-  ...homeBannerFields,
-  ...homeCompanyFields,
-  ...homeFundsFields,
-  ...homeNewsFields,
-  ...homeProfileFields,
-  ...homeWithdrawFields,
-];
-
-const depositFields: FieldDef[] = [
-  { key: "page_title", label: "页面标题（AppBar）", rows: 1 },
-  { key: "hero_title", label: "充值页主标题", rows: 1 },
-  { key: "instructions", label: "充值说明正文", rows: 4 },
-  { key: "cta_label", label: "联系客服按钮文案", rows: 1 },
-  { key: "chat_preset", label: "充值页打开客服时的预填消息", rows: 2 },
-  {
-    key: "api_reject_message",
-    label: "接口拒绝自助充值时的提示文案",
-    rows: 3,
-  },
-  { key: "history_section_title", label: "入金历史区标题", rows: 1 },
-  { key: "history_empty", label: "入金历史空状态", rows: 1 },
-  { key: "terms_section_title", label: "条款区标题", rows: 1 },
-  { key: "terms", label: "充值条款说明", rows: 5 },
-];
-
-const supportFields: FieldDef[] = [
-  { key: "fab_label", label: "侧边客服悬浮按钮文案", rows: 1 },
-  { key: "header_title", label: "客服面板标题", rows: 1 },
-  { key: "greeting", label: "客服欢迎语", rows: 3 },
-  {
-    key: "hours",
-    label: "服务时间滚动提示（客服面板顶部公告，可横向滚动）",
-    rows: 2,
-  },
-  { key: "quick_topics_label", label: "快捷主题区标题", rows: 1 },
-  { key: "topic.deposit", label: "快捷主题 · 入金", rows: 1 },
-  { key: "topic.trading", label: "快捷主题 · 交易", rows: 1 },
-  { key: "topic.account", label: "快捷主题 · 账户", rows: 1 },
-  { key: "composer_hint", label: "输入框提示文案（Web/桌面）", rows: 1 },
-  { key: "chat_preset.help", label: "帮助入口预填消息", rows: 2 },
-  { key: "chat_preset.deposit", label: "快捷主题「入金」预填消息", rows: 2 },
-  { key: "salesmartly_script_url", label: "SaleSmartly Script URL（en/hi 共用，两端客服入口共用）", rows: 2 },
-];
-
-const supportTagField = {
-  key: "tags",
-  label: "客服标签（逗号分隔）",
-  locale: "zh",
-  rows: 2,
-} as const;
-
-const aboutFields = [
-  { key: "company_name", label: "显示名称", rows: 1 },
-  { key: "legal_name", label: "法律主体名称", rows: 2 },
-  { key: "registered_address", label: "注册地址", rows: 3 },
-  { key: "grievance_contact", label: "投诉/申诉联系方式", rows: 3 },
-  { key: "app_version", label: "版本文案", rows: 1 },
-  { key: "summary", label: "About 简介", rows: 4 },
-] as const;
-
-const insightIntroFields = [
-  { key: "intro.title", label: "Insights 标题", rows: 2 },
-  { key: "intro.body", label: "Insights 介绍", rows: 4 },
-] as const;
-
-const insightArticleKeys = [
-  "article.01",
-  "article.02",
-  "article.03",
-  "article.04",
-  "article.05",
-  "article.06",
-  "article.07",
-  "article.08",
-] as const;
-
-const supportQuickReplies = [
-  { key: "quick_reply.deposit", label: "快捷回复 · 入金", locale: "zh" },
-  { key: "quick_reply.withdrawal", label: "快捷回复 · 提现", locale: "zh" },
-  { key: "quick_reply.kyc", label: "快捷回复 · KYC", locale: "zh" },
-  { key: "quick_reply.general", label: "快捷回复 · 通用", locale: "zh" },
-] as const;
-
-const tradingFields: FieldDef[] = [
-  { key: "tab.trades", label: "Tab · Trades", rows: 1 },
-  { key: "tab.institutional", label: "Tab · Institutional", rows: 1 },
-  { key: "tab.holdings", label: "Tab · Holdings", rows: 1 },
-  { key: "tab.pending", label: "Tab · Pending", rows: 1 },
-  { key: "tab.order_book", label: "Tab · Order Book", rows: 1 },
-  { key: "tab.otc", label: "Tab · OTC", rows: 1 },
-  { key: "tab.ipo", label: "Tab · IPO", rows: 1 },
-  { key: "tab.history", label: "Tab · History", rows: 1 },
-  { key: "tab.funds_ledger", label: "Tab · Funds Ledger", rows: 1 },
-  { key: "tab.all", label: "产品筛选 · All", rows: 1 },
-  { key: "tab.ins_stock", label: "产品筛选 · 涨停股", rows: 1 },
-  { key: "shortcut.orders", label: "快捷入口 · Orders", rows: 1 },
-  { key: "institutional.empty_title", label: "涨停股空状态标题", rows: 2 },
-  { key: "institutional.empty_subtitle", label: "涨停股空状态说明", rows: 3 },
-  { key: "otc.empty_title", label: "OTC 空状态标题", rows: 2 },
-  { key: "otc.empty_subtitle", label: "OTC 空状态说明", rows: 3 },
-  {
-    key: "ipo.confirm_template",
-    label: "IPO 提交确认文案（可用 {current}/{max}）",
-    rows: 4,
-  },
-  { key: "ipo.empty_open_title", label: "IPO 开放列表空状态标题", rows: 2 },
-  { key: "ipo.empty_open_subtitle", label: "IPO 开放列表空状态说明", rows: 2 },
-  { key: "ipo.empty_title", label: "IPO 其他列表空状态标题", rows: 2 },
-  { key: "ipo.empty_subtitle", label: "IPO 其他列表空状态说明", rows: 2 },
-  { key: "portfolio.page_title", label: "组合页标题", rows: 1 },
-  { key: "portfolio.value_label", label: "组合总价值标签", rows: 1 },
-  { key: "portfolio.summary_heading", label: "投资摘要标题", rows: 1 },
-  { key: "portfolio.allocation_heading", label: "资产配置标题", rows: 1 },
-  { key: "portfolio.empty_title", label: "组合空状态标题", rows: 2 },
-  { key: "portfolio.empty_subtitle", label: "组合空状态说明", rows: 2 },
-  { key: "portfolio.explore_cta", label: "组合空状态按钮文案", rows: 1 },
-  { key: "holdings.empty_title", label: "持仓空状态标题", rows: 2 },
-  { key: "holdings.empty_subtitle", label: "持仓空状态说明", rows: 2 },
-  {
-    key: "guide.institutional",
-    label: "交易说明 · 涨停股",
-    rows: 4,
-    title: true,
-  },
-  { key: "guide.otc", label: "交易说明 · OTC", rows: 4, title: true },
-  { key: "guide.ipo", label: "交易说明 · IPO", rows: 4, title: true },
-];
-
-const tradingTabFields = tradingFields.filter(
-  (field) => field.key.startsWith("tab.") || field.key.startsWith("shortcut."),
-);
-const tradingEmptyFields = tradingFields.filter(
-  (field) =>
-    field.key.includes("empty") ||
-    field.key === "ipo.confirm_template" ||
-    field.key.startsWith("portfolio.") ||
-    field.key.startsWith("holdings."),
-);
-const tradingGuideFields = tradingFields.filter((field) =>
-  field.key.startsWith("guide."),
-);
 
 function apiError(error: unknown, fallback: string) {
   const value = (error as { response?: { data?: { message?: unknown } } })
@@ -431,7 +217,7 @@ export default function AppOpsContentPage() {
   function applyOpsForms(nextEntries: ContentEntry[], locale: "en" | "hi") {
     homeForm.setFieldsValue(
       Object.fromEntries(
-        homeFields.map((field) => [
+        [...homeFields, ...homeLegacyFields].map((field) => [
           field.key,
           entryValue(nextEntries, "HOME", field.key, locale),
         ]),
@@ -467,7 +253,7 @@ export default function AppOpsContentPage() {
     });
     tradingForm.setFieldsValue({
       ...Object.fromEntries(
-        tradingFields.map((field) => [
+        [...tradingFields, ...tradingLegacyFields].map((field) => [
           field.key,
           entryValue(nextEntries, "TRADING", field.key, locale),
         ]),
@@ -531,6 +317,7 @@ export default function AppOpsContentPage() {
         const locale = field.locale ?? "en";
         const body = values[field.key] ?? "";
         const titleKey = `${field.key}__title`;
+        // Do not send isActive/sortOrder — preserve existing DB values on body edits.
         return [
           {
             module,
@@ -538,7 +325,6 @@ export default function AppOpsContentPage() {
             locale,
             body,
             title: field.title ? values[titleKey] || null : undefined,
-            isActive: true,
           },
         ];
       });
@@ -614,7 +400,7 @@ export default function AppOpsContentPage() {
                     />
                     <FieldGroup
                       title="资金入口"
-                      hint="Add Funds / Withdraw 与资产卡标签"
+                      hint="Add Funds / Withdraw / Trade 与资产卡标签"
                       fields={homeFundsFields}
                     />
                     <FieldGroup
@@ -632,6 +418,22 @@ export default function AppOpsContentPage() {
                       hint="首页 Withdraw 打开的提现申请弹窗文案"
                       fields={homeWithdrawFields}
                     />
+                    <Collapse
+                      style={{ marginBottom: 16 }}
+                      items={[
+                        {
+                          key: "legacy",
+                          label: <Text type="secondary">Legacy / 已弃用字段</Text>,
+                          children: (
+                            <FieldGroup
+                              title="Legacy HOME"
+                              hint="当前 Flutter 未引用；保留数据库行以兼容旧客户端。不建议继续编辑。"
+                              fields={homeLegacyFields}
+                            />
+                          ),
+                        },
+                      ]}
+                    />
                     <Button
                       type="primary"
                       icon={<SaveOutlined />}
@@ -641,7 +443,7 @@ export default function AppOpsContentPage() {
                           saveModule(
                             "HOME",
                             values,
-                            homeFields.map((field) => ({
+                            [...homeFields, ...homeLegacyFields].map((field) => ({
                               key: field.key,
                               locale: opsLocale,
                             })),
@@ -764,20 +566,43 @@ export default function AppOpsContentPage() {
                     <Paragraph type="secondary">
                       当前编辑：{opsLocale === "hi" ? "Hindi" : "English"}
                     </Paragraph>
+                    <Alert
+                      type="warning"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="展示文案不影响交易规则"
+                      description="交易说明 / IPO 确认文案仅用于客户端展示与教育。下单类型、撮合、冻结、限额、资格与结算以系统交易逻辑为准，CMS 不能改变业务规则。"
+                    />
                     <FieldGroup
                       title="交易中心 Tab / 快捷入口"
-                      hint="Trade 页顶部筛选与快捷入口标签"
+                      hint="Trade 页顶部筛选与快捷入口。tab.holdings / tab.all 为稳定遗留 key，展示名分别为 Positions / Overview。"
                       fields={tradingTabFields}
                     />
                     <FieldGroup
                       title="空状态与组合页"
-                      hint="涨停股/OTC/IPO 空态、组合页标题与持仓空态"
+                      hint="涨停股/OTC/IPO 空态、组合页标题与 Positions 空态"
                       fields={tradingEmptyFields}
                     />
                     <FieldGroup
                       title="交易引导"
-                      hint="可同时编辑标题与正文"
+                      hint="可同时编辑标题与正文。内容仅供说明，不改变交易规则。"
                       fields={tradingGuideFields}
+                    />
+                    <Collapse
+                      style={{ marginBottom: 16 }}
+                      items={[
+                        {
+                          key: "legacy",
+                          label: <Text type="secondary">Legacy / 已弃用字段</Text>,
+                          children: (
+                            <FieldGroup
+                              title="Legacy TRADING"
+                              hint="当前 Flutter 未引用；保留数据库行以兼容旧客户端。"
+                              fields={tradingLegacyFields}
+                            />
+                          ),
+                        },
+                      ]}
                     />
                     <Button
                       type="primary"
@@ -788,11 +613,13 @@ export default function AppOpsContentPage() {
                           saveModule(
                             "TRADING",
                             values,
-                            tradingFields.map((field) => ({
-                              key: field.key,
-                              locale: opsLocale,
-                              title: field.title,
-                            })),
+                            [...tradingFields, ...tradingLegacyFields].map(
+                              (field) => ({
+                                key: field.key,
+                                locale: opsLocale,
+                                title: field.title,
+                              }),
+                            ),
                           ),
                         )
                       }
@@ -814,6 +641,13 @@ export default function AppOpsContentPage() {
                     <Paragraph type="secondary">
                       上线前请补齐法律主体、注册地址与申诉联系方式；客户端 About 页会直接展示这些字段。
                     </Paragraph>
+                    <Alert
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="版本展示文案 ≠ 真实构建版本"
+                      description="app_version 仅为营销/展示文案。真实客户端版本以 App 构建元数据为准，请勿将其当作 PackageInfo。"
+                    />
                     {aboutFields.map((field) => (
                       <Form.Item key={field.key} name={field.key} label={field.label}>
                         <TextArea rows={field.rows} />
@@ -845,6 +679,13 @@ export default function AppOpsContentPage() {
                 ),
                 children: (
                   <Form form={legalForm} layout="vertical">
+                    <Alert
+                      type="info"
+                      showIcon
+                      style={{ marginBottom: 16 }}
+                      title="法律文本 · Privacy / Terms"
+                      description="内容类型为对外法律文档（JSON sections）。保存后客户端下次拉取即生效。请确认文案经合规审核；本页无独立审批流。保存操作已记入 AuditLog。"
+                    />
                     <Paragraph type="secondary">
                       正文请使用 JSON：{`{"effective":"...","sections":[{"heading":"...","body":"..."}]}`}
                     </Paragraph>

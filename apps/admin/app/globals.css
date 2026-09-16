@@ -116,6 +116,11 @@ body {
   color: #ffffff !important;
 }
 
+.ops-mobile-nav {
+  min-height: 100vh;
+  background: linear-gradient(180deg, var(--sider-from), var(--sider-mid) 62%, var(--sider-to));
+}
+
 .ops-menu .ant-menu-item-group-title {
   color: #7f97b2 !important;
   font-size: 11px !important;

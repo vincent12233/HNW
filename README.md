@@ -2,7 +2,7 @@
 
 面向印度手机号客户注册的交易平台：客户 App、五个分离的运营后台、API 后端。客服通过客户端内 SaleSmartly 原生 SDK 接入。
 
-**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。不再提供本机 Docker / compose 编排。
+**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。仓库同时提供隔离的本机 Docker Compose 环境，专用于 E2E 和后台联调。
 
 ## 项目组成
 
@@ -39,6 +39,21 @@ docs/生产部署说明.md
 
 服务器上：`npm ci` → 迁移 / seed → `npm run build` → `npm run start:prod`（API 入口为 `dist/main.js`），五个后台分别构建并用 Nginx 反代。
 
+## 本机 Docker E2E 联调（推荐）
+
+启动 Docker Desktop 后，在仓库根目录执行：
+
+```powershell
+$env:HNW_E2E_DB_PASSWORD="HnwE2E_Local_2026_Strong!"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-docker-stack.ps1
+```
+
+该环境使用独立的 `hnw_e2e` 数据库，不连接生产数据。停止环境：
+
+```powershell
+docker compose -f .\compose.local-test.yaml down
+```
+
 ## 本机联调（无 Docker）
 
 见 `docs/本地启动与联调.md`：本机安装 PostgreSQL + Node，直接跑 API / admin / Flutter。
@@ -70,12 +85,20 @@ API: http://localhost:3000
 专用运营员: http://localhost:3007/login
 ```
 
+Docker E2E API 地址为 `http://localhost:3100`，后台端口仍为 `3002/3004/3005/3006/3007`。
+
 客户 App：
 
 ```powershell
 cd apps/client
 flutter pub get
 flutter run --dart-define=API_BASE_URL=http://localhost:3000
+```
+
+Android 真机 E2E（需要 USB 调试设备）：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-e2e.ps1
 ```
 
 ## 默认后台账号

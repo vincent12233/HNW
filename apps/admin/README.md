@@ -16,6 +16,8 @@ Copy-Item .env.example .env.local
 NEXT_PUBLIC_API_URL=http://localhost:3000
 ```
 
+Docker E2E 环境使用 `NEXT_PUBLIC_API_URL=http://localhost:3100`；后台入口端口不变。
+
 启动后台：
 
 ```powershell

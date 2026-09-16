@@ -12,6 +12,8 @@ flutter run --dart-define=API_BASE_URL=http://localhost:3000
 
 真机联调请把 `localhost` 换成电脑局域网 IP。允许本机 HTTP 时再加 `--dart-define=ALLOW_INSECURE_API=true`（仅开发）。
 
+使用仓库 Docker E2E 环境时，执行 `scripts/build-android-e2e.ps1`。该脚本会自动建立 `adb reverse tcp:3100 tcp:3100`，再构建、安装并启动调试 APK。
+
 ## 正式构建
 
 ```powershell

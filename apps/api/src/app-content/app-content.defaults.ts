@@ -110,6 +110,22 @@ const termsDocument = {
   ],
 };
 
+const riskDocument = {
+  effective: 'Effective 16 September 2026  •  Version 1.0',
+  sections: [
+    { heading: '1. Capital and market risk', body: 'Investments can rise or fall in value and you may lose some or all of the capital committed. Market prices can change rapidly because of issuer, sector, economic, political, currency or broader market events. Past performance and displayed returns do not guarantee future results.' },
+    { heading: '2. Volatility and liquidity risk', body: 'Some instruments may experience sharp price movements or limited trading interest. You may be unable to buy or sell the desired quantity at the displayed price, or at all. Low liquidity can increase price impact and the time required to complete or settle a transaction.' },
+    { heading: '3. Execution and price risk', body: 'Quotes, charts and reference prices may be delayed, corrected or differ from the final transaction or settlement price. Submitting an instruction does not guarantee acceptance, execution, allocation or approval. Review the instrument, quantity, price basis, charges and total before confirming.' },
+    { heading: '4. Product-specific risk', body: 'Institutional offers, IPOs and OTC products may involve restricted eligibility, uncertain allocation, limited liquidity, valuation uncertainty and additional review or settlement steps. OTC transactions remain pending until approved. Read the product details and do not treat an application or displayed position as a completed allocation or settlement.' },
+    { heading: '5. Settlement, custody and counterparty risk', body: 'Transactions depend on the disclosed operator, banking, custody, allocation and settlement arrangements. Delays, rejection, reconciliation issues or counterparty failure may affect when cash or assets become available. Confirm the contracting entity, ownership record, settlement timing, cancellation rules and complaint route before transacting.' },
+    { heading: '6. System and data risk', body: 'The application, networks, devices, market-data services, banking systems or other providers may be unavailable or contain delayed or inaccurate information. A pending screen, notification or balance display is not conclusive proof of execution or settlement. Check transaction records and contact support when information conflicts.' },
+    { heading: '7. Borrowing and leverage risk', body: 'Borrowing money or using leverage to invest can magnify losses and may create repayment obligations even when an investment loses value. Do not borrow or commit funds needed for essential expenses, emergencies or near-term obligations.' },
+    { heading: '8. Fraud and account-security risk', body: 'Fraudsters may impersonate staff or promise guaranteed returns. Never share passwords, OTPs or transaction keys, and use only verified in-app support channels. Report unauthorised activity promptly. India Trading does not guarantee returns or ask you to bypass the displayed transaction workflow.' },
+    { heading: '9. Regulatory and tax risk', body: 'Laws, regulatory requirements, taxes, fees and product availability may change and can affect transactions or returns. Your tax and legal position depends on your circumstances. Obtain independent professional advice where needed.' },
+    { heading: '10. Make an informed decision', body: 'This application provides information and transaction workflows; it does not provide personal investment, legal or tax advice unless expressly identified as such by an authorised professional. Consider your objectives, financial position, time horizon and ability to bear loss. Read all product disclosures and seek independent advice before acting if you do not understand the risks.' },
+  ],
+};
+
 const insightArticles: Array<{
   key: string;
   titleEn: string;
@@ -705,6 +721,20 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     body: 'ऐप, नियम और नीतियाँ',
     locale: 'hi',
     sortOrder: 103,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'profile.tile.risk.title',
+    body: 'Risk Disclosure',
+    locale: 'en',
+    sortOrder: 104,
+  },
+  {
+    module: AppContentModule.HOME,
+    key: 'profile.tile.risk.title',
+    body: 'जोखिम प्रकटीकरण',
+    locale: 'hi',
+    sortOrder: 104,
   },
   {
     module: AppContentModule.HOME,
@@ -1973,6 +2003,14 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     body: JSON.stringify(termsDocument),
     locale: 'en',
     sortOrder: 20,
+  },
+  {
+    module: AppContentModule.LEGAL,
+    key: 'risk.document',
+    title: 'Risk Disclosure',
+    body: JSON.stringify(riskDocument),
+    locale: 'en',
+    sortOrder: 30,
   },
   {
     module: AppContentModule.ABOUT,

@@ -250,6 +250,7 @@ const hindi = <String, String>{
   'Invested': 'निवेशित',
   'Terms of Service': 'सेवा की शर्तें',
   'Privacy Policy': 'गोपनीयता नीति',
+  'Risk Disclosure': 'जोखिम प्रकटीकरण',
   'Sign out?': 'लॉगआउट करें?',
   'Sign Out': 'लॉगआउट',
   'Unable to mark notification as read':

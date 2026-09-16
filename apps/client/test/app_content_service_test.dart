@@ -31,6 +31,11 @@ void main() {
           'body':
               '{"effective":"Effective now","sections":[{"heading":"1","body":"A"}]}',
         },
+        'risk.document': {
+          'title': 'Risk Disclosure',
+          'body':
+              '{"effective":"Effective now","sections":[{"heading":"Risk","body":"Capital can be lost"}]}',
+        },
       },
       'about': {
         'company_name': {'body': 'India Trading App'},
@@ -50,6 +55,7 @@ void main() {
       'Online customer service hours: Mon-Sun 09:00-22:00 (IST).',
     );
     expect(bundle.privacyDocument().sections.single.heading, '1');
+    expect(bundle.riskDocument().sections.single.body, 'Capital can be lost');
     expect(bundle.text('about', 'company_name'), 'India Trading App');
     expect(bundle.insightArticles().single.title, 'Account and KYC');
     expect(bundle.hasContent, isTrue);

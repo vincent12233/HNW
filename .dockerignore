@@ -1,0 +1,6 @@
+.git
+**/node_modules
+**/.next*
+**/dist
+**/coverage
+apps/api/private-objects

@@ -69,21 +69,11 @@ $business = Invoke-JsonPost "/auth/login" @{
 }
 $businessToken = $business.accessToken
 
-$codes = Invoke-JsonGet "/business/invite-codes" $businessToken
-$invite = ($codes | Where-Object { $_.status -eq "UNUSED" } | Select-Object -First 1).code
+$currentInvite = Invoke-JsonGet "/business/my-invite-code" $businessToken
+$invite = $currentInvite.code.code
 $generatedInvite = $false
-if (-not $invite) {
-  $generatedCodes = Invoke-JsonPost "/business/self/invite-codes" @{
-    count = 3
-  } $businessToken
 
-  $invite = ($generatedCodes | Where-Object { $_.status -eq "UNUSED" } | Select-Object -First 1).code
-  $generatedInvite = $true
-}
-
-if (-not $invite) {
-  throw "No unused invite code available, and automatic invite generation failed."
-}
+if (-not $invite) { throw "No unused invite code is available for BUSINESS001." }
 
 $registration = Invoke-JsonPost "/auth/register" @{
   phone = $phone

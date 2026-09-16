@@ -438,6 +438,7 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
           'profile.tile.insights.subtitle',
           'profile.tile.about.title',
           'profile.tile.about.subtitle',
+          'profile.tile.risk.title',
           'profile.tile.terms.title',
           'profile.tile.privacy.title',
           'profile.logout_label',

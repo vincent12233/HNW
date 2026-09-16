@@ -140,6 +140,9 @@ class AppContentBundle {
   LegalDocumentContent termsDocument() =>
       LegalDocumentContent.fromBlock(legal['terms.document']);
 
+  LegalDocumentContent riskDocument() =>
+      LegalDocumentContent.fromBlock(legal['risk.document']);
+
   List<AppContentBlock> insightArticles() {
     final articles =
         insights.entries

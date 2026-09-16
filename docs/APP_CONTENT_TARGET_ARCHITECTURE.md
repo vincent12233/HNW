@@ -1,8 +1,8 @@
 # App Content Target Architecture
 
-**Status:** Phase 10 design + Phase 11A KV harden + Phase 11B structured entities + **Phase 12 Admin UX complete**.  
+**Status:** Phase 10–13 complete for App Content track (KV + structured entities + Admin UX + Flutter integration).  
 **Prerequisite audit:** `docs/APP_CONTENT_CMS_AUDIT.md`  
-**Phase docs:** `APP_CONTENT_PHASE_11A.md`, `APP_CONTENT_PHASE_11B.md`, `APP_CONTENT_PHASE_12_ADMIN.md`
+**Phase docs:** `APP_CONTENT_PHASE_11A.md`, `APP_CONTENT_PHASE_11B.md`, `APP_CONTENT_PHASE_12_ADMIN.md`, `APP_CONTENT_PHASE_13_CLIENT.md`, `APP_CONTENT_END_TO_END_MATRIX.md`
 
 Goal: **reuse and normalize** the existing App Content system — do not build a parallel CMS.
 
@@ -236,11 +236,14 @@ Reuse existing `AuditLog` + `AuditService` — do not create a parallel audit pr
 - Featured Instruments (Instrument flags + placement PATCH)
 - See `docs/APP_CONTENT_PHASE_12_ADMIN.md`
 
-### PHASE 13 — Flutter dynamic-content completion
-- Consume structured APIs
-- PackageInfo for real version
-- Optional Risk Disclosure **only** with legal + Admin + client
-- Preserve offline safe fallbacks; never fake financial data
+### PHASE 13 — Flutter dynamic-content completion — **DONE**
+- App settings bootstrap + force/maintenance/optional gates
+- Insights SUCCESS[] vs FAILURE fallback
+- Announcements Home banner (max 1)
+- Featured Home/Markets via public instruments filters
+- See `docs/APP_CONTENT_PHASE_13_CLIENT.md` + end-to-end matrix
+
+**Remaining product gaps:** store URL field; Risk Disclosure; production release ops (out of this track).
 
 ---
 

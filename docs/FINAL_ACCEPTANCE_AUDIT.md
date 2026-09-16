@@ -3,21 +3,28 @@
 **Branch:** `cursor/app-ui-ux-admin-upgrade-c5d7`  
 **Starting HEAD (original audit):** `2324c4e`  
 **Blocker remediation start:** `4b03fa5`  
-**Ending HEAD:** `ae72051`  
+**Ending HEAD:** `a459714`  
 **PR:** https://github.com/vincent12233/HNW/pull/84  
 **Audit date:** 2026-09-16  
 **Remediation date:** 2026-09-16  
 
-**Android E2E gate attempt:** 2026-09-16 @ `101fd0b` — **STOPPED** (no Android device/emulator on Cloud Agent; Windows host not accessible). Chrome/Web not used as substitute.  
-**API startup DI fix:** 2026-09-16 @ `ae72051` — Passport/JWT wiring; `GET /health` 200 on local `start:dev`.
+**Android E2E gate attempt:** 2026-09-16 @ `101fd0b` — **STOPPED** (Cloud Agent; no adb device). Chrome/Web not used as substitute.  
+**API startup DI fix:** 2026-09-16 @ `ae72051` — Passport/JWT wiring; `GET /health` 200 on local `start:dev`.  
+**Owner decision (2026-09-16):** Android 真机 E2E **暂缓** — 不阻塞工程评审；上线前仍须补做。
 
 ## Status
 
-**BLOCKED**
+**READY_FOR_REVIEW**
 
-Not production-ready. Force-update dead-end **code path is fixed** (`updateUrl` + safe Continue). Nest Passport DI **startup blocker is fixed**. **Android device E2E** remains unexecuted (no real device / emulator available to this agent) and is still a release blocker.
+Engineering review may proceed. **Not Production Ready.**
 
-Do **not** merge for production and do **not** claim Production Ready until Android E2E PASS is recorded on `C:\Users\suyan\HNW` with a real Android target.
+- Force-update dead-end **code path fixed** (`updateUrl` + safe Continue).  
+- Nest Passport DI **startup blocker fixed** (`ae72051`).  
+- Flutter / API / Admin CI gates **PASS**.  
+- **Android device E2E deferred** by owner — still **required before production** merge/deploy.  
+- Risk Disclosure remains **REQUIRES_COMPLIANCE_REVIEW**.
+
+Do **not** merge for production and do **not** claim Production Ready until Android E2E PASS is recorded on `C:\Users\suyan\HNW`.
 
 See also: [`docs/FINAL_BLOCKER_REMEDIATION.md`](./FINAL_BLOCKER_REMEDIATION.md).
 
@@ -28,19 +35,21 @@ See also: [`docs/FINAL_BLOCKER_REMEDIATION.md`](./FINAL_BLOCKER_REMEDIATION.md).
 | Item | Result |
 |------|--------|
 | Branch | `cursor/app-ui-ux-admin-upgrade-c5d7` |
-| Remediation feature commit | `feat: add safe client update destination` |
+| Remediation feature commit | `feat: add safe client update destination` (`f97bfbd`) |
+| Passport DI fix | `fix: wire passport authentication dependencies` (`ae72051`) |
 | Unexpected / forbidden tracked artifacts | **None** |
 | Secrets in diff | **None** |
 
 ### Scope
 
-In-scope: UI/UX, design system, navigation, Home/Markets/Trade presentation/Portfolio/Profile, AppContent CMS, structured content, Admin management, Flutter integration, tests/docs, SaleSmartly support plumbing (early commit on branch), **safe `updateUrl` client update destination**.
+In-scope: UI/UX, design system, navigation, Home/Markets/Trade presentation/Portfolio/Profile, AppContent CMS, structured content, Admin management, Flutter integration, tests/docs, SaleSmartly support plumbing (early commit on branch), **safe `updateUrl` client update destination**, **Passport DI startup wiring**.
 
 API touch set is limited to:
 
 - `app-content/*`
 - `ops-content/*` (including `updateUrl`)
 - `market/*` placement + public featured filters
+- `auth/*` Passport/JWT module wiring (`ae72051`)
 - `app.module.ts` wiring
 - Prisma additive migrations + schema
 
@@ -69,7 +78,7 @@ API touch set is limited to:
 | `flutter build apk --debug` | **PASS** |
 | `flutter build web --dart-define=API_BASE_URL=https://example.invalid` | **PASS** — LOCAL BUILD VALIDATION ONLY |
 | Android device / emulator | **NO** (Linux Cloud Agent @ `101fd0b`: Flutter 3.47.4, Android SDK 36 present, `adb devices` empty, no AVD; `C:\Users\suyan\HNW` unreachable) |
-| Live Android visual gate | **NOT EXECUTED** → required gate **FAILED** / **BLOCKED** |
+| Live Android visual gate | **NOT EXECUTED** — **deferred by owner** for engineering review; **still required before production** |
 
 ---
 
@@ -96,6 +105,7 @@ API touch set is limited to:
 | lint | PASS (0 errors; prettier warnings elsewhere) |
 | full test suite | **328 passed / 79 suites** |
 | build (`nest build`) | PASS |
+| Passport DI / `start:dev` | **PASS** after `ae72051` — Nest starts; `GET /health` 200 |
 
 ---
 
@@ -142,9 +152,9 @@ Live multi-role browser exercise not run in this environment.
 | App Settings safe fail | safeDefaults + gate tests | COMPLETE (unit) |
 | updateUrl / force Continue | Flutter + API unit tests | COMPLETE (unit) |
 | Featured Home/Markets | Public filters + client sections hide when empty | COMPLETE (code/unit) |
-| Legal | Privacy/Terms; Risk Disclosure deferred | PARTIAL |
-| Live Admin→DB→App loop | Not exercised against running stack | **GAP** |
-| Android device E2E | Cloud Linux — no device | **BLOCKER** |
+| Legal | Privacy/Terms; Risk Disclosure deferred | PARTIAL — **REQUIRES_COMPLIANCE_REVIEW** |
+| Live Admin→DB→App loop | Not exercised against running stack | **GAP** (follow-up) |
+| Android device E2E | Cloud Linux — no device; owner deferred for review | **DEFERRED** — required before production |
 
 ---
 
@@ -163,18 +173,18 @@ Live multi-role browser exercise not run in this environment.
 
 ## Known gaps
 
-### Production blockers
+### Production blockers (not blocking engineering review)
 
-1. **Android device/emulator visual acceptance not executed** (required gate).
+1. **Android device/emulator visual acceptance not executed** — deferred by owner for `READY_FOR_REVIEW`; **still required before production**.
 
 ### Cleared
 
-2. ~~Force update lacks store URL~~ → **`updateUrl` shipped**; dead-end soft-continue path added.  
+2. ~~Force update lacks store URL~~ → **`updateUrl` shipped**; dead-end soft-continue path added (`f97bfbd`).  
 2b. ~~Nest Passport/JWT DI startup failure~~ → **`ae72051`**.
 
 ### Follow-ups / reviews
 
-3. Risk Disclosure — **REQUIRES COMPLIANCE REVIEW** (not implemented; do not invent legal conclusion).  
+3. Risk Disclosure — **REQUIRES_COMPLIANCE_REVIEW** (not implemented; do not invent legal conclusion).  
 4. Live multi-role Admin RBAC browser pass.  
 5. Live CMS Admin→Flutter end-to-end against applied DB.  
 6. Apply pending additive migrations in controlled environments (not production from this agent).  
@@ -189,14 +199,15 @@ Live multi-role browser exercise not run in this environment.
 
 | Field | Value |
 |-------|--------|
-| Final status | **BLOCKED** |
-| Merge / production | **BLOCKED** — do **not** merge PR #84 for production; do **not** deploy |
-| Review | Engineering review of the PR may continue; release gate waits on Android E2E |
+| Engineering status | **READY_FOR_REVIEW** |
+| Production status | **NOT Production Ready** — Android E2E still outstanding |
+| Merge / production | Do **not** merge PR #84 for production; do **not** deploy |
+| Review | Engineering review of the PR may proceed now |
 
-**Clear remaining blocker by:**
+**Before production:**
 
-1. Running full Android device/emulator visual checklist on the Windows host and recording evidence.  
-2. Completing compliance decision on Risk Disclosure (separate from READY_FOR_REVIEW engineering gate once Android E2E passes).
+1. Run full Android device/emulator visual checklist on the Windows host and record evidence.  
+2. Complete compliance decision on Risk Disclosure (**REQUIRES_COMPLIANCE_REVIEW**).
 
 ---
 

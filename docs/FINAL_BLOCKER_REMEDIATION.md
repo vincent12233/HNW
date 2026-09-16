@@ -2,7 +2,7 @@
 
 **Branch:** `cursor/app-ui-ux-admin-upgrade-c5d7`  
 **Starting HEAD (this phase):** `4b03fa5`  
-**Ending HEAD (this phase):** `ae72051`  
+**Ending HEAD (this phase):** `a459714`  
 **PR:** https://github.com/vincent12233/HNW/pull/84  
 **Date:** 2026-09-16  
 
@@ -92,6 +92,8 @@ Only FINAL ACCEPTANCE launch blockers. No new business features. No trading / KY
 
 Per task rules: do **not** pretend Windows/Android E2E completed. Device name / Android version / resolution / screen PASS-FAIL matrix: **N/A — blocked on environment**.
 
+**Owner decision (2026-09-16):** Android 真机 E2E **暂缓** — does **not** block engineering `READY_FOR_REVIEW`. Still **required before production** merge/deploy.
+
 Must be run on the user’s Windows host (`C:\Users\suyan\HNW`) with a physical device (preferred) or configured emulator:
 
 ```text
@@ -106,7 +108,7 @@ flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://<WINDOWS-LA
 
 Inject maintenance / optional / force update via **dev/test injection or safe local config** — do **not** mutate production DB.
 
-Required screens (still outstanding): Login, Register, Forgot Password, Home, Markets, Search, Stock Detail, Trade, Portfolio, Profile, KYC entry, Bank Details, Deposit, Insights, Announcements, bottom nav, back, keyboard, scrolling, maintenance, optional update, force update (valid + missing URL) — at real device resolution (and ~360/~412 logical width if emulator available).
+Required screens (still outstanding before production): Login, Register, Forgot Password, Home, Markets, Search, Stock Detail, Trade, Portfolio, Profile, KYC entry, Bank Details, Deposit, Insights, Announcements, bottom nav, back, keyboard, scrolling, maintenance, optional update, force update (valid + missing URL) — at real device resolution (and ~360/~412 logical width if emulator available).
 
 **No code changes** made in this Android E2E attempt.
 
@@ -134,9 +136,9 @@ Required screens (still outstanding): Login, Register, Forgot Password, Home, Ma
 
 ---
 
-## 4. Remaining blockers
+## 4. Remaining items
 
-1. **Android device / emulator visual E2E** — still required; not runnable here.  
+1. **Android device / emulator visual E2E** — deferred by owner for engineering review; **still required before production**.  
 2. Risk Disclosure — keep **REQUIRES_COMPLIANCE_REVIEW** (no invented legal text).  
 3. Live Admin→DB→App CMS loop / multi-role RBAC browser (follow-up, not this phase’s sole gate).
 
@@ -144,9 +146,9 @@ Required screens (still outstanding): Login, Register, Forgot Password, Home, Ma
 
 | Prior blocker | Status after remediation |
 |---------------|--------------------------|
-| Force update dead-end / no store URL | **RESOLVED in code** — `updateUrl` + Continue soft path |
+| Force update dead-end / no store URL | **RESOLVED in code** — `updateUrl` + Continue soft path (`f97bfbd`) |
 | Nest Passport/JWT DI (`AuthModuleOptions` / AuditModule) | **RESOLVED** — `ae72051` `fix: wire passport authentication dependencies` |
-| Android device E2E | **STILL BLOCKED** |
+| Android device E2E | **DEFERRED by owner** for review; **still required before production** |
 
 ---
 
@@ -160,14 +162,21 @@ Required screens (still outstanding): Login, Register, Forgot Password, Home, Ma
 | `npm run build` / tests | PASS |
 | `start:dev` | Nest application successfully started |
 | `GET /health` | HTTP 200 |
+| Commit | `ae72051` |
 
 ---
 
 ## 5. Final status
 
-**BLOCKED**
+**READY_FOR_REVIEW**
 
-Cannot mark `READY_FOR_REVIEW` until Android device E2E PASS is recorded on the Windows host (`C:\Users\suyan\HNW`).
+Engineering review may proceed. **Not Production Ready.**
+
+- `updateUrl` + force-update Continue path: **done** (`f97bfbd`)  
+- Passport DI startup: **done** (`ae72051`)  
+- Flutter / API / Admin gates: **PASS**  
+- Android E2E: **deferred by owner** — required before production  
+- Risk Disclosure: **REQUIRES_COMPLIANCE_REVIEW**
 
 PR #84 not merged. No production deploy. No production migration.
 

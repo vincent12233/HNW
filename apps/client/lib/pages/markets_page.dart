@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 
 import '../models/stock_quote.dart';
 import '../services/app_content_service.dart';
+import '../services/featured_instruments_service.dart';
 import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/market_socket_service.dart';
@@ -73,6 +74,7 @@ class _MarketsPageState extends State<MarketsPage> {
   bool _watchlistFailed = false;
   final Map<String, List<double>> _indexHistory = <String, List<double>>{};
   final Map<String, List<double>> _stockHistory = <String, List<double>>{};
+  final List<StockQuote> _marketsFeatured = <StockQuote>[];
   final Map<String, (double, double)> _yearRanges =
       <String, (double, double)>{};
   bool _yearRangesLoading = false;
@@ -151,13 +153,15 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Future<void> _loadFeaturedStockHistory() async {
-    final featured = _stocksInOrder(const [
-      'HDFCBANK',
-      'RELIANCE',
-      'TCS',
-      'ICICIBANK',
-      'INFY',
-    ]);
+    final featured = await FeaturedInstrumentsService.instance
+        .marketsFeatured();
+    if (!mounted) return;
+    setState(() {
+      _marketsFeatured
+        ..clear()
+        ..addAll(featured);
+    });
+    if (featured.isEmpty) return;
     final results = await Future.wait(
       featured.map((stock) async {
         try {
@@ -840,6 +844,12 @@ class _MarketsPageState extends State<MarketsPage> {
         ),
         const SizedBox(height: 12),
         _indexGrid(globalIndices),
+        if (_marketsFeatured.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          _marketSectionHeading('Featured'),
+          const SizedBox(height: 12),
+          _moverTable(_marketsFeatured.take(5).toList()),
+        ],
         const SizedBox(height: 18),
         _marketSectionHeading(
           'Market Movers',
@@ -872,19 +882,6 @@ class _MarketsPageState extends State<MarketsPage> {
       if (quote != null) return quote;
     }
     return null;
-  }
-
-  List<StockQuote> _stocksInOrder(List<String> symbols) {
-    final ordered = <StockQuote>[];
-    for (final symbol in symbols) {
-      for (final stock in widget.stocks) {
-        if (stock.symbol == symbol) {
-          ordered.add(stock);
-          break;
-        }
-      }
-    }
-    return ordered;
   }
 
   Widget _marketSectionHeading(

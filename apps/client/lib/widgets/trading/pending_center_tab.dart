@@ -1,11 +1,15 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/ipo.dart';
 import '../../models/trading_order.dart';
 import '../../services/trading_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
+import '../../utils/order_status_presentation.dart';
 import '../stock_logo.dart';
 
 class PendingCenterTab extends StatefulWidget {
@@ -30,7 +34,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
   final Set<String> _cancellingOrderIds = <String>{};
 
   int selectedSection = 0;
-  final List<String> sections = const ['Order Book', 'IPO Applications'];
+  final List<String> sections = const ['Open orders', 'IPO Applications'];
 
   @override
   Widget build(BuildContext context) {
@@ -47,11 +51,18 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
               return ChoiceChip(
                 label: AppText(sections[index]),
                 selected: selectedSection == index,
-                labelStyle: TextStyle(
+                selectedColor: AppColors.brandPrimary,
+                backgroundColor: AppColors.surface,
+                labelStyle: AppTypography.labelMedium.copyWith(
                   color: selectedSection == index
-                      ? Colors.white
-                      : AppConfig.textPrimaryColor,
+                      ? AppColors.textInverse
+                      : AppColors.textPrimary,
                   fontWeight: FontWeight.w700,
+                ),
+                side: BorderSide(
+                  color: selectedSection == index
+                      ? AppColors.brandPrimary
+                      : AppColors.border,
                 ),
                 onSelected: (_) => setState(() => selectedSection = index),
               );
@@ -78,23 +89,29 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
         .toList();
 
     if (orders.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.schedule_outlined, size: 64, color: Colors.black38),
-              SizedBox(height: 16),
+              const Icon(
+                Icons.schedule_outlined,
+                size: 64,
+                color: AppColors.textDisabled,
+              ),
+              const SizedBox(height: AppSpacing.lg),
               AppText(
                 'No pending orders',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: AppTypography.headline.copyWith(fontSize: 20),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               AppText(
                 'Open and partially filled orders will appear here.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -111,17 +128,19 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
   }
 
   Widget _pendingOrderCard(TradingOrder order) {
-    final sideColor = order.isBuy ? AppConfig.gainColor : AppConfig.lossColor;
+    final sideColor = OrderStatusPresentation.sideColor(
+      order.isBuy ? 'BUY' : 'SELL',
+    );
     final orderId = order.orderId;
     final cancelling = orderId != null && _cancellingOrderIds.contains(orderId);
     final displayPrice = order.limitPrice ?? order.price;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.card,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
+        color: AppColors.surface,
+        borderRadius: AppRadius.borderLg,
+        border: Border.all(color: AppColors.border),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -129,38 +148,36 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
           Row(
             children: [
               StockLogo(symbol: order.symbol, size: 42),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    AppText(
-                      order.symbol,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    AppText(order.symbol, style: AppTypography.titleMedium),
                     const SizedBox(height: 3),
                     AppText(
                       '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                      style: const TextStyle(color: Colors.black54),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ],
                 ),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 5,
+                  horizontal: AppSpacing.sm + 2,
+                  vertical: AppSpacing.xs + 1,
                 ),
                 decoration: BoxDecoration(
                   color: sideColor.withValues(alpha: 0.10),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: AppRadius.borderPill,
                 ),
                 child: AppText(
-                  order.isBuy ? 'BUY' : 'SELL',
-                  style: TextStyle(
+                  OrderStatusPresentation.sideLabel(
+                    order.isBuy ? 'BUY' : 'SELL',
+                  ),
+                  style: AppTypography.labelSmall.copyWith(
                     color: sideColor,
                     fontWeight: FontWeight.w700,
                     fontSize: 12,
@@ -182,13 +199,13 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
               Expanded(
                 child: _orderValue(
                   'Status',
-                  order.status == 'PARTIALLY_FILLED' ? 'Partial' : 'Open',
+                  OrderStatusPresentation.label(order.status),
                 ),
               ),
             ],
           ),
           if (order.filledQuantity > 0) ...[
-            const SizedBox(height: 14),
+            const SizedBox(height: AppSpacing.md + 2),
             Row(
               children: [
                 Expanded(
@@ -207,13 +224,15 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
               ],
             ),
           ],
-          const SizedBox(height: 14),
+          const SizedBox(height: AppSpacing.md + 2),
           Row(
             children: [
               Expanded(
                 child: AppText(
                   order.formattedTime,
-                  style: const TextStyle(color: Colors.black45, fontSize: 12),
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textTertiary,
+                  ),
                 ),
               ),
               OutlinedButton(
@@ -221,7 +240,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                     ? null
                     : () => _confirmCancel(order),
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: AppConfig.lossColor,
+                  foregroundColor: AppColors.loss,
                 ),
                 child: AppText(cancelling ? 'Cancelling...' : 'Cancel Order'),
               ),
@@ -238,10 +257,15 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
       children: [
         AppText(
           label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textTertiary,
+          ),
         ),
-        const SizedBox(height: 4),
-        AppText(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        const SizedBox(height: AppSpacing.xs),
+        AppText(
+          value,
+          style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
+        ),
       ],
     );
   }
@@ -265,7 +289,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(backgroundColor: AppConfig.lossColor),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.loss),
             child: const AppText('Cancel Order'),
           ),
         ],
@@ -297,23 +321,29 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
 
   Widget _buildIpoApplications() {
     if (widget.ipoApplications.isEmpty) {
-      return const Center(
+      return Center(
         child: Padding(
-          padding: EdgeInsets.all(32),
+          padding: const EdgeInsets.all(32),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.assignment_outlined, size: 64, color: Colors.black38),
-              SizedBox(height: 16),
+              const Icon(
+                Icons.assignment_outlined,
+                size: 64,
+                color: AppColors.textDisabled,
+              ),
+              const SizedBox(height: AppSpacing.lg),
               AppText(
                 'No IPO applications',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                style: AppTypography.headline.copyWith(fontSize: 20),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: AppSpacing.sm),
               AppText(
                 'Your IPO applications will appear here.',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.black54),
+                style: AppTypography.bodyMedium.copyWith(
+                  color: AppColors.textSecondary,
+                ),
               ),
             ],
           ),
@@ -329,19 +359,19 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
         final application = widget.ipoApplications[index];
         final applicationNumber = _applicationNumberFor(application);
         final statusColor = switch (application.status) {
-          IpoApplicationStatus.completed => AppConfig.gainColor,
-          IpoApplicationStatus.notAllotted => AppConfig.lossColor,
-          IpoApplicationStatus.cancelled => AppConfig.neutralColor,
-          IpoApplicationStatus.allocated => const Color(0xFFB45309),
-          IpoApplicationStatus.applied => AppConfig.primaryColor,
+          IpoApplicationStatus.completed => AppColors.gain,
+          IpoApplicationStatus.notAllotted => AppColors.loss,
+          IpoApplicationStatus.cancelled => AppColors.neutral,
+          IpoApplicationStatus.allocated => AppColors.warning,
+          IpoApplicationStatus.applied => AppColors.brandPrimary,
         };
 
         return Container(
-          padding: const EdgeInsets.all(16),
+          padding: AppSpacing.card,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: const Color(0xFFE5E7EB)),
+            color: AppColors.surface,
+            borderRadius: AppRadius.borderLg,
+            border: Border.all(color: AppColors.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -469,12 +499,12 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                 const SizedBox(height: 14),
                 const Row(
                   children: [
-                    Icon(Icons.check_circle, size: 18, color: Colors.green),
-                    SizedBox(width: 8),
+                    Icon(Icons.check_circle, size: 18, color: AppColors.gain),
+                    SizedBox(width: AppSpacing.sm),
                     AppText(
                       'Subscription completed',
                       style: TextStyle(
-                        color: Colors.green,
+                        color: AppColors.gain,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -527,12 +557,10 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
               children: [
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(AppSpacing.lg),
                   decoration: BoxDecoration(
-                    color: needsFunds
-                        ? const Color(0xFFFFF1F2)
-                        : const Color(0xFFECFDF5),
-                    borderRadius: BorderRadius.circular(12),
+                    color: needsFunds ? AppColors.lossSoft : AppColors.gainSoft,
+                    borderRadius: AppRadius.borderMd,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -543,9 +571,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                             : 'Subscription completed',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          color: needsFunds
-                              ? const Color(0xFFB42318)
-                              : const Color(0xFF047857),
+                          color: needsFunds ? AppColors.loss : AppColors.gain,
                         ),
                       ),
                       const SizedBox(height: 10),

@@ -1,9 +1,14 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/trading_order.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
+import '../../utils/order_status_presentation.dart';
+import '../app_chip.dart';
 import 'standard_order_details_sheet.dart';
 import '../responsive_empty_state.dart';
 
@@ -32,31 +37,25 @@ class HistoryTab extends StatelessWidget {
     }
 
     return ListView.separated(
-      padding: const EdgeInsets.all(16),
+      padding: AppSpacing.page,
       itemCount: history.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
+      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
       itemBuilder: (context, index) {
         final order = history[index];
-        final sideColor = order.isBuy
-            ? AppConfig.gainColor
-            : AppConfig.lossColor;
-        final statusColor = switch (order.status) {
-          'FILLED' => AppConfig.gainColor,
-          'CANCELLED' => AppConfig.neutralColor,
-          'REJECTED' => AppConfig.lossColor,
-          _ => AppConfig.neutralColor,
-        };
+        final sideColor = OrderStatusPresentation.sideColor(
+          order.isBuy ? 'BUY' : 'SELL',
+        );
         final displayPrice = order.limitPrice ?? order.price;
 
         return InkWell(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: AppRadius.borderLg,
           onTap: () => showStandardOrderDetails(context, order: order),
           child: Container(
-            padding: const EdgeInsets.all(16),
+            padding: AppSpacing.card,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE5E7EB)),
+              color: AppColors.surface,
+              borderRadius: AppRadius.borderLg,
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               children: [
@@ -64,79 +63,68 @@ class HistoryTab extends StatelessWidget {
                   children: [
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
+                        horizontal: AppSpacing.sm + 2,
+                        vertical: AppSpacing.xs + 1,
                       ),
                       decoration: BoxDecoration(
                         color: sideColor.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: AppRadius.borderSm,
                       ),
                       child: AppText(
-                        order.isBuy ? 'BUY' : 'SELL',
-                        style: TextStyle(
+                        OrderStatusPresentation.sideLabel(
+                          order.isBuy ? 'BUY' : 'SELL',
+                        ),
+                        style: AppTypography.labelSmall.copyWith(
                           color: sideColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
+                    const SizedBox(width: AppSpacing.sm + 2),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppText(
                             order.symbol,
-                            style: const TextStyle(
+                            style: AppTypography.titleMedium.copyWith(
                               fontSize: 17,
-                              fontWeight: FontWeight.bold,
                             ),
                           ),
                           AppText(
                             order.exchange,
-                            style: const TextStyle(
-                              color: Colors.black45,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textTertiary,
                               fontSize: 10,
                             ),
                           ),
                           const SizedBox(height: 3),
                           AppText(
                             '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                            style: const TextStyle(
-                              color: Colors.black45,
-                              fontSize: 12,
+                            style: AppTypography.bodySmall.copyWith(
+                              color: AppColors.textTertiary,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
+                    AppStatusChip(
+                      label: OrderStatusPresentation.label(order.status),
+                      variant: OrderStatusPresentation.chipVariant(
+                        order.status,
                       ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withValues(alpha: 0.10),
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: AppText(
-                        _statusLabel(order.status),
-                        style: TextStyle(
-                          color: statusColor,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 11,
-                        ),
-                      ),
+                      compact: true,
                     ),
-                    const SizedBox(width: 4),
+                    const SizedBox(width: AppSpacing.xs),
                     const Icon(
                       Icons.chevron_right_rounded,
                       size: 20,
-                      color: Colors.black38,
+                      color: AppColors.textDisabled,
                     ),
                   ],
                 ),
-                const Divider(height: 24),
+                const Divider(height: AppSpacing.xxl),
                 Row(
                   children: [
                     Expanded(child: _value('Quantity', '${order.quantity}')),
@@ -154,12 +142,14 @@ class HistoryTab extends StatelessWidget {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: AppSpacing.md),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: AppText(
                     order.formattedTime,
-                    style: const TextStyle(color: Colors.black45, fontSize: 12),
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textTertiary,
+                    ),
                   ),
                 ),
               ],
@@ -170,29 +160,21 @@ class HistoryTab extends StatelessWidget {
     );
   }
 
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'FILLED':
-        return 'Completed';
-      case 'CANCELLED':
-        return 'Cancelled';
-      case 'REJECTED':
-        return 'Rejected';
-      default:
-        return status;
-    }
-  }
-
   Widget _value(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppText(
           label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textTertiary,
+          ),
         ),
-        const SizedBox(height: 4),
-        AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppSpacing.xs),
+        AppText(
+          value,
+          style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }

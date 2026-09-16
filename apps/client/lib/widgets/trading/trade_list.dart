@@ -1,11 +1,15 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/stock_quote.dart';
 import '../../models/portfolio_position.dart';
 import '../../services/trading_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
+import '../../utils/order_status_presentation.dart';
 import '../stock_logo.dart';
 import '../../models/trading_order.dart';
 import 'standard_order_details_sheet.dart';
@@ -54,19 +58,24 @@ class TradeList extends StatelessWidget {
     final total = holdings;
     final pnl = holdings - invested;
     return ListView(
-      padding: const EdgeInsets.fromLTRB(16, 6, 16, 18),
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.lg,
+        AppSpacing.sm - 2,
+        AppSpacing.lg,
+        AppSpacing.lg + 2,
+      ),
       children: [
         Card(
           child: Padding(
-            padding: const EdgeInsets.all(14),
+            padding: const EdgeInsets.all(AppSpacing.md + 2),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const AppText(
+                AppText(
                   'Trading Summary',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w800),
+                  style: AppTypography.titleMedium.copyWith(fontSize: 17),
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: AppSpacing.lg + 2),
                 LayoutBuilder(
                   builder: (context, constraints) {
                     final compact = constraints.maxWidth < 380;
@@ -79,28 +88,26 @@ class TradeList extends StatelessWidget {
                                 child: _summary(
                                   'Trading Positions Value',
                                   formatPrice(total),
-                                  AppConfig.textPrimaryColor,
+                                  AppColors.textPrimary,
                                 ),
                               ),
                               Expanded(
                                 child: _summary(
                                   'Total Invested',
                                   formatPrice(invested),
-                                  AppConfig.textPrimaryColor,
+                                  AppColors.textPrimary,
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 18),
+                          const SizedBox(height: AppSpacing.lg + 2),
                           Row(
                             children: [
                               Expanded(
                                 child: _summary(
                                   'Unrealized P&L',
                                   '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                                  pnl >= 0
-                                      ? AppConfig.gainColor
-                                      : AppConfig.lossColor,
+                                  pnl >= 0 ? AppColors.gain : AppColors.loss,
                                 ),
                               ),
                               Expanded(
@@ -109,7 +116,7 @@ class TradeList extends StatelessWidget {
                                   account == null
                                       ? '--'
                                       : formatPrice(account!.availableBalance),
-                                  AppConfig.textPrimaryColor,
+                                  AppColors.textPrimary,
                                 ),
                               ),
                             ],
@@ -124,7 +131,7 @@ class TradeList extends StatelessWidget {
                             child: _summary(
                               'Trading Positions Value',
                               formatPrice(total),
-                              AppConfig.textPrimaryColor,
+                              AppColors.textPrimary,
                             ),
                           ),
                           const VerticalDivider(width: 1),
@@ -132,7 +139,7 @@ class TradeList extends StatelessWidget {
                             child: _summary(
                               'Total Invested',
                               formatPrice(invested),
-                              AppConfig.textPrimaryColor,
+                              AppColors.textPrimary,
                             ),
                           ),
                           const VerticalDivider(width: 1),
@@ -140,9 +147,7 @@ class TradeList extends StatelessWidget {
                             child: _summary(
                               'Unrealized P&L',
                               '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                              pnl >= 0
-                                  ? AppConfig.gainColor
-                                  : AppConfig.lossColor,
+                              pnl >= 0 ? AppColors.gain : AppColors.loss,
                             ),
                           ),
                           const VerticalDivider(width: 1),
@@ -152,7 +157,7 @@ class TradeList extends StatelessWidget {
                               account == null
                                   ? '--'
                                   : formatPrice(account!.availableBalance),
-                              AppConfig.textPrimaryColor,
+                              AppColors.textPrimary,
                             ),
                           ),
                         ],
@@ -164,13 +169,13 @@ class TradeList extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: AppSpacing.lg),
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: AppText(
                 'Recent Orders',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                style: AppTypography.sectionTitle,
               ),
             ),
             if (onViewOrders != null)
@@ -182,7 +187,7 @@ class TradeList extends StatelessWidget {
         ),
         if (orders.isEmpty)
           const Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
+            padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
             child: AppText('No orders yet'),
           ),
         ...orders
@@ -192,16 +197,14 @@ class TradeList extends StatelessWidget {
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(
                   order.isBuy ? Icons.call_received : Icons.call_made,
-                  color: order.isBuy
-                      ? AppConfig.gainColor
-                      : AppConfig.lossColor,
+                  color: OrderStatusPresentation.sideColor(
+                    order.isBuy ? 'BUY' : 'SELL',
+                  ),
                 ),
-                title: AppText(
-                  order.symbol,
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
+                title: AppText(order.symbol, style: AppTypography.titleSmall),
                 subtitle: AppText(
-                  '${order.exchange} · ${order.quantity} · ${tr(order.status)}',
+                  '${order.exchange} · ${order.quantity} · ${OrderStatusPresentation.label(order.status)}',
+                  style: AppTypography.bodySmall,
                 ),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showStandardOrderDetails(
@@ -217,10 +220,7 @@ class TradeList extends StatelessWidget {
             Expanded(
               child: AppText(
                 '${tr('Open Holdings')} (${positions.length})',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTypography.sectionTitle,
               ),
             ),
             TextButton(
@@ -229,29 +229,34 @@ class TradeList extends StatelessWidget {
                   : () => _showAllPositions(context),
               style: TextButton.styleFrom(
                 minimumSize: const Size(0, 32),
-                padding: const EdgeInsets.symmetric(horizontal: 4),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
               ),
-              child: const AppText(
+              child: AppText(
                 'View All',
-                style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                style: AppTypography.labelSmall.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.brandPrimary,
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 9),
+        const SizedBox(height: AppSpacing.sm + 1),
         Container(
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: const Color(0xFFE8EDF5)),
+            color: AppColors.surface,
+            borderRadius: AppRadius.borderSm,
+            border: Border.all(color: AppColors.divider),
           ),
           child: positions.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.all(24),
+              ? Padding(
+                  padding: const EdgeInsets.all(AppSpacing.xxl),
                   child: Center(
                     child: AppText(
                       'No open positions',
-                      style: TextStyle(color: Color(0xFF64748B)),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textTertiary,
+                      ),
                     ),
                   ),
                 )
@@ -262,32 +267,34 @@ class TradeList extends StatelessWidget {
                       .toList(),
                 ),
         ),
-        const Divider(height: 24),
+        const Divider(height: AppSpacing.xxl),
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: AppText(
                 'Total Holdings Value',
-                style: TextStyle(fontWeight: FontWeight.w700),
+                style: AppTypography.titleSmall,
               ),
             ),
             AppText(
               formatPrice(holdings),
-              style: const TextStyle(fontWeight: FontWeight.w800),
+              style: AppTypography.titleSmall.copyWith(
+                fontWeight: FontWeight.w800,
+              ),
             ),
           ],
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: AppSpacing.sm - 2),
         Align(
           alignment: Alignment.centerRight,
           child: AppText(
             '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-            style: TextStyle(
-              color: pnl >= 0 ? AppConfig.gainColor : AppConfig.lossColor,
+            style: AppTypography.bodyMedium.copyWith(
+              color: pnl >= 0 ? AppColors.gain : AppColors.loss,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: AppSpacing.md),
       ],
     );
   }
@@ -306,13 +313,15 @@ class TradeList extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.lg,
+                0,
+                AppSpacing.lg,
+                AppSpacing.sm + 2,
+              ),
               child: AppText(
                 '${tr('Open Holdings')} (${positions.length})',
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTypography.titleLarge,
               ),
             ),
             const Divider(height: 1),
@@ -340,14 +349,17 @@ class TradeList extends StatelessWidget {
     return InkWell(
       onTap: quote.isEmpty ? null : () => onTrade(quote.first),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.md,
+        ),
         decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFE8EDF5))),
+          border: Border(bottom: BorderSide(color: AppColors.divider)),
         ),
         child: Row(
           children: [
             StockLogo(symbol: position.symbol, size: 36),
-            const SizedBox(width: 10),
+            const SizedBox(width: AppSpacing.sm + 2),
             Expanded(
               flex: 4,
               child: Column(
@@ -357,14 +369,13 @@ class TradeList extends StatelessWidget {
                     position.symbol,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
+                    style: AppTypography.titleSmall.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   AppText(
                     '${position.quantity} Shares · ${position.exchange}',
-                    style: const TextStyle(
-                      fontSize: 10,
-                      color: Color(0xFF64748B),
-                    ),
+                    style: AppTypography.caption.copyWith(fontSize: 10),
                   ),
                 ],
               ),
@@ -376,22 +387,19 @@ class TradeList extends StatelessWidget {
                 children: [
                   AppText(
                     formatPrice(price),
-                    style: const TextStyle(
-                      fontSize: 11,
+                    style: AppTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.w700,
+                      fontFeatures: AppTypography.tabularFeatures,
                     ),
                   ),
                   AppText(
                     'Avg. ${formatPrice(position.averageCost)}',
-                    style: const TextStyle(
-                      fontSize: 9,
-                      color: Color(0xFF64748B),
-                    ),
+                    style: AppTypography.caption.copyWith(fontSize: 9),
                   ),
                 ],
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppSpacing.sm),
             SizedBox(
               width: 65,
               child: Column(
@@ -399,21 +407,17 @@ class TradeList extends StatelessWidget {
                 children: [
                   AppText(
                     '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                    style: TextStyle(
-                      fontSize: 11,
+                    style: AppTypography.labelSmall.copyWith(
                       fontWeight: FontWeight.w800,
-                      color: pnl >= 0
-                          ? AppConfig.gainColor
-                          : AppConfig.lossColor,
+                      color: pnl >= 0 ? AppColors.gain : AppColors.loss,
+                      fontFeatures: AppTypography.tabularFeatures,
                     ),
                   ),
                   AppText(
                     '${pnl >= 0 ? '+' : ''}${position.averageCost > 0 ? (pnl / (position.averageCost * position.quantity) * 100).toStringAsFixed(2) : '0.00'}%',
-                    style: TextStyle(
+                    style: AppTypography.caption.copyWith(
                       fontSize: 9,
-                      color: pnl >= 0
-                          ? AppConfig.gainColor
-                          : AppConfig.lossColor,
+                      color: pnl >= 0 ? AppColors.gain : AppColors.loss,
                     ),
                   ),
                 ],
@@ -430,18 +434,18 @@ class TradeList extends StatelessWidget {
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          label,
-          maxLines: 2,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-        ),
+        AppText(label, maxLines: 2, style: AppTypography.caption),
         const SizedBox(height: 7),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,
           child: AppText(
             value,
-            style: TextStyle(color: color, fontWeight: FontWeight.w800),
+            style: AppTypography.titleSmall.copyWith(
+              color: color,
+              fontWeight: FontWeight.w800,
+              fontFeatures: AppTypography.tabularFeatures,
+            ),
           ),
         ),
       ],

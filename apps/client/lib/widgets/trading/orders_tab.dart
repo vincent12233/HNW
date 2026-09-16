@@ -1,9 +1,14 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/trading_order.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
+import '../../utils/order_status_presentation.dart';
+import '../app_chip.dart';
 import 'standard_order_details_sheet.dart';
 import '../responsive_empty_state.dart';
 
@@ -44,7 +49,12 @@ class _OrdersTabState extends State<OrdersTab> {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.lg,
+            AppSpacing.xs,
+            AppSpacing.lg,
+            AppSpacing.sm,
+          ),
           child: TextField(
             onChanged: (value) => setState(() => query = value.trim()),
             decoration: const InputDecoration(
@@ -57,7 +67,7 @@ class _OrdersTabState extends State<OrdersTab> {
         SizedBox(
           height: 42,
           child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
             scrollDirection: Axis.horizontal,
             children:
                 [
@@ -70,17 +80,26 @@ class _OrdersTabState extends State<OrdersTab> {
                     ]
                     .map(
                       (value) => Padding(
-                        padding: const EdgeInsets.only(right: 8),
+                        padding: const EdgeInsets.only(right: AppSpacing.sm),
                         child: ChoiceChip(
                           label: AppText(
-                            value == 'ALL' ? 'All' : _statusLabel(value),
+                            value == 'ALL'
+                                ? 'All'
+                                : OrderStatusPresentation.label(value),
                           ),
                           selected: status == value,
-                          labelStyle: TextStyle(
+                          selectedColor: AppColors.brandPrimary,
+                          backgroundColor: AppColors.surface,
+                          labelStyle: AppTypography.labelMedium.copyWith(
                             color: status == value
-                                ? Colors.white
-                                : AppConfig.textPrimaryColor,
+                                ? AppColors.textInverse
+                                : AppColors.textPrimary,
                             fontWeight: FontWeight.w700,
+                          ),
+                          side: BorderSide(
+                            color: status == value
+                                ? AppColors.brandPrimary
+                                : AppColors.border,
                           ),
                           onSelected: (_) => setState(() => status = value),
                         ),
@@ -93,29 +112,30 @@ class _OrdersTabState extends State<OrdersTab> {
           child: filtered.isEmpty
               ? const Center(child: AppText('No matching orders'))
               : ListView.separated(
-                  padding: const EdgeInsets.all(16),
+                  padding: AppSpacing.page,
                   itemCount: filtered.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(height: AppSpacing.md),
                   itemBuilder: (context, index) {
                     final order = filtered[index];
-                    final sideColor = order.isBuy
-                        ? AppConfig.gainColor
-                        : AppConfig.lossColor;
+                    final sideColor = OrderStatusPresentation.sideColor(
+                      order.isBuy ? 'BUY' : 'SELL',
+                    );
                     final displayPrice = order.limitPrice ?? order.price;
 
                     return InkWell(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: AppRadius.borderLg,
                       onTap: () => showStandardOrderDetails(
                         context,
                         order: order,
                         onCancel: order.isActive ? widget.onCancel : null,
                       ),
                       child: Container(
-                        padding: const EdgeInsets.all(16),
+                        padding: AppSpacing.card,
                         decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: const Color(0xFFE5E7EB)),
+                          color: AppColors.surface,
+                          borderRadius: AppRadius.borderLg,
+                          border: Border.all(color: AppColors.border),
                         ),
                         child: Column(
                           children: [
@@ -124,16 +144,18 @@ class _OrdersTabState extends State<OrdersTab> {
                                 Flexible(
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 5,
+                                      horizontal: AppSpacing.sm + 2,
+                                      vertical: AppSpacing.xs + 1,
                                     ),
                                     decoration: BoxDecoration(
                                       color: sideColor.withValues(alpha: 0.10),
-                                      borderRadius: BorderRadius.circular(8),
+                                      borderRadius: AppRadius.borderSm,
                                     ),
                                     child: AppText(
-                                      order.isBuy ? 'BUY' : 'SELL',
-                                      style: TextStyle(
+                                      OrderStatusPresentation.sideLabel(
+                                        order.isBuy ? 'BUY' : 'SELL',
+                                      ),
+                                      style: AppTypography.labelSmall.copyWith(
                                         color: sideColor,
                                         fontWeight: FontWeight.bold,
                                         fontSize: 12,
@@ -141,7 +163,7 @@ class _OrdersTabState extends State<OrdersTab> {
                                     ),
                                   ),
                                 ),
-                                const SizedBox(width: 10),
+                                const SizedBox(width: AppSpacing.sm + 2),
                                 Expanded(
                                   child: Column(
                                     crossAxisAlignment:
@@ -149,58 +171,44 @@ class _OrdersTabState extends State<OrdersTab> {
                                     children: [
                                       AppText(
                                         order.symbol,
-                                        style: const TextStyle(
-                                          fontSize: 17,
-                                          fontWeight: FontWeight.bold,
-                                        ),
+                                        style: AppTypography.titleMedium
+                                            .copyWith(fontSize: 17),
                                       ),
                                       AppText(
                                         order.exchange,
-                                        style: const TextStyle(
-                                          color: Colors.black45,
+                                        style: AppTypography.caption.copyWith(
+                                          color: AppColors.textTertiary,
                                           fontSize: 10,
                                         ),
                                       ),
                                       const SizedBox(height: 3),
                                       AppText(
                                         '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                                        style: const TextStyle(
-                                          color: Colors.black45,
-                                          fontSize: 12,
+                                        style: AppTypography.bodySmall.copyWith(
+                                          color: AppColors.textTertiary,
                                         ),
                                       ),
                                     ],
                                   ),
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
+                                AppStatusChip(
+                                  label: OrderStatusPresentation.label(
+                                    order.status,
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: _statusColor(
-                                      order.status,
-                                    ).withValues(alpha: 0.10),
-                                    borderRadius: BorderRadius.circular(7),
+                                  variant: OrderStatusPresentation.chipVariant(
+                                    order.status,
                                   ),
-                                  child: AppText(
-                                    _statusLabel(order.status),
-                                    style: TextStyle(
-                                      color: _statusColor(order.status),
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 11,
-                                    ),
-                                  ),
+                                  compact: true,
                                 ),
-                                const SizedBox(width: 4),
+                                const SizedBox(width: AppSpacing.xs),
                                 const Icon(
                                   Icons.chevron_right_rounded,
                                   size: 20,
-                                  color: Colors.black38,
+                                  color: AppColors.textDisabled,
                                 ),
                               ],
                             ),
-                            const Divider(height: 24),
+                            const Divider(height: AppSpacing.xxl),
                             Row(
                               children: [
                                 Expanded(
@@ -227,14 +235,13 @@ class _OrdersTabState extends State<OrdersTab> {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: 14),
+                            const SizedBox(height: AppSpacing.md + 2),
                             Align(
                               alignment: Alignment.centerLeft,
                               child: AppText(
                                 order.formattedTime,
-                                style: const TextStyle(
-                                  color: Colors.black45,
-                                  fontSize: 12,
+                                style: AppTypography.bodySmall.copyWith(
+                                  color: AppColors.textTertiary,
                                 ),
                               ),
                             ),
@@ -255,44 +262,16 @@ class _OrdersTabState extends State<OrdersTab> {
       children: [
         AppText(
           label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
+          style: AppTypography.bodySmall.copyWith(
+            color: AppColors.textTertiary,
+          ),
         ),
-        const SizedBox(height: 4),
-        AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+        const SizedBox(height: AppSpacing.xs),
+        AppText(
+          value,
+          style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
+        ),
       ],
     );
-  }
-
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'OPEN':
-        return 'Open';
-      case 'PARTIALLY_FILLED':
-        return 'Partially filled';
-      case 'FILLED':
-        return 'Completed';
-      case 'CANCELLED':
-        return 'Cancelled';
-      case 'REJECTED':
-        return 'Rejected';
-      default:
-        return status;
-    }
-  }
-
-  Color _statusColor(String status) {
-    switch (status) {
-      case 'FILLED':
-        return AppConfig.gainColor;
-      case 'PARTIALLY_FILLED':
-        return const Color(0xFFF59E0B);
-      case 'OPEN':
-        return AppConfig.primaryColor;
-      case 'CANCELLED':
-      case 'REJECTED':
-        return AppConfig.lossColor;
-      default:
-        return AppConfig.neutralColor;
-    }
   }
 }

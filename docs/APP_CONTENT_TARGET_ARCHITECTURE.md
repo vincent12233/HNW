@@ -1,7 +1,8 @@
-# App Content Target Architecture (Phase 10 — design only)
+# App Content Target Architecture
 
-**Status:** Design / planning document. **Not implemented in Phase 10.**  
-**Prerequisite audit:** `docs/APP_CONTENT_CMS_AUDIT.md`
+**Status:** Phase 10 design + Phase 11A KV harden + **Phase 11B structured entities implemented**.  
+**Prerequisite audit:** `docs/APP_CONTENT_CMS_AUDIT.md`  
+**Phase docs:** `APP_CONTENT_PHASE_11A.md`, `APP_CONTENT_PHASE_11B.md`
 
 Goal: **reuse and normalize** the existing App Content system — do not build a parallel CMS.
 
@@ -50,8 +51,9 @@ Goal: **reuse and normalize** the existing App Content system — do not build a
 | Locale columns | `locale` + unique `(module,key,locale)` | Yes |
 | Flutter service + fallbacks | `AppContentService` | Yes — strengthen, don’t replace |
 | CompanyShowcase | Separate structured entity | Yes — do not fold into KV |
-| Instrument `displayOrder` / `isActive` | Featured ordering | Yes — extend, don’t duplicate |
+| Instrument `displayOrder` / `isActive` / `featuredHome` / `featuredMarkets` | Featured surfaces | Yes — flags on Instrument only |
 | Market News RSS | Separate service | Yes — not AppContent |
+| InsightArticle / Announcement / AppClientSetting | Structured ops content (11B) | Yes — keep KV for labels |
 
 ---
 
@@ -62,10 +64,10 @@ Goal: **reuse and normalize** the existing App Content system — do not build a
 | No AuditLog on content writes | Ops changes untraceable | 11A |
 | No key allowlist on API | Arbitrary keys / drift | 11A |
 | Admin forces `isActive: true` | No draft/publish | 12 |
-| Fixed Insights `article.01`–`08` | Poor editorial UX | 11B |
-| No Announcement entity | Ops notices missing or misused as “news” | 11B |
-| Banner only title/subtitle | No image/link/schedule | 11B optional |
-| No AppSettings (maintenance / min version) | Cannot safely gate clients | 11B |
+| Fixed Insights `article.01`–`08` | Poor editorial UX | **11B done** (structured + KV fallback) |
+| No Announcement entity | Ops notices missing or misused as “news” | **11B done** |
+| Banner only title/subtitle | No image/link/schedule | **11B: KEEP_AS_KV** until real need |
+| No AppSettings (maintenance / min version) | Cannot safely gate clients | **11B done** (API + model; UI gate in 13) |
 | LEGAL/ABOUT en-only in CMS | hi relies on API→en→local | 11A |
 | Role names vs product language | Code has `ADMIN` only (UI: 超级管理员); no PLATFORM_ADMIN/SUPER_ADMIN | Document; optional role rename later — **out of Phase 10** |
 | `about.app_version` is CMS copy | Can diverge from build | 11A / 13 |
@@ -94,14 +96,14 @@ Use for:
 |--------|-----------------|------------|
 | **InsightArticle** | id, slug, locale, title, summary, body, imageUrl?, isPublished, sortOrder, publishedAt | Editorial lifecycle; more than 8 fixed keys |
 | **Announcement** | id, locale, title, body, severity, startsAt, endsAt, isPublished | Ops notices ≠ market news ≠ banner |
-| **ContentBanner** (optional) | id, surface(HOME/MARKETS), locale, title, subtitle, imageUrl?, linkUrl?, sortOrder, schedule | Visual + targeting |
-| **AppClientSetting** | platform(ANDROID/IOS/WEB), minVersion, latestVersion, forceUpdate, maintenanceMode, maintenanceMessage (locale or FK) | Safety-critical client gates |
+| **ContentBanner** (deferred) | — | **KEEP_AS_KV** in 11B; promote only if image/deepLink/schedule/multi needed |
+| **AppClientSetting** | platform(ANDROID/IOS/WEB), minVersion, latestVersion, forceUpdate, maintenanceMode, maintenanceMessage, supportUrl? | Safety-critical client gates |
 
 ### C. Existing non-CMS structured (keep)
 
 | Entity | Role |
 |--------|------|
-| `Instrument` | Catalog; featured via `displayOrder` / future `featuredHome` flags |
+| `Instrument` | Catalog; featured via `displayOrder` + `featuredHome` / `featuredMarkets` |
 | `CompanyShowcase` | Home company cards + video/website |
 | Market news feed | External headlines |
 
@@ -122,18 +124,13 @@ Phase 12 UI should visually separate “客户端客服文案” vs “后台坐
 
 ---
 
-## 6. Featured stocks design (no schema change now)
+## 6. Featured stocks (Phase 11B choice)
 
 **Do not create a second stock/content table.**
 
-Current: Home/Markets “featured” lists come from active instruments ordered by `displayOrder`.
+**Chosen:** Boolean flags on `Instrument`: `featuredHome`, `featuredMarkets` (+ keep `displayOrder` / `isActive`).
 
-**Future options (pick one in 11B):**
-
-1. Boolean flags on `Instrument`: `featuredHome`, `featuredMarkets` (+ keep `displayOrder`)
-2. Lightweight join table `InstrumentSurfacePlacement(instrumentId, surface, sortOrder, isPublished)`
-
-Either way: tradability remains engine/`isActive` (and product rules), not a CMS free-text field.
+Tradability remains engine/`isActive` (and product rules), not a CMS free-text field.
 
 ---
 
@@ -141,8 +138,8 @@ Either way: tradability remains engine/`isActive` (and product rules), not a CMS
 
 ```
 Market News     → external/market feed service (exists)
-Announcement    → platform ops entity (missing)
-Banner          → marketing/entry creative (today: HOME/MARKETS KV titles)
+Announcement    → platform ops entity (`Announcement` — 11B)
+Banner          → marketing/entry creative (HOME/MARKETS KV titles; KEEP_AS_KV)
 ```
 
 Admin CMS must not dump announcements into `news.section_title` or Insights articles.
@@ -223,11 +220,13 @@ Reuse existing `AuditLog` + `AuditService` — do not create a parallel audit pr
 - Clarify app version source
 - Document OVER_CONFIGURED guide/terms policy
 
-### PHASE 11B — Structured entities only where justified
-- InsightArticle (migrate from article.01–08)
-- Announcement (+ optional Banner entity)
+### PHASE 11B — Structured entities only where justified — **DONE**
+- InsightArticle (+ legacy KV fallback / idempotent import)
+- Announcement (Banner deferred as KEEP_AS_KV)
 - AppClientSetting (maintenance / versions)
-- Instrument feature-flag design (no duplicate catalog)
+- Instrument `featuredHome` / `featuredMarkets` (no duplicate catalog)
+- Minimal Admin pages + Flutter models/Insights smoke consumption
+- See `docs/APP_CONTENT_PHASE_11B.md`
 
 ### PHASE 12 — Super Admin UI improvements
 - Publish/unpublish, sortOrder, stale hygiene

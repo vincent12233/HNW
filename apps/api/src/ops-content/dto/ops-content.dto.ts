@@ -150,7 +150,11 @@ export class UpsertAppClientSettingDto {
   /** Store / download destination for Update CTA. Must be http(s) when set. */
   @IsOptional()
   @ValidateIf((_, v) => v != null && String(v).trim() !== '')
-  @IsUrl({ require_tld: false, protocols: ['http', 'https'], require_protocol: true })
+  @IsUrl({
+    require_tld: false,
+    protocols: ['http', 'https'],
+    require_protocol: true,
+  })
   @MaxLength(2000)
   updateUrl?: string | null;
 }

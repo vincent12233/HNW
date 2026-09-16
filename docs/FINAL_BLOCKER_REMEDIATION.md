@@ -2,7 +2,7 @@
 
 **Branch:** `cursor/app-ui-ux-admin-upgrade-c5d7`  
 **Starting HEAD (this phase):** `4b03fa5`  
-**Ending HEAD (this phase):** `f7319e2`  
+**Ending HEAD (this phase):** `ae72051`  
 **PR:** https://github.com/vincent12233/HNW/pull/84  
 **Date:** 2026-09-16  
 
@@ -145,7 +145,21 @@ Required screens (still outstanding): Login, Register, Forgot Password, Home, Ma
 | Prior blocker | Status after remediation |
 |---------------|--------------------------|
 | Force update dead-end / no store URL | **RESOLVED in code** — `updateUrl` + Continue soft path |
+| Nest Passport/JWT DI (`AuthModuleOptions` / AuditModule) | **RESOLVED** — `ae72051` `fix: wire passport authentication dependencies` |
 | Android device E2E | **STILL BLOCKED** |
+
+---
+
+## 4b. Nest startup (Passport wiring)
+
+| Item | Result |
+|------|--------|
+| Symptom | `JwtAuthGuard` → `AuthModuleOptions` unavailable in `AuditModule` |
+| Fix | `PassportModule.register({ defaultStrategy: 'jwt' })` in `@Global()` `AuthModule`; single `JwtAuthGuard` provider/export; Nest 12 optional options ctor on guard |
+| Behavior changed (JWT / roles / x-backend-role) | **NO** |
+| `npm run build` / tests | PASS |
+| `start:dev` | Nest application successfully started |
+| `GET /health` | HTTP 200 |
 
 ---
 
@@ -153,7 +167,7 @@ Required screens (still outstanding): Login, Register, Forgot Password, Home, Ma
 
 **BLOCKED**
 
-Cannot mark `READY_FOR_REVIEW` until Android device E2E PASS is recorded on the Windows host.
+Cannot mark `READY_FOR_REVIEW` until Android device E2E PASS is recorded on the Windows host (`C:\Users\suyan\HNW`).
 
 PR #84 not merged. No production deploy. No production migration.
 

@@ -3,18 +3,19 @@
 **Branch:** `cursor/app-ui-ux-admin-upgrade-c5d7`  
 **Starting HEAD (original audit):** `2324c4e`  
 **Blocker remediation start:** `4b03fa5`  
-**Ending HEAD:** `f7319e2`  
+**Ending HEAD:** `ae72051`  
 **PR:** https://github.com/vincent12233/HNW/pull/84  
 **Audit date:** 2026-09-16  
 **Remediation date:** 2026-09-16  
 
-**Android E2E gate attempt:** 2026-09-16 @ `101fd0b` — **STOPPED** (no Android device/emulator on Cloud Agent; Windows host not accessible). Chrome/Web not used as substitute.
+**Android E2E gate attempt:** 2026-09-16 @ `101fd0b` — **STOPPED** (no Android device/emulator on Cloud Agent; Windows host not accessible). Chrome/Web not used as substitute.  
+**API startup DI fix:** 2026-09-16 @ `ae72051` — Passport/JWT wiring; `GET /health` 200 on local `start:dev`.
 
 ## Status
 
 **BLOCKED**
 
-Not production-ready. Force-update dead-end **code path is fixed** (`updateUrl` + safe Continue). **Android device E2E** remains unexecuted (no real device / emulator available to this agent) and is still a release blocker.
+Not production-ready. Force-update dead-end **code path is fixed** (`updateUrl` + safe Continue). Nest Passport DI **startup blocker is fixed**. **Android device E2E** remains unexecuted (no real device / emulator available to this agent) and is still a release blocker.
 
 Do **not** merge for production and do **not** claim Production Ready until Android E2E PASS is recorded on `C:\Users\suyan\HNW` with a real Android target.
 
@@ -168,7 +169,8 @@ Live multi-role browser exercise not run in this environment.
 
 ### Cleared
 
-2. ~~Force update lacks store URL~~ → **`updateUrl` shipped**; dead-end soft-continue path added.
+2. ~~Force update lacks store URL~~ → **`updateUrl` shipped**; dead-end soft-continue path added.  
+2b. ~~Nest Passport/JWT DI startup failure~~ → **`ae72051`**.
 
 ### Follow-ups / reviews
 

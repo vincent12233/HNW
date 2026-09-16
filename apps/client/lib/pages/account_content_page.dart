@@ -2,6 +2,7 @@ import '../widgets/app_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
+import '../theme/app_colors.dart';
 
 class WealthInsightsPage extends StatefulWidget {
   const WealthInsightsPage({super.key});
@@ -44,7 +45,9 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
     );
     final articles = _content.insightArticles();
     final fallbackArticles = wealthInsightArticles;
-    final count = articles.isNotEmpty ? articles.length : fallbackArticles.length;
+    final count = articles.isNotEmpty
+        ? articles.length
+        : fallbackArticles.length;
 
     return AppPageScaffold(
       appBar: AppBar(title: const AppText('Wealth Insights')),
@@ -69,7 +72,7 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                       AppText(
                         introBody,
                         style: const TextStyle(
-                          color: Color(0xFF667085),
+                          color: AppColors.textSecondary,
                           height: 1.5,
                         ),
                       ),
@@ -91,9 +94,7 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                       MaterialPageRoute<void>(
                         builder: (_) => WealthInsightArticlePage(
                           index: index,
-                          article: articles.isNotEmpty
-                              ? articles[index]
-                              : null,
+                          article: articles.isNotEmpty ? articles[index] : null,
                         ),
                       ),
                     ),
@@ -116,13 +117,10 @@ class WealthInsightArticlePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fallback = wealthInsightArticles[index.clamp(
-      0,
-      wealthInsightArticles.length - 1,
-    )];
+    final fallback =
+        wealthInsightArticles[index.clamp(0, wealthInsightArticles.length - 1)];
     final hindi = Localizations.localeOf(context).languageCode == 'hi';
-    final title =
-        article?.title?.trim().isNotEmpty == true
+    final title = article?.title?.trim().isNotEmpty == true
         ? article!.title!
         : fallback.$1;
     final body = article?.body.trim().isNotEmpty == true

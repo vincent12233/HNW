@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../app_config.dart';
 import '../services/client_account_service.dart';
+import '../theme/app_colors.dart';
 import '../utils/client_error_message.dart';
 
 class BankDetailsPage extends StatefulWidget {
@@ -89,7 +90,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F8FF),
+                    color: AppColors.brandPrimarySoft,
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: const Row(

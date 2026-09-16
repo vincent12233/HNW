@@ -1,6 +1,9 @@
 import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import 'package:flutter/material.dart';
 
 class LegalPage extends StatefulWidget {
@@ -56,44 +59,57 @@ class _LegalPageState extends State<LegalPage> {
       appBar: AppBar(title: AppText(heading)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 36),
-              children: [
-                AppText(
-                  heading,
-                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                    fontWeight: FontWeight.w800,
+          : Align(
+              alignment: Alignment.topCenter,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 680),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.xl,
+                    AppSpacing.md,
+                    AppSpacing.xl,
+                    AppSpacing.xxxl + 4,
                   ),
-                ),
-                const SizedBox(height: 6),
-                AppText(
-                  effective,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-                const SizedBox(height: 20),
-                ...sections.map(
-                  (section) => Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          section.heading,
-                          style: Theme.of(context).textTheme.titleMedium
-                              ?.copyWith(fontWeight: FontWeight.w700),
-                        ),
-                        const SizedBox(height: 7),
-                        AppText(
-                          section.body,
-                          style: Theme.of(
-                            context,
-                          ).textTheme.bodyMedium?.copyWith(height: 1.55),
-                        ),
-                      ],
+                  children: [
+                    AppText(
+                      heading,
+                      style: AppTypography.headline.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: AppSpacing.sm - 2),
+                    AppText(
+                      effective,
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xl),
+                    ...sections.map(
+                      (section) => Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            AppText(
+                              section.heading,
+                              style: AppTypography.titleMedium,
+                            ),
+                            const SizedBox(height: AppSpacing.sm - 1),
+                            AppText(
+                              section.body,
+                              style: AppTypography.bodyMedium.copyWith(
+                                height: 1.55,
+                                color: AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
     );
   }

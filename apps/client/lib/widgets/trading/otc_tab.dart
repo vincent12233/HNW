@@ -118,7 +118,8 @@ class _OtcTabState extends State<OtcTab> {
             marketPrice: item.marketPrice,
             offerPrice: item.price,
             onTrade: item.price > 0 ? () => _submitDialog(item) : null,
-          );        },
+          );
+        },
       ),
     );
   }
@@ -249,6 +250,4 @@ class _OtcTabState extends State<OtcTab> {
       ),
     );
   }
-
 }
-

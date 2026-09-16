@@ -24,6 +24,7 @@ final class _SaleSmartlyWebPlatform implements SaleSmartlyPlatform {
   Future<void>? _loading;
   String? _loadedScriptUrl;
   bool _unreadListenerAttached = false;
+
   /// Prevents auto-preset spam when openChat is called repeatedly for the
   /// same user + same CMS message in one browser session.
   String? _lastAutoPresetKey;
@@ -235,10 +236,7 @@ final class _SaleSmartlyWebPlatform implements SaleSmartlyPlatform {
       ..setProperty('phone'.toJS, session.phone.trim().toJS)
       ..setProperty('email'.toJS, ''.toJS)
       ..setProperty('description'.toJS, 'India Trading customer'.toJS)
-      ..setProperty(
-        'label_names'.toJS,
-        <JSAny?>['hnw'.toJS, 'web'.toJS].toJS,
-      );
+      ..setProperty('label_names'.toJS, <JSAny?>['hnw'.toJS, 'web'.toJS].toJS);
 
     final status = await _pushCommand('setLoginInfo', payload: payload);
     if (status == 'failed') {

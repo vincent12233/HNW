@@ -7,11 +7,7 @@ import '../app_config.dart';
 import '../l10n/app_language.dart';
 
 class AppContentBlock {
-  const AppContentBlock({
-    required this.body,
-    this.title,
-    this.locale = 'en',
-  });
+  const AppContentBlock({required this.body, this.title, this.locale = 'en'});
 
   final String body;
   final String? title;
@@ -44,18 +40,23 @@ class LegalDocumentContent {
     try {
       final decoded = jsonDecode(block.body);
       if (decoded is! Map) {
-        return LegalDocumentContent(effective: '', sections: [], title: block.title);
+        return LegalDocumentContent(
+          effective: '',
+          sections: [],
+          title: block.title,
+        );
       }
-      final sections = (decoded['sections'] is List ? decoded['sections'] as List : const [])
-          .whereType<Map>()
-          .map(
-            (row) => (
-              heading: '${row['heading'] ?? ''}',
-              body: '${row['body'] ?? ''}',
-            ),
-          )
-          .where((row) => row.heading.isNotEmpty || row.body.isNotEmpty)
-          .toList();
+      final sections =
+          (decoded['sections'] is List ? decoded['sections'] as List : const [])
+              .whereType<Map>()
+              .map(
+                (row) => (
+                  heading: '${row['heading'] ?? ''}',
+                  body: '${row['body'] ?? ''}',
+                ),
+              )
+              .where((row) => row.heading.isNotEmpty || row.body.isNotEmpty)
+              .toList();
       return LegalDocumentContent(
         effective: '${decoded['effective'] ?? ''}',
         sections: sections,
@@ -112,15 +113,15 @@ class AppContentBundle {
       insights.isNotEmpty;
 
   Map<String, AppContentBlock> _module(String module) => switch (module) {
-        'home' => home,
-        'deposit' => deposit,
-        'support' => support,
-        'trading' => trading,
-        'legal' => legal,
-        'about' => about,
-        'insights' => insights,
-        _ => const <String, AppContentBlock>{},
-      };
+    'home' => home,
+    'deposit' => deposit,
+    'support' => support,
+    'trading' => trading,
+    'legal' => legal,
+    'about' => about,
+    'insights' => insights,
+    _ => const <String, AppContentBlock>{},
+  };
 
   String text(String module, String key, {String fallback = ''}) {
     final value = _module(module)[key]?.body.trim();
@@ -140,10 +141,11 @@ class AppContentBundle {
       LegalDocumentContent.fromBlock(legal['terms.document']);
 
   List<AppContentBlock> insightArticles() {
-    final articles = insights.entries
-        .where((entry) => entry.key.startsWith('article.'))
-        .toList()
-      ..sort((a, b) => a.key.compareTo(b.key));
+    final articles =
+        insights.entries
+            .where((entry) => entry.key.startsWith('article.'))
+            .toList()
+          ..sort((a, b) => a.key.compareTo(b.key));
     return articles.map((entry) => entry.value).toList();
   }
 
@@ -223,9 +225,7 @@ class AppContentService extends ChangeNotifier {
     final generation = ++_fetchGeneration;
     try {
       final response = await http
-          .get(
-            Uri.parse('${AppConfig.apiBaseUrl}/app-content?locale=$locale'),
-          )
+          .get(Uri.parse('${AppConfig.apiBaseUrl}/app-content?locale=$locale'))
           .timeout(const Duration(seconds: 12));
       if (generation != _fetchGeneration) return _bundle;
       if (response.statusCode < 200 || response.statusCode >= 300) {

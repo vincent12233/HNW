@@ -547,7 +547,8 @@ const hindi = <String, String>{
   'Quick topics': 'त्वरित विषय',
   'Deposit': 'जमा',
   'Trading': 'ट्रेडिंग',
-  'Dedicated help for deposits, account security and trading.': 'जमा, खाता सुरक्षा और ट्रेडिंग के लिए समर्पित सहायता।',
+  'Dedicated help for deposits, account security and trading.':
+      'जमा, खाता सुरक्षा और ट्रेडिंग के लिए समर्पित सहायता।',
   'Message opens in live chat': 'संदेश लाइव चैट में खुलता है',
   'Use a topic or open on mobile': 'एक विषय चुनें या मोबाइल पर खोलें',
   'We are here to help': 'हम मदद के लिए यहाँ हैं',

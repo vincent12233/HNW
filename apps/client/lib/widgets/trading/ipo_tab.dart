@@ -147,7 +147,6 @@ class _IpoTabState extends State<IpoTab> {
       itemBuilder: (context, index) {
         final ipo = filtered[index];
 
-
         final applicationCount = _applicationCount(ipo.id);
         final reachedLimit = applicationCount >= 5;
 
@@ -161,7 +160,8 @@ class _IpoTabState extends State<IpoTab> {
           offerLabel: 'Subscription Price',
           actionLabel: reachedLimit ? 'Applied 5/5' : 'Trade Now',
           onTrade: ipo.status == IpoStatus.open && !reachedLimit
-              ? () => _confirmApply(ipo) : null,
+              ? () => _confirmApply(ipo)
+              : null,
         );
       },
     );
@@ -209,7 +209,9 @@ class _IpoTabState extends State<IpoTab> {
               ),
               const SizedBox(height: 18),
               AppText('Market Price: ${formatPrice(ipo.marketPrice)}'),
-              AppText('Subscription Price: ${formatPrice(ipo.subscriptionPrice)}'),
+              AppText(
+                'Subscription Price: ${formatPrice(ipo.subscriptionPrice)}',
+              ),
               AppText('Lot Size: ${ipo.lotSize} Shares'),
               const SizedBox(height: 12),
               AppText(message),
@@ -240,4 +242,3 @@ class _IpoTabState extends State<IpoTab> {
     widget.onApply(ipo);
   }
 }
-

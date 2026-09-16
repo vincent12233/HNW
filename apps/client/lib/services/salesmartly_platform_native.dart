@@ -4,8 +4,7 @@ import 'package:flutter/services.dart';
 import '../models/auth_session.dart';
 import 'salesmartly_platform.dart';
 
-SaleSmartlyPlatform createSaleSmartlyPlatform() =>
-    _SaleSmartlyNativePlatform();
+SaleSmartlyPlatform createSaleSmartlyPlatform() => _SaleSmartlyNativePlatform();
 
 /// Android / iOS MethodChannel bridge. Unchanged channel contract.
 final class _SaleSmartlyNativePlatform implements SaleSmartlyPlatform {

@@ -20,7 +20,10 @@ void main() {
     }).insightArticles();
 
     expect(
-      shouldUseLegacyKv(structuredApiOk: true, hasLegacyArticles: kv.isNotEmpty),
+      shouldUseLegacyKv(
+        structuredApiOk: true,
+        hasLegacyArticles: kv.isNotEmpty,
+      ),
       isFalse,
     );
   });

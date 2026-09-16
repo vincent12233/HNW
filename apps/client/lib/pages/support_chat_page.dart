@@ -87,7 +87,9 @@ class _SupportChatPageState extends State<SupportChatPage>
         throw const SaleSmartlyException('Please sign in again.');
       }
       final content = await _appContent.load();
-      final scriptUrl = content.text('support', 'salesmartly_script_url').trim();
+      final scriptUrl = content
+          .text('support', 'salesmartly_script_url')
+          .trim();
       await _saleSmartly.openChat(
         session: session,
         initialMessage: launchMessage,
@@ -122,12 +124,11 @@ class _SupportChatPageState extends State<SupportChatPage>
           'Online customer service hours: Mon–Sun 09:00–22:00 (IST). We are here to help with deposits, trading and account questions.',
     );
 
-    final bubbleText = _error ??
+    final bubbleText =
+        _error ??
         (_opening
             ? 'Connecting you to an agent…'
-            : (_chatAvailable
-                ? greeting
-                : '$greeting\n\n$hours'));
+            : (_chatAvailable ? greeting : '$greeting\n\n$hours'));
 
     // Always show the CMS hours notice unless the user dismisses it.
     final showNotice = _noticeVisible && hours.trim().isNotEmpty;
@@ -243,11 +244,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                 _buildComposer(m),
               ];
 
-              return SizedBox.expand(
-                child: Column(
-                  children: columnChildren,
-                ),
-              );
+              return SizedBox.expand(child: Column(children: columnChildren));
             },
           ),
         ),
@@ -352,9 +349,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                   AppText(
                     _opening
                         ? 'Connecting…'
-                        : (_chatAvailable
-                            ? 'Online now'
-                            : 'In-app support'),
+                        : (_chatAvailable ? 'Online now' : 'In-app support'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -485,13 +480,12 @@ class _SupportChatPageState extends State<SupportChatPage>
                         hintText: _opening
                             ? 'Connecting…'
                             : (_chatAvailable
-                                ? 'Message opens in live chat'
-                                : _appContent.current.text(
-                                    'support',
-                                    'composer_hint',
-                                    fallback:
-                                        'Use a topic or open on mobile',
-                                  )),
+                                  ? 'Message opens in live chat'
+                                  : _appContent.current.text(
+                                      'support',
+                                      'composer_hint',
+                                      fallback: 'Use a topic or open on mobile',
+                                    )),
                         hintStyle: TextStyle(
                           color: Colors.blueGrey.shade400,
                           fontSize: m.bodySize - 1,
@@ -519,9 +513,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                 width: m.sendButtonSize,
                 height: m.sendButtonSize,
                 child: Icon(
-                  _chatAvailable
-                      ? Icons.send_rounded
-                      : Icons.refresh_rounded,
+                  _chatAvailable ? Icons.send_rounded : Icons.refresh_rounded,
                   color: Colors.white,
                   size: 18 * m.scale,
                 ),
@@ -627,7 +619,9 @@ class _AgentBubble extends StatelessWidget {
                       SizedBox(
                         width: 11 * m.scale,
                         height: 11 * m.scale,
-                        child: const CircularProgressIndicator(strokeWidth: 1.6),
+                        child: const CircularProgressIndicator(
+                          strokeWidth: 1.6,
+                        ),
                       ),
                       SizedBox(width: 6 * m.scale),
                       AppText(

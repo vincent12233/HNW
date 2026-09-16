@@ -5,11 +5,13 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { AppContentModule } from '../generated/prisma/enums';
+import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
+import { isAdminOnlySupportKey } from './app-content.visibility';
 
 export type AppContentUpsertInput = {
-  module: AppContentModule;
+  module: AppContentModule | string;
   key: string;
   title?: string | null;
   body: string;
@@ -17,6 +19,11 @@ export type AppContentUpsertInput = {
   metadata?: Prisma.InputJsonValue | null;
   isActive?: boolean;
   sortOrder?: number;
+};
+
+export type AppContentActor = {
+  userId: string;
+  role: string;
 };
 
 /** Accept a bare URL or a full <script src="..."> snippet from SaleSmartly. */
@@ -28,9 +35,14 @@ export function normalizeSaleSmartlyScriptUrl(raw: string): string {
   return text;
 }
 
+const ALLOWED_LOCALES = new Set(['en', 'hi', 'zh']);
+
 @Injectable()
 export class AppContentService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly audit: AuditService,
+  ) {}
 
   private ensureDefaultsPromise: Promise<void> | null = null;
 
@@ -87,7 +99,14 @@ export class AppContentService {
   async getPublicBundle(locale = 'en') {
     await this.ensureDefaults();
     const entries = await this.prisma.appContentEntry.findMany({
-      where: { isActive: true },
+      where: {
+        isActive: true,
+        // Desk-only SUPPORT keys stay out of the public client bundle.
+        NOT: {
+          module: AppContentModule.SUPPORT,
+          key: { in: [...ADMIN_ONLY_SUPPORT_KEYS_LIST] },
+        },
+      },
       orderBy: [{ module: 'asc' }, { sortOrder: 'asc' }, { key: 'asc' }],
     });
 
@@ -111,6 +130,34 @@ export class AppContentService {
     };
   }
 
+  /**
+   * Desk config for support console (tags / quick replies).
+   * Authenticated ADMIN or SUPPORT only — never via public GET.
+   */
+  async getSupportDeskContent(locale = 'zh') {
+    await this.ensureDefaults();
+    const wanted =
+      String(locale || 'zh')
+        .trim()
+        .toLowerCase() || 'zh';
+    const rows = await this.prisma.appContentEntry.findMany({
+      where: {
+        module: AppContentModule.SUPPORT,
+        key: { in: [...ADMIN_ONLY_SUPPORT_KEYS_LIST] },
+        isActive: true,
+        locale: { in: [wanted, 'zh', 'en'] },
+      },
+      orderBy: [{ sortOrder: 'asc' }, { key: 'asc' }],
+    });
+    const picked = this.pickLocale(rows, wanted);
+    return {
+      locale: picked.localeUsed,
+      support: this.moduleMap(picked.rows, AppContentModule.SUPPORT, {
+        includeAdminOnlySupportKeys: true,
+      }),
+    };
+  }
+
   async listAdmin(module?: string) {
     await this.ensureDefaults();
     return this.prisma.appContentEntry.findMany({
@@ -119,23 +166,31 @@ export class AppContentService {
     });
   }
 
-  async upsertEntry(body: AppContentUpsertInput) {
-    const module = this.parseModule(body.module);
+  async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor) {
+    const module = this.parseModule(String(body.module));
     const key = String(body.key || '').trim();
-    const locale =
-      String(body.locale || 'en')
-        .trim()
-        .toLowerCase() || 'en';
+    const locale = this.parseLocale(body.locale);
     if (!key) throw new BadRequestException('Content key is required');
     if (body.body == null)
       throw new BadRequestException('Content body is required');
+    if (key.length > 128) {
+      throw new BadRequestException('Content key is too long');
+    }
+    const rawBody = String(body.body);
+    if (rawBody.length > 200_000) {
+      throw new BadRequestException('Content body is too long');
+    }
 
     const normalizedBody =
       module === AppContentModule.SUPPORT && key === 'salesmartly_script_url'
-        ? normalizeSaleSmartlyScriptUrl(String(body.body))
-        : String(body.body);
+        ? normalizeSaleSmartlyScriptUrl(rawBody)
+        : rawBody;
 
-    const data = {
+    const before = await this.prisma.appContentEntry.findUnique({
+      where: { module_key_locale: { module, key, locale } },
+    });
+
+    const createData = {
       module,
       key,
       title: body.title?.trim() || null,
@@ -143,16 +198,14 @@ export class AppContentService {
       metadata: body.metadata ?? Prisma.JsonNull,
       isActive: body.isActive ?? true,
       sortOrder: Number(body.sortOrder ?? 0),
+      locale,
     };
 
     const result = await this.prisma.appContentEntry.upsert({
       where: {
         module_key_locale: { module, key, locale },
       },
-      create: {
-        ...data,
-        locale,
-      },
+      create: createData,
       update: {
         title:
           body.title === undefined ? undefined : body.title?.trim() || null,
@@ -161,7 +214,8 @@ export class AppContentService {
           body.metadata === undefined
             ? undefined
             : (body.metadata ?? Prisma.JsonNull),
-        isActive: body.isActive,
+        // Preserve existing isActive / sortOrder when omitted (Admin body edits).
+        isActive: body.isActive === undefined ? undefined : body.isActive,
         sortOrder:
           body.sortOrder === undefined ? undefined : Number(body.sortOrder),
       },
@@ -179,38 +233,98 @@ export class AppContentService {
             module_key_locale: { module, key, locale: otherLocale },
           },
           create: {
-            ...data,
+            module,
+            key,
+            title: createData.title,
+            body: normalizedBody,
+            metadata: createData.metadata,
+            isActive: createData.isActive,
+            sortOrder: createData.sortOrder,
             locale: otherLocale,
           },
           update: {
             body: normalizedBody,
-            isActive: body.isActive ?? true,
+            // Do not force isActive on the mirrored locale.
           },
         });
       }
     }
 
+    if (actor) {
+      await this.audit.createLog({
+        actorId: actor.userId,
+        action: before ? 'APP_CONTENT_UPDATE' : 'APP_CONTENT_CREATE',
+        resource: 'app_content',
+        resourceId: result.id,
+        description: `${before ? 'Updated' : 'Created'} ${module}/${key}/${locale}`,
+        metadata: {
+          operatorRole: actor.role,
+          module,
+          key,
+          locale,
+          before: before
+            ? {
+                title: before.title,
+                body: before.body,
+                isActive: before.isActive,
+                sortOrder: before.sortOrder,
+              }
+            : null,
+          after: {
+            title: result.title,
+            body: result.body,
+            isActive: result.isActive,
+            sortOrder: result.sortOrder,
+          },
+        },
+      });
+    }
+
     return result;
   }
 
-  async bulkUpsert(entries: AppContentUpsertInput[]) {
+  async bulkUpsert(entries: AppContentUpsertInput[], actor?: AppContentActor) {
     if (!Array.isArray(entries) || entries.length === 0) {
       throw new BadRequestException('At least one content entry is required');
     }
     const results = [];
     for (const entry of entries) {
-      results.push(await this.upsertEntry(entry));
+      results.push(await this.upsertEntry(entry, actor));
     }
     return results;
   }
 
-  async deleteEntry(id: string) {
-    try {
-      await this.prisma.appContentEntry.delete({ where: { id } });
-      return { ok: true };
-    } catch {
+  async deleteEntry(id: string, actor?: AppContentActor) {
+    const existing = await this.prisma.appContentEntry.findUnique({
+      where: { id },
+    });
+    if (!existing) {
       throw new NotFoundException('Content entry not found');
     }
+    await this.prisma.appContentEntry.delete({ where: { id } });
+    if (actor) {
+      await this.audit.createLog({
+        actorId: actor.userId,
+        action: 'APP_CONTENT_DELETE',
+        resource: 'app_content',
+        resourceId: id,
+        description: `Deleted ${existing.module}/${existing.key}/${existing.locale}`,
+        metadata: {
+          operatorRole: actor.role,
+          module: existing.module,
+          key: existing.key,
+          locale: existing.locale,
+          before: {
+            title: existing.title,
+            body: existing.body,
+            isActive: existing.isActive,
+            sortOrder: existing.sortOrder,
+          },
+          after: null,
+        },
+      });
+    }
+    return { ok: true };
   }
 
   async getDepositRejectMessage(locale = 'en') {
@@ -248,6 +362,17 @@ export class AppContentService {
     return normalized as AppContentModule;
   }
 
+  private parseLocale(value?: string | null): string {
+    const locale =
+      String(value || 'en')
+        .trim()
+        .toLowerCase() || 'en';
+    if (!ALLOWED_LOCALES.has(locale)) {
+      throw new BadRequestException('Invalid content locale');
+    }
+    return locale;
+  }
+
   private moduleMap(
     rows: Array<{
       module: AppContentModule;
@@ -259,6 +384,7 @@ export class AppContentService {
       sortOrder: number;
     }>,
     module: AppContentModule,
+    options?: { includeAdminOnlySupportKeys?: boolean },
   ) {
     const map: Record<
       string,
@@ -272,6 +398,13 @@ export class AppContentService {
     > = {};
     for (const row of rows) {
       if (row.module !== module) continue;
+      if (
+        !options?.includeAdminOnlySupportKeys &&
+        module === AppContentModule.SUPPORT &&
+        isAdminOnlySupportKey(row.key)
+      ) {
+        continue;
+      }
       map[row.key] = {
         title: row.title,
         body: row.body,
@@ -324,6 +457,11 @@ export class AppContentService {
     return support;
   }
 
+  /**
+   * Public / desk locale pick: requested locale → en only.
+   * Does not fall through to arbitrary locales (avoids leaking zh desk copy).
+   * Keys with neither requested nor en content are omitted.
+   */
   private pickLocale<
     T extends {
       key: string;
@@ -355,14 +493,18 @@ export class AppContentService {
       );
       const preferredAny = group.find((row) => row.locale === wanted);
       const englishAny = group.find((row) => row.locale === 'en');
-      picked.push(
-        preferredFilled ??
-          englishFilled ??
-          preferredAny ??
-          englishAny ??
-          group[0],
-      );
+      const chosen =
+        preferredFilled ?? englishFilled ?? preferredAny ?? englishAny;
+      if (chosen) picked.push(chosen);
     }
     return { localeUsed: wanted, rows: picked };
   }
 }
+
+const ADMIN_ONLY_SUPPORT_KEYS_LIST = [
+  'tags',
+  'quick_reply.deposit',
+  'quick_reply.withdrawal',
+  'quick_reply.kyc',
+  'quick_reply.general',
+] as const;

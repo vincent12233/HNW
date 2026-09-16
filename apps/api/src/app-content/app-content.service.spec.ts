@@ -4,6 +4,10 @@ import {
   AppContentService,
   normalizeSaleSmartlyScriptUrl,
 } from './app-content.service';
+import {
+  ADMIN_ONLY_SUPPORT_KEYS,
+  isAdminOnlySupportKey,
+} from './app-content.visibility';
 
 describe('normalizeSaleSmartlyScriptUrl', () => {
   it('extracts src from a script tag', () => {
@@ -24,6 +28,15 @@ describe('normalizeSaleSmartlyScriptUrl', () => {
     ).toBe(
       'https://plugin-code.salesmartly.com/js/project_829333_860505_1789464929.js',
     );
+  });
+});
+
+describe('admin-only support visibility', () => {
+  it('marks desk tags and quick replies as admin-only', () => {
+    expect(isAdminOnlySupportKey('tags')).toBe(true);
+    expect(isAdminOnlySupportKey('quick_reply.deposit')).toBe(true);
+    expect(isAdminOnlySupportKey('greeting')).toBe(false);
+    expect(ADMIN_ONLY_SUPPORT_KEYS.size).toBe(5);
   });
 });
 
@@ -65,6 +78,44 @@ describe('AppContentService locale selection', () => {
     );
   });
 
+  it('does not fall through to arbitrary locales such as zh', () => {
+    const pick = (service as any).pickLocale(
+      [
+        {
+          module: 'SUPPORT',
+          key: 'greeting',
+          locale: 'zh',
+          body: '中文欢迎',
+        },
+        {
+          module: 'SUPPORT',
+          key: 'greeting',
+          locale: 'en',
+          body: 'Welcome',
+        },
+      ],
+      'hi',
+    );
+    expect(pick.rows).toEqual([
+      expect.objectContaining({ key: 'greeting', locale: 'en', body: 'Welcome' }),
+    ]);
+  });
+
+  it('omits keys when neither requested nor en content exists', () => {
+    const pick = (service as any).pickLocale(
+      [
+        {
+          module: 'SUPPORT',
+          key: 'tags',
+          locale: 'zh',
+          body: '入金,提现',
+        },
+      ],
+      'hi',
+    );
+    expect(pick.rows).toEqual([]);
+  });
+
   it('skips empty preferred-locale bodies and keeps filled English', () => {
     const pick = (service as any).pickLocale(
       [
@@ -92,7 +143,7 @@ describe('AppContentService locale selection', () => {
     ]);
   });
 
-  it('maps module rows into a key-keyed object', () => {
+  it('maps module rows into a key-keyed object and strips admin-only support keys', () => {
     const mapped = (service as any).moduleMap(
       [
         {
@@ -101,19 +152,38 @@ describe('AppContentService locale selection', () => {
           title: null,
           body: 'Markets',
           locale: 'en',
+          metadata: null,
+          sortOrder: 1,
         },
         {
-          module: AppContentModule.DEPOSIT,
-          key: 'instructions',
+          module: AppContentModule.SUPPORT,
+          key: 'tags',
           title: null,
-          body: 'Pay via support',
+          body: 'desk',
+          locale: 'zh',
+          metadata: null,
+          sortOrder: 1,
+        },
+        {
+          module: AppContentModule.SUPPORT,
+          key: 'greeting',
+          title: null,
+          body: 'Hello',
           locale: 'en',
+          metadata: null,
+          sortOrder: 2,
         },
       ],
-      AppContentModule.HOME,
+      AppContentModule.SUPPORT,
     );
     expect(mapped).toEqual({
-      'banner.title': { title: null, body: 'Markets', locale: 'en' },
+      greeting: {
+        title: null,
+        body: 'Hello',
+        locale: 'en',
+        metadata: null,
+        sortOrder: 2,
+      },
     });
   });
 
@@ -162,19 +232,38 @@ describe('AppContentService locale selection', () => {
   });
 });
 
+function mockService(prisma: any, audit?: any) {
+  return new AppContentService(prisma, {
+    createLog: jest.fn().mockResolvedValue({ id: 'audit' }),
+    ...audit,
+  } as any);
+}
+
 describe('AppContentService SaleSmartly URL sync', () => {
   it('mirrors salesmartly_script_url to the other locale on upsert', async () => {
-    const upsert = jest.fn().mockResolvedValue({ id: 'row' });
-    const service = new AppContentService({
-      appContentEntry: { upsert },
-    } as any);
-
-    await service.upsertEntry({
-      module: 'SUPPORT',
-      key: 'salesmartly_script_url',
-      locale: 'en',
-      body: '<script src="https://cdn.example.com/widget.js"></script>',
+    const upsert = jest.fn().mockResolvedValue({
+      id: 'row',
+      title: null,
+      body: 'https://cdn.example.com/widget.js',
+      isActive: true,
+      sortOrder: 0,
     });
+    const findUnique = jest.fn().mockResolvedValue(null);
+    const createLog = jest.fn().mockResolvedValue({ id: 'audit' });
+    const service = mockService(
+      { appContentEntry: { upsert, findUnique } },
+      { createLog },
+    );
+
+    await service.upsertEntry(
+      {
+        module: 'SUPPORT',
+        key: 'salesmartly_script_url',
+        locale: 'en',
+        body: '<script src="https://cdn.example.com/widget.js"></script>',
+      },
+      { userId: 'admin-1', role: 'ADMIN' },
+    );
 
     expect(upsert).toHaveBeenCalledTimes(2);
     expect(upsert.mock.calls[0][0].where.module_key_locale.locale).toBe('en');
@@ -184,6 +273,117 @@ describe('AppContentService SaleSmartly URL sync', () => {
     expect(upsert.mock.calls[1][0].where.module_key_locale.locale).toBe('hi');
     expect(upsert.mock.calls[1][0].create.body).toBe(
       'https://cdn.example.com/widget.js',
+    );
+    expect(upsert.mock.calls[1][0].update.isActive).toBeUndefined();
+    expect(createLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'APP_CONTENT_CREATE',
+        resource: 'app_content',
+        metadata: expect.objectContaining({
+          operatorRole: 'ADMIN',
+          key: 'salesmartly_script_url',
+        }),
+      }),
+    );
+  });
+
+  it('preserves isActive and sortOrder when omitted on update', async () => {
+    const existing = {
+      id: 'row-1',
+      module: AppContentModule.HOME,
+      key: 'banner.title',
+      locale: 'en',
+      title: null,
+      body: 'Old',
+      isActive: false,
+      sortOrder: 42,
+    };
+    const upsert = jest.fn().mockResolvedValue({
+      ...existing,
+      body: 'New',
+    });
+    const findUnique = jest.fn().mockResolvedValue(existing);
+    const createLog = jest.fn().mockResolvedValue({ id: 'audit' });
+    const service = mockService(
+      { appContentEntry: { upsert, findUnique } },
+      { createLog },
+    );
+
+    await service.upsertEntry(
+      {
+        module: 'HOME',
+        key: 'banner.title',
+        locale: 'en',
+        body: 'New',
+      },
+      { userId: 'admin-1', role: 'ADMIN' },
+    );
+
+    expect(upsert.mock.calls[0][0].update.isActive).toBeUndefined();
+    expect(upsert.mock.calls[0][0].update.sortOrder).toBeUndefined();
+    expect(createLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'APP_CONTENT_UPDATE',
+        metadata: expect.objectContaining({
+          before: expect.objectContaining({ isActive: false, sortOrder: 42 }),
+          after: expect.objectContaining({ body: 'New' }),
+        }),
+      }),
+    );
+  });
+
+  it('audits delete with before snapshot', async () => {
+    const existing = {
+      id: 'del-1',
+      module: AppContentModule.HOME,
+      key: 'banner.title',
+      locale: 'en',
+      title: null,
+      body: 'Gone',
+      isActive: true,
+      sortOrder: 1,
+    };
+    const findUnique = jest.fn().mockResolvedValue(existing);
+    const del = jest.fn().mockResolvedValue(existing);
+    const createLog = jest.fn().mockResolvedValue({ id: 'audit' });
+    const service = mockService(
+      { appContentEntry: { findUnique, delete: del } },
+      { createLog },
+    );
+
+    await service.deleteEntry('del-1', { userId: 'admin-1', role: 'ADMIN' });
+    expect(createLog).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'APP_CONTENT_DELETE',
+        resourceId: 'del-1',
+        metadata: expect.objectContaining({
+          before: expect.objectContaining({ body: 'Gone' }),
+          after: null,
+        }),
+      }),
+    );
+  });
+
+  it('excludes admin-only support keys from the public bundle query', async () => {
+    const findMany = jest.fn().mockResolvedValue([]);
+    const service = mockService({
+      appContentEntry: {
+        findMany,
+        findUnique: jest.fn().mockResolvedValue({ id: 'x' }),
+      },
+    });
+    (service as any).ensureDefaults = jest.fn().mockResolvedValue(undefined);
+
+    await service.getPublicBundle('en');
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          isActive: true,
+          NOT: expect.objectContaining({
+            module: AppContentModule.SUPPORT,
+          }),
+        }),
+      }),
     );
   });
 });
@@ -213,6 +413,8 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
           'funds.cta_subtitle',
           'funds.withdraw_cta_label',
           'funds.withdraw_cta_subtitle',
+          'funds.trade_cta_label',
+          'funds.trade_cta_subtitle',
           'funds.total_asset_label',
           'funds.available_label',
           'indices.section_title',
@@ -221,9 +423,12 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
           'news.empty',
           'profile.page_title',
           'profile.section.overview',
+          'profile.section.account',
+          'profile.section.funds',
           'profile.section.security',
           'profile.section.preferences',
           'profile.section.support',
+          'profile.section.legal',
           'profile.metric.available',
           'profile.metric.portfolio',
           'profile.metric.returns',
@@ -306,6 +511,7 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
           'tab.funds_ledger',
           'tab.all',
           'tab.ins_stock',
+          'shortcut.overview',
           'shortcut.orders',
           'institutional.empty_title',
           'institutional.empty_subtitle',
@@ -317,6 +523,7 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
           'ipo.empty_title',
           'ipo.empty_subtitle',
           'portfolio.page_title',
+          'portfolio.page_subtitle',
           'portfolio.value_label',
           'portfolio.summary_heading',
           'portfolio.allocation_heading',
@@ -341,6 +548,21 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
         }
       }
     }
+
+    const holdingsEn = APP_CONTENT_DEFAULTS.find(
+      (row) =>
+        row.module === AppContentModule.TRADING &&
+        row.key === 'tab.holdings' &&
+        row.locale === 'en',
+    );
+    expect(holdingsEn?.body).toBe('Positions');
+    const allEn = APP_CONTENT_DEFAULTS.find(
+      (row) =>
+        row.module === AppContentModule.TRADING &&
+        row.key === 'tab.all' &&
+        row.locale === 'en',
+    );
+    expect(allEn?.body).toBe('Overview');
   });
 
   it('seeds missing defaults without overwriting existing rows', async () => {
@@ -360,28 +582,19 @@ describe('APP_CONTENT_DEFAULTS coverage', () => {
           });
           return data;
         }),
+        update: jest.fn(),
       },
     };
-
-    const service = new AppContentService(prisma as any);
+    const service = mockService(prisma);
     await (service as any).seedMissingDefaults();
-
+    expect(created.length).toBeGreaterThan(0);
     expect(
       created.some(
         (row) =>
-          row.module === AppContentModule.HOME &&
+          row.module === 'HOME' &&
           row.key === 'banner.title' &&
           row.locale === 'en',
       ),
     ).toBe(false);
-    expect(
-      created.some(
-        (row) =>
-          row.module === AppContentModule.HOME &&
-          row.key === 'banner.title' &&
-          row.locale === 'hi',
-      ),
-    ).toBe(true);
-    expect(created.length).toBeGreaterThan(10);
   });
 });

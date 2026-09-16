@@ -2,6 +2,7 @@ import '../widgets/app_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
+import '../services/insight_articles_service.dart';
 import '../theme/app_colors.dart';
 
 class WealthInsightsPage extends StatefulWidget {
@@ -13,6 +14,7 @@ class WealthInsightsPage extends StatefulWidget {
 
 class _WealthInsightsPageState extends State<WealthInsightsPage> {
   AppContentBundle _content = AppContentBundle.empty;
+  List<InsightArticle> _structured = const [];
   bool _loading = true;
 
   @override
@@ -22,9 +24,12 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
   }
 
   Future<void> _load() async {
+    // Prefer structured InsightArticle API; keep KV + local fallbacks.
+    final structured = await InsightArticlesService.instance.list();
     final content = await AppContentService.instance.load();
     if (!mounted) return;
     setState(() {
+      _structured = structured;
       _content = content;
       _loading = false;
     });
@@ -43,10 +48,14 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
       fallback:
           'Explore essential investment concepts, portfolio strategies, market perspectives and wealth-management principles designed to help investors make more informed financial decisions.',
     );
-    final articles = _content.insightArticles();
+    final kvArticles = _content.insightArticles();
     final fallbackArticles = wealthInsightArticles;
-    final count = articles.isNotEmpty
-        ? articles.length
+    final useStructured = _structured.isNotEmpty;
+    final useKv = !useStructured && kvArticles.isNotEmpty;
+    final count = useStructured
+        ? _structured.length
+        : useKv
+        ? kvArticles.length
         : fallbackArticles.length;
 
     return AppPageScaffold(
@@ -83,9 +92,13 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                   ListTile(
                     leading: const Icon(Icons.menu_book_outlined),
                     title: AppText(
-                      articles.isNotEmpty
-                          ? (articles[index].title?.trim().isNotEmpty == true
-                                ? articles[index].title!
+                      useStructured
+                          ? (_structured[index].title.trim().isNotEmpty
+                                ? _structured[index].title
+                                : 'Article ${index + 1}')
+                          : useKv
+                          ? (kvArticles[index].title?.trim().isNotEmpty == true
+                                ? kvArticles[index].title!
                                 : 'Article ${index + 1}')
                           : fallbackArticles[index].$1,
                     ),
@@ -94,7 +107,8 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                       MaterialPageRoute<void>(
                         builder: (_) => WealthInsightArticlePage(
                           index: index,
-                          article: articles.isNotEmpty ? articles[index] : null,
+                          structured: useStructured ? _structured[index] : null,
+                          article: useKv ? kvArticles[index] : null,
                         ),
                       ),
                     ),
@@ -109,10 +123,12 @@ class WealthInsightArticlePage extends StatelessWidget {
   const WealthInsightArticlePage({
     super.key,
     required this.index,
+    this.structured,
     this.article,
   });
 
   final int index;
+  final InsightArticle? structured;
   final AppContentBlock? article;
 
   @override
@@ -120,10 +136,14 @@ class WealthInsightArticlePage extends StatelessWidget {
     final fallback =
         wealthInsightArticles[index.clamp(0, wealthInsightArticles.length - 1)];
     final hindi = Localizations.localeOf(context).languageCode == 'hi';
-    final title = article?.title?.trim().isNotEmpty == true
+    final title = structured?.title.trim().isNotEmpty == true
+        ? structured!.title
+        : article?.title?.trim().isNotEmpty == true
         ? article!.title!
         : fallback.$1;
-    final body = article?.body.trim().isNotEmpty == true
+    final body = structured?.body.trim().isNotEmpty == true
+        ? structured!.body
+        : article?.body.trim().isNotEmpty == true
         ? article!.body
         : (hindi ? fallback.$3 : fallback.$2);
     return AppPageScaffold(

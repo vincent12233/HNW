@@ -2,7 +2,7 @@
 
 **Branch:** `cursor/app-ui-ux-admin-upgrade-c5d7`  
 **Starting HEAD:** `2324c4e`  
-**Ending HEAD:** (see Git section after audit commits)  
+**Ending HEAD:** `f4b9c97`  
 **PR:** https://github.com/vincent12233/HNW/pull/84  
 **Audit date:** 2026-09-16  
 
@@ -20,7 +20,8 @@ Not production-ready. Code review of the PR may continue, but **do not merge for
 |------|--------|
 | Branch | `cursor/app-ui-ux-admin-upgrade-c5d7` |
 | Working tree at gate | clean @ `2324c4e` |
-| Commits vs `origin/main` | **30** |
+| Ending HEAD | `f4b9c97` |
+| Commits vs `origin/main` (at audit start) | **30** (+ 2 audit commits after) |
 | Files changed | **113** |
 | Diff size | **+12993 / −3078** |
 | Unexpected / forbidden tracked artifacts | **None** (no `.env`, keys, build/, node_modules, dumps) |

@@ -1,8 +1,8 @@
 # App Content Target Architecture
 
-**Status:** Phase 10 design + Phase 11A KV harden + **Phase 11B structured entities implemented**.  
+**Status:** Phase 10 design + Phase 11A KV harden + Phase 11B structured entities + **Phase 12 Admin UX complete**.  
 **Prerequisite audit:** `docs/APP_CONTENT_CMS_AUDIT.md`  
-**Phase docs:** `APP_CONTENT_PHASE_11A.md`, `APP_CONTENT_PHASE_11B.md`
+**Phase docs:** `APP_CONTENT_PHASE_11A.md`, `APP_CONTENT_PHASE_11B.md`, `APP_CONTENT_PHASE_12_ADMIN.md`
 
 Goal: **reuse and normalize** the existing App Content system — do not build a parallel CMS.
 
@@ -228,12 +228,13 @@ Reuse existing `AuditLog` + `AuditService` — do not create a parallel audit pr
 - Minimal Admin pages + Flutter models/Insights smoke consumption
 - See `docs/APP_CONTENT_PHASE_11B.md`
 
-### PHASE 12 — Super Admin UI improvements
-- Publish/unpublish, sortOrder, stale hygiene
-- Client vs console SUPPORT sections
-- Diff / audit viewer
-- Warnings on OVER_CONFIGURED keys
-- Do not rebuild `/app-content` from scratch — evolve it
+### PHASE 12 — Super Admin UI improvements — **DONE**
+- APP Management nav + hub summary
+- Content page sections / safety / Legacy Insights demotion
+- Insights & Announcements formal management + preview
+- App Settings danger confirmations
+- Featured Instruments (Instrument flags + placement PATCH)
+- See `docs/APP_CONTENT_PHASE_12_ADMIN.md`
 
 ### PHASE 13 — Flutter dynamic-content completion
 - Consume structured APIs

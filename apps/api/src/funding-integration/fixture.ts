@@ -62,6 +62,19 @@ export async function createInviteGraph(
   });
 }
 
+export async function createAssignedSupportConversation(
+  prisma: PrismaService,
+  clientId: string,
+  supportUserId: string,
+) {
+  return prisma.supportConversation.create({
+    data: {
+      clientId,
+      assignedToId: supportUserId,
+    },
+  });
+}
+
 export async function createClientWithAccount(
   prisma: PrismaService,
   options: {

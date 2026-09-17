@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'scripts/**'
+      - 'apps/api/scripts/**'
       - '.github/workflows/tooling-ci.yml'
   push:
     branches: [main]
     paths:
       - 'scripts/**'
+      - 'apps/api/scripts/**'
       - '.github/workflows/tooling-ci.yml'
 
 permissions:
@@ -25,3 +27,6 @@ jobs:
       - name: Check verification restores the caller environment
         shell: powershell
         run: ./scripts/tests/verify-environment.test.ps1
+      - name: Check funding integration runner URL guard on Windows PowerShell
+        shell: powershell
+        run: ./scripts/tests/funding-integration-runner.test.ps1

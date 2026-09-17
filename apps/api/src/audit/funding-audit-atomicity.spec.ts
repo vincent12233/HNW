@@ -54,6 +54,15 @@ function fixture() {
     },
     depositRequest: {
       findUnique: jest.fn().mockResolvedValue(deposit),
+      create: jest.fn().mockResolvedValue({
+        id: 'deposit-submit-1',
+        accountId: account.id,
+        amount: new Prisma.Decimal('150.50'),
+        referenceId: 'PAYREF01',
+        paymentMethod: 'UPI',
+        note: 'wire | Submitted by support support-1',
+        status: 'PENDING',
+      }),
       updateMany: jest.fn().mockResolvedValue({ count: 1 }),
     },
     withdrawalRequest: {
@@ -69,6 +78,7 @@ function fixture() {
     },
     user: {
       count: jest.fn().mockResolvedValue(1),
+      findFirst: jest.fn().mockResolvedValue({ id: 'client-1' }),
       findUnique: jest.fn().mockResolvedValue({
         usedInviteCode: { code: 'BUSINESS-INVITE' },
       }),
@@ -90,6 +100,12 @@ function fixture() {
       findUnique: jest.fn().mockResolvedValue(null),
     },
     notification: { create: jest.fn().mockResolvedValue({}) },
+    supportConversation: {
+      findUnique: jest.fn().mockResolvedValue({
+        clientId: 'client-1',
+        assignedToId: 'support-1',
+      }),
+    },
   };
   const callbackCompleted = jest.fn();
   const callbackRejected = jest.fn();
@@ -253,6 +269,89 @@ const operations: FundingOperation[] = [
     },
   },
 ];
+
+describe('DEPOSIT_DETAILS_SUBMITTED audit transaction', () => {
+  const input = {
+    conversationId: 'conversation-1',
+    amount: '150.50',
+    referenceId: 'PAYREF01',
+    paymentMethod: 'UPI',
+    note: 'wire',
+  };
+
+  function submitFixture() {
+    const f = fixture();
+    f.tx.depositRequest.findUnique.mockResolvedValue(null);
+    return f;
+  }
+
+  it('awaits one audit insert in the transaction and preserves the result', async () => {
+    const f = submitFixture();
+    let notifyAuditStarted!: () => void;
+    let resolveAudit!: (value: { id: string }) => void;
+    const auditStarted = new Promise<void>((resolve) => {
+      notifyAuditStarted = resolve;
+    });
+    const auditResult = new Promise<{ id: string }>((resolve) => {
+      resolveAudit = resolve;
+    });
+    f.tx.auditLog.create.mockImplementationOnce(() => {
+      notifyAuditStarted();
+      return auditResult;
+    });
+
+    const result = f.deposits.submitToFinanceBySupport('support-1', input);
+    await auditStarted;
+    expect(f.callbackCompleted).not.toHaveBeenCalled();
+    resolveAudit({ id: 'audit-1' });
+
+    await expect(result).resolves.toMatchObject({
+      id: 'deposit-submit-1',
+      referenceId: 'PAYREF01',
+      status: 'PENDING',
+      paymentMethod: 'UPI',
+    });
+    expect(f.callbackCompleted).toHaveBeenCalledTimes(1);
+    expect(f.callbackRejected).not.toHaveBeenCalled();
+    expect(f.tx.depositRequest.create).toHaveBeenCalledTimes(1);
+    expect(f.tx.notification.create).toHaveBeenCalledTimes(1);
+    expect(f.tx.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(f.tx.auditLog.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        actorId: 'support-1',
+        action: 'DEPOSIT_DETAILS_SUBMITTED',
+        resource: 'deposit',
+        resourceId: 'deposit-submit-1',
+        metadata: {
+          referenceId: 'PAYREF01',
+          amount: '150.50',
+          conversationId: 'conversation-1',
+        },
+      }),
+    });
+    expect(f.prisma.auditLog.create).not.toHaveBeenCalled();
+    expect(f.prisma.$transaction).toHaveBeenCalledWith(expect.any(Function), {
+      isolationLevel: 'Serializable',
+    });
+  });
+
+  it('rejects the transaction callback when audit insertion fails', async () => {
+    const f = submitFixture();
+    const failure = new Error('audit insert failed');
+    f.tx.auditLog.create.mockRejectedValueOnce(failure);
+
+    await expect(
+      f.deposits.submitToFinanceBySupport('support-1', input),
+    ).rejects.toBe(failure);
+
+    expect(f.callbackRejected).toHaveBeenCalledWith(failure);
+    expect(f.callbackCompleted).not.toHaveBeenCalled();
+    expect(f.tx.depositRequest.create).toHaveBeenCalledTimes(1);
+    expect(f.tx.notification.create).toHaveBeenCalledTimes(1);
+    expect(f.tx.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(f.prisma.auditLog.create).not.toHaveBeenCalled();
+  });
+});
 
 describe.each(operations)('$action audit transaction', (operation) => {
   it('awaits one audit insert in the transaction and preserves the result', async () => {

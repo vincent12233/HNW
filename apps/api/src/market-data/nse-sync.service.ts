@@ -33,8 +33,8 @@ export class NseSyncService {
     private readonly health: MarketDataHealthService,
   ) {}
 
-  // Credential-free providers are snapshot endpoints, so poll frequently and
-  // relay each accepted update over the existing authenticated WebSocket.
+  // Snapshot providers are polled frequently and relay accepted updates over
+  // the existing authenticated WebSocket. Overlapping cycles are skipped.
   @Cron('*/10 * * * * *')
   async sync() {
     if (this.syncing) {
@@ -48,7 +48,7 @@ export class NseSyncService {
     this.syncing = true;
     try {
       this.logger.log(
-        `Updating market quotes via polling fallback ${this.provider.providerName}...`,
+        `Updating market quotes via polling ${this.provider.providerName}...`,
       );
       await this.syncStocks();
       await this.syncIndices();
@@ -102,29 +102,99 @@ export class NseSyncService {
       );
     }
 
-    // Bound concurrency to avoid overwhelming the public snapshot provider.
-    for (let offset = 0; offset < batch.length; offset += 8) {
-      const group = batch.slice(offset, offset + 8);
-      await Promise.allSettled(
-        group.map(async (instrument) => {
-          const key = this.pollingKey(instrument.exchange, instrument.symbol);
-          this.lastPollingAttempt.set(key, Date.now());
+    const started = Date.now();
+    let successCount = 0;
+    let failureCount = 0;
+
+    if (this.provider.provider.getQuotes) {
+      for (const instrument of batch) {
+        this.lastPollingAttempt.set(
+          this.pollingKey(instrument.exchange, instrument.symbol),
+          Date.now(),
+        );
+      }
+      try {
+        const quotes = await this.provider.getQuotes(
+          batch.map((instrument) => ({
+            symbol: instrument.symbol,
+            exchange: instrument.exchange,
+          })),
+        );
+        const returned = new Set(
+          quotes.map((quote) => `${quote.exchange ?? ''}:${quote.symbol}`),
+        );
+        for (const quote of quotes) {
           try {
+            const ageMs = Date.now() - quote.updatedAt.getTime();
+            this.logger.log(
+              JSON.stringify({
+                provider: this.provider.providerName,
+                exchange: quote.exchange,
+                symbol: quote.symbol,
+                quoteAgeMs: ageMs,
+              }),
+            );
+            await this.ingestion.ingest(
+              quote.exchange ?? 'NSE',
+              quote,
+              'STOCK',
+            );
+            successCount += 1;
+          } catch (error: unknown) {
+            failureCount += 1;
+            const message =
+              error instanceof Error ? error.message : String(error);
+            this.logger.error(
+              `${quote.exchange}:${quote.symbol} ingest failed: ${message}`,
+            );
+          }
+        }
+        for (const instrument of batch) {
+          const key = `${instrument.exchange}:${instrument.symbol}`;
+          if (!returned.has(key)) failureCount += 1;
+        }
+      } catch (error: unknown) {
+        failureCount += batch.length;
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Snapshot batch failed: ${message}`);
+      }
+    } else {
+      for (let offset = 0; offset < batch.length; offset += 8) {
+        const group = batch.slice(offset, offset + 8);
+        const results = await Promise.allSettled(
+          group.map(async (instrument) => {
+            const key = this.pollingKey(instrument.exchange, instrument.symbol);
+            this.lastPollingAttempt.set(key, Date.now());
             const quote = await this.provider.getQuote(
               instrument.symbol,
               instrument.exchange,
             );
             await this.ingestion.ingest(instrument.exchange, quote, 'STOCK');
-          } catch (error: unknown) {
+          }),
+        );
+        for (const result of results) {
+          if (result.status === 'fulfilled') successCount += 1;
+          else {
+            failureCount += 1;
             const message =
-              error instanceof Error ? error.message : String(error);
-            this.logger.error(
-              `${instrument.exchange}:${instrument.symbol} update failed: ${message}`,
-            );
+              result.reason instanceof Error
+                ? result.reason.message
+                : String(result.reason);
+            this.logger.error(`Quote update failed: ${message}`);
           }
-        }),
-      );
+        }
+      }
     }
+
+    this.logger.log(
+      JSON.stringify({
+        provider: this.provider.providerName,
+        batchCount: batch.length,
+        successCount,
+        failureCount,
+        durationMs: Date.now() - started,
+      }),
+    );
   }
 
   selectPollingBatch(
@@ -172,6 +242,10 @@ export class NseSyncService {
   }
 
   private pollBatchSize() {
+    const apifySize = this.config.get<string>('APIFY_MARKET_DATA_BATCH_SIZE');
+    if (this.provider.providerName === 'APIFY' && apifySize) {
+      return this.positiveInteger(apifySize, 24);
+    }
     return this.positiveInteger(
       this.config.get<string>('MARKET_DATA_POLL_BATCH_SIZE'),
       24,

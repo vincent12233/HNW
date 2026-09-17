@@ -167,4 +167,34 @@ describe('QuoteIngestionService', () => {
 
     expect(gateway.emitQuoteUpdate).not.toHaveBeenCalled();
   });
+
+  it('does not persist quotes that lack a trusted exchange timestamp', async () => {
+    const prisma = {
+      instrument: { findUnique: jest.fn() },
+      marketQuote: { upsert: jest.fn() },
+    } as any;
+    const gateway = { emitQuoteUpdate: jest.fn() } as any;
+    const health = { recordQuote: jest.fn() } as any;
+    const service = new QuoteIngestionService(prisma, gateway, health);
+
+    await service.ingest('NSE', {
+      symbol: 'RELIANCE',
+      price: '100',
+      previousClose: '99',
+      openPrice: null,
+      highPrice: null,
+      lowPrice: null,
+      bidPrice: null,
+      askPrice: null,
+      volume: '0',
+      change: 1,
+      source: 'APIFY',
+      updatedAt: new Date(),
+      timestampConfidence: 'UNKNOWN',
+      receivedAt: new Date(),
+    });
+
+    expect(prisma.marketQuote.upsert).not.toHaveBeenCalled();
+    expect(health.recordQuote).not.toHaveBeenCalled();
+  });
 });

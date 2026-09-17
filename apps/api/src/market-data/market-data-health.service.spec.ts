@@ -1,8 +1,16 @@
 import { MarketDataHealthService } from './market-data-health.service';
 
 describe('MarketDataHealthService', () => {
+  const config = {
+    get: jest.fn((key: string) => {
+      if (key === 'MARKET_DATA_STALE_AFTER_MS') return '60000';
+      if (key === 'MARKET_DATA_STREAMING_ENABLED') return 'false';
+      if (key === 'MARKET_DATA_PROVIDER') return 'APIFY';
+      return undefined;
+    }),
+  } as any;
+
   it('starts stale before any quote is received', () => {
-    const config = { get: jest.fn().mockReturnValue('60000') } as any;
     const service = new MarketDataHealthService(config);
 
     expect(service.getStatus()).toEqual(
@@ -10,12 +18,13 @@ describe('MarketDataHealthService', () => {
         healthy: false,
         stale: true,
         lastQuoteAt: null,
+        providerConfigured: false,
+        configuredProvider: 'APIFY',
       }),
     );
   });
 
   it('becomes healthy after a recent quote', () => {
-    const config = { get: jest.fn().mockReturnValue('60000') } as any;
     const service = new MarketDataHealthService(config);
     const at = new Date();
 
@@ -27,6 +36,9 @@ describe('MarketDataHealthService', () => {
         stale: false,
         lastQuoteAt: at,
         lastSource: 'TRUEDATA',
+        lastSuccessfulIngestionAt: expect.any(Date),
+        configuredProvider: 'APIFY',
+        streamingEnabled: false,
       }),
     );
   });

@@ -1,5 +1,13 @@
+export type QuoteTimestampConfidence = 'EXCHANGE' | 'UNKNOWN';
+
+export interface MarketQuoteRequest {
+  symbol: string;
+  exchange: string;
+}
+
 export interface MarketQuoteResult {
   symbol: string;
+  exchange?: string;
   price: string;
   previousClose: string;
   openPrice: string | null;
@@ -10,7 +18,16 @@ export interface MarketQuoteResult {
   volume: string;
   change: number;
   source: string;
+  /** Exchange/market timestamp when confidence is EXCHANGE. Never a forged clock. */
   updatedAt: Date;
+  receivedAt?: Date;
+  timestampConfidence?: QuoteTimestampConfidence;
+}
+
+export interface MarketDataProvider {
+  readonly name: string;
+  getQuote(symbol: string, exchange?: string): Promise<MarketQuoteResult>;
+  getQuotes?(requests: MarketQuoteRequest[]): Promise<MarketQuoteResult[]>;
 }
 
 export interface MarketHistoryPoint {
@@ -37,9 +54,4 @@ export interface MarketHistoryEvent {
   type: 'DIVIDEND' | 'SPLIT';
   value: number;
   label: string;
-}
-
-export interface MarketDataProvider {
-  readonly name: string;
-  getQuote(symbol: string, exchange?: string): Promise<MarketQuoteResult>;
 }

@@ -356,7 +356,6 @@ export class MarketDataService {
           bid: quote.bidPrice ?? null,
           ask: quote.askPrice ?? null,
           volume: quote.volume?.toString() ?? '0',
-          source: quote.source ?? null,
           updatedAt,
           quoteFresh,
         };

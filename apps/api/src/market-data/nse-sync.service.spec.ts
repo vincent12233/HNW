@@ -10,6 +10,7 @@ describe('NseSyncService polling selection', () => {
     };
     const provider = {
       providerName: 'TEST',
+      provider: {},
       getQuote: jest.fn(),
     };
     const ingestion = {
@@ -139,5 +140,40 @@ describe('NseSyncService polling selection', () => {
       'C',
       'D',
     ]);
+  });
+
+  it('uses provider getQuotes for a batch without synthesizing missing rows', async () => {
+    const { service, prisma, provider, ingestion } = createService('2');
+    (provider as any).provider = {
+      getQuotes: jest.fn(),
+    };
+    (provider as any).getQuotes = jest.fn().mockResolvedValue([
+      {
+        symbol: 'A',
+        exchange: 'NSE',
+        price: '10',
+        previousClose: '9',
+        openPrice: null,
+        highPrice: null,
+        lowPrice: null,
+        bidPrice: null,
+        askPrice: null,
+        volume: '1',
+        change: 0,
+        source: 'APIFY',
+        updatedAt: new Date('2026-09-17T03:30:00Z'),
+      },
+    ]);
+    prisma.instrument.findMany.mockResolvedValue([
+      candidate('A'),
+      candidate('B'),
+    ]);
+    ingestion.ingest.mockResolvedValue(undefined);
+
+    await (service as unknown as { syncStocks(): Promise<void> }).syncStocks();
+
+    expect((provider as any).getQuotes).toHaveBeenCalledTimes(1);
+    expect(ingestion.ingest).toHaveBeenCalledTimes(1);
+    expect(provider.getQuote).not.toHaveBeenCalled();
   });
 });

@@ -17,6 +17,7 @@ import { TrueDataSubscriptionPolicyService } from './providers/truedata-subscrip
 import { TrueDataSymbolMapperService } from './providers/truedata-symbol-mapper.service';
 import { TrueDataTickNormalizerService } from './providers/truedata-tick-normalizer.service';
 import { YahooProvider } from './providers/yahoo.provider';
+import { ApifyProvider } from './providers/apify.provider';
 import { QuoteIngestionService } from './quote-ingestion.service';
 import { StreamingMarketDataService } from './streaming-market-data.service';
 import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
@@ -38,6 +39,7 @@ import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
     TrueDataNodeTransportService,
     TrueDataProvider,
     YahooProvider,
+    ApifyProvider,
     QuoteIngestionService,
     StreamingMarketDataService,
     NseSyncService,

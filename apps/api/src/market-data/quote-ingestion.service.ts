@@ -26,6 +26,9 @@ export class QuoteIngestionService {
     ) {
       return;
     }
+    if (quote.timestampConfidence === 'UNKNOWN') {
+      return;
+    }
     const payload = this.toPayload(exchange, quote, type);
 
     if (type === 'INDEX') {

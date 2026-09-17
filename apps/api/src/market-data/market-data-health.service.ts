@@ -5,6 +5,7 @@ import { ConfigService } from '@nestjs/config';
 export class MarketDataHealthService {
   private lastQuoteAt: Date | null = null;
   private lastSource: string | null = null;
+  private lastSuccessfulIngestionAt: Date | null = null;
   private streamingProvider = 'NONE';
   private streamingConnected = false;
   private subscriptionCount = 0;
@@ -18,6 +19,7 @@ export class MarketDataHealthService {
       this.lastQuoteAt = at;
       this.lastSource = source;
     }
+    this.lastSuccessfulIngestionAt = new Date();
   }
 
   setStreamingStatus(
@@ -56,15 +58,30 @@ export class MarketDataHealthService {
       (this.config.get<string>('MARKET_DATA_STREAMING_ENABLED') ?? 'false')
         .trim()
         .toLowerCase() === 'true';
+    const configuredProvider = (
+      this.config.get<string>('MARKET_DATA_PROVIDER') ?? 'APIFY'
+    )
+      .trim()
+      .toUpperCase();
+    const providerConfigured =
+      configuredProvider !== 'APIFY' ||
+      (this.hasConfiguredSecret(this.config.get<string>('APIFY_TOKEN')) &&
+        this.hasConfiguredSecret(this.config.get<string>('APIFY_ACTOR_ID')));
 
     return {
       healthy: !stale,
       stale,
       lastQuoteAt: this.lastQuoteAt,
       lastTickAt: this.lastQuoteAt,
+      lastSuccessfulIngestionAt: this.lastSuccessfulIngestionAt,
       lastSource: this.lastSource,
       ageMs,
+      quoteAge: ageMs,
       staleAfterMs,
+      configuredProvider,
+      providerConfigured,
+      streamingEnabled,
+      streamingProvider: this.streamingProvider,
       streaming: {
         enabled: streamingEnabled,
         provider: this.streamingProvider,
@@ -74,6 +91,14 @@ export class MarketDataHealthService {
         lastConnectionError: this.lastConnectionError,
       },
     };
+  }
+
+  private hasConfiguredSecret(value: string | undefined) {
+    const trimmed = value?.trim() ?? '';
+    return (
+      trimmed.length > 0 &&
+      !/replace|change-me|your-token|example|placeholder/i.test(trimmed)
+    );
   }
 
   private positiveInteger(value: string | undefined, fallback: number) {

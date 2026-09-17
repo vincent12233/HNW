@@ -17,6 +17,7 @@ import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
 import '../widgets/app_card.dart';
+import '../widgets/account_metrics.dart';
 import '../widgets/home/home_action_button.dart';
 import '../widgets/home/mini_line_chart_painter.dart';
 import '../widgets/profile_menu.dart';
@@ -99,6 +100,10 @@ class _MarketHomePageState extends State<MarketHomePage>
   bool _biometricEnabled = false;
   bool _biometricBusy = false;
   bool isLoading = true;
+  bool _accountSnapshotLoaded = false;
+  bool _accountSnapshotFailed = false;
+  bool _accountSnapshotRefreshing = true;
+  Future<void>? _accountRefreshInFlight;
   bool _ipoAllocationDialogOpen = false;
   final Set<String> _shownIpoAllotments = {};
   bool _withdrawalSubmitting = false;
@@ -134,7 +139,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   String accountName = 'Client';
   String accountPhone = '';
   String accountNumber = '';
-  String kycStatus = 'NOT_SUBMITTED';
+  String kycStatus = 'UNKNOWN';
   Uint8List? profileAvatarBytes;
 
   final List<TradingOrder> orders = <TradingOrder>[];
@@ -568,11 +573,11 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Future<void> _refreshMarketSession() async {
     final status = await marketDataService.fetchMarketSession();
-    if (!mounted || status == null) return;
-    final openTime = status['openTime']?.toString();
-    final closeTime = status['closeTime']?.toString();
+    if (!mounted) return;
+    final openTime = status?['openTime']?.toString();
+    final closeTime = status?['closeTime']?.toString();
     setState(() {
-      marketOpen = status['isOpen'] == true;
+      marketOpen = status?['isOpen'] is bool ? status!['isOpen'] as bool : null;
       if (openTime?.isNotEmpty == true && closeTime?.isNotEmpty == true) {
         marketHours = '$openTime - $closeTime IST';
       }
@@ -580,10 +585,31 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Future<void> _refreshAccountSnapshot() async {
+    final active = _accountRefreshInFlight;
+    if (active != null) return active;
+    final refresh = _performAccountRefresh();
+    _accountRefreshInFlight = refresh;
     try {
-      final snapshot = await tradingService.fetchAccountSnapshot();
-      if (!mounted || snapshot == null) return;
+      await refresh;
+    } finally {
+      if (identical(_accountRefreshInFlight, refresh)) {
+        _accountRefreshInFlight = null;
+      }
+    }
+  }
+
+  Future<void> _performAccountRefresh() async {
+    if (!mounted) return;
+    setState(() => _accountSnapshotRefreshing = true);
+    try {
+      final snapshot = await tradingService.fetchAccountSnapshot(
+        allowCached: false,
+      );
+      if (!mounted) return;
+      if (snapshot == null) throw StateError('Account snapshot unavailable');
       setState(() {
+        _accountSnapshotLoaded = true;
+        _accountSnapshotFailed = false;
         cashBalance = snapshot.cashBalance;
         buyingPower = snapshot.buyingPower;
         frozenBalance = snapshot.frozenBalance;
@@ -600,7 +626,9 @@ class _MarketHomePageState extends State<MarketHomePage>
           );
       });
     } catch (_) {
-      // Keep the last known account values when a background refresh fails.
+      if (mounted) setState(() => _accountSnapshotFailed = true);
+    } finally {
+      if (mounted) setState(() => _accountSnapshotRefreshing = false);
     }
   }
 
@@ -672,8 +700,10 @@ class _MarketHomePageState extends State<MarketHomePage>
           bankNiftyChange = change;
         }
       }
+      marketOpen = session?['isOpen'] is bool
+          ? session!['isOpen'] as bool
+          : null;
       if (session != null) {
-        marketOpen = session['isOpen'] == true;
         final openTime = session['openTime']?.toString();
         final closeTime = session['closeTime']?.toString();
         if (openTime?.isNotEmpty == true && closeTime?.isNotEmpty == true) {
@@ -717,188 +747,136 @@ class _MarketHomePageState extends State<MarketHomePage>
     }
   }
 
+  Future<void> _loadDashboardSection(Future<void> Function() load) async {
+    try {
+      await load();
+    } catch (_) {
+      // Each endpoint loads independently, preserving other confirmed data.
+    } finally {
+      if (mounted) setState(() {});
+    }
+  }
+
   Future<void> _loadAppData() async {
-    final session = await AuthService().restoreSession();
-
-    accountName = session?.fullName.isNotEmpty == true
-        ? session!.fullName
-        : 'Client';
-    accountPhone = session?.phone ?? '';
-    accountNumber = session?.accountNumber ?? '';
-    if (accountPhone.isNotEmpty) {
-      try {
-        kycStatus = await AuthService().fetchKycStatus();
-      } catch (_) {
-        kycStatus = 'NOT_SUBMITTED';
-      }
-    }
-
-    stocks.clear();
-    ipos.clear();
-
     try {
-      final remoteStocks = await marketDataService.fetchSnapshot();
-      if (remoteStocks.isNotEmpty) {
-        stocks
-          ..clear()
-          ..addAll(remoteStocks);
-      }
+      final session = await AuthService().restoreSession();
+      if (!mounted) return;
+      setState(() {
+        accountName = session?.fullName.isNotEmpty == true
+            ? session!.fullName
+            : 'Client';
+        accountPhone = session?.phone ?? '';
+        accountNumber = session?.accountNumber ?? '';
+      });
     } catch (_) {
-      // The service returns the last successful real snapshot when available.
+      // Authentication recovery is handled by the session-expiry flow.
     }
-
-    try {
-      final indices = await marketDataService.fetchIndexSnapshot();
-      for (final item in indices) {
-        final symbol = item['symbol']?.toString().trim().toUpperCase() ?? '';
-        final price = double.tryParse(item['price']?.toString() ?? '');
-        final change = double.tryParse(item['change']?.toString() ?? '') ?? 0;
-        if (symbol.isEmpty || price == null) continue;
-        indexQuotes[symbol] = (price, change);
-        if (symbol == 'NIFTY50') {
-          nifty50Price = price;
-          nifty50Change = change;
-        } else if (symbol == 'SENSEX') {
-          sensexPrice = price;
-          sensexChange = change;
-        } else if (symbol == 'BANKNIFTY') {
-          bankNiftyPrice = price;
-          bankNiftyChange = change;
+    if (!mounted) return;
+    await Future.wait<void>([
+      _refreshAccountSnapshot(),
+      _loadDashboardSection(() async {
+        if (accountPhone.isNotEmpty) {
+          kycStatus = await AuthService().fetchKycStatus();
         }
-      }
-    } catch (_) {
-      indexQuotes.clear();
-    }
-
-    try {
-      final sessionStatus = await marketDataService.fetchMarketSession();
-      if (sessionStatus != null) {
-        marketOpen = sessionStatus['isOpen'] == true;
-        final openTime = sessionStatus['openTime']?.toString();
-        final closeTime = sessionStatus['closeTime']?.toString();
-        if (openTime?.isNotEmpty == true && closeTime?.isNotEmpty == true) {
-          marketHours = '$openTime - $closeTime IST';
+      }),
+      _loadDashboardSection(() async {
+        final remote = await marketDataService.fetchSnapshot();
+        if (remote.isNotEmpty) {
+          stocks
+            ..clear()
+            ..addAll(remote);
         }
-      }
-    } catch (_) {}
-
-    try {
-      final snapshot = await tradingService.fetchAccountSnapshot();
-      if (snapshot != null) {
-        cashBalance = snapshot.cashBalance;
-        buyingPower = snapshot.buyingPower;
-        frozenBalance = snapshot.frozenBalance;
-        realizedProfitLoss = snapshot.realizedProfitLoss;
-        positions
+      }),
+      _loadDashboardSection(() async {
+        final indices = await marketDataService.fetchIndexSnapshot();
+        for (final item in indices) {
+          final symbol = item['symbol']?.toString().trim().toUpperCase() ?? '';
+          final price = double.tryParse(item['price']?.toString() ?? '');
+          final change = double.tryParse(item['change']?.toString() ?? '') ?? 0;
+          if (symbol.isEmpty || price == null) continue;
+          indexQuotes[symbol] = (price, change);
+          if (symbol == 'NIFTY50') {
+            nifty50Price = price;
+            nifty50Change = change;
+          } else if (symbol == 'SENSEX') {
+            sensexPrice = price;
+            sensexChange = change;
+          } else if (symbol == 'BANKNIFTY') {
+            bankNiftyPrice = price;
+            bankNiftyChange = change;
+          }
+        }
+      }),
+      _loadDashboardSection(_refreshMarketSession),
+      _loadDashboardSection(() async {
+        final remote = await tradingService.fetchOrders();
+        orders
           ..clear()
-          ..addEntries(
-            snapshot.positions.map(
-              (position) => MapEntry(
-                _positionKey(position.exchange, position.symbol),
-                position,
-              ),
-            ),
-          );
-      }
-    } catch (_) {}
-
-    try {
-      final remoteOrders = await tradingService.fetchOrders();
-      orders
-        ..clear()
-        ..addAll(remoteOrders);
-    } catch (_) {
-      orders.clear();
-    }
-
-    try {
-      final remoteInstitutional = await marketDataService
-          .fetchInstitutionalOffers();
-      institutionalStocks
-        ..clear()
-        ..addAll(remoteInstitutional);
-    } catch (_) {
-      institutionalStocks.clear();
-    }
-
-    try {
-      final remoteWithdrawals = await AuthService().fetchWithdrawals();
-      withdrawalRequests
-        ..clear()
-        ..addAll(remoteWithdrawals);
-    } catch (_) {
-      withdrawalRequests.clear();
-    }
-
-    try {
-      final remoteIpos = await ipoService.fetchOpenIpos();
-      final remoteApplications = await ipoService.fetchMyApplications();
-      if (remoteIpos.isNotEmpty) {
+          ..addAll(remote);
+      }),
+      _loadDashboardSection(() async {
+        final remote = await marketDataService.fetchInstitutionalOffers();
+        institutionalStocks
+          ..clear()
+          ..addAll(remote);
+      }),
+      _loadDashboardSection(() async {
+        final remote = await AuthService().fetchWithdrawals();
+        withdrawalRequests
+          ..clear()
+          ..addAll(remote);
+      }),
+      _loadDashboardSection(() async {
+        final remote = await ipoService.fetchOpenIpos();
         ipos
           ..clear()
-          ..addAll(remoteIpos);
-      }
-      ipoApplications
-        ..clear()
-        ..addAll(remoteApplications);
-    } catch (_) {
-      ipoApplications.clear();
-    }
-
-    try {
-      _profileData = await ClientAccountService().profile();
-      final avatar = _profileData['avatarData'];
-      profileAvatarBytes = avatar is String && avatar.isNotEmpty
-          ? base64Decode(avatar)
-          : null;
-      final settings = await ClientAccountService().preferences();
-      await AppLanguage.instance.select(
-        settings['language']?.toString() ?? 'en',
-      );
-      await _loadAppContent(force: true);
-      await AppearanceSettings.instance.select(
-        settings['theme']?.toString() ?? 'light',
-      );
-      accountName = _profileData['fullName']?.toString() ?? accountName;
-      accountPhone = _profileData['phone']?.toString() ?? accountPhone;
-      accountNumber =
-          _profileData['account']?['accountNumber']?.toString() ??
-          accountNumber;
-    } catch (_) {}
-
-    try {
-      final notifications = await ClientAccountService().notifications();
-      unreadNotificationCount = notifications
-          .where((item) => item['readAt'] == null)
-          .length;
-    } catch (_) {
-      unreadNotificationCount = 0;
-    }
-
-    try {
-      final latestNews = await marketDataService.fetchMarketNews();
-      if (latestNews.isNotEmpty) {
-        marketNews
+          ..addAll(remote);
+      }),
+      _loadDashboardSection(() async {
+        final remote = await ipoService.fetchMyApplications();
+        ipoApplications
           ..clear()
-          ..addAll(latestNews);
-      }
-    } catch (_) {}
-
-    if (mounted) {
-      setState(() {
-        isLoading = false;
-      });
-      unawaited(_loadFeaturedStockHistory());
-      unawaited(_loadPortfolioHistory(_portfolioPeriod));
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted || selectedIndex != 0) {
-          return;
+          ..addAll(remote);
+      }),
+      _loadDashboardSection(() async {
+        final profile = await ClientAccountService().profile();
+        _profileData = profile;
+        final avatar = profile['avatarData'];
+        profileAvatarBytes = avatar is String && avatar.isNotEmpty
+            ? base64Decode(avatar)
+            : null;
+        accountName = profile['fullName']?.toString() ?? accountName;
+        accountPhone = profile['phone']?.toString() ?? accountPhone;
+        accountNumber =
+            profile['account']?['accountNumber']?.toString() ?? accountNumber;
+      }),
+      _loadDashboardSection(() async {
+        final settings = await ClientAccountService().preferences();
+        await AppLanguage.instance.select(
+          settings['language']?.toString() ?? 'en',
+        );
+        await _loadAppContent(force: true);
+        await AppearanceSettings.instance.select(
+          settings['theme']?.toString() ?? 'light',
+        );
+      }),
+      _loadDashboardSection(_refreshUnreadNotificationCount),
+      _loadDashboardSection(() async {
+        final remote = await marketDataService.fetchMarketNews();
+        if (remote.isNotEmpty) {
+          marketNews
+            ..clear()
+            ..addAll(remote);
         }
-
-        _showPendingIpoAllocationIfNeeded();
-      });
-    }
+      }),
+    ]);
+    if (!mounted) return;
+    setState(() => isLoading = false);
+    unawaited(_loadFeaturedStockHistory());
+    unawaited(_loadPortfolioHistory(_portfolioPeriod));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && selectedIndex == 0) _showPendingIpoAllocationIfNeeded();
+    });
   }
 
   Future<void> _loadFeaturedStockHistory() async {
@@ -940,35 +918,33 @@ class _MarketHomePageState extends State<MarketHomePage>
     Localizations.localeOf(context);
     return Scaffold(
       backgroundColor: AppConfig.backgroundColor,
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : Stack(
-              children: [
-                SafeArea(
-                  bottom: false,
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 1040),
-                      child: _selectedBody(),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  right: 0,
-                  bottom: SupportUiMetrics.of(context).fabBottom,
-                  child: SafeArea(
-                    child: FloatingSupportButton(
-                      label: _appContent.text(
-                        'support',
-                        'fab_label',
-                        fallback: 'Customer Service',
-                      ),
-                      onTap: () => unawaited(showSupportChatPanel(context)),
-                    ),
-                  ),
-                ),
-              ],
+      body: Stack(
+        children: [
+          SafeArea(
+            bottom: false,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1040),
+                child: _selectedBody(),
+              ),
             ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: SupportUiMetrics.of(context).fabBottom,
+            child: SafeArea(
+              child: FloatingSupportButton(
+                label: _appContent.text(
+                  'support',
+                  'fab_label',
+                  fallback: 'Customer Service',
+                ),
+                onTap: () => unawaited(showSupportChatPanel(context)),
+              ),
+            ),
+          ),
+        ],
+      ),
       bottomNavigationBar: SafeArea(
         top: false,
         child: Container(
@@ -1150,6 +1126,9 @@ class _MarketHomePageState extends State<MarketHomePage>
           onNotifications: _openNotifications,
           onStockTap: _openStock,
           onRefresh: _refreshMarketData,
+          marketOpen: marketOpen,
+          marketHours: marketHours,
+          quotesConnected: marketConnected,
         );
 
       case 2:
@@ -1235,7 +1214,9 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ),
                   ),
                   IconButton(
-                    tooltip: _amountsHidden ? 'Show balances' : 'Hide balances',
+                    tooltip: tr(
+                      _amountsHidden ? 'Show balances' : 'Hide balances',
+                    ),
                     onPressed: () =>
                         setState(() => _amountsHidden = !_amountsHidden),
                     icon: Icon(
@@ -1278,42 +1259,49 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: AppText(
-                      _amountsHidden
-                          ? '******'
-                          : formatPrice(totalPortfolioValue),
-                      style: AppTypography.numericInverse.copyWith(
-                        fontSize: 26,
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final value = AppText(
+                    _balanceText(totalPortfolioValue),
+                    style: AppTypography.numericInverse.copyWith(fontSize: 28),
+                  );
+                  if (_amountsHidden || _portfolioSeries.length < 2) {
+                    return value;
+                  }
+                  final compact =
+                      constraints.maxWidth < 420 ||
+                      MediaQuery.textScalerOf(context).scale(14) > 18;
+                  final chart = ExcludeSemantics(
+                    child: SizedBox(
+                      width: compact ? double.infinity : 116,
+                      height: 40,
+                      child: CustomPaint(
+                        painter: MiniLineChartPainter(
+                          color: (_periodProfit ?? 0) < 0
+                              ? const Color(0xFFFCA5A5)
+                              : AppColors.chartGain,
+                          values: _portfolioSeries,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  SizedBox(
-                    width: MediaQuery.sizeOf(context).width < 360 ? 90 : 116,
-                    height: 38,
-                    child: !_amountsHidden && _portfolioSeries.length >= 2
-                        ? CustomPaint(
-                            painter: MiniLineChartPainter(
-                              color: AppColors.chartGain,
-                              values: _portfolioSeries,
-                            ),
-                          )
-                        : Center(
-                            child: AppText(
-                              '--',
-                              style: AppTypography.labelMedium.copyWith(
-                                color: AppColors.textInverse.withValues(
-                                  alpha: 0.7,
-                                ),
-                              ),
-                            ),
-                          ),
-                  ),
-                ],
+                  );
+                  return compact
+                      ? Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            value,
+                            const SizedBox(height: AppSpacing.md),
+                            chart,
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            Expanded(child: value),
+                            const SizedBox(width: AppSpacing.md),
+                            chart,
+                          ],
+                        );
+                },
               ),
               const SizedBox(height: AppSpacing.sm),
               AppText(
@@ -1325,7 +1313,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                     ? 'Insufficient history'
                     : '${formatPrice(_periodProfit!)} · $_portfolioPeriod',
                 style: AppTypography.labelLarge.copyWith(
-                  color: (_periodProfit ?? 0) == 0
+                  color: _amountsHidden || (_periodProfit ?? 0) == 0
                       ? AppColors.textInverse.withValues(alpha: 0.7)
                       : (_periodProfit ?? 0) > 0
                       ? AppColors.chartGain
@@ -1365,35 +1353,20 @@ class _MarketHomePageState extends State<MarketHomePage>
         const SizedBox(height: AppSpacing.sm),
         _homeQuickActions(),
         const SizedBox(height: AppSpacing.sm),
+        _accountDataStatus(),
         AppCard(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.md + 2,
-            horizontal: AppSpacing.xs,
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: _homeBalanceValue(
-                  'Available Funds',
-                  availableBalance,
-                  AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 58, child: VerticalDivider(width: 1)),
-              Expanded(
-                child: _homeBalanceValue(
-                  'Used Margin',
-                  frozenBalance,
-                  AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 58, child: VerticalDivider(width: 1)),
-              Expanded(
-                child: _homeBalanceValue(
-                  'Unrealized P&L',
-                  todayPnl,
-                  pnlPositive ? AppColors.gain : AppColors.loss,
-                ),
+          child: AccountMetrics(
+            items: [
+              AccountMetric('Available Funds', _balanceText(availableBalance)),
+              AccountMetric('Used Margin', _balanceText(frozenBalance)),
+              AccountMetric(
+                'Unrealized P&L',
+                _balanceText(todayPnl, signed: true),
+                color: _amountsHidden || !_accountSnapshotLoaded
+                    ? AppColors.textPrimary
+                    : pnlPositive
+                    ? AppColors.gain
+                    : AppColors.loss,
               ),
             ],
           ),
@@ -1402,42 +1375,18 @@ class _MarketHomePageState extends State<MarketHomePage>
     );
   }
 
-  Widget _homeBalanceValue(String label, double value, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppText(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textTertiary,
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: AppText(
-              _amountsHidden
-                  ? '******'
-                  : label.contains('P&L')
-                  ? formatSignedPrice(value)
-                  : formatPrice(value),
-              style: AppTypography.numericSmall.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
+  String _balanceText(double value, {bool signed = false}) {
+    if (_amountsHidden) return '******';
+    if (!_accountSnapshotLoaded) return '--';
+    return signed ? formatSignedPrice(value) : formatPrice(value);
   }
+
+  Widget _accountDataStatus() => AccountDataStatus(
+    hasData: _accountSnapshotLoaded,
+    refreshing: _accountSnapshotRefreshing,
+    failed: _accountSnapshotFailed,
+    onRetry: () => unawaited(_refreshAccountSnapshot()),
+  );
 
   Widget _companyShowcaseCard(CompanyShowcase company) {
     return Container(
@@ -1591,62 +1540,77 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _homeQuickActions() {
-    return Row(
-      children: [
-        Expanded(
-          child: HomeActionButton(
-            label: _appContent.text(
-              'home',
-              'funds.cta_label',
-              fallback: 'Add Funds',
-            ),
-            subtitle: _appContent.text(
-              'home',
-              'funds.cta_subtitle',
-              fallback: 'Contact support to fund',
-            ),
-            icon: Icons.account_balance_wallet_outlined,
-            color: AppColors.brandPrimary,
-            onTap: _openDepositSupport,
-          ),
+    final actions = <Widget>[
+      HomeActionButton(
+        label: _appContent.text(
+          'home',
+          'funds.cta_label',
+          fallback: 'Add Funds',
         ),
-        const SizedBox(width: AppSpacing.sm + 2),
-        Expanded(
-          child: HomeActionButton(
-            label: _appContent.text(
-              'home',
-              'funds.withdraw_cta_label',
-              fallback: 'Withdraw',
-            ),
-            subtitle: _appContent.text(
-              'home',
-              'funds.withdraw_cta_subtitle',
-              fallback: 'Transfer to Bank',
-            ),
-            icon: Icons.call_made_rounded,
-            color: AppColors.gain,
-            onTap: _openWithdrawalRequest,
-          ),
+        subtitle: _appContent.text(
+          'home',
+          'funds.cta_subtitle',
+          fallback: 'Contact support to fund',
         ),
-        const SizedBox(width: AppSpacing.sm + 2),
-        Expanded(
-          child: HomeActionButton(
-            label: _appContent.text(
-              'home',
-              'funds.trade_cta_label',
-              fallback: 'Trade',
-            ),
-            subtitle: _appContent.text(
-              'home',
-              'funds.trade_cta_subtitle',
-              fallback: 'Place orders',
-            ),
-            icon: Icons.swap_horiz_rounded,
-            color: AppColors.brandDark,
-            onTap: () => setState(() => selectedIndex = 2),
-          ),
+        icon: Icons.account_balance_wallet_outlined,
+        color: AppColors.brandPrimary,
+        onTap: _openDepositSupport,
+      ),
+      HomeActionButton(
+        label: _appContent.text(
+          'home',
+          'funds.withdraw_cta_label',
+          fallback: 'Withdraw',
         ),
-      ],
+        subtitle: _appContent.text(
+          'home',
+          'funds.withdraw_cta_subtitle',
+          fallback: 'Transfer to Bank',
+        ),
+        icon: Icons.call_made_rounded,
+        color: AppColors.gain,
+        onTap: _openWithdrawalRequest,
+      ),
+      HomeActionButton(
+        label: _appContent.text(
+          'home',
+          'funds.trade_cta_label',
+          fallback: 'Trade',
+        ),
+        subtitle: _appContent.text(
+          'home',
+          'funds.trade_cta_subtitle',
+          fallback: 'Place orders',
+        ),
+        icon: Icons.swap_horiz_rounded,
+        color: AppColors.brandDark,
+        onTap: () => _onDestinationSelected(2),
+      ),
+    ];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        final columns = constraints.maxWidth >= 600 * scale
+            ? 3
+            : constraints.maxWidth >= 320 * scale
+            ? 2
+            : 1;
+        final width =
+            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
+        return Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (var index = 0; index < actions.length; index++)
+              SizedBox(
+                width: columns == 2 && index == 2
+                    ? constraints.maxWidth
+                    : width,
+                child: actions[index],
+              ),
+          ],
+        );
+      },
     );
   }
 
@@ -2666,6 +2630,10 @@ class _MarketHomePageState extends State<MarketHomePage>
             AppSpacing.xxl,
           ),
           children: [
+            if (isLoading) ...[
+              const LinearProgressIndicator(minHeight: 2),
+              const SizedBox(height: AppSpacing.sm),
+            ],
             // PRIMARY
             MarketHeader(
               accountName: accountName,
@@ -2676,7 +2644,11 @@ class _MarketHomePageState extends State<MarketHomePage>
               notificationCount: unreadNotificationCount,
             ),
             const SizedBox(height: AppSpacing.sm + 2),
-            const MarketStatusCard(),
+            MarketStatusCard(
+              isOpen: marketOpen,
+              hours: marketHours,
+              quotesConnected: marketConnected,
+            ),
             if (_homeAnnouncement != null) ...[
               const SizedBox(height: AppSpacing.sm + 2),
               HomeAnnouncementBanner(item: _homeAnnouncement!),
@@ -3282,7 +3254,9 @@ class _MarketHomePageState extends State<MarketHomePage>
                           iconColor: kycStatus == 'APPROVED'
                               ? AppColors.gain
                               : mutedInverse,
-                          label: kycStatus == 'APPROVED'
+                          label: kycStatus == 'UNKNOWN'
+                              ? 'Verification status unavailable'
+                              : kycStatus == 'APPROVED'
                               ? 'KYC Verified'
                               : kycStatus == 'PENDING'
                               ? 'KYC Pending Review'
@@ -3433,52 +3407,40 @@ class _MarketHomePageState extends State<MarketHomePage>
           style: AppUi.sectionTitle,
         ),
         const SizedBox(height: AppSpacing.md),
-        Container(
-          padding: const EdgeInsets.symmetric(
-            vertical: AppSpacing.lg,
-            horizontal: AppSpacing.xs,
-          ),
-          decoration: AppUi.surface(radius: AppRadius.md),
-          child: IntrinsicHeight(
-            child: Row(
-              children: [
-                Expanded(
-                  child: _homeBalanceValue(
-                    _appContent.text(
-                      'home',
-                      'profile.metric.available',
-                      fallback: 'Available Balance',
-                    ),
-                    availableBalance,
-                    AppColors.textPrimary,
-                  ),
+        _accountDataStatus(),
+        AppCard(
+          child: AccountMetrics(
+            items: [
+              AccountMetric(
+                _appContent.text(
+                  'home',
+                  'profile.metric.available',
+                  fallback: 'Available Balance',
                 ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: _homeBalanceValue(
-                    _appContent.text(
-                      'home',
-                      'profile.metric.portfolio',
-                      fallback: 'Product Holdings',
-                    ),
-                    productValue,
-                    AppColors.textPrimary,
-                  ),
+                _balanceText(availableBalance),
+              ),
+              AccountMetric(
+                _appContent.text(
+                  'home',
+                  'profile.metric.portfolio',
+                  fallback: 'Product Holdings',
                 ),
-                const VerticalDivider(width: 1),
-                Expanded(
-                  child: _homeBalanceValue(
-                    _appContent.text(
-                      'home',
-                      'profile.metric.returns',
-                      fallback: 'Total Returns',
-                    ),
-                    totalReturns,
-                    totalReturns >= 0 ? AppColors.gain : AppColors.loss,
-                  ),
+                _balanceText(productValue),
+              ),
+              AccountMetric(
+                _appContent.text(
+                  'home',
+                  'profile.metric.returns',
+                  fallback: 'Total Returns',
                 ),
-              ],
-            ),
+                _balanceText(totalReturns, signed: true),
+                color: _amountsHidden || !_accountSnapshotLoaded
+                    ? AppColors.textPrimary
+                    : totalReturns >= 0
+                    ? AppColors.gain
+                    : AppColors.loss,
+              ),
+            ],
           ),
         ),
         const SizedBox(height: AppSpacing.xl - 2),
@@ -3500,7 +3462,9 @@ class _MarketHomePageState extends State<MarketHomePage>
               icon: Icons.verified_user_outlined,
               title: 'KYC Verification',
               subtitle: 'Identity documents and verification status',
-              status: kycStatus == 'APPROVED'
+              status: kycStatus == 'UNKNOWN'
+                  ? 'Verification status unavailable'
+                  : kycStatus == 'APPROVED'
                   ? 'Verified'
                   : kycStatus == 'PENDING'
                   ? 'Pending'
@@ -3736,6 +3700,20 @@ class _MarketHomePageState extends State<MarketHomePage>
               ),
               color: AppColors.textSecondary,
             ),
+            ProfileMenuRow(
+              icon: Icons.warning_amber_rounded,
+              title: _appContent.text(
+                'home',
+                'profile.tile.risk.title',
+                fallback: 'Risk Disclosure',
+              ),
+              onTap: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => const LegalPage(title: 'Risk Disclosure'),
+                ),
+              ),
+              color: AppColors.warning,
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.md + 2),
@@ -3925,6 +3903,21 @@ class _MarketHomePageState extends State<MarketHomePage>
                     Navigator.of(context).push(
                       MaterialPageRoute<void>(
                         builder: (_) => const LegalPage(title: 'Privacy'),
+                      ),
+                    );
+                  },
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: const Icon(Icons.warning_amber_rounded),
+                  title: const AppText('Risk Disclosure'),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) =>
+                            const LegalPage(title: 'Risk Disclosure'),
                       ),
                     );
                   },

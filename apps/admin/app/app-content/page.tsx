@@ -130,6 +130,50 @@ type ContentEntry = {
   updatedAt?: string;
 };
 
+function parseLegalDocument(body: string) {
+  let document: unknown;
+  try {
+    document = JSON.parse(body);
+  } catch {
+    throw new Error("请输入有效的 JSON，检查引号、逗号和括号");
+  }
+  if (typeof document !== "object" || document === null) {
+    throw new Error("法律文档必须是包含 effective 和 sections 的 JSON 对象");
+  }
+  const value = document as {
+    effective?: unknown;
+    sections?: unknown;
+  };
+  if (typeof value.effective !== "string" || !value.effective.trim()) {
+    throw new Error("请填写 effective 生效日期及版本");
+  }
+  if (
+    !Array.isArray(value.sections) ||
+    !value.sections.length ||
+    value.sections.some(
+      (section: unknown) =>
+        typeof section !== "object" ||
+        section === null ||
+        typeof (section as Record<string, unknown>).heading !== "string" ||
+        !(section as { heading: string }).heading.trim() ||
+        typeof (section as Record<string, unknown>).body !== "string" ||
+        !(section as { body: string }).body.trim(),
+    )
+  ) {
+    throw new Error("sections 至少需要一个段落，每段都要填写 heading 和 body");
+  }
+  return {
+    effective: value.effective,
+    sections: value.sections as { heading: string; body: string }[],
+  };
+}
+
+const legalDocumentRule = {
+  validator: async (_: unknown, value: string) => {
+    parseLegalDocument(value || "");
+  },
+};
+
 
 function apiError(error: unknown, fallback: string) {
   const value = (error as { response?: { data?: { message?: unknown } } })
@@ -206,6 +250,7 @@ export default function AppOpsContentPage() {
       legalForm.setFieldsValue({
         "privacy.document": entryValue(nextEntries, "LEGAL", "privacy.document"),
         "terms.document": entryValue(nextEntries, "LEGAL", "terms.document"),
+        "risk.document": entryValue(nextEntries, "LEGAL", "risk.document"),
         "privacy.document__title": entryTitle(
           nextEntries,
           "LEGAL",
@@ -215,6 +260,11 @@ export default function AppOpsContentPage() {
           nextEntries,
           "LEGAL",
           "terms.document",
+        ),
+        "risk.document__title": entryTitle(
+          nextEntries,
+          "LEGAL",
+          "risk.document",
         ),
       });
       applyInsightsForm(nextEntries, insightsLocale);
@@ -728,7 +778,7 @@ export default function AppOpsContentPage() {
                       type="info"
                       showIcon
                       style={{ marginBottom: 16 }}
-                      title="Privacy Policy / Terms of Service"
+                      title="Privacy Policy / Terms of Service / Risk Disclosure"
                       description={
                         <>
                           English available
@@ -740,7 +790,7 @@ export default function AppOpsContentPage() {
                           )
                             ? " · Hindi configured"
                             : " · Hindi not configured"}
-                          。本 Phase 不创建 Risk Disclosure。
+                          。此处编辑 English 文档，保存前请由运营主体确认最终内容。
                           {" "}
                           Last updated：
                           {(() => {
@@ -765,7 +815,7 @@ export default function AppOpsContentPage() {
                     <Form.Item
                       name="privacy.document"
                       label="隐私政策 JSON"
-                      rules={[{ required: true, message: "请填写隐私政策" }]}
+                      rules={[{ required: true, message: "请填写隐私政策" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />
                     </Form.Item>
@@ -788,7 +838,7 @@ export default function AppOpsContentPage() {
                     <Form.Item
                       name="terms.document"
                       label="服务条款 JSON"
-                      rules={[{ required: true, message: "请填写服务条款" }]}
+                      rules={[{ required: true, message: "请填写服务条款" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />
                     </Form.Item>
@@ -805,18 +855,47 @@ export default function AppOpsContentPage() {
                     >
                       预览服务条款
                     </Button>
+                    <Form.Item name="risk.document__title" label="风险披露标题">
+                      <Input />
+                    </Form.Item>
+                    <Form.Item
+                      name="risk.document"
+                      label="风险披露 JSON"
+                      rules={[{ required: true, message: "请填写风险披露" }, legalDocumentRule]}
+                    >
+                      <TextArea rows={12} />
+                    </Form.Item>
+                    <Button
+                      style={{ marginBottom: 16, marginRight: 8 }}
+                      onClick={() =>
+                        setLegalPreview({
+                          title:
+                            legalForm.getFieldValue("risk.document__title") ||
+                            "Risk Disclosure",
+                          body: legalForm.getFieldValue("risk.document") || "",
+                        })
+                      }
+                    >
+                      预览风险披露
+                    </Button>
                     <Button
                       type="primary"
                       icon={<SaveOutlined />}
                       loading={saving}
-                      onClick={() =>
-                        legalForm.validateFields().then((values) =>
-                          saveModule("LEGAL", values, [
-                            { key: "privacy.document", title: true },
-                            { key: "terms.document", title: true },
-                          ]),
-                        )
-                      }
+                      onClick={async () => {
+                        let values: Record<string, string>;
+                        try {
+                          values = await legalForm.validateFields();
+                        } catch {
+                          // Ant Design retains the field validation messages.
+                          return;
+                        }
+                        await saveModule("LEGAL", values, [
+                          { key: "privacy.document", title: true },
+                          { key: "terms.document", title: true },
+                          { key: "risk.document", title: true },
+                        ]);
+                      }}
                     >
                       保存 Legal
                     </Button>
@@ -937,15 +1016,42 @@ export default function AppOpsContentPage() {
             right: 24,
             bottom: 24,
             width: 420,
+            maxWidth: "calc(100vw - 48px)",
             maxHeight: "70vh",
             overflow: "auto",
             zIndex: 1000,
             boxShadow: "0 8px 24px rgba(0,0,0,0.15)",
           }}
         >
-          <Paragraph style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>
-            {legalPreview.body}
-          </Paragraph>
+          {(() => {
+            try {
+              const document = parseLegalDocument(legalPreview.body);
+              return (
+                <>
+                  <Paragraph type="secondary">{document.effective}</Paragraph>
+                  {document.sections.map((section, index) => (
+                    <section key={index}>
+                      <Typography.Title level={5}>{section.heading}</Typography.Title>
+                      <Paragraph style={{ whiteSpace: "pre-wrap" }}>
+                        {section.body}
+                      </Paragraph>
+                    </section>
+                  ))}
+                </>
+              );
+            } catch (previewError) {
+              return (
+                <Alert
+                  type="error"
+                  showIcon
+                  title="暂时无法预览"
+                  description={
+                    previewError instanceof Error ? previewError.message : "请检查 JSON 格式"
+                  }
+                />
+              );
+            }
+          })()}
         </Card>
       ) : null}
     </AdminShell>

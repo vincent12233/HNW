@@ -23,7 +23,7 @@ $logPath = Join-Path $projectRoot 'docker-compose-startup.log'
 $previousPreference = $ErrorActionPreference
 $ErrorActionPreference = 'Continue'
 try {
-  & $dockerPath compose --progress plain -f $composeFile up -d --build 2>&1 |
+  & $dockerPath compose --progress plain -f $composeFile up -d --build --wait --wait-timeout 300 2>&1 |
     Tee-Object -FilePath $logPath
   $composeExitCode = $LASTEXITCODE
 } finally {
@@ -34,4 +34,7 @@ if ($composeExitCode -ne 0) {
 }
 
 & $dockerPath compose -f $composeFile ps
-Write-Host 'API http://localhost:3100 | Admin 3002 | Manager 3004 | Finance 3005 | Business 3006 | Support 3007'
+if ($LASTEXITCODE -ne 0) {
+  throw 'The stack started, but Docker could not read its status. Check Docker Desktop.'
+}
+Write-Host 'Local test services are healthy. API http://localhost:3100 | Admin 3002 | Manager 3004 | Finance 3005 | Business 3006 | Support 3007'

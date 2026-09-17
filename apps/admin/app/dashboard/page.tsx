@@ -4,6 +4,7 @@ import {
   BankOutlined,
   DollarOutlined,
   GiftOutlined,
+  ReloadOutlined,
   RightOutlined,
   SafetyCertificateOutlined,
   StockOutlined,
@@ -13,9 +14,9 @@ import {
   WalletOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { Alert, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
+import { Alert, Button, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
 import { isAxiosError } from "axios";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
@@ -118,104 +119,95 @@ function QuickAction({
   description,
   icon,
   tone,
-  onClick,
+  href,
 }: {
   title: string;
   description: string;
   icon: ReactNode;
   tone: string;
-  onClick: () => void;
+  href: string;
 }) {
   return (
-    <Card
-      hoverable
-      onClick={onClick}
-      className="ops-quick-card"
-      styles={{ body: { padding: 18 } }}
-    >
-      <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
-        <Space align="start">
-          <span
-            style={{
-              width: 38,
-              height: 38,
-              borderRadius: 8,
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              background: tone,
-              color: "#fff",
-              fontSize: 17,
-            }}
-          >
-            {icon}
-          </span>
-          <div>
-            <Text strong>{title}</Text>
-            <Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 3 }}>
-              {description}
-            </Paragraph>
-          </div>
+    <Link href={href} className="ops-quick-action">
+      <Card hoverable className="ops-quick-card" styles={{ body: { padding: 18 } }}>
+        <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
+          <Space align="start">
+            <span
+              style={{
+                width: 38,
+                height: 38,
+                borderRadius: 8,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: tone,
+                color: "#fff",
+                fontSize: 17,
+              }}
+            >
+              {icon}
+            </span>
+            <div>
+              <Text strong>{title}</Text>
+              <Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 3 }}>
+                {description}
+              </Paragraph>
+            </div>
+          </Space>
+          <RightOutlined style={{ color: "#94a3b8", marginTop: 10 }} />
         </Space>
-        <RightOutlined style={{ color: "#94a3b8", marginTop: 10 }} />
-      </Space>
-    </Card>
+      </Card>
+    </Link>
   );
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [businessData, setBusinessData] = useState<BusinessDashboard | null>(null);
   const [businessRisk, setBusinessRisk] = useState<BusinessRiskDashboard | null>(null);
   const [adminRisk, setAdminRisk] = useState<LoginRiskSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
   useEffect(() => {
-    async function loadStoredUser() {
-      const storedUser = localStorage.getItem("adminUser");
-      if (!storedUser) return;
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        setUser(null);
-      }
-    }
-    void loadStoredUser();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const currentUser = user;
+    let active = true;
 
     async function loadDashboard() {
       setLoading(true);
       setError("");
 
       try {
+        // Use the verified server identity; localStorage may be missing or stale.
+        const { data: currentUser } = await api.get<CurrentUser>("/auth/me", { timeout: 12000 });
+        if (!active) return;
+        setUser(currentUser);
         if (currentUser.role === "BUSINESS" || currentUser.role === "SUPPORT") {
           const [dashboardResponse, riskResponse] = await Promise.all([
-            api.get<BusinessDashboard>("/business/my-dashboard"),
-            api.get<BusinessRiskDashboard>("/business/my-risk-dashboard"),
+            api.get<BusinessDashboard>("/business/my-dashboard", { timeout: 15000 }),
+            api.get<BusinessRiskDashboard>("/business/my-risk-dashboard", { timeout: 15000 }),
           ]);
 
+          if (!active) return;
           setBusinessData(dashboardResponse.data);
           setBusinessRisk(riskResponse.data);
         } else {
-          const response = await api.get<LoginRiskSummary>("/admin/login-risk-summary");
+          const response = await api.get<LoginRiskSummary>("/admin/login-risk-summary", { timeout: 15000 });
+          if (!active) return;
           setAdminRisk(response.data);
         }
       } catch (err: unknown) {
+        if (!active) return;
         const message = isAxiosError(err) ? err.response?.data?.message : undefined;
         setError(Array.isArray(message) ? message.join("，") : typeof message === "string" ? message : "首页数据加载失败");
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
-    loadDashboard();
-  }, [user]);
+    void loadDashboard();
+    return () => { active = false; };
+  }, [refreshNonce]);
 
   const adminRiskPercent = useMemo(() => {
     const total = adminRisk?.totalCustomers ?? 0;
@@ -227,6 +219,24 @@ export default function DashboardPage() {
     return (
       <AdminShell>
         <Skeleton active />
+      </AdminShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AdminShell>
+        <Alert
+          type="error"
+          showIcon
+          title="工作台数据暂时不可用"
+          description={`${error}。请重试以获取完整数据。`}
+          action={
+            <Button icon={<ReloadOutlined />} onClick={() => setRefreshNonce((value) => value + 1)}>
+              重新加载
+            </Button>
+          }
+        />
       </AdminShell>
     );
   }
@@ -262,8 +272,6 @@ export default function DashboardPage() {
             <Paragraph>{heroDesc}</Paragraph>
           </Space>
         </div>
-
-        {error && <Alert type="error" showIcon title={error} />}
 
         {isBusiness ? (
           <>
@@ -324,7 +332,7 @@ export default function DashboardPage() {
                   description="处理自己客户提交的 Aadhaar / PAN 文件"
                   icon={<SafetyCertificateOutlined />}
                   tone="#1f8fff"
-                  onClick={() => router.push("/business-kyc")}
+                  href="/business-kyc"
                 />
               </Col>
               {!isSupport && <Col xs={24} md={8}>
@@ -336,7 +344,7 @@ export default function DashboardPage() {
                   description="查看自己客户提交的提现订单号和状态"
                   icon={<BankOutlined />}
                   tone="#dc2626"
-                  onClick={() => router.push("/business-withdrawals")}
+                  href="/business-withdrawals"
                 />
               </Col>
             </Row>
@@ -362,28 +370,28 @@ export default function DashboardPage() {
               <Card title="财务快捷入口" style={{ borderRadius: 8 }}>
                 <Row gutter={[12, 12]}>
                   <Col xs={24} md={8}>
-                    <QuickAction title="上下分" description="单人操作：按交易账号创建上分或下分" icon={<WalletOutlined />} tone="#0d9488" onClick={() => router.push("/finance-overview")} />
+                    <QuickAction title="上下分" description="单人操作：按交易账号创建上分或下分" icon={<WalletOutlined />} tone="#0d9488" href="/finance-overview" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="上分订单" description="客户存款完成后核对到账并完成上分" icon={<DollarOutlined />} tone="#c98200" onClick={() => router.push("/deposits")} />
+                    <QuickAction title="上分订单" description="客户存款完成后核对到账并完成上分" icon={<DollarOutlined />} tone="#c98200" href="/deposits" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="提现审核" description="客户 APP 发起后，核对收款信息并审核" icon={<BankOutlined />} tone="#dc2626" onClick={() => router.push("/withdrawals")} />
+                    <QuickAction title="提现审核" description="客户 APP 发起后，核对收款信息并审核" icon={<BankOutlined />} tone="#dc2626" href="/withdrawals" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="资金流水" description="查询账户资金变动记录" icon={<TransactionOutlined />} tone="#7c3aed" onClick={() => router.push("/transactions")} />
+                    <QuickAction title="资金流水" description="查询账户资金变动记录" icon={<TransactionOutlined />} tone="#7c3aed" href="/transactions" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="贷款处理" description="审核客户贷款申请" icon={<DollarOutlined />} tone="#ea580c" onClick={() => router.push("/loans")} />
+                    <QuickAction title="贷款处理" description="审核客户贷款申请" icon={<DollarOutlined />} tone="#ea580c" href="/loans" />
                   </Col>
                 </Row>
               </Card>
             ) : (
               <Card title="交易产品运营" style={{ borderRadius: 8 }}>
                 <Row gutter={[12, 12]}>
-                  <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理涨停股（机构股票）上架；成交按实时行情结算" icon={<StockOutlined />} tone="#2563eb" onClick={() => router.push("/watchlist")} /></Col>
-                  <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" onClick={() => router.push("/block-trades")} /></Col>
-                  <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" onClick={() => router.push("/ipo-management")} /></Col>
+                  <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理涨停股（机构股票）上架；成交按实时行情结算" icon={<StockOutlined />} tone="#2563eb" href="/watchlist" /></Col>
+                  <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" href="/block-trades" /></Col>
+                  <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" href="/ipo-management" /></Col>
                 </Row>
               </Card>
             )}
@@ -427,7 +435,7 @@ export default function DashboardPage() {
                     description="查看客户资料、KYC、账号和登录风险"
                     icon={<TeamOutlined />}
                     tone="#1f8fff"
-                    onClick={() => router.push("/customers")}
+                    href="/customers"
                   />
                 </Col>
                 <Col xs={24} md={6}>
@@ -436,7 +444,7 @@ export default function DashboardPage() {
                     description="管理业务员账号、客户归属和邀请码"
                     icon={<UserAddOutlined />}
                     tone="#16a34a"
-                    onClick={() => router.push("/business-users")}
+                    href="/business-users"
                   />
                 </Col>
                 <Col xs={24} md={6}>
@@ -445,7 +453,7 @@ export default function DashboardPage() {
                     description="查看账户、资金、IPO、贷款等关键操作"
                     icon={<SafetyCertificateOutlined />}
                     tone="#dc2626"
-                    onClick={() => router.push("/audit-logs")}
+                    href="/audit-logs"
                   />
                 </Col>
                 <Col xs={24} md={6}>
@@ -454,7 +462,7 @@ export default function DashboardPage() {
                     description="维护可交易股票、价格和启用状态"
                     icon={<StockOutlined />}
                     tone="#7c3aed"
-                    onClick={() => router.push("/market")}
+                    href="/market"
                   />
                 </Col>
               </Row>

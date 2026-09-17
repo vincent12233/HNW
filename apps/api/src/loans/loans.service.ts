@@ -368,22 +368,25 @@ export class LoansService {
           },
         });
 
-        return tx.loanApplication.findUniqueOrThrow({
+        const approvedLoan = await tx.loanApplication.findUniqueOrThrow({
           where: { id },
           include: this.includeCustomer(),
         });
+        await this.auditService.createLog(
+          {
+            actorId: operatorId,
+            action: 'LOAN_APPROVE_AUTO_CREDIT',
+            resource: 'loan',
+            resourceId: approvedLoan.id,
+            description: `贷款审核通过并自动到账 ${approvedLoan.orderNo}`,
+            metadata: { orderNo: approvedLoan.orderNo, approvedAmount },
+          },
+          tx,
+        );
+        return approvedLoan;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-
-    await this.auditService.createLog({
-      actorId: operatorId,
-      action: 'LOAN_APPROVE_AUTO_CREDIT',
-      resource: 'loan',
-      resourceId: result.id,
-      description: `贷款审核通过并自动到账 ${result.orderNo}`,
-      metadata: { orderNo: result.orderNo, approvedAmount },
-    });
 
     return result;
   }

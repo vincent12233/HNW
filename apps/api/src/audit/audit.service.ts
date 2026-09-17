@@ -17,8 +17,8 @@ interface CreateAuditLogInput {
 export class AuditService {
   constructor(private readonly prisma: PrismaService) {}
 
-  createLog(input: CreateAuditLogInput) {
-    return this.prisma.auditLog.create({
+  createLog(input: CreateAuditLogInput, tx?: Prisma.TransactionClient) {
+    return (tx ?? this.prisma).auditLog.create({
       data: {
         actorId: input.actorId,
         action: input.action,

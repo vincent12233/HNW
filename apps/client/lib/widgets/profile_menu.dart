@@ -68,8 +68,8 @@ class ProfileMenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = destructive ? AppColors.loss : color;
     return ListTile(
-      minTileHeight: 48,
-      visualDensity: VisualDensity.compact,
+      minTileHeight: 64,
+      visualDensity: VisualDensity.standard,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: AppSpacing.xxs,
@@ -90,40 +90,41 @@ class ProfileMenuRow extends StatelessWidget {
           color: destructive ? AppColors.loss : AppColors.textPrimary,
         ),
       ),
-      subtitle: subtitle.isEmpty
+      subtitle: subtitle.isEmpty && status == null
           ? null
-          : AppText(
-              subtitle,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textSecondary,
-              ),
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (subtitle.isNotEmpty)
+                  AppText(
+                    subtitle,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                if (status != null) ...[
+                  const SizedBox(height: AppSpacing.xs),
+                  AppText(
+                    status!,
+                    style: AppTypography.caption.copyWith(
+                      color: status == 'Verified'
+                          ? AppColors.gain
+                          : AppColors.textSecondary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ],
             ),
       trailing:
           trailing ??
-          (onTap == null
+          (onTap == null || destructive
               ? null
-              : Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    if (status != null) ...[
-                      AppText(
-                        status!,
-                        style: AppTypography.caption.copyWith(
-                          color: status == 'Verified'
-                              ? AppColors.gain
-                              : AppColors.textSecondary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(width: AppSpacing.xxs + 1),
-                    ],
-                    if (!destructive)
-                      Icon(
-                        Icons.chevron_right,
-                        size: 20,
-                        color: AppColors.textTertiary,
-                      ),
-                  ],
+              : const Icon(
+                  Icons.chevron_right,
+                  size: 20,
+                  color: AppColors.textTertiary,
                 )),
       onTap: onTap,
     );

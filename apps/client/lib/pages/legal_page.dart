@@ -20,6 +20,7 @@ class _LegalPageState extends State<LegalPage> {
   bool get _isRisk => widget.title.toLowerCase().contains('risk');
   AppContentBundle _content = AppContentBundle.empty;
   bool _loading = true;
+  bool _couldNotRefresh = false;
 
   @override
   void initState() {
@@ -27,11 +28,13 @@ class _LegalPageState extends State<LegalPage> {
     _load();
   }
 
-  Future<void> _load() async {
-    final content = await AppContentService.instance.load();
+  Future<void> _load({bool force = false}) async {
+    if (force) setState(() => _loading = true);
+    final content = await AppContentService.instance.load(force: force);
     if (!mounted) return;
     setState(() {
       _content = content;
+      _couldNotRefresh = AppContentService.instance.lastFetchFailed;
       _loading = false;
     });
   }
@@ -48,9 +51,7 @@ class _LegalPageState extends State<LegalPage> {
         ? 'Risk Disclosure'
         : (_isPrivacy ? 'Privacy Policy' : 'Terms of Service');
     final heading = useRemote
-        ? (remote.title?.isNotEmpty == true
-              ? remote.title!
-              : fallbackHeading)
+        ? (remote.title?.isNotEmpty == true ? remote.title! : fallbackHeading)
         : fallbackHeading;
     final effective = useRemote && remote.effective.isNotEmpty
         ? remote.effective
@@ -66,7 +67,16 @@ class _LegalPageState extends State<LegalPage> {
               : (_isPrivacy ? _privacySections : _termsSections));
 
     return AppPageScaffold(
-      appBar: AppBar(title: AppText(heading)),
+      appBar: AppBar(
+        title: AppText(heading),
+        actions: [
+          IconButton(
+            tooltip: tr('Refresh'),
+            onPressed: _loading ? null : () => _load(force: true),
+            icon: const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Align(
@@ -94,6 +104,24 @@ class _LegalPageState extends State<LegalPage> {
                         color: AppColors.textSecondary,
                       ),
                     ),
+                    if (!useRemote || _couldNotRefresh) ...[
+                      const SizedBox(height: AppSpacing.md),
+                      Container(
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.warning.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: AppText(
+                          useRemote
+                              ? 'Showing a previously loaded document. Updates could not be checked. Please try refreshing again.'
+                              : 'Showing the bundled document. Connect and refresh to check the latest published version.',
+                          style: AppTypography.bodySmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: AppSpacing.xl),
                     ...sections.map(
                       (section) => Padding(

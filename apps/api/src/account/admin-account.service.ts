@@ -198,6 +198,22 @@ export class AdminAccountService {
             referenceId,
           },
         });
+        await this.auditService.createLog(
+          {
+            actorId: operatorId,
+            action: `${role === 'FINANCE' ? 'FINANCE' : 'DEDICATED'}_${direction}`,
+            resource: 'ACCOUNT_BALANCE',
+            resourceId: normalizedAccountNumber,
+            description: `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} directly adjusted customer funds`,
+            metadata: {
+              referenceId,
+              amount: amount.toFixed(2),
+              ipoRepayment: ipoRepayment.toFixed(2),
+              creditedAmount: creditedAmount.toFixed(2),
+            },
+          },
+          tx,
+        );
         return {
           accountNumber: normalizedAccountNumber,
           direction,
@@ -209,19 +225,6 @@ export class AdminAccountService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
-    await this.auditService.createLog({
-      actorId: operatorId,
-      action: `${role === 'FINANCE' ? 'FINANCE' : 'DEDICATED'}_${direction}`,
-      resource: 'ACCOUNT_BALANCE',
-      resourceId: normalizedAccountNumber,
-      description: `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} directly adjusted customer funds`,
-      metadata: {
-        referenceId,
-        amount: amount.toFixed(2),
-        ipoRepayment: result.ipoRepayment,
-        creditedAmount: result.creditedAmount,
-      },
-    });
     return {
       message: direction === 'CREDIT' ? 'Funds credited' : 'Funds debited',
       ...result,

@@ -38,6 +38,9 @@ class MarketsPage extends StatefulWidget {
     required this.onNotifications,
     required this.onStockTap,
     required this.onRefresh,
+    this.marketOpen,
+    this.marketHours = '09:15 - 15:30 IST',
+    this.quotesConnected,
   });
 
   final List<StockQuote> stocks;
@@ -52,6 +55,9 @@ class MarketsPage extends StatefulWidget {
   final VoidCallback onNotifications;
   final ValueChanged<StockQuote> onStockTap;
   final Future<void> Function() onRefresh;
+  final bool? marketOpen;
+  final String marketHours;
+  final bool? quotesConnected;
 
   @override
   State<MarketsPage> createState() => _MarketsPageState();
@@ -536,7 +542,7 @@ class _MarketsPageState extends State<MarketsPage> {
               ),
             ),
             SizedBox(
-              height: 40,
+              height: 48,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 scrollDirection: Axis.horizontal,
@@ -548,36 +554,40 @@ class _MarketsPageState extends State<MarketsPage> {
                   final contentIndex = tab.$1;
                   final selected = effectiveTab == contentIndex;
 
-                  return InkWell(
-                    onTap: () {
-                      setState(() {
-                        selectedTab = contentIndex;
-                      });
-                    },
-                    child: Container(
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          bottom: BorderSide(
-                            color: selected
-                                ? AppColors.brandPrimary
-                                : Colors.transparent,
-                            width: 2,
+                  return Semantics(
+                    button: true,
+                    selected: selected,
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          selectedTab = contentIndex;
+                        });
+                      },
+                      child: Container(
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(
+                              color: selected
+                                  ? AppColors.brandPrimary
+                                  : Colors.transparent,
+                              width: 2,
+                            ),
                           ),
                         ),
-                      ),
-                      child: AppText(
-                        tab.$2,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: selected
-                              ? AppColors.brandPrimary
-                              : AppColors.textSecondary,
-                          fontWeight: selected
-                              ? FontWeight.w700
-                              : FontWeight.w500,
+                        child: AppText(
+                          tab.$2,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: selected
+                                ? AppColors.brandPrimary
+                                : AppColors.textSecondary,
+                            fontWeight: selected
+                                ? FontWeight.w700
+                                : FontWeight.w500,
+                          ),
                         ),
                       ),
                     ),
@@ -757,12 +767,45 @@ class _MarketsPageState extends State<MarketsPage> {
       );
     }
 
-    return _stockList(
+    final list = _stockList(
       _watchlistStocks,
       emptyTitle: 'Your watchlist is empty',
       emptySubtitle: 'Add stocks from search or detail pages.',
       allowPagination: false,
       requireLogo: false,
+    );
+    if (!_watchlistFailed) return list;
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.cloud_off_outlined,
+                size: 20,
+                color: AppColors.warning,
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AppText(
+                  'Watchlist could not be refreshed. Showing previously loaded stocks.',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.warning,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: _watchlistLoading
+                    ? null
+                    : () => unawaited(_loadWatchlist()),
+                child: const AppText('Retry'),
+              ),
+            ],
+          ),
+        ),
+        Expanded(child: list),
+      ],
     );
   }
 
@@ -829,7 +872,11 @@ class _MarketsPageState extends State<MarketsPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 24),
       children: [
-        const MarketStatusCard(),
+        MarketStatusCard(
+          isOpen: widget.marketOpen,
+          hours: widget.marketHours,
+          quotesConnected: widget.quotesConnected,
+        ),
         const SizedBox(height: 14),
         _marketSectionHeading(
           'Indian Indices',
@@ -1530,6 +1577,7 @@ class _MarketsPageState extends State<MarketsPage> {
 
     final showMore = allowPagination && (_searchHasMore || _searchFailed);
     return ListView.separated(
+      key: PageStorageKey('market-list-$selectedTab'),
       physics: const AlwaysScrollableScrollPhysics(),
       padding: AppSpacing.page,
       itemCount: stocks.length + (showMore ? 1 : 0),

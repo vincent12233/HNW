@@ -1,4 +1,4 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Controller('health')
@@ -21,7 +21,13 @@ export class HealthController {
 
   @Get('ready')
   async ready() {
-    await this.prisma.$queryRaw`SELECT 1`;
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+    } catch (error) {
+      throw new ServiceUnavailableException('Service is not ready', {
+        cause: error,
+      });
+    }
     return {
       status: 'ready',
       database: 'connected',

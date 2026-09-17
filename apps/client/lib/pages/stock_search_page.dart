@@ -20,11 +20,15 @@ class StockSearchPage extends StatefulWidget {
     required this.initialStocks,
     required this.onSelected,
     this.onWatchlistChanged,
+    this.marketDataService,
+    this.watchlistService,
   });
 
   final List<StockQuote> initialStocks;
   final ValueChanged<StockQuote> onSelected;
   final VoidCallback? onWatchlistChanged;
+  final MarketDataService? marketDataService;
+  final WatchlistService? watchlistService;
 
   @override
   State<StockSearchPage> createState() => _StockSearchPageState();
@@ -32,12 +36,14 @@ class StockSearchPage extends StatefulWidget {
 
 class _StockSearchPageState extends State<StockSearchPage> {
   final _controller = TextEditingController();
-  final _marketData = MarketDataService();
-  final _watchlistService = WatchlistService();
+  late final _marketData = widget.marketDataService ?? MarketDataService();
+  late final _watchlistService = widget.watchlistService ?? WatchlistService();
   Timer? _debounce;
   List<StockQuote> _results = const [];
   bool _loading = false;
   bool _failed = false;
+  bool _failedLoadMore = false;
+  String? _resultQuery;
   int _generation = 0;
   int _page = 0;
   bool _hasMore = false;
@@ -129,11 +135,19 @@ class _StockSearchPageState extends State<StockSearchPage> {
     // while the debounced request is in flight.
     setState(() {
       _failed = false;
+      _failedLoadMore = false;
       _results = const [];
+      _resultQuery = null;
       _hasMore = false;
       _loading = true;
     });
     _debounce = Timer(const Duration(milliseconds: 300), () => _search(query));
+  }
+
+  void _submitSearch(String value) {
+    _debounce?.cancel();
+    FocusScope.of(context).unfocus();
+    unawaited(_search(value.trim()));
   }
 
   Future<void> _search(String query, {bool loadMore = false}) async {
@@ -161,6 +175,8 @@ class _StockSearchPageState extends State<StockSearchPage> {
             WatchlistService.key(stock.exchange, stock.symbol): stock,
         };
         _results = merged.values.toList();
+        _resultQuery = query;
+        _failedLoadMore = false;
         _page = response.page;
         _hasMore = response.hasMore;
       });
@@ -169,7 +185,8 @@ class _StockSearchPageState extends State<StockSearchPage> {
       final needle = query.toLowerCase();
       setState(() {
         _failed = true;
-        if (!loadMore) {
+        _failedLoadMore = loadMore;
+        if (!loadMore && _resultQuery != query) {
           _results = widget.initialStocks
               .where(
                 (stock) =>
@@ -195,8 +212,10 @@ class _StockSearchPageState extends State<StockSearchPage> {
     if (_loading) return;
     _debounce?.cancel();
     _failedLogos.clear();
-    _hasMore = false;
-    await _search(_controller.text.trim());
+    await _search(
+      _controller.text.trim(),
+      loadMore: _failed && _failedLoadMore,
+    );
   }
 
   @override
@@ -208,38 +227,49 @@ class _StockSearchPageState extends State<StockSearchPage> {
               !_failedLogos.contains(stock.logoUrl),
         )
         .toList();
-    return Scaffold(
+    return AppPageScaffold(
       appBar: AppBar(
-        titleSpacing: 0,
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          onChanged: _onChanged,
-          decoration: const InputDecoration(
-            hintText: 'Search symbol or company',
-            border: InputBorder.none,
-          ),
-        ),
+        title: const AppText('Search stocks'),
         actions: [
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: tr('Refresh'),
             onPressed: _loading ? null : _retrySearch,
             icon: const Icon(Icons.refresh),
           ),
-          if (_controller.text.isNotEmpty)
-            IconButton(
-              tooltip: 'Clear',
-              onPressed: () {
-                _controller.clear();
-                _onChanged('');
-              },
-              icon: const Icon(Icons.close),
-            ),
         ],
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.sm,
+              AppSpacing.lg,
+              AppSpacing.md,
+            ),
+            child: TextField(
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.search,
+              autocorrect: false,
+              onChanged: _onChanged,
+              onSubmitted: _submitSearch,
+              decoration: InputDecoration(
+                hintText: tr('Search symbol or company'),
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _controller.text.isEmpty
+                    ? null
+                    : IconButton(
+                        tooltip: tr('Clear'),
+                        onPressed: () {
+                          _controller.clear();
+                          _onChanged('');
+                        },
+                        icon: const Icon(Icons.close),
+                      ),
+              ),
+            ),
+          ),
           if (_loading) const LinearProgressIndicator(minHeight: 2),
           if (_watchlistFailed)
             Padding(
@@ -254,7 +284,7 @@ class _StockSearchPageState extends State<StockSearchPage> {
                 ],
               ),
             ),
-          if (_failed)
+          if (_failed && visible.isNotEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(
                 AppSpacing.lg,
@@ -262,15 +292,35 @@ class _StockSearchPageState extends State<StockSearchPage> {
                 AppSpacing.lg,
                 AppSpacing.xs,
               ),
-              child: AppText(
-                'Live search is unavailable. Showing loaded instruments.',
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.warning,
-                ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.cloud_off_outlined,
+                    color: AppColors.warning,
+                    size: 20,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: AppText(
+                      _failedLoadMore
+                          ? 'More results could not be loaded. Your current results are still available.'
+                          : 'Live search is unavailable. Showing loaded instruments.',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.warning,
+                      ),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: _loading ? null : _retrySearch,
+                    child: const AppText('Retry'),
+                  ),
+                ],
               ),
             ),
           Expanded(
-            child: visible.isEmpty && !_loading && !_hasMore
+            child: visible.isEmpty && _loading
+                ? const AppLoadingView(message: 'Searching stocks…')
+                : visible.isEmpty && !_hasMore
                 ? (_failed
                       ? AppErrorView(
                           title: 'Unable to load stocks',
@@ -289,8 +339,10 @@ class _StockSearchPageState extends State<StockSearchPage> {
                           onRetry: _retrySearch,
                         ))
                 : ListView.builder(
+                    key: ValueKey(_controller.text.trim()),
                     keyboardDismissBehavior:
                         ScrollViewKeyboardDismissBehavior.onDrag,
+                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
                     itemCount: visible.length + (_hasMore ? 1 : 0),
                     itemBuilder: (context, index) {
                       if (index == visible.length) {
@@ -302,7 +354,13 @@ class _StockSearchPageState extends State<StockSearchPage> {
                                     _controller.text.trim(),
                                     loadMore: true,
                                   ),
-                            child: const AppText('Load more'),
+                            child: AppText(
+                              _loading
+                                  ? 'Loading…'
+                                  : _failedLoadMore
+                                  ? 'Retry'
+                                  : 'Load more',
+                            ),
                           ),
                         );
                       }

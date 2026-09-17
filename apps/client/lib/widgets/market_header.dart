@@ -40,26 +40,36 @@ class MarketHeader extends StatelessWidget {
       children: [
         Row(
           children: [
-            InkWell(
-              onTap: onAvatarTap,
-              customBorder: const CircleBorder(),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: AppColors.brandPrimarySoft,
-                backgroundImage: avatarBytes == null
-                    ? null
-                    : MemoryImage(avatarBytes!),
-                child: avatarBytes != null
-                    ? null
-                    : AppText(
-                        accountName.trim().isEmpty
-                            ? 'C'
-                            : accountName.trim()[0].toUpperCase(),
-                        style: AppTypography.titleMedium.copyWith(
-                          color: AppColors.brandPrimary,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+            Semantics(
+              label: tr('Profile'),
+              button: onAvatarTap != null,
+              child: InkWell(
+                onTap: onAvatarTap,
+                customBorder: const CircleBorder(),
+                child: Padding(
+                  padding: const EdgeInsets.all(4),
+                  child: ExcludeSemantics(
+                    child: CircleAvatar(
+                      radius: 20,
+                      backgroundColor: AppColors.brandPrimarySoft,
+                      backgroundImage: avatarBytes == null
+                          ? null
+                          : MemoryImage(avatarBytes!),
+                      child: avatarBytes != null
+                          ? null
+                          : AppText(
+                              accountName.trim().isEmpty
+                                  ? 'C'
+                                  : accountName.trim().characters.first
+                                      .toUpperCase(),
+                              style: AppTypography.titleMedium.copyWith(
+                                color: AppColors.brandPrimary,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.sm + 2),
@@ -89,7 +99,9 @@ class MarketHeader extends StatelessWidget {
               clipBehavior: Clip.none,
               children: [
                 IconButton(
-                  tooltip: 'Notifications',
+                  tooltip: notificationCount > 0
+                      ? '${tr('Notifications')} ($notificationCount)'
+                      : tr('Notifications'),
                   onPressed: onNotificationTap,
                   icon: const Icon(
                     Icons.notifications_none_rounded,
@@ -101,22 +113,27 @@ class MarketHeader extends StatelessWidget {
                   Positioned(
                     right: 8,
                     top: 7,
-                    child: Container(
-                      width: 17,
-                      height: 17,
-                      alignment: Alignment.center,
-                      decoration: const BoxDecoration(
-                        color: AppColors.loss,
-                        shape: BoxShape.circle,
-                      ),
-                      child: AppText(
-                        notificationCount > 9
-                            ? '9+'
-                            : notificationCount.toString(),
-                        style: AppTypography.caption.copyWith(
-                          color: AppColors.textInverse,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
+                    child: IgnorePointer(
+                      child: ExcludeSemantics(
+                        child: Container(
+                          width: 17,
+                          height: 17,
+                          alignment: Alignment.center,
+                          decoration: const BoxDecoration(
+                            color: AppColors.loss,
+                            shape: BoxShape.circle,
+                          ),
+                          child: AppText(
+                            notificationCount > 9
+                                ? '9+'
+                                : notificationCount.toString(),
+                            textScaler: TextScaler.noScaling,
+                            style: AppTypography.caption.copyWith(
+                              color: AppColors.textInverse,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -126,39 +143,45 @@ class MarketHeader extends StatelessWidget {
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        Material(
-          color: Colors.transparent,
-          child: InkWell(
-            onTap: onSearchTap,
-            borderRadius: AppRadius.borderSm,
-            child: Ink(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.md,
-                vertical: AppSpacing.sm + 3,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.surface,
-                borderRadius: AppRadius.borderSm,
-                border: Border.all(color: AppColors.border),
-              ),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.search_rounded,
-                    size: 20,
-                    color: AppColors.textTertiary,
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: AppText(
-                      'Search stocks, indices…',
-                      style: AppTypography.labelLarge.copyWith(
+        Semantics(
+          button: true,
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onSearchTap,
+              borderRadius: AppRadius.borderSm,
+              child: Ink(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm + 3,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: AppRadius.borderSm,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(minHeight: 26),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.search_rounded,
+                        size: 20,
                         color: AppColors.textTertiary,
-                        fontWeight: FontWeight.w500,
                       ),
-                    ),
+                      const SizedBox(width: AppSpacing.sm),
+                      Expanded(
+                        child: AppText(
+                          'Search stocks, indices…',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.textTertiary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
           ),

@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { PrismaService } from '../prisma/prisma.service';
+import { loadStandardQuoteEvidence } from '../health/standard-quote-evidence';
 
 @Injectable()
 export class MarketDataHealthService {
@@ -12,7 +14,10 @@ export class MarketDataHealthService {
   private providerSymbolCount = 0;
   private lastConnectionError: string | null = null;
 
-  constructor(private readonly config: ConfigService) {}
+  constructor(
+    private readonly config: ConfigService,
+    private readonly prisma: PrismaService,
+  ) {}
 
   recordQuote(source: string, at: Date) {
     if (!this.lastQuoteAt || at > this.lastQuoteAt) {
@@ -91,6 +96,34 @@ export class MarketDataHealthService {
         lastConnectionError: this.lastConnectionError,
       },
     };
+  }
+
+  async getPersistedDiagnostics(now = new Date()) {
+    const staleAfterMs = this.positiveInteger(
+      this.config.get<string>('MARKET_DATA_STALE_AFTER_MS'),
+      60000,
+    );
+    try {
+      const evidence = await loadStandardQuoteEvidence(this.prisma);
+      const persistedQuoteAgeMs = evidence.latestAsOf
+        ? now.getTime() - evidence.latestAsOf.getTime()
+        : null;
+      return {
+        persistedLatestQuoteAt: evidence.latestAsOf,
+        persistedQuoteAgeMs,
+        persistedStaleAfterMs: staleAfterMs,
+        activeStandardInstrumentCount: evidence.activeCount,
+        quotedStandardInstrumentCount: evidence.quotedCount,
+      };
+    } catch {
+      return {
+        persistedLatestQuoteAt: null,
+        persistedQuoteAgeMs: null,
+        persistedStaleAfterMs: staleAfterMs,
+        activeStandardInstrumentCount: null,
+        quotedStandardInstrumentCount: null,
+      };
+    }
   }
 
   private hasConfiguredSecret(value: string | undefined) {

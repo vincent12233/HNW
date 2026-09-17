@@ -7,7 +7,7 @@ import { join } from 'path';
 import { AccountModule } from './account/account.module';
 import { ApprovalModule } from './approval/approval.module';
 import { AuthModule } from './auth/auth.module';
-import { HealthController } from './health/health.controller';
+import { HealthModule } from './health/health.module';
 import { MarketModule } from './market/market.module';
 import { MatchingModule } from './matching/matching.module';
 import { OrdersModule } from './orders/orders.module';
@@ -44,6 +44,7 @@ import { OpsContentModule } from './ops-content/ops-content.module';
     ScheduleModule.forRoot(),
 
     PrismaModule,
+    HealthModule,
     AuthModule,
     UsersModule,
     AccountModule,
@@ -72,6 +73,5 @@ import { OpsContentModule } from './ops-content/ops-content.module';
     CompanyShowcaseModule,
     OpsContentModule,
   ],
-  controllers: [HealthController],
 })
 export class AppModule {}

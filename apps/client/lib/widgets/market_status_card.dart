@@ -7,33 +7,35 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
-/// Compact NSE session strip — mirrors Groww / Kite market-hours chrome.
+/// Server-confirmed session state. Local clock time cannot identify holidays
+/// or an unavailable market-data service.
 class MarketStatusCard extends StatelessWidget {
-  const MarketStatusCard({super.key, this.compact = true});
+  const MarketStatusCard({
+    super.key,
+    this.compact = true,
+    this.isOpen,
+    this.hours = '09:15 - 15:30 IST',
+    this.quotesConnected,
+  });
 
   final bool compact;
-
-  bool _isMarketOpen() {
-    final nowUtc = DateTime.now().toUtc();
-    final indiaTime = nowUtc.add(const Duration(hours: 5, minutes: 30));
-    final weekday = indiaTime.weekday;
-    final isWeekday = weekday >= DateTime.monday && weekday <= DateTime.friday;
-    if (!isWeekday) return false;
-
-    final minutes = indiaTime.hour * 60 + indiaTime.minute;
-    const marketOpenMinutes = 9 * 60 + 15;
-    const marketCloseMinutes = 15 * 60 + 30;
-    return minutes >= marketOpenMinutes && minutes <= marketCloseMinutes;
-  }
+  final bool? isOpen;
+  final String hours;
+  final bool? quotesConnected;
 
   @override
   Widget build(BuildContext context) {
-    final isOpen = _isMarketOpen();
-    final statusColor = isOpen ? AppConfig.gainColor : AppConfig.lossColor;
-    final statusText = isOpen ? 'NSE Open' : 'NSE Closed';
-    final tint = isOpen
-        ? AppConfig.gainColor.withValues(alpha: 0.08)
-        : AppConfig.lossColor.withValues(alpha: 0.08);
+    final statusColor = switch (isOpen) {
+      true => AppConfig.gainColor,
+      false => AppColors.textSecondary,
+      null => AppColors.warning,
+    };
+    final statusText = switch (isOpen) {
+      true => 'NSE Open',
+      false => 'NSE Closed',
+      null => 'Market status unavailable',
+    };
+    final tint = statusColor.withValues(alpha: 0.08);
 
     if (compact) {
       return Container(
@@ -47,32 +49,47 @@ class MarketStatusCard extends StatelessWidget {
           borderRadius: AppRadius.borderSm,
           border: Border.all(color: statusColor.withValues(alpha: 0.22)),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: statusColor,
-                shape: BoxShape.circle,
-              ),
+            Wrap(
+              spacing: AppSpacing.md,
+              runSpacing: AppSpacing.xs,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.circle, size: 8, color: statusColor),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: AppText(
+                        statusText,
+                        style: AppTypography.labelMedium.copyWith(
+                          color: statusColor,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                AppText(
+                  hours,
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: AppText(
-                statusText,
-                style: AppTypography.labelMedium.copyWith(
-                  color: statusColor,
-                  fontWeight: FontWeight.w800,
+            if (quotesConnected == false) ...[
+              const SizedBox(height: AppSpacing.xs),
+              AppText(
+                'Live quotes reconnecting. Prices may be delayed.',
+                style: AppTypography.labelSmall.copyWith(
+                  color: AppColors.textSecondary,
                 ),
               ),
-            ),
-            AppText(
-              '09:15 – 15:30 IST',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
+            ],
           ],
         ),
       );
@@ -93,7 +110,7 @@ class MarketStatusCard extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: AppText(
-              isOpen ? 'Market Open' : 'Market Closed',
+              statusText,
               style: const TextStyle(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,
@@ -101,9 +118,11 @@ class MarketStatusCard extends StatelessWidget {
               ),
             ),
           ),
-          const AppText(
-            '09:15 - 15:30 IST',
-            style: TextStyle(color: Colors.white70, fontSize: 12),
+          Flexible(
+            child: AppText(
+              hours,
+              style: const TextStyle(color: Colors.white70, fontSize: 12),
+            ),
           ),
         ],
       ),

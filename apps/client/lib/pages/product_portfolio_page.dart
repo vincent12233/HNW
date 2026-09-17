@@ -78,6 +78,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
 
   double _number(dynamic value) =>
       value is num ? value.toDouble() : double.tryParse('$value') ?? 0;
+  double? _availableNumber(dynamic value) {
+    final number = value is num ? value.toDouble() : double.tryParse('$value');
+    return number != null && number.isFinite ? number : null;
+  }
+
   List<Map<String, dynamic>> _rows(dynamic value) =>
       (value is List ? value : const [])
           .whereType<Map>()
@@ -85,15 +90,25 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           .toList();
   String _money(dynamic value) => _hidden
       ? '******'
-      : value == null
+      : _availableNumber(value) == null
       ? '--'
       : formatPrice(_number(value));
+  String _percent(dynamic value) => _hidden
+      ? '******'
+      : _availableNumber(value) == null
+      ? '--'
+      : '${_number(value).toStringAsFixed(1)}%';
+  String _quantity(dynamic value) => _hidden
+      ? '******'
+      : _availableNumber(value) == null
+      ? '--'
+      : '$value';
   String _date(dynamic value) {
     final date = DateTime.tryParse('$value')?.toLocal();
     return date == null ? '--' : date.toString().substring(0, 16);
   }
 
-  Color _pnlColor(dynamic value) => _number(value) == 0
+  Color _pnlColor(dynamic value) => _hidden || _number(value) == 0
       ? AppColors.textSecondary
       : _number(value) > 0
       ? AppColors.gain
@@ -146,24 +161,54 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               ),
             ],
           ),
-          if (_loading) const LinearProgressIndicator(minHeight: 2),
-          if (_error != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
+          if (_loading && data != null)
+            const LinearProgressIndicator(minHeight: 2),
+          if (_loading && data == null)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.sectionGap),
               child: Column(
                 children: [
-                  AppText(
-                    _error!,
-                    style: AppTypography.bodyMedium.copyWith(
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: _loading ? null : _load,
-                    icon: const Icon(Icons.refresh),
-                    label: const AppText('Retry'),
-                  ),
+                  CircularProgressIndicator(),
+                  SizedBox(height: AppSpacing.md),
+                  AppText('Loading portfolio'),
                 ],
+              ),
+            ),
+          if (_error != null && data == null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+              child: AppEmptyState(
+                title: 'Unable to load portfolio',
+                message: _error,
+                icon: Icons.wifi_off_outlined,
+                onRetry: _loading ? null : _load,
+              ),
+            ),
+          if (_error != null && data != null)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
+              child: Semantics(
+                liveRegion: true,
+                child: AppCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        'Showing previously loaded portfolio data.',
+                        style: AppTypography.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      AppText(_error!, style: AppTypography.bodySmall),
+                      TextButton.icon(
+                        onPressed: _loading ? null : _load,
+                        icon: const Icon(Icons.refresh),
+                        label: const AppText('Retry'),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           if (data != null) ..._content(data),
@@ -178,7 +223,12 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         ? Map<String, dynamic>.from(data['history'])
         : <String, dynamic>{};
     final points = _rows(history['points']);
-    final empty = _number(data['positionCount']) == 0;
+    final empty = _availableNumber(data['positionCount']) == 0;
+    final hasHistory =
+        points.length >= 2 &&
+        points.every(
+          (point) => _availableNumber(point['productValue']) != null,
+        );
     final inverseMuted = AppColors.textInverse.withValues(alpha: 0.7);
     return [
       const SizedBox(height: AppSpacing.md),
@@ -273,7 +323,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                           strokeWidth: 2,
                         ),
                       )
-                    : points.length < 2
+                    : !hasHistory
                     ? Center(
                         child: AppText(
                           'Insufficient history',
@@ -396,7 +446,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                           .copyWith(fontSize: 10),
                                     ),
                                     const SizedBox(height: AppSpacing.xs),
-                                    if (!_hidden)
+                                    if (!_hidden &&
+                                        _availableNumber(
+                                              category['allocationPercent'],
+                                            ) !=
+                                            null)
                                       LinearProgressIndicator(
                                         value:
                                             (_number(
@@ -415,9 +469,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                 ),
                               ),
                               AppText(
-                                _hidden
-                                    ? '--'
-                                    : '${_number(category['allocationPercent']).toStringAsFixed(1)}%',
+                                _percent(category['allocationPercent']),
                                 style: AppTypography.numericSmall,
                               ),
                               const SizedBox(width: AppSpacing.xs),
@@ -465,7 +517,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   ),
                 ),
               );
-              if (_hidden || _number(data['currentValue']) <= 0) return legend;
+              if (_hidden ||
+                  _number(data['currentValue']) <= 0 ||
+                  categories.any(
+                    (category) =>
+                        _availableNumber(category['currentValue']) == null,
+                  )) {
+                return legend;
+              }
               if (constraints.maxWidth < 320 ||
                   MediaQuery.textScalerOf(context).scale(1) > 1.2) {
                 return Column(
@@ -534,7 +593,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   ('Invested', category['invested']),
                   ('Total Returns', category['totalPnl']),
                 ]),
-                if (!_hidden) ...[
+                if (!_hidden &&
+                    _availableNumber(category['allocationPercent']) !=
+                        null) ...[
                   const SizedBox(height: AppSpacing.md - 2),
                   LinearProgressIndicator(
                     value: (_number(category['allocationPercent']) / 100).clamp(
@@ -572,7 +633,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               ]),
               const SizedBox(height: AppSpacing.md),
               AppText(
-                '${tr('Best Segment')}: ${tr(data['bestSegment']?.toString() ?? '--')}',
+                '${tr('Best Segment')}: ${_hidden ? '******' : tr(data['bestSegment']?.toString() ?? '--')}',
                 style: AppTypography.labelLarge,
               ),
             ],
@@ -601,29 +662,41 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     ];
   }
 
-  Widget _heading(String title, {VoidCallback? action}) => Row(
-    children: [
-      Expanded(
-        child: AppText(
-          title,
-          style: AppTypography.sectionTitle.copyWith(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-          ),
+  Widget _heading(String title, {VoidCallback? action}) => LayoutBuilder(
+    builder: (context, constraints) {
+      final heading = AppText(
+        title,
+        style: AppTypography.sectionTitle.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
         ),
-      ),
-      if (action != null)
-        TextButton(onPressed: action, child: const AppText('View Details')),
-    ],
+      );
+      final button = action == null
+          ? null
+          : TextButton(onPressed: action, child: const AppText('View Details'));
+      if (constraints.maxWidth < 320 ||
+          MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [heading, ?button],
+        );
+      }
+      return Row(
+        children: [
+          Expanded(child: heading),
+          ?button,
+        ],
+      );
+    },
   );
 
   Widget _metrics(List<(String, dynamic)> items) => LayoutBuilder(
     builder: (context, constraints) {
-      final columns =
-          MediaQuery.textScalerOf(context).scale(1) > 1.2 &&
-              constraints.maxWidth < 360
-          ? 2
-          : items.length;
+      final scale = MediaQuery.textScalerOf(context).scale(1);
+      final columns = (constraints.maxWidth / (110 * scale)).floor().clamp(
+        1,
+        items.length,
+      );
       return Wrap(
         runSpacing: AppSpacing.md + 2,
         children: items
@@ -644,23 +717,18 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs + 1),
-                      FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: AppText(
-                          item.$1 == 'Allocation'
-                              ? (_hidden
-                                    ? '--'
-                                    : '${_number(item.$2).toStringAsFixed(1)}%')
-                              : _money(item.$2),
-                          style: AppTypography.numericSmall.copyWith(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w700,
-                            color:
-                                item.$1.contains('P&L') ||
-                                    item.$1.contains('Returns')
-                                ? _pnlColor(item.$2)
-                                : AppColors.textPrimary,
-                          ),
+                      AppText(
+                        item.$1 == 'Allocation'
+                            ? _percent(item.$2)
+                            : _money(item.$2),
+                        style: AppTypography.numericSmall.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color:
+                              item.$1.contains('P&L') ||
+                                  item.$1.contains('Returns')
+                              ? _pnlColor(item.$2)
+                              : AppColors.textPrimary,
                         ),
                       ),
                     ],
@@ -720,7 +788,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         AppText(
-                          '${tr('Quantity')}: ${position['quantity']} · ${tr('Available')}: ${position['availableQuantity']}',
+                          '${tr('Quantity')}: ${_quantity(position['quantity'])} · ${tr('Available')}: ${_quantity(position['availableQuantity'])}',
                           style: AppTypography.bodySmall,
                         ),
                         const SizedBox(height: AppSpacing.md),
@@ -777,9 +845,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             children: [
               AppText('${tr('Status')}: ${tr(activity['status'].toString())}'),
               const SizedBox(height: AppSpacing.sm),
-              AppText('${tr('Quantity')}: ${activity['quantity']}'),
+              AppText('${tr('Quantity')}: ${_quantity(activity['quantity'])}'),
               AppText(
-                '${tr('Filled / allocated')}: ${activity['filledQuantity']}',
+                '${tr('Filled / allocated')}: ${_quantity(activity['filledQuantity'])}',
               ),
               AppText('${tr('Amount')}: ${_money(activity['amount'])}'),
               const SizedBox(height: AppSpacing.sm),

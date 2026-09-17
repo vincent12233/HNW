@@ -320,6 +320,22 @@ export class DepositService {
             referenceId: depositId,
           },
         });
+        if (actorId)
+          await this.audit.createLog(
+            {
+              actorId,
+              action: 'DEPOSIT_APPROVED',
+              resource: 'deposit',
+              resourceId: depositId,
+              description: 'Deposit approved by finance operator',
+              metadata: {
+                depositAmount: String(deposit.amount),
+                ipoRepayment: repayAmount.toFixed(2),
+                creditedAmount: availableAmount.toFixed(2),
+              },
+            },
+            tx,
+          );
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
@@ -335,19 +351,6 @@ export class DepositService {
 
       creditedAmount: availableAmount,
     };
-    if (actorId)
-      await this.audit.createLog({
-        actorId,
-        action: 'DEPOSIT_APPROVED',
-        resource: 'deposit',
-        resourceId: depositId,
-        description: 'Deposit approved by finance operator',
-        metadata: {
-          depositAmount: String(deposit.amount),
-          ipoRepayment: repayAmount.toFixed(2),
-          creditedAmount: availableAmount.toFixed(2),
-        },
-      });
     return result;
   }
 
@@ -388,18 +391,22 @@ export class DepositService {
             referenceId: depositId,
           },
         });
+        if (actorId)
+          await this.audit.createLog(
+            {
+              actorId,
+              action: 'DEPOSIT_REJECTED',
+              resource: 'deposit',
+              resourceId: depositId,
+              description:
+                note?.trim() || 'Deposit rejected by finance operator',
+            },
+            tx,
+          );
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
 
-    if (actorId)
-      await this.audit.createLog({
-        actorId,
-        action: 'DEPOSIT_REJECTED',
-        resource: 'deposit',
-        resourceId: depositId,
-        description: note?.trim() || 'Deposit rejected by finance operator',
-      });
     return {
       message: 'Deposit rejected',
       depositId,

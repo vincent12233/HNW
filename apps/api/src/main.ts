@@ -5,15 +5,10 @@ import { randomUUID } from 'crypto';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './observability/all-exceptions.filter';
+import { isLocalDevelopmentOrigin } from './common/local-development-origin';
 
 type RateEntry = { count: number; resetAt: number };
 const rateEntries = new Map<string, RateEntry>();
-
-function isLocalDevelopmentOrigin(origin: string) {
-  return /^https?:\/\/(?:localhost|127\.0\.0\.1|10\.(?:\d{1,3}\.){2}\d{1,3}|192\.168\.(?:\d{1,3}\.)?\d{1,3}|172\.(?:1[6-9]|2\d|3[0-1])\.\d{1,3})(?::\d+)?$/i.test(
-    origin,
-  );
-}
 
 function isLoopbackOrPrivateHostname(hostname: string) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');

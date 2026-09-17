@@ -33,8 +33,9 @@ class MarketDataService {
       final response = await http
           .get(Uri.parse('${AppConfig.apiBaseUrl}/company-showcase'))
           .timeout(const Duration(seconds: 8));
-      if (response.statusCode < 200 || response.statusCode >= 300)
+      if (response.statusCode < 200 || response.statusCode >= 300) {
         return const [];
+      }
       final decoded = jsonDecode(response.body);
       if (decoded is! List) return const [];
       return decoded

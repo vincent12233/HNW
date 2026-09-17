@@ -30,6 +30,7 @@ void main() {
     'language': const LanguagePage(),
     'appearance': const AppearancePage(),
     'privacy': const LegalPage(title: 'Privacy'),
+    'risk': const LegalPage(title: 'Risk Disclosure'),
     'notifications': const NotificationsPage(),
     'login': LoginPage(onSignedIn: (_) {}),
     'register': const RegisterPage(),

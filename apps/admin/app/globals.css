@@ -37,7 +37,12 @@ body {
 /* ----- Shell layout ----- */
 .ops-layout {
   min-height: 100vh !important;
+  min-height: 100dvh !important;
   background: #eef3f8 !important;
+}
+
+.ops-main-layout {
+  min-width: 0;
 }
 
 .ops-sider {
@@ -46,11 +51,32 @@ body {
   position: sticky !important;
   top: 0;
   height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
   border-inline-end: 1px solid #ffffff10 !important;
+}
+
+.ops-sider .ant-layout-sider-children,
+.ops-mobile-nav {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.ops-navigation {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #6484a6 transparent;
 }
 
 .ops-brand {
   height: 78px;
+  flex: 0 0 78px;
   display: flex;
   align-items: center;
   gap: 12px;
@@ -92,16 +118,12 @@ body {
   background: transparent !important;
   border: 0 !important;
   padding: 4px 10px 24px;
-  min-height: 100%;
   color: #dbeafe !important;
 }
 
-/* The mobile navigation is rendered inside an Ant Drawer rather than the
-   desktop Sider. Keep the full menu surface dark so grouped items remain
-   readable when the drawer is taller than its initial viewport. */
-.ops-menu,
+/* The dark surface belongs to the scroll container, not individual groups. */
 .ops-menu .ant-menu-item-group-list {
-  background: linear-gradient(180deg, var(--sider-from), var(--sider-mid) 62%, var(--sider-to)) !important;
+  background: transparent !important;
 }
 
 .ops-menu .ant-menu-item,
@@ -117,12 +139,21 @@ body {
 }
 
 .ops-mobile-nav {
-  min-height: 100vh;
   background: linear-gradient(180deg, var(--sider-from), var(--sider-mid) 62%, var(--sider-to));
 }
 
+.ops-nav-drawer .ant-drawer-close,
+.ops-nav-drawer .ant-drawer-title {
+  color: #dbeafe;
+}
+
+.ops-nav-drawer .ant-drawer-close:hover {
+  color: #fff;
+  background: #ffffff18;
+}
+
 .ops-menu .ant-menu-item-group-title {
-  color: #7f97b2 !important;
+  color: #a6bed6 !important;
   font-size: 11px !important;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -222,16 +253,36 @@ body {
   overflow: auto;
 }
 
-.ops-mobile-nav {
-  min-height: 100vh;
-  background: linear-gradient(180deg, var(--sider-from), var(--sider-to));
-}
-
 .ops-boot {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   place-items: center;
   background: #f4f7fb;
+  padding: 24px;
+}
+
+.ops-skip-link {
+  position: fixed;
+  top: 8px;
+  left: 12px;
+  z-index: 2000;
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: #fff;
+  color: #102033;
+  transform: translateY(-150%);
+}
+
+.ops-skip-link:focus {
+  transform: translateY(0);
+}
+
+.ops-layout :is(button, a, input, [tabindex="0"]):focus-visible,
+.ops-nav-drawer :is(button, a, [tabindex="0"]):focus-visible,
+.admin-login :is(button, a, input):focus-visible {
+  outline: 3px solid #1677ff;
+  outline-offset: 3px;
 }
 
 .ops-pending-warn {
@@ -320,6 +371,7 @@ body {
 /* ----- Login ----- */
 .admin-login {
   min-height: 100vh;
+  min-height: 100dvh;
   display: grid;
   grid-template-columns: minmax(360px, 1.15fr) minmax(400px, 0.85fr);
   background: #061120;
@@ -480,6 +532,12 @@ body {
   margin: 20px 0 0;
 }
 
+.login-caps-warning {
+  margin: -12px 0 18px;
+  color: #9a6700;
+  font-size: 13px;
+}
+
 .login-mobile-brand {
   display: none;
   color: var(--login-accent, #1677ff);
@@ -534,18 +592,41 @@ body {
 }
 
 .ops-metric-card,
-.ops-quick-card,
-.ops-metric-card,
 .ops-quick-card {
   border-radius: 14px !important;
   border: 1px solid #e8edf5 !important;
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.ops-quick-card:hover,
 .ops-quick-card:hover {
   transform: translateY(-2px);
   box-shadow: 0 14px 28px #102a4314;
+}
+
+.ops-quick-action {
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 14px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+.ops-quick-action .ant-space-item {
+  min-width: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ops-quick-card {
+    transition: none;
+  }
+  .ops-quick-card:hover {
+    transform: none;
+  }
 }
 
 /* Shared ops page header */
@@ -574,7 +655,6 @@ body {
   max-width:720px;
 }
 .ops-page-extra{margin-top:4px}
-.ops-toolbar,
 .ops-toolbar{
   display:flex;
   flex-wrap:wrap;
@@ -583,14 +663,12 @@ body {
   justify-content:space-between;
   margin-bottom:16px;
 }
-.ops-stat-strip,
 .ops-stat-strip{
   display:grid;
   grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   gap:12px;
   margin-bottom:16px;
 }
-.ops-stat-pill,
 .ops-stat-pill{
   background:#fff;
   border:1px solid #e5edf5;
@@ -598,7 +676,5 @@ body {
   padding:14px 16px;
   box-shadow:0 6px 16px #102a4308;
 }
-.ops-stat-pill .label,
 .ops-stat-pill .label{display:block;color:#8492a6;font-size:12px;margin-bottom:4px}
-.ops-stat-pill .value,
 .ops-stat-pill .value{font-size:22px;font-weight:700;color:#102033;letter-spacing:-0.02em}

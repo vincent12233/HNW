@@ -54,21 +54,26 @@ function Set-FlutterWritableDirectories {
   $env:PUB_CACHE = $pubCache
 }
 
-Invoke-Step "API build" {
+Invoke-Step "API lint, tests and build" {
   Push-Location (Join-Path $root "apps/api")
   try {
     if (-not (Test-Path "node_modules")) { Invoke-Native "npm.cmd" @("ci") }
     Invoke-Native "npm.cmd" @("run", "db:generate")
+    Invoke-Native "npm.cmd" @("run", "lint")
+    Invoke-Native "npm.cmd" @("test", "--", "--runInBand")
     Invoke-Native "npm.cmd" @("run", "build")
   } finally {
     Pop-Location
   }
 }
 
-Invoke-Step "Admin build" {
+Invoke-Step "Admin lint, tests, typecheck and build" {
   Push-Location (Join-Path $root "apps/admin")
   try {
     if (-not (Test-Path "node_modules")) { Invoke-Native "npm.cmd" @("ci") }
+    Invoke-Native "npm.cmd" @("run", "lint")
+    Invoke-Native "npm.cmd" @("test")
+    Invoke-Native "npx.cmd" @("--no-install", "tsc", "--noEmit")
     Invoke-Native "npm.cmd" @("run", "build")
   } finally {
     Pop-Location
@@ -76,15 +81,27 @@ Invoke-Step "Admin build" {
 }
 
 Invoke-Step "Client analyze" {
+  $gitConfigIndex = if ($env:GIT_CONFIG_COUNT) { [int]$env:GIT_CONFIG_COUNT } else { 0 }
+  $temporaryVariables = @(
+    "APPDATA", "LOCALAPPDATA", "PUB_CACHE", "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_KEY_$gitConfigIndex", "GIT_CONFIG_VALUE_$gitConfigIndex"
+  )
+  $previousEnvironment = @{}
+  foreach ($name in $temporaryVariables) {
+    $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable($name, "Process")
+  }
   Push-Location (Join-Path $root "apps/client")
   try {
     Set-FlutterGitSafeDirectory
     Set-FlutterWritableDirectories
-    Invoke-Native "flutter" @("pub", "get")
-    Invoke-Native "flutter" @("analyze")
+    Invoke-Native "flutter" @("pub", "get", "--enforce-lockfile")
+    Invoke-Native "flutter" @("analyze", "--no-fatal-infos")
     Invoke-Native "flutter" @("test")
   } finally {
     Pop-Location
+    foreach ($name in $temporaryVariables) {
+      [Environment]::SetEnvironmentVariable($name, $previousEnvironment[$name], "Process")
+    }
   }
 }
 

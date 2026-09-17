@@ -14,23 +14,26 @@ class AppLoadingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: AppSpacing.page,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            if (message != null) ...[
-              const SizedBox(height: AppSpacing.lg),
-              AppText(
-                message!,
-                textAlign: TextAlign.center,
-                style: AppTypography.bodyMedium.copyWith(
-                  color: AppColors.textSecondary,
+        child: Semantics(
+          liveRegion: true,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(semanticsLabel: tr('Loading')),
+              if (message != null) ...[
+                const SizedBox(height: AppSpacing.lg),
+                AppText(
+                  message!,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
-              ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -72,11 +75,14 @@ class AppErrorView extends StatelessWidget {
                 child: Icon(icon, size: 34, color: AppColors.loss),
               ),
               const SizedBox(height: AppSpacing.xl - 2),
-              AppText(
-                title,
-                textAlign: TextAlign.center,
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.w800,
+              Semantics(
+                liveRegion: true,
+                child: AppText(
+                  title,
+                  textAlign: TextAlign.center,
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               if (message != null) ...[
@@ -93,6 +99,9 @@ class AppErrorView extends StatelessWidget {
               if (onRetry != null) ...[
                 const SizedBox(height: AppSpacing.xl - 2),
                 OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(120, 48),
+                  ),
                   onPressed: onRetry,
                   icon: const Icon(Icons.refresh, size: 18),
                   label: const AppText('Retry'),

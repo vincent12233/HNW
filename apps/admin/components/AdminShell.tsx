@@ -7,6 +7,7 @@ import {
   BarChartOutlined,
   BellOutlined,
   BookOutlined,
+  CloseOutlined,
   CustomerServiceOutlined,
   DashboardOutlined,
   DollarOutlined,
@@ -16,6 +17,7 @@ import {
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MobileOutlined,
+  ReloadOutlined,
   SettingOutlined,
   ShopOutlined,
   StarOutlined,
@@ -32,17 +34,19 @@ import {
   Drawer,
   Layout,
   Menu,
+  Result,
   Space,
   Spin,
   Tag,
   Typography,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
-import { usePathname, useRouter } from "next/navigation";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 
 import { api } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
+import { findNavigationItem } from "@/lib/admin-navigation";
 import { isAxiosError } from "axios";
 
 const { Header, Sider, Content } = Layout;
@@ -247,6 +251,16 @@ function emptyPending(): PendingCounts {
   return { kyc: 0, deposits: 0, withdrawals: 0, loans: 0, otc: 0, ipo: 0, approvals: 0, total: 0 };
 }
 
+function NavigationState({ onChange }: { onChange: (key: string) => void }) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  useEffect(() => {
+    const query = searchParams.toString();
+    onChange(query ? `${pathname}?${query}` : pathname);
+  }, [pathname, searchParams, onChange]);
+  return null;
+}
+
 export default function AdminShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -256,6 +270,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [verified, setVerified] = useState(false);
+  const [sessionUnavailable, setSessionUnavailable] = useState(false);
+  const [sessionAttempt, setSessionAttempt] = useState(0);
   const [pending, setPending] = useState<PendingCounts>(emptyPending());
   const [pendingUnavailable, setPendingUnavailable] = useState(false);
 
@@ -280,10 +296,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       let lastError: unknown;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          const { data } = await api.get<CurrentUser>("/auth/me");
-          if (!data.role || !menus[data.role] || (deploymentRole && data.role !== deploymentRole)) {
-            throw new Error("Role not allowed on this backend");
-          }
+          const { data } = await api.get<CurrentUser>("/auth/me", { timeout: 12000 });
           return data;
         } catch (error: unknown) {
           lastError = error;
@@ -298,20 +311,30 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     verifySession()
       .then((data) => {
         if (!active) return;
+        if (!data.role || !menus[data.role] || (deploymentRole && data.role !== deploymentRole)) {
+          localStorage.removeItem("adminUser");
+          router.replace("/login");
+          return;
+        }
         localStorage.setItem("adminUser", JSON.stringify(data));
         setUser(data);
         setVerified(true);
       })
-      .catch(() => {
+      .catch((error: unknown) => {
         if (!active) return;
-        localStorage.removeItem("adminUser");
-        router.replace("/login");
+        const status = isAxiosError(error) ? error.response?.status : undefined;
+        if (status === 401 || status === 403) {
+          localStorage.removeItem("adminUser");
+          router.replace("/login");
+        } else {
+          setSessionUnavailable(true);
+        }
       });
 
     return () => {
       active = false;
     };
-  }, [router]);
+  }, [router, sessionAttempt]);
 
   useEffect(() => {
     if (!verified) return;
@@ -321,7 +344,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     const refresh = async () => {
       const current = ++generation;
       try {
-        const { data } = await api.get<PendingCounts>("/admin/pending-counts");
+        const { data } = await api.get<PendingCounts>("/admin/pending-counts", { timeout: 12000 });
         if (active && current === generation) {
           setPending(data);
           setPendingUnavailable(false);
@@ -348,13 +371,6 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     };
   }, [verified]);
 
-  useEffect(() => {
-    const syncNavigation = () => setActiveKey(window.location.pathname + window.location.search);
-    syncNavigation();
-    window.addEventListener("popstate", syncNavigation);
-    return () => window.removeEventListener("popstate", syncNavigation);
-  }, []);
-
   const role: Role = user?.role || "ADMIN";
   const flatItems = useMemo(
     () =>
@@ -366,13 +382,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   );
   const byKey = useMemo(() => Object.fromEntries(flatItems.map((item) => [item.key, item])), [flatItems]);
   const meta = roleMeta[role];
-  const [activePath, query = ""] = activeKey.split("?");
-  const selectedItem =
-    flatItems.find((item) => {
-      const [path, itemQuery] = item.key.split("?");
-      if (!activePath.startsWith(path)) return false;
-      return itemQuery ? itemQuery === query : !query;
-    }) || flatItems.find((item) => activePath.startsWith(item.key.split("?")[0]));
+  const selectedItem = findNavigationItem(flatItems, activeKey);
   const pageTitle = selectedItem?.label || "工作台";
   const allowed =
     pathname === "/" ||
@@ -444,7 +454,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       <span className="ops-logo">
         <StockOutlined />
       </span>
-      {!collapsed && (
+      {(!collapsed || mobile) && (
         <div>
           <strong>India Trading</strong>
           <small>{meta.product}</small>
@@ -456,13 +466,40 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   if (!verified || !user) {
     return (
       <div className="ops-boot">
-        <Spin size="large" tip="正在验证安全会话" />
+        {sessionUnavailable ? (
+          <Result
+            status="warning"
+            title="暂时无法连接后台服务"
+            subTitle="请检查网络或稍后重试。连接恢复后将继续验证当前会话。"
+            extra={
+              <Button
+                type="primary"
+                icon={<ReloadOutlined />}
+                onClick={() => {
+                  setSessionUnavailable(false);
+                  setSessionAttempt((value) => value + 1);
+                }}
+              >
+                重新连接
+              </Button>
+            }
+          />
+        ) : (
+          <Space orientation="vertical" align="center" size="middle" role="status">
+            <Spin size="large" />
+            <Text type="secondary">正在验证安全会话…</Text>
+          </Space>
+        )}
       </div>
     );
   }
 
   return (
     <Layout className={`ops-layout role-${role.toLowerCase()}`}>
+      <Suspense fallback={null}>
+        <NavigationState onChange={setActiveKey} />
+      </Suspense>
+      <a className="ops-skip-link" href="#ops-main-content">跳转到页面内容</a>
       {pendingUnavailable && (
         <div className="ops-pending-warn">
           <Alert
@@ -481,7 +518,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       {!mobile && (
         <Sider width={264} collapsedWidth={78} collapsed={collapsed} trigger={null} className="ops-sider">
           {brand}
-          {menu}
+          <nav className="ops-navigation" aria-label="后台导航">{menu}</nav>
         </Sider>
       )}
 
@@ -490,15 +527,21 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         width={292}
         open={mobile && drawerOpen}
         onClose={() => setDrawerOpen(false)}
-        styles={{ body: { padding: 0, background: "#071426" }, header: { display: "none" } }}
+        title={meta.product}
+        closeIcon={<CloseOutlined aria-label="关闭导航" />}
+        rootClassName={`ops-nav-drawer role-${role.toLowerCase()}`}
+        styles={{
+          body: { padding: 0, overflow: "hidden" },
+          header: { background: "var(--sider-from)", color: "#fff", borderBottom: "1px solid #ffffff20" },
+        }}
       >
         <div className="ops-mobile-nav">
           {brand}
-          {menu}
+          <nav className="ops-navigation" aria-label="后台导航">{menu}</nav>
         </div>
       </Drawer>
 
-      <Layout>
+      <Layout className="ops-main-layout">
         <Header className="ops-header">
           <Space size={12}>
             <Button
@@ -538,7 +581,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </Button>
           </Space>
         </Header>
-        <Content className="ops-content">{verified && allowed ? children : null}</Content>
+        <Content id="ops-main-content" tabIndex={-1} className="ops-content">
+          {verified && allowed ? children : null}
+        </Content>
       </Layout>
     </Layout>
   );

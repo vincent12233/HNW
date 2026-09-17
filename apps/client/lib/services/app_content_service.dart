@@ -197,8 +197,10 @@ class AppContentService extends ChangeNotifier {
   DateTime? _loadedAt;
   Future<AppContentBundle>? _inFlight;
   int _fetchGeneration = 0;
+  bool _lastFetchFailed = false;
 
   AppContentBundle get current => _bundle;
+  bool get lastFetchFailed => _lastFetchFailed;
 
   Future<AppContentBundle> load({bool force = false}) async {
     if (!force &&
@@ -232,15 +234,21 @@ class AppContentService extends ChangeNotifier {
           .timeout(const Duration(seconds: 12));
       if (generation != _fetchGeneration) return _bundle;
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        _lastFetchFailed = true;
         return _bundle;
       }
       final decoded = jsonDecode(response.body);
-      if (decoded is! Map) return _bundle;
+      if (decoded is! Map) {
+        _lastFetchFailed = true;
+        return _bundle;
+      }
       _bundle = AppContentBundle.fromJson(Map<String, dynamic>.from(decoded));
       _loadedAt = DateTime.now();
+      _lastFetchFailed = false;
       notifyListeners();
       return _bundle;
     } catch (_) {
+      if (generation == _fetchGeneration) _lastFetchFailed = true;
       return _bundle;
     }
   }

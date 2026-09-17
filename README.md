@@ -54,6 +54,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-docker-stack
 docker compose -f .\compose.local-test.yaml down
 ```
 
+启动脚本会等待数据库、API 就绪检查和五个后台登录页通过健康检查后再报告成功。首次构建可能需要下载依赖；若失败，查看仓库根目录的 `docker-compose-startup.log`。这套 Compose 使用开发模式和本机测试密码，不能直接部署到公网。
+
 ## 本机联调（无 Docker）
 
 见 `docs/本地启动与联调.md`：本机安装 PostgreSQL + Node，直接跑 API / admin / Flutter。
@@ -101,6 +103,8 @@ Android 真机 E2E（需要 USB 调试设备）：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-e2e.ps1
 ```
 
+连接多台设备时加 `-DeviceSerial <adb devices 中的设备序列号>`；更改 API 端口时加 `-ApiPort 3200`。脚本先检查本地 API 和数据库，再构建、安装和启动 App。完成此步骤只表示真机测试环境已就绪，业务 E2E 仍需按验收清单逐项执行。
+
 ## 默认后台账号
 
 | 角色 | 员工编号 | 密码 |
@@ -111,7 +115,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-e2e.
 | 业务员 | `BUSINESS001` | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 | 专用运营员 | `SUPPORT001` | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 
-项目不提供固定默认密码。首次初始化前必须在 API 环境变量中设置各角色强密码。
+原生部署和正式环境不提供默认密码：首次初始化前必须在 API 环境变量中设置各角色强密码。本机 Docker 环境有隔离测试专用的默认值，见 `compose.local-test.yaml` 中的 `HNW_E2E_*_PASSWORD`；可在首次启动前覆盖。种子脚本不会重置已有账号密码，修改环境变量也不会更改已有数据库中的密码。
 
 ## 免账号行情与新闻
 
@@ -139,4 +143,5 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 - `docs/运营流程说明.md`
 - `docs/客户APP发布配置.md`
 - `docs/交付验收清单.md`
+- `docs/上线准备与验收.md`（发布门槛与待补验证）
 - `docs/项目交付总览.md`

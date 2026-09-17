@@ -2,6 +2,7 @@
 
 import { IdcardOutlined, LockOutlined, SafetyCertificateOutlined, StockOutlined } from "@ant-design/icons";
 import { Alert, Button, Form, Input } from "antd";
+import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 
@@ -33,6 +34,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
   const deploymentRole = useSyncExternalStore<BackendRole | undefined>(
     subscribeToBackendRole,
     getBackendRole,
@@ -40,13 +42,15 @@ export default function AdminLoginPage() {
   );
 
   async function submit(values: Values) {
+    if (submitting) return;
     setError("");
     setSubmitting(true);
     try {
-      const { data } = await api.post("/auth/login", {
-        employeeNo: values.employeeNo.trim().toUpperCase(),
-        password: values.password,
-      });
+      const { data } = await api.post(
+        "/auth/login",
+        { employeeNo: values.employeeNo.trim().toUpperCase(), password: values.password },
+        { timeout: 20000 },
+      );
       if (
         !["ADMIN", "MANAGER", "FINANCE", "BUSINESS", "SUPPORT"].includes(data.user?.role) ||
         (deploymentRole && data.user?.role !== deploymentRole)
@@ -58,7 +62,11 @@ export default function AdminLoginPage() {
       router.push(homeByRole[data.user.role] || "/dashboard");
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;
-      setError(Array.isArray(message) ? message.join("，") : message || "登录失败，请检查员工编号、密码或后台服务。");
+      setError(
+        isAxiosError(err) && !err.response
+          ? "暂时无法连接后台服务，请检查网络后重试。"
+          : Array.isArray(message) ? message.join("，") : message || "登录失败，请检查员工编号、密码或后台服务。",
+      );
     } finally {
       setSubmitting(false);
     }
@@ -106,10 +114,16 @@ export default function AdminLoginPage() {
             ? `${roleHints[deploymentRole]}。请使用本角色员工编号登录，跨角色账号将被拒绝。`
             : "超级管理员、管理员、财务、业务员与专用运营员使用员工编号登录对应入口。"}
         </p>
-        {error && <Alert type="error" title={error} showIcon />}
-        <Form<Values> layout="vertical" onFinish={submit} size="large">
-          <Form.Item label="员工编号" name="employeeNo" rules={[{ required: true, message: "请输入员工编号" }]}>
-            <Input prefix={<IdcardOutlined />} placeholder="例如 ADMIN001" autoCapitalize="characters" />
+        {error && <div role="alert"><Alert type="error" title={error} showIcon /></div>}
+        <Form<Values> layout="vertical" onFinish={submit} size="large" disabled={submitting}>
+          <Form.Item label="员工编号" name="employeeNo" rules={[{ required: true, whitespace: true, message: "请输入员工编号" }]}>
+            <Input
+              prefix={<IdcardOutlined />}
+              placeholder="例如 ADMIN001"
+              autoCapitalize="characters"
+              autoComplete="username"
+              spellCheck={false}
+            />
           </Form.Item>
           <Form.Item
             label="密码"
@@ -119,8 +133,17 @@ export default function AdminLoginPage() {
               { min: 6, message: "密码至少需要 6 个字符" },
             ]}
           >
-            <Input.Password prefix={<LockOutlined />} placeholder="请输入密码" />
+            <Input.Password
+              prefix={<LockOutlined />}
+              placeholder="请输入密码"
+              autoComplete="current-password"
+              onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))}
+              onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))}
+              onBlur={() => setCapsLock(false)}
+              aria-describedby={capsLock ? "login-caps-warning" : undefined}
+            />
           </Form.Item>
+          {capsLock && <p id="login-caps-warning" className="login-caps-warning" role="status">大写锁定已开启</p>}
           <Button type="primary" htmlType="submit" loading={submitting} block>
             {submitting ? "安全验证中…" : "登录工作台"}
           </Button>

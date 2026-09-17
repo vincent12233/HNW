@@ -251,6 +251,34 @@ const hindi = <String, String>{
   'Terms of Service': 'सेवा की शर्तें',
   'Privacy Policy': 'गोपनीयता नीति',
   'Risk Disclosure': 'जोखिम प्रकटीकरण',
+  'Updating balances…': 'शेष राशि अपडेट हो रही है…',
+  'Verification status unavailable': 'सत्यापन की स्थिति उपलब्ध नहीं है',
+  'Balances could not be refreshed. Showing previously loaded values.':
+      'शेष राशि अपडेट नहीं हो सकी। पहले लोड किए गए मान दिखाए जा रहे हैं।',
+  'Balances are unavailable. Please retry.':
+      'शेष राशि उपलब्ध नहीं है। कृपया फिर से प्रयास करें।',
+  'More results could not be loaded. Your current results are still available.':
+      'और परिणाम लोड नहीं हो सके। आपके मौजूदा परिणाम अभी भी उपलब्ध हैं।',
+  'Searching stocks…': 'स्टॉक खोजे जा रहे हैं…',
+  'Watchlist could not be refreshed. Showing previously loaded stocks.':
+      'वॉचलिस्ट अपडेट नहीं हो सकी। पहले लोड किए गए स्टॉक दिखाए जा रहे हैं।',
+  'Loading portfolio': 'पोर्टफोलियो लोड हो रहा है',
+  'Showing previously loaded portfolio data.':
+      'पहले लोड किया गया पोर्टफोलियो डेटा दिखाया जा रहा है।',
+  'Loading…': 'लोड हो रहा है…',
+  'Search symbol or company': 'सिंबल या कंपनी खोजें',
+  'Delayed quote': 'विलंबित भाव',
+  'Show balances': 'शेष राशि दिखाएँ',
+  'Hide balances': 'शेष राशि छिपाएँ',
+  'Showing a previously loaded document. Updates could not be checked. Please try refreshing again.':
+      'पहले लोड किया गया दस्तावेज़ दिखाया जा रहा है। अपडेट जाँचे नहीं जा सके। कृपया फिर रीफ़्रेश करें।',
+  'Showing the bundled document. Connect and refresh to check the latest published version.':
+      'ऐप के साथ दिया गया दस्तावेज़ दिखाया जा रहा है। नवीनतम प्रकाशित संस्करण देखने के लिए कनेक्ट करके रीफ़्रेश करें।',
+  'NSE Open': 'एनएसई खुला है',
+  'NSE Closed': 'एनएसई बंद है',
+  'Market status unavailable': 'बाज़ार की स्थिति उपलब्ध नहीं है',
+  'Live quotes reconnecting. Prices may be delayed.':
+      'लाइव भाव फिर से जुड़ रहे हैं। कीमतों में देरी हो सकती है।',
   'Sign out?': 'लॉगआउट करें?',
   'Sign Out': 'लॉगआउट',
   'Unable to mark notification as read':

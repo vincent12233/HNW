@@ -292,6 +292,18 @@ export class WithdrawalService {
             referenceId: withdrawalId,
           },
         });
+        if (actorId)
+          await this.audit.createLog(
+            {
+              actorId,
+              action: 'WITHDRAWAL_APPROVED',
+              resource: 'withdrawal',
+              resourceId: withdrawalId,
+              description: 'Withdrawal approved by finance operator',
+              metadata: { amount: String(withdrawal.amount) },
+            },
+            tx,
+          );
 
         return {
           message: 'Withdrawal approved',
@@ -304,15 +316,6 @@ export class WithdrawalService {
       },
       { isolationLevel: 'Serializable' },
     );
-    if (actorId)
-      await this.audit.createLog({
-        actorId,
-        action: 'WITHDRAWAL_APPROVED',
-        resource: 'withdrawal',
-        resourceId: withdrawalId,
-        description: 'Withdrawal approved by finance operator',
-        metadata: { amount: String(result.amount) },
-      });
     return result;
   }
 
@@ -384,20 +387,24 @@ export class WithdrawalService {
             referenceId: withdrawalId,
           },
         });
+        if (actorId)
+          await this.audit.createLog(
+            {
+              actorId,
+              action: 'WITHDRAWAL_REJECTED',
+              resource: 'withdrawal',
+              resourceId: withdrawalId,
+              description:
+                note?.trim() || 'Withdrawal rejected by finance operator',
+            },
+            tx,
+          );
         return tx.withdrawalRequest.findUnique({
           where: { id: withdrawalId },
         });
       },
       { isolationLevel: 'Serializable' },
     );
-    if (actorId)
-      await this.audit.createLog({
-        actorId,
-        action: 'WITHDRAWAL_REJECTED',
-        resource: 'withdrawal',
-        resourceId: withdrawalId,
-        description: note?.trim() || 'Withdrawal rejected by finance operator',
-      });
     return rejected;
   }
 

@@ -42,7 +42,7 @@ services:
       postgres:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 18
@@ -55,29 +55,36 @@ services:
       NODE_ENV: development
       NEXT_PUBLIC_API_URL: http://localhost:3100
       NEXT_PUBLIC_BACKEND_ROLE: ADMIN
+      PORT: "3002"
     command: ["npx", "next", "dev", "-p", "3002", "-H", "0.0.0.0"]
     ports: ["127.0.0.1:3002:3002"]
     depends_on:
       api:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+process.env.PORT+'/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 10s
+      timeout: 20s
+      retries: 18
+      start_period: 60s
   manager:
     <<: *admin
-    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: MANAGER }
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: MANAGER, PORT: "3004" }
     command: ["npx", "next", "dev", "-p", "3004", "-H", "0.0.0.0"]
     ports: ["127.0.0.1:3004:3004"]
   finance:
     <<: *admin
-    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: FINANCE }
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: FINANCE, PORT: "3005" }
     command: ["npx", "next", "dev", "-p", "3005", "-H", "0.0.0.0"]
     ports: ["127.0.0.1:3005:3005"]
   business:
     <<: *admin
-    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: BUSINESS }
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: BUSINESS, PORT: "3006" }
     command: ["npx", "next", "dev", "-p", "3006", "-H", "0.0.0.0"]
     ports: ["127.0.0.1:3006:3006"]
   support:
     <<: *admin
-    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: SUPPORT }
+    environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: SUPPORT, PORT: "3007" }
     command: ["npx", "next", "dev", "-p", "3007", "-H", "0.0.0.0"]
     ports: ["127.0.0.1:3007:3007"]
 volumes:

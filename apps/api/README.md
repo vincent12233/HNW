@@ -78,3 +78,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verification-test.
 ```
 
 该脚本会覆盖手机号注册、KYC、客服入金咨询、财务上分、提现申请、业务员可见提现记录等核心流程。
+
+## Funding concurrency (real PostgreSQL)
+
+`npm test` stays mock-only and never reads `DATABASE_URL`.
+
+To audit deposit / withdrawal / FINANCE+SUPPORT credit-debit races against PostgreSQL 17:
+
+1. Start `compose.local-test.yaml` postgres (do not use production).
+2. Create isolated database `hnw_funding_integration` (name must contain `test`, `e2e`, or `integration`).
+3. Set **only** `FUNDING_INTEGRATION_DATABASE_URL` (never fall back to production `DATABASE_URL`).
+4. Run existing `prisma migrate deploy` against that URL, then:
+
+```bash
+cd apps/api
+# helper: checks local host, creates hnw_funding_integration, migrate deploy, jest --runInBand
+./scripts/run-funding-integration.sh
+# or: powershell -File .\scripts\run-funding-integration.ps1
+```
+
+Closed-market / missing Apify must not be confused with this suite. This is a funding ledger audit, not a trading quote gate.

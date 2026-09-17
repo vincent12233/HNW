@@ -13,6 +13,7 @@
     "test",
     "dist",
     "prisma",
-    "**/*spec.ts"
+    "**/*spec.ts",
+    "src/funding-integration"
   ]
 }

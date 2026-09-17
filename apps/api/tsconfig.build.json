@@ -15,5 +15,6 @@
     "prisma",
     "**/*spec.ts",
     "src/testing/**"
+    ,"src/funding-integration"
   ]
 }

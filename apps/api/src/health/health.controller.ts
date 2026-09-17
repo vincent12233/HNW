@@ -1,9 +1,15 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import {
+  Controller,
+  Get,
+  Res,
+  ServiceUnavailableException,
+} from '@nestjs/common';
+import type { Response } from 'express';
+import { HealthService } from './health.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly health: HealthService) {}
 
   @Get()
   check() {
@@ -22,7 +28,7 @@ export class HealthController {
   @Get('ready')
   async ready() {
     try {
-      await this.prisma.$queryRaw`SELECT 1`;
+      await this.health.probeDatabase();
     } catch (error) {
       throw new ServiceUnavailableException('Service is not ready', {
         cause: error,
@@ -33,5 +39,11 @@ export class HealthController {
       database: 'connected',
       timestamp: new Date().toISOString(),
     };
+  }
+
+  @Get('trading-ready')
+  async tradingReady(@Res() response: Response) {
+    const result = await this.health.evaluateTradingReady();
+    return response.status(result.statusCode).json(result.body);
   }
 }

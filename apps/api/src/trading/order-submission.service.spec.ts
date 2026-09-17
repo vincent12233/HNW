@@ -182,6 +182,38 @@ describe('OrderSubmissionService', () => {
     expect(matchingService.matchOrder).not.toHaveBeenCalled();
   });
 
+  it('does not freeze cash/holdings, create an order, or match when preparation rejects a special product', async () => {
+    const orderPreparation = {
+      validateOrderRequest: jest.fn(),
+      prepare: jest
+        .fn()
+        .mockRejectedValue(
+          new Error('Instrument is not available for standard market trading'),
+        ),
+      getIdempotentOrder: jest.fn(),
+    } as any;
+    const { service, tradingService, limitOrderService, matchingService } =
+      createService({ orderPreparation });
+
+    await expect(
+      service.submit('user-1', {
+        clientOrderId: 'bypass-1',
+        exchange: 'NSE',
+        symbol: 'IPOCO',
+        side: 'BUY',
+        type: 'MARKET',
+        timeInForce: 'DAY',
+        quantity: 1,
+      } as any),
+    ).rejects.toThrow(
+      'Instrument is not available for standard market trading',
+    );
+
+    expect(tradingService.executeImmediately).not.toHaveBeenCalled();
+    expect(limitOrderService.createOpenLimitOrder).not.toHaveBeenCalled();
+    expect(matchingService.matchOrder).not.toHaveBeenCalled();
+  });
+
   it('stops after three serialization conflicts instead of executing with stale state', async () => {
     const prisma = {
       $transaction: jest.fn().mockImplementation(async () => {

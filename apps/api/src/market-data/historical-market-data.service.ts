@@ -6,6 +6,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import axios from 'axios';
+import { ordinaryMarketCategoryWhere } from '../common/instrument-category';
 import { PrismaService } from '../prisma/prisma.service';
 import { IndiaStockMcpProvider } from './providers/india-stock-mcp.provider';
 import {
@@ -57,6 +58,7 @@ export class HistoricalMarketDataService {
         isActive: true,
         exchange: normalizedExchange ?? { in: ['NSE', 'BSE'] },
         type: 'EQUITY',
+        AND: [ordinaryMarketCategoryWhere()],
       },
       select: { symbol: true, exchange: true },
       orderBy: { exchange: 'desc' },

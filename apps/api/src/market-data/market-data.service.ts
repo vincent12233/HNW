@@ -11,6 +11,10 @@ import {
 } from '../generated/prisma/enums';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  isStandardMarketInstrument,
+  ordinaryMarketCategoryWhere,
+} from '../common/instrument-category';
 import { QuoteIngestionService } from './quote-ingestion.service';
 
 type InstrumentWithQuote = Prisma.InstrumentGetPayload<{
@@ -31,6 +35,7 @@ export class MarketDataService {
         isActive: true,
         exchange: { in: [Exchange.NSE, Exchange.BSE] },
         type: InstrumentType.EQUITY,
+        AND: [ordinaryMarketCategoryWhere()],
       },
       include: { quote: true },
       orderBy: { displayOrder: 'asc' },
@@ -111,6 +116,7 @@ export class MarketDataService {
       exchange: { in: [Exchange.NSE, Exchange.BSE] },
       type: InstrumentType.EQUITY,
       quote: { is: { lastPrice: { gt: 0 } } },
+      AND: [ordinaryMarketCategoryWhere()],
     };
 
     const watchlistRows = await this.prisma.$queryRaw<
@@ -200,6 +206,7 @@ export class MarketDataService {
       exchange: { in: [Exchange.NSE, Exchange.BSE] },
       type: InstrumentType.EQUITY,
       quote: { is: { lastPrice: { gt: 0 } } },
+      AND: [ordinaryMarketCategoryWhere()],
       ...(normalizedQuery
         ? {
             OR: [
@@ -324,6 +331,7 @@ export class MarketDataService {
     );
 
     return instruments
+      .filter((item) => isStandardMarketInstrument(item))
       .filter((item) => Number(item.quote?.lastPrice ?? 0) > 0)
       .map((item) => {
         const quote = item.quote!;

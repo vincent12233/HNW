@@ -44,6 +44,7 @@ describe('ApprovalService decide notifies client on credit', () => {
       },
       accountTransaction: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
       },
       notification: { create: jest.fn() },

@@ -1,11 +1,15 @@
 import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../generated/prisma/enums';
 import { AccountService } from './account.service';
 import { ListTransactionsQueryDto } from './dto/list-transactions-query.dto';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('account')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.CLIENT)
 export class AccountController {
   constructor(private readonly accountService: AccountService) {}
 

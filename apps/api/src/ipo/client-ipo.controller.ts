@@ -1,10 +1,14 @@
 import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../generated/prisma/enums';
 import { IpoService } from './ipo.service';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('ipo')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.CLIENT)
 export class ClientIpoController {
   constructor(private readonly ipoService: IpoService) {}
 

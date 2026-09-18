@@ -9,6 +9,9 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Roles } from '../auth/roles.decorator';
+import { RolesGuard } from '../auth/roles.guard';
+import { UserRole } from '../generated/prisma/enums';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { ListOrdersQueryDto } from './dto/list-orders-query.dto';
 import { ListTradesQueryDto } from './dto/list-trades-query.dto';
@@ -17,7 +20,8 @@ import { TradingOrdersService } from './trading-orders.service';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 
 @Controller('orders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(UserRole.CLIENT)
 export class OrdersController {
   constructor(private readonly ordersService: TradingOrdersService) {}
 

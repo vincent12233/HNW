@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { RolesGuard } from '../auth/roles.guard';
 import { PrismaModule } from '../prisma/prisma.module';
 import { TradingModule } from '../trading/trading.module';
 import { AdminOrdersController } from './admin-orders.controller';
@@ -17,6 +18,7 @@ import { TradingOrdersService } from './trading-orders.service';
     TradingOrdersService,
     AdminOrdersService,
     AdminTradesService,
+    RolesGuard,
   ],
   exports: [OrdersService, TradingOrdersService],
 })

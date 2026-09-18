@@ -19,14 +19,14 @@ describe('MarketDataHealthService', () => {
     const service = new MarketDataHealthService(config);
     const at = new Date();
 
-    service.recordQuote('TRUEDATA', at);
+    service.recordQuote('YAHOO', at);
 
     expect(service.getStatus()).toEqual(
       expect.objectContaining({
         healthy: true,
         stale: false,
         lastQuoteAt: at,
-        lastSource: 'TRUEDATA',
+        lastSource: 'YAHOO',
       }),
     );
   });

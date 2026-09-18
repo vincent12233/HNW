@@ -1,14 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StreamingMarketDataProvider } from './streaming-market-data-provider.interface';
-import { TrueDataProvider } from './truedata.provider';
 
+/**
+ * Registry for optional future commercial streaming providers.
+ * TrueData has been removed; no streaming provider is registered in Phase 1.
+ */
 @Injectable()
 export class StreamingProviderRegistryService {
-  constructor(
-    private readonly config: ConfigService,
-    private readonly trueData: TrueDataProvider,
-  ) {}
+  constructor(private readonly config: ConfigService) {}
 
   get provider(): StreamingMarketDataProvider | null {
     const name = (
@@ -18,9 +18,10 @@ export class StreamingProviderRegistryService {
       .toUpperCase();
 
     if (name === '' || name === 'NONE') return null;
-    if (name === 'TRUEDATA') return this.trueData;
 
-    throw new Error(`Unsupported streaming market data provider: ${name}`);
+    throw new Error(
+      `Unsupported streaming market data provider: ${name}. No streaming provider is configured; polling via MARKET_DATA_PROVIDER remains active.`,
+    );
   }
 
   get providerName() {

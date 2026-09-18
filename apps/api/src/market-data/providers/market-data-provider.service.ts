@@ -1,14 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { IndiaStockMcpProvider } from './india-stock-mcp.provider';
-import { MarketDataProvider } from './market-data-provider.interface';
+import {
+  MarketDataProvider,
+  MarketHistoryResult,
+} from './market-data-provider.interface';
 import { YahooProvider } from './yahoo.provider';
 
 @Injectable()
 export class MarketDataProviderService {
   constructor(
     private readonly config: ConfigService,
-    private readonly indiaStockMcp: IndiaStockMcpProvider,
     private readonly yahoo: YahooProvider,
   ) {}
 
@@ -17,19 +18,27 @@ export class MarketDataProviderService {
       .trim()
       .toUpperCase();
 
-    switch (name) {
-      case 'INDIA_STOCK_MCP':
-      case 'MCP':
-        return this.indiaStockMcp;
-      case 'YAHOO':
-        return this.yahoo;
-      default:
-        throw new Error(`Unsupported market data provider: ${name}`);
+    // Temporary free development provider only. Future commercial providers
+    // should be registered here without changing Flutter or trading APIs.
+    if (name === '' || name === 'YAHOO') {
+      return this.yahoo;
     }
+
+    throw new Error(
+      `Unsupported market data provider: ${name}. Only YAHOO is configured as the temporary development provider.`,
+    );
   }
 
   getQuote(symbol: string, exchange?: string) {
     return this.provider.getQuote(symbol, exchange);
+  }
+
+  getHistory(
+    symbol: string,
+    exchange: string,
+    range: MarketHistoryResult['range'],
+  ) {
+    return this.provider.getHistory(symbol, exchange, range);
   }
 
   get providerName() {

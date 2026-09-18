@@ -39,7 +39,7 @@ export class StreamingMarketDataService
         lastConnectionError: null,
       });
       this.logger.log(
-        'Streaming market data is disabled; polling fallback remains active',
+        'Streaming market data is disabled; polling remains active',
       );
       return;
     }
@@ -77,7 +77,7 @@ export class StreamingMarketDataService
       const message =
         'Streaming market data is enabled but no streaming provider is configured';
       if (failFast) throw new Error(message);
-      this.logger.warn(`${message}; polling fallback remains active`);
+      this.logger.warn(`${message}; polling remains active`);
       return;
     }
 

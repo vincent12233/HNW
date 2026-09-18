@@ -21,15 +21,12 @@
     "test:debug": "node --experimental-vm-modules --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest.js --runInBand",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "seed": "tsx prisma/seed.ts",
-    "truedata:preflight": "tsx scripts/truedata-preflight.ts",
-    "india-stock-mcp:smoke": "tsx scripts/india-stock-mcp-smoke.ts"
+    "seed": "tsx prisma/seed.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "1.30.0",
     "@nestjs/common": "^12.0.3",
     "@nestjs/config": "^12.0.0",
     "@nestjs/core": "^12.0.3",
@@ -46,7 +43,6 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
     "dotenv": "^17.4.2",
-    "india-stock-mcp": "1.0.1",
     "libphonenumber-js": "^1.13.13",
     "otpauth": "^9.5.2",
     "passport": "^0.7.0",
@@ -55,8 +51,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "sharp": "^0.35.4",
-    "socket.io": "^4.8.3",
-    "truedata-nodejs": "1.2.0"
+    "socket.io": "^4.8.3"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

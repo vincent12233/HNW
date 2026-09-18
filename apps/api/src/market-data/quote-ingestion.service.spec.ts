@@ -28,7 +28,7 @@ describe('QuoteIngestionService', () => {
         askPrice: '100.1',
         volume: '1234',
         change: 2.04,
-        source: 'INDIA_STOCK_MCP',
+        source: 'YAHOO',
         updatedAt,
       },
       'STOCK',
@@ -36,11 +36,11 @@ describe('QuoteIngestionService', () => {
 
     expect(prisma.marketQuote.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        update: expect.objectContaining({ source: 'INDIA_STOCK_MCP' }),
+        update: expect.objectContaining({ source: 'YAHOO' }),
       }),
     );
     expect(health.recordQuote).toHaveBeenCalledWith(
-      'INDIA_STOCK_MCP',
+      'YAHOO',
       updatedAt,
     );
     expect(gateway.emitQuoteUpdate).toHaveBeenCalledWith(
@@ -75,14 +75,14 @@ describe('QuoteIngestionService', () => {
         askPrice: null,
         volume: '0',
         change: 0.4,
-        source: 'INDIA_STOCK_MCP',
+        source: 'YAHOO',
         updatedAt,
       },
       'INDEX',
     );
 
     expect(health.recordQuote).toHaveBeenCalledWith(
-      'INDIA_STOCK_MCP',
+      'YAHOO',
       updatedAt,
     );
     expect(gateway.emitQuoteUpdate).toHaveBeenCalledWith(

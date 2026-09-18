@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import { OrderStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
-import { MarketDataHealthService } from './market-data-health.service';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 
@@ -30,25 +29,21 @@ export class NseSyncService {
     private readonly prisma: PrismaService,
     private readonly provider: MarketDataProviderService,
     private readonly ingestion: QuoteIngestionService,
-    private readonly health: MarketDataHealthService,
   ) {}
 
-  // Credential-free providers are snapshot endpoints, so poll frequently and
-  // relay each accepted update over the existing authenticated WebSocket.
+  // Temporary development provider is a snapshot endpoint, so poll frequently
+  // and relay each accepted update over the existing authenticated WebSocket.
   @Cron('*/10 * * * * *')
   async sync() {
     if (this.syncing) {
       this.logger.debug('Market polling cycle still running; skipping overlap');
       return;
     }
-    if (this.streamingEnabled() && !this.health.getStatus().stale) {
-      return;
-    }
 
     this.syncing = true;
     try {
       this.logger.log(
-        `Updating market quotes via polling fallback ${this.provider.providerName}...`,
+        `Updating market quotes via ${this.provider.providerName}...`,
       );
       await this.syncStocks();
       await this.syncIndices();
@@ -190,14 +185,6 @@ export class NseSyncService {
           this.logger.error(`${symbol} index update failed: ${message}`);
         }
       }),
-    );
-  }
-
-  private streamingEnabled() {
-    return (
-      (this.config.get<string>('MARKET_DATA_STREAMING_ENABLED') ?? 'false')
-        .trim()
-        .toLowerCase() === 'true'
     );
   }
 

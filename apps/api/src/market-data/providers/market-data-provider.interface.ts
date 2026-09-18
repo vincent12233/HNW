@@ -39,7 +39,17 @@ export interface MarketHistoryEvent {
   label: string;
 }
 
+/**
+ * Temporary development polling provider contract.
+ * Yahoo is the only active implementation; future commercial providers
+ * should implement this interface without changing Flutter or trading APIs.
+ */
 export interface MarketDataProvider {
   readonly name: string;
   getQuote(symbol: string, exchange?: string): Promise<MarketQuoteResult>;
+  getHistory(
+    symbol: string,
+    exchange: string,
+    range: MarketHistoryResult['range'],
+  ): Promise<MarketHistoryResult>;
 }

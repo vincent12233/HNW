@@ -21,7 +21,6 @@ describe('NseSyncService polling selection', () => {
     const config = {
       get: jest.fn((key: string) => {
         if (key === 'MARKET_DATA_POLL_BATCH_SIZE') return batchSize;
-        if (key === 'MARKET_DATA_STREAMING_ENABLED') return 'false';
         return undefined;
       }),
     } as unknown as ConfigService;
@@ -32,11 +31,11 @@ describe('NseSyncService polling selection', () => {
         prisma as never,
         provider as never,
         ingestion as never,
-        health as never,
       ),
       prisma,
       provider,
       ingestion,
+      health,
     };
   }
 

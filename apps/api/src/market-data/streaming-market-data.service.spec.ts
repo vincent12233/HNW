@@ -72,11 +72,11 @@ describe('StreamingMarketDataService', () => {
 
   it('stores the last connection error when initial streaming connection fails', async () => {
     const provider = {
-      name: 'TRUEDATA',
+      name: 'FUTURE_STREAM',
       providerSymbolCount: 1,
       connect: jest
         .fn()
-        .mockRejectedValue(new Error('TRUEDATA_USER is required')),
+        .mockRejectedValue(new Error('STREAMING_CREDENTIALS are required')),
       disconnect: jest.fn(),
       subscribe: jest.fn().mockResolvedValue(undefined),
       onQuote: jest.fn(),
@@ -103,14 +103,14 @@ describe('StreamingMarketDataService', () => {
     );
 
     await expect(service.onModuleInit()).rejects.toThrow(
-      'TRUEDATA_USER is required',
+      'STREAMING_CREDENTIALS are required',
     );
     expect(healthService.setStreamingStatus).toHaveBeenLastCalledWith(
-      'TRUEDATA',
+      'FUTURE_STREAM',
       false,
       expect.objectContaining({
         providerSymbolCount: 1,
-        lastConnectionError: 'TRUEDATA_USER is required',
+        lastConnectionError: 'STREAMING_CREDENTIALS are required',
       }),
     );
   });

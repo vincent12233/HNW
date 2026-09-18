@@ -38,7 +38,7 @@ async function main() {
       SELECT "referenceId", COUNT(*)::int AS count
       FROM "account_transactions"
       WHERE "referenceId" IS NOT NULL
-        AND "type" <> 'IPO_REPAYMENT'
+        AND "type"::text <> 'IPO_REPAYMENT'
       GROUP BY "referenceId"
       HAVING COUNT(*) > 1
       ORDER BY count DESC

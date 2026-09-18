@@ -1,12 +1,15 @@
 -- Ledger idempotency key (nullable unique; multiple NULLs allowed).
 ALTER TABLE "account_transactions" ADD COLUMN IF NOT EXISTS "idempotencyKey" TEXT;
 
+ALTER TYPE "AccountTransactionType"
+ADD VALUE IF NOT EXISTS 'IPO_REPAYMENT';
+
 -- Backfill only when referenceId is globally unique and not multi-payment IPO repayments.
 UPDATE "account_transactions" AS t
 SET "idempotencyKey" = t."referenceId"
 WHERE t."referenceId" IS NOT NULL
   AND t."idempotencyKey" IS NULL
-  AND t."type" <> 'IPO_REPAYMENT'
+  AND t."type"::text <> 'IPO_REPAYMENT'
   AND (
     SELECT COUNT(*)
     FROM "account_transactions" AS other

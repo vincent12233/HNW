@@ -57,6 +57,7 @@ model User {
   announcementsCreated       Announcement[]        @relation("AnnouncementCreator")
   announcementsUpdated       Announcement[]        @relation("AnnouncementUpdater")
   appClientSettingsUpdated   AppClientSetting[]    @relation("AppClientSettingUpdater")
+  watchlistItems             UserWatchlistItem[]
 
   @@index([assignedBusinessId])
   @@index([businessCreatorId])
@@ -1054,11 +1055,11 @@ model KycSubmission {
 
 /// Existing client watchlist table alignment (created by prior SQL migrations).
 model UserWatchlistItem {
-  id           String   @id @default(uuid())
+  id           String     @id @default(uuid())
   userId       String
   instrumentId String
-  createdAt    DateTime @default(now())
-  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  user         User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
 
   @@unique([userId, instrumentId])

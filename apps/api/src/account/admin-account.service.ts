@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../audit/audit.service';
 import { ApprovalService } from '../approval/approval.service';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AdjustBalanceDto } from './dto/adjust-balance.dto';
@@ -115,7 +116,7 @@ export class AdminAccountService {
             'Dedicated operator customer account not found',
           );
         const duplicate = await tx.accountTransaction.findFirst({
-          where: { referenceId },
+          where: { idempotencyKey: `ADJUSTMENT:${referenceId}` },
         });
         if (duplicate)
           throw new ConflictException(
@@ -163,27 +164,31 @@ export class AdminAccountService {
           balanceAfter = balanceBefore.add(creditedAmount);
         }
 
-        await tx.accountTransaction.create({
-          data: {
-            accountId: account.id,
-            type: direction === 'CREDIT' ? 'ADMIN_CREDIT' : 'ADMIN_DEBIT',
-            status: 'COMPLETED',
-            amount: direction === 'CREDIT' ? creditedAmount : amount,
-            balanceBefore,
-            balanceAfter,
-            referenceId,
-            note: (() => {
-              const base =
-                dto.note?.trim() ||
-                `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`;
-              if (direction === 'CREDIT' && ipoRepayment.gt(0)) {
-                return `${base}; ${ipoRepayment.toFixed(2)} applied to IPO debt`;
-              }
-              return base;
-            })(),
-            createdById: operatorId,
-          },
+        const ledger = await createLedgerEntryIdempotent(tx, {
+          accountId: account.id,
+          type: direction === 'CREDIT' ? 'ADMIN_CREDIT' : 'ADMIN_DEBIT',
+          status: 'COMPLETED',
+          amount: direction === 'CREDIT' ? creditedAmount : amount,
+          balanceBefore,
+          balanceAfter,
+          referenceId,
+          note: (() => {
+            const base =
+              dto.note?.trim() ||
+              `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} ${direction.toLowerCase()}`;
+            if (direction === 'CREDIT' && ipoRepayment.gt(0)) {
+              return `${base}; ${ipoRepayment.toFixed(2)} applied to IPO debt`;
+            }
+            return base;
+          })(),
+          createdById: operatorId,
+          idempotencyKey: `ADJUSTMENT:${referenceId}`,
         });
+        if (!ledger.created) {
+          throw new ConflictException(
+            'Reference number has already been processed',
+          );
+        }
         await tx.notification.create({
           data: {
             userId: account.user.id,

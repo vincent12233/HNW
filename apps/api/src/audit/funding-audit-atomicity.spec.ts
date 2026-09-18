@@ -87,6 +87,7 @@ function fixture() {
     accountTransaction: {
       create: jest.fn().mockResolvedValue({}),
       findFirst: jest.fn().mockResolvedValue(null),
+      findUnique: jest.fn().mockResolvedValue(null),
     },
     notification: { create: jest.fn().mockResolvedValue({}) },
   };

@@ -24,6 +24,7 @@ describe('AdminAccountService credit applies IPO debt', () => {
       },
       accountTransaction: {
         findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
         create: jest.fn(),
       },
       ipoDebt: {

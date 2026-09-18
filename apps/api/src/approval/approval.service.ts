@@ -9,6 +9,7 @@ import { AuditService } from '../audit/audit.service';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { applyIncomingFundsToIpoDebts } from '../common/ipo-debt-repay';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { availableCash, moneyDecimal } from '../common/money';
 
@@ -155,8 +156,9 @@ export class ApprovalService {
           (account.buyingPower.lt(amount) || availableCash(account).lt(amount))
         )
           throw new BadRequestException('Insufficient available balance');
-        const existing = await tx.accountTransaction.findFirst({
-          where: { referenceId: payload.referenceId },
+        const adjustmentKey = `ADJUSTMENT:${payload.referenceId}`;
+        const existing = await tx.accountTransaction.findUnique({
+          where: { idempotencyKey: adjustmentKey },
         });
         if (existing)
           throw new ConflictException('Reference number already processed');
@@ -193,24 +195,26 @@ export class ApprovalService {
           });
         }
 
-        await tx.accountTransaction.create({
-          data: {
-            accountId: account.id,
-            type: debit ? 'ADMIN_DEBIT' : 'ADMIN_CREDIT',
-            status: 'COMPLETED',
-            amount: debit ? amount : creditedAmount,
-            balanceBefore,
-            balanceAfter: debit
-              ? balanceBefore.sub(amount)
-              : balanceBefore.add(creditedAmount),
-            referenceId: payload.referenceId,
-            note:
-              !debit && ipoRepayment.gt(0)
-                ? `${payload.note || 'Approved credit'}; ${ipoRepayment.toFixed(2)} applied to IPO debt`
-                : payload.note || null,
-            createdById: deciderId,
-          },
+        const ledger = await createLedgerEntryIdempotent(tx, {
+          accountId: account.id,
+          type: debit ? 'ADMIN_DEBIT' : 'ADMIN_CREDIT',
+          status: 'COMPLETED',
+          amount: debit ? amount : creditedAmount,
+          balanceBefore,
+          balanceAfter: debit
+            ? balanceBefore.sub(amount)
+            : balanceBefore.add(creditedAmount),
+          referenceId: payload.referenceId,
+          note:
+            !debit && ipoRepayment.gt(0)
+              ? `${payload.note || 'Approved credit'}; ${ipoRepayment.toFixed(2)} applied to IPO debt`
+              : payload.note || null,
+          createdById: deciderId,
+          idempotencyKey: adjustmentKey,
         });
+        if (!ledger.created) {
+          throw new ConflictException('Reference number already processed');
+        }
 
         await tx.notification.create({
           data: {

@@ -10,6 +10,7 @@ import { Prisma } from '../generated/prisma/client';
 import { LoanStatus, UserRole } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { moneyDecimal } from '../common/money';
 
@@ -354,19 +355,21 @@ export class LoansService {
           },
         });
 
-        await tx.accountTransaction.create({
-          data: {
-            accountId: loan.accountId,
-            type: 'LOAN_DISBURSEMENT',
-            status: 'COMPLETED',
-            amount: approvedAmount,
-            balanceBefore: before,
-            balanceAfter: after,
-            referenceId: loan.orderNo,
-            note: requestBody.note?.trim() || '贷款审核通过并自动到账',
-            createdById: operatorId,
-          },
+        const ledger = await createLedgerEntryIdempotent(tx, {
+          accountId: loan.accountId,
+          type: 'LOAN_DISBURSEMENT',
+          status: 'COMPLETED',
+          amount: approvedAmount,
+          balanceBefore: before,
+          balanceAfter: after,
+          referenceId: loan.orderNo,
+          note: requestBody.note?.trim() || '贷款审核通过并自动到账',
+          createdById: operatorId,
+          idempotencyKey: `LOAN_DISBURSEMENT:${loan.id}`,
         });
+        if (!ledger.created) {
+          throw new ConflictException('贷款放款记账已存在，禁止重复到账');
+        }
 
         const approvedLoan = await tx.loanApplication.findUniqueOrThrow({
           where: { id },
@@ -451,20 +454,32 @@ export class LoansService {
     const amount = moneyDecimal(loan.approvedAmount ?? 0);
     if (amount.lte(0)) throw new BadRequestException('贷款批准金额不正确');
 
-    return this.prisma.$transaction(async (tx) => {
-      const before = moneyDecimal(loan.account.cashBalance);
-      const after = before.add(amount);
+    return this.prisma.$transaction(
+      async (tx) => {
+        const claimed = await tx.loanApplication.updateMany({
+          where: { id, status: LoanStatus.APPROVED },
+          data: {
+            status: LoanStatus.DISBURSED,
+            disbursedAt: new Date(),
+            note: note?.trim() || loan.note,
+          },
+        });
+        if (claimed.count !== 1) {
+          throw new ConflictException('贷款放款已被处理');
+        }
 
-      await tx.account.update({
-        where: { id: loan.accountId },
-        data: {
-          cashBalance: after,
-          buyingPower: { increment: amount },
-        },
-      });
+        const before = moneyDecimal(loan.account.cashBalance);
+        const after = before.add(amount);
 
-      await tx.accountTransaction.create({
-        data: {
+        await tx.account.update({
+          where: { id: loan.accountId },
+          data: {
+            cashBalance: after,
+            buyingPower: { increment: amount },
+          },
+        });
+
+        const ledger = await createLedgerEntryIdempotent(tx, {
           accountId: loan.accountId,
           type: 'LOAN_DISBURSEMENT',
           status: 'COMPLETED',
@@ -474,19 +489,19 @@ export class LoansService {
           referenceId: loan.orderNo,
           note: note?.trim() || '贷款放款',
           createdById: operatorId,
-        },
-      });
+          idempotencyKey: `LOAN_DISBURSEMENT:${loan.id}`,
+        });
+        if (!ledger.created) {
+          throw new ConflictException('贷款放款记账已存在，禁止重复到账');
+        }
 
-      return tx.loanApplication.update({
-        where: { id },
-        data: {
-          status: LoanStatus.DISBURSED,
-          disbursedAt: new Date(),
-          note: note?.trim() || loan.note,
-        },
-        include: this.includeCustomer(),
-      });
-    });
+        return tx.loanApplication.findUniqueOrThrow({
+          where: { id },
+          include: this.includeCustomer(),
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async repay(

@@ -16,6 +16,7 @@ import {
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { fixedInviteCode } from '../common/fixed-invite';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { availableCash, moneyDecimal } from '../common/money';
 
 function resolveOtcEncryptionSecret() {
@@ -406,6 +407,13 @@ export class OtcService {
         if (!order) throw new NotFoundException('OTC order not found');
         if (order.status !== 'PENDING')
           throw new BadRequestException('OTC order already reviewed');
+        const settlementKey = `OTC_SETTLEMENT:${order.id}`;
+        const existingSettlement = await tx.accountTransaction.findUnique({
+          where: { idempotencyKey: settlementKey },
+        });
+        if (existingSettlement) {
+          throw new ConflictException('OTC order settlement already recorded');
+        }
         const reviewer = await tx.user.findUnique({
           where: { id: reviewerId },
         });
@@ -504,18 +512,20 @@ export class OtcService {
             netAmount: order.amount,
           },
         });
-        await tx.accountTransaction.create({
-          data: {
-            accountId: order.accountId,
-            type: 'OTC_SETTLEMENT',
-            status: 'COMPLETED',
-            amount: order.amount.negated(),
-            balanceBefore: order.account.cashBalance,
-            balanceAfter,
-            referenceId: order.id,
-            note: 'OTC purchase approved and settled',
-          },
+        const ledger = await createLedgerEntryIdempotent(tx, {
+          accountId: order.accountId,
+          type: 'OTC_SETTLEMENT',
+          status: 'COMPLETED',
+          amount: order.amount.negated(),
+          balanceBefore: order.account.cashBalance,
+          balanceAfter,
+          referenceId: order.id,
+          note: 'OTC purchase approved and settled',
+          idempotencyKey: settlementKey,
         });
+        if (!ledger.created) {
+          throw new ConflictException('OTC order settlement already recorded');
+        }
         const claimed = await tx.otcOrder.updateMany({
           where: { id: order.id, status: 'PENDING' },
           data: {

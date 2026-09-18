@@ -10,6 +10,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Prisma } from '../generated/prisma/client';
 import { UserRole } from '../generated/prisma/enums';
 import { settleIpoHoldings, SettleIpoInput } from '../common/ipo-debt-repay';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { availableCash, moneyDecimal } from '../common/money';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
@@ -994,19 +995,23 @@ export class IpoService {
         });
 
         if (debitAmount.gt(0)) {
-          await tx.accountTransaction.create({
-            data: {
-              accountId: account.id,
-              type: 'TRADE_SETTLEMENT',
-              status: 'COMPLETED',
-              amount: debitAmount.negated(),
-              balanceBefore: account.cashBalance,
-              balanceAfter: moneyDecimal(account.cashBalance).sub(debitAmount),
-              referenceId: application.id,
-              createdById: actorId,
-              note: 'IPO allotment payment on publication',
-            },
+          const ledger = await createLedgerEntryIdempotent(tx, {
+            accountId: account.id,
+            type: 'TRADE_SETTLEMENT',
+            status: 'COMPLETED',
+            amount: debitAmount.negated(),
+            balanceBefore: account.cashBalance,
+            balanceAfter: moneyDecimal(account.cashBalance).sub(debitAmount),
+            referenceId: application.id,
+            createdById: actorId,
+            note: 'IPO allotment payment on publication',
+            idempotencyKey: `IPO_PUBLICATION:${application.id}`,
           });
+          if (!ledger.created) {
+            throw new ConflictException(
+              'IPO publication settlement already recorded',
+            );
+          }
         }
 
         await tx.auditLog.create({

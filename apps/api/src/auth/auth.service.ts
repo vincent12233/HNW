@@ -27,10 +27,13 @@ import { TwoFactorService } from './two-factor.service';
 import { fixedInviteCode } from '../common/fixed-invite';
 @Injectable()
 export class AuthService {
-  // Sessions stay valid until explicit logout (or authVersion revocation).
-  private static readonly CLIENT_TOKEN_SECONDS = 365 * 24 * 60 * 60;
-  private static readonly STAFF_TOKEN_SECONDS = 365 * 24 * 60 * 60;
-  private static readonly ACCESS_TOKEN_TTL = '365d';
+  // Short-lived access tokens; refresh tokens extend the session safely.
+  private static readonly CLIENT_TOKEN_SECONDS = 24 * 60 * 60;
+  private static readonly STAFF_TOKEN_SECONDS = 24 * 60 * 60;
+  private static readonly ACCESS_TOKEN_TTL = '24h';
+  private static readonly REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
+  private static readonly REFRESH_TOKEN_TTL = '30d';
+  private static readonly REFRESH_PURPOSE = 'REFRESH';
 
   constructor(
     private readonly usersService: UsersService,
@@ -65,6 +68,116 @@ export class AuthService {
       },
       { expiresIn: AuthService.ACCESS_TOKEN_TTL },
     );
+  }
+
+  private async issueRefreshToken(user: {
+    id: string;
+    phone: string | null;
+    role: UserRole;
+    authVersion: number;
+  }) {
+    return this.jwtService.signAsync(
+      {
+        sub: user.id,
+        phone: user.phone,
+        role: user.role,
+        version: user.authVersion,
+        purpose: AuthService.REFRESH_PURPOSE,
+      },
+      { expiresIn: AuthService.REFRESH_TOKEN_TTL },
+    );
+  }
+
+  private async issueSessionTokens(user: {
+    id: string;
+    phone: string | null;
+    role: UserRole;
+    authVersion: number;
+  }) {
+    const [accessToken, refreshToken] = await Promise.all([
+      this.issueAccessToken(user),
+      this.issueRefreshToken(user),
+    ]);
+    return {
+      accessToken,
+      refreshToken,
+      tokenType: 'Bearer' as const,
+      expiresIn: this.accessTokenExpiresIn(user.role),
+      refreshExpiresIn: AuthService.REFRESH_TOKEN_SECONDS,
+    };
+  }
+
+  async refresh(refreshToken: string) {
+    const token = refreshToken?.trim();
+    if (!token) throw new UnauthorizedException('Refresh token is required');
+
+    let payload: {
+      sub?: string;
+      version?: number;
+      purpose?: string;
+    };
+    try {
+      payload = await this.jwtService.verifyAsync(token);
+    } catch {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+    if (
+      !payload.sub ||
+      payload.purpose !== AuthService.REFRESH_PURPOSE ||
+      typeof payload.version !== 'number'
+    ) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: payload.sub },
+      include: { account: true },
+    });
+    if (
+      !user ||
+      user.deletedAt ||
+      user.status !== UserStatus.ACTIVE ||
+      user.authVersion !== payload.version
+    ) {
+      throw new UnauthorizedException('Refresh token has been revoked');
+    }
+
+    const tokens = await this.issueSessionTokens(user);
+    return {
+      message: 'Token refreshed',
+      ...tokens,
+      user: {
+        id: user.id,
+        fullName: user.fullName,
+        phone: user.phone,
+        role: user.role,
+        status: user.status,
+      },
+      account: user.account,
+    };
+  }
+
+  async revokeSession(userId: string) {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { authVersion: { increment: 1 } },
+    });
+    return { loggedOut: true };
+  }
+
+  async revokeAccessToken(accessToken: string) {
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub?: string;
+        purpose?: string;
+      }>(accessToken);
+      if (payload.sub && !payload.purpose) {
+        await this.revokeSession(payload.sub);
+      }
+    } catch {
+      // Clearing local credentials still succeeds even if the token is expired.
+    }
+    return { loggedOut: true };
   }
 
   async register(dto: RegisterDto) {
@@ -334,13 +447,11 @@ export class AuthService {
       },
     });
 
-    const accessToken = await this.issueAccessToken(user);
+    const tokens = await this.issueSessionTokens(user);
 
     return {
       message: 'Login successful',
-      accessToken,
-      tokenType: 'Bearer',
-      expiresIn: this.accessTokenExpiresIn(user.role),
+      ...tokens,
       user: {
         id: user.id,
         fullName: user.fullName,
@@ -383,12 +494,10 @@ export class AuthService {
       throw new UnauthorizedException(
         'Use password sign in with your authenticator code',
       );
-    const accessToken = await this.issueAccessToken(user);
+    const tokens = await this.issueSessionTokens(user);
     return {
       message: 'Login successful',
-      accessToken,
-      tokenType: 'Bearer',
-      expiresIn: this.accessTokenExpiresIn(user.role),
+      ...tokens,
       user: {
         id: user.id,
         fullName: user.fullName,
@@ -502,12 +611,10 @@ export class AuthService {
       throw new UnauthorizedException(
         'Use password sign in with your authenticator code',
       );
-    const accessToken = await this.issueAccessToken(user);
+    const tokens = await this.issueSessionTokens(user);
     return {
       message: 'Login successful',
-      accessToken,
-      tokenType: 'Bearer',
-      expiresIn: this.accessTokenExpiresIn(user.role),
+      ...tokens,
       user: {
         id: user.id,
         fullName: user.fullName,

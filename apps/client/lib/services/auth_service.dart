@@ -533,12 +533,74 @@ class AuthService {
   }
 
   Future<void> clearSession() async {
+    final session = await restoreSession();
+    if (session != null && session.accessToken.isNotEmpty) {
+      try {
+        await http
+            .post(
+              Uri.parse('${AppConfig.apiBaseUrl}/auth/logout'),
+              headers: {
+                'Authorization': 'Bearer ${session.accessToken}',
+                'Content-Type': 'application/json',
+              },
+            )
+            .timeout(const Duration(seconds: 8));
+      } catch (_) {
+        // Local logout still proceeds if the network call fails.
+      }
+    }
     await _secureStorage.delete(key: _sessionKey);
     await disableBiometricQuickLogin();
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
     await preferences.remove(_biometricSessionKey);
     await SaleSmartlyService().clearUser();
+  }
+
+  Future<AuthSession?> refreshSession() async {
+    final session = await restoreSession();
+    final refreshToken = session?.refreshToken?.trim() ?? '';
+    if (session == null || refreshToken.isEmpty) return null;
+
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${AppConfig.apiBaseUrl}/auth/refresh'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'refreshToken': refreshToken}),
+          )
+          .timeout(const Duration(seconds: 10));
+      final decoded = _decodeJson(response.body);
+      if (response.statusCode < 200 ||
+          response.statusCode >= 300 ||
+          decoded is! Map<String, dynamic>) {
+        return null;
+      }
+      final refreshed = AuthSession.fromLoginJson({
+        ...decoded,
+        'user': {
+          'id': session.userId,
+          'phone': session.phone,
+          'fullName': session.fullName,
+          'role': session.role,
+          ...(decoded['user'] is Map
+              ? Map<String, dynamic>.from(decoded['user'] as Map)
+              : const <String, dynamic>{}),
+        },
+        'account': {
+          'id': session.accountId,
+          'accountNumber': session.accountNumber,
+          ...(decoded['account'] is Map
+              ? Map<String, dynamic>.from(decoded['account'] as Map)
+              : const <String, dynamic>{}),
+        },
+      });
+      if (!refreshed.isValid) return null;
+      await saveSession(refreshed);
+      return refreshed;
+    } catch (_) {
+      return null;
+    }
   }
 }
 

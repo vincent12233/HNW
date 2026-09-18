@@ -4,34 +4,24 @@ import { AuthService } from './auth.service';
 import { UserRole } from '../generated/prisma/enums';
 
 describe('AuthService access token TTL', () => {
-  it('issues long-lived tokens for clients and staff until logout', async () => {
+  it('issues short-lived access tokens with refresh tokens', async () => {
     const signAsync = jest.fn(
-      async (_payload: unknown, options?: { expiresIn?: string }) =>
-        `token:${options?.expiresIn ?? 'default'}`,
+      async (payload: { purpose?: string }, options?: { expiresIn?: string }) =>
+        `token:${payload.purpose ?? 'access'}:${options?.expiresIn ?? 'default'}`,
     );
     const auth = Object.create(AuthService.prototype) as AuthService;
     (auth as any).jwtService = { signAsync } as unknown as JwtService;
 
-    const clientToken = await (auth as any).issueAccessToken({
+    const tokens = await (auth as any).issueSessionTokens({
       id: 'c1',
       phone: '9876543210',
       role: UserRole.CLIENT,
       authVersion: 1,
     });
-    const financeToken = await (auth as any).issueAccessToken({
-      id: 'f1',
-      phone: null,
-      role: UserRole.FINANCE,
-      authVersion: 1,
-    });
 
-    expect(clientToken).toBe('token:365d');
-    expect(financeToken).toBe('token:365d');
-    expect((auth as any).accessTokenExpiresIn(UserRole.CLIENT)).toBe(
-      365 * 24 * 60 * 60,
-    );
-    expect((auth as any).accessTokenExpiresIn(UserRole.FINANCE)).toBe(
-      365 * 24 * 60 * 60,
-    );
+    expect(tokens.accessToken).toBe('token:access:24h');
+    expect(tokens.refreshToken).toBe('token:REFRESH:30d');
+    expect(tokens.expiresIn).toBe(24 * 60 * 60);
+    expect(tokens.refreshExpiresIn).toBe(30 * 24 * 60 * 60);
   });
 });

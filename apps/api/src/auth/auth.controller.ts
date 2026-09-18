@@ -22,7 +22,7 @@ const backendRoles = new Set([
   'BUSINESS',
   'SUPPORT',
 ]);
-const staffSessionSeconds = 365 * 24 * 60 * 60;
+const staffSessionSeconds = 24 * 60 * 60;
 
 function staffCookieName(role?: string) {
   const normalized = role?.trim().toUpperCase();
@@ -84,24 +84,45 @@ export class AuthController {
       return {
         ...result,
         accessToken: undefined,
+        refreshToken: undefined,
         expiresIn: staffSessionSeconds,
       };
     }
     return result;
   }
 
+  @Post('refresh')
+  refresh(@Body() body: { refreshToken?: string }) {
+    return this.authService.refresh(body.refreshToken ?? '');
+  }
+
   @Post('logout')
-  logout(@Req() req: Request, @Res({ passthrough: true }) response: Response) {
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
     const cookieOptions = {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       path: '/',
     } as const;
-    response.clearCookie(
-      staffCookieName(req.header('x-backend-role')),
-      cookieOptions,
+    const authorization = req.headers.authorization;
+    if (authorization?.startsWith('Bearer ')) {
+      await this.authService.revokeAccessToken(authorization.slice(7));
+    }
+    const backendRole = req.header('x-backend-role');
+    const staffCookie = staffCookieName(backendRole);
+    const cookieHeader = req.headers.cookie ?? '';
+    const cookieMatch = cookieHeader.match(
+      new RegExp(`(?:^|;\\s*)${staffCookie}=([^;]+)`),
     );
+    if (cookieMatch?.[1]) {
+      await this.authService.revokeAccessToken(
+        decodeURIComponent(cookieMatch[1]),
+      );
+    }
+    response.clearCookie(staffCookie, cookieOptions);
     response.clearCookie('staff_access', cookieOptions);
     return { loggedOut: true };
   }

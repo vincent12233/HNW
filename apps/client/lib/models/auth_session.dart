@@ -1,6 +1,7 @@
 class AuthSession {
   const AuthSession({
     required this.accessToken,
+    this.refreshToken,
     required this.userId,
     required this.phone,
     required this.fullName,
@@ -10,6 +11,7 @@ class AuthSession {
   });
 
   final String accessToken;
+  final String? refreshToken;
   final String userId;
   final String phone;
   final String fullName;
@@ -23,6 +25,7 @@ class AuthSession {
 
     return AuthSession(
       accessToken: json['accessToken']?.toString() ?? '',
+      refreshToken: json['refreshToken']?.toString(),
       userId: user['id']?.toString() ?? '',
       phone: user['phone']?.toString() ?? '',
       fullName: user['fullName']?.toString() ?? '',
@@ -35,6 +38,7 @@ class AuthSession {
   factory AuthSession.fromJson(Map<String, dynamic> json) {
     return AuthSession(
       accessToken: json['accessToken']?.toString() ?? '',
+      refreshToken: json['refreshToken']?.toString(),
       userId: json['userId']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       fullName: json['fullName']?.toString() ?? '',
@@ -47,6 +51,7 @@ class AuthSession {
   Map<String, dynamic> toJson() {
     return {
       'accessToken': accessToken,
+      'refreshToken': refreshToken,
       'userId': userId,
       'phone': phone,
       'fullName': fullName,
@@ -54,6 +59,19 @@ class AuthSession {
       'accountId': accountId,
       'accountNumber': accountNumber,
     };
+  }
+
+  AuthSession copyWith({String? accessToken, String? refreshToken}) {
+    return AuthSession(
+      accessToken: accessToken ?? this.accessToken,
+      refreshToken: refreshToken ?? this.refreshToken,
+      userId: userId,
+      phone: phone,
+      fullName: fullName,
+      role: role,
+      accountId: accountId,
+      accountNumber: accountNumber,
+    );
   }
 
   bool get isValid => accessToken.isNotEmpty && userId.isNotEmpty;

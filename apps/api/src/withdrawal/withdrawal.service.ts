@@ -9,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
 import { fixedInviteCode } from '../common/fixed-invite';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import {
   assertAtMostTwoDecimals,
   assertPositiveMoney,
@@ -271,17 +272,16 @@ export class WithdrawalService {
           },
         });
 
-        await tx.accountTransaction.create({
-          data: {
-            accountId: account.id,
-            type: 'WITHDRAWAL',
-            status: 'COMPLETED',
-            amount: withdrawal.amount,
-            balanceBefore: cashBalance,
-            balanceAfter,
-            referenceId: withdrawalId,
-            note: 'Withdrawal approved',
-          },
+        await createLedgerEntryIdempotent(tx, {
+          accountId: account.id,
+          type: 'WITHDRAWAL',
+          status: 'COMPLETED',
+          amount: withdrawal.amount,
+          balanceBefore: cashBalance,
+          balanceAfter,
+          referenceId: withdrawalId,
+          note: 'Withdrawal approved',
+          idempotencyKey: `WITHDRAWAL:${withdrawalId}`,
         });
         await tx.notification.create({
           data: {

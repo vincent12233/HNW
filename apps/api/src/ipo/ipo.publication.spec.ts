@@ -43,7 +43,7 @@ describe('IPO publication', () => {
       ipoDebt: { create: jest.fn() },
       notification: { create: jest.fn() },
       auditLog: { create: jest.fn() },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
     };
     const service = new IpoService({
       $transaction: (fn: any) => fn(tx),

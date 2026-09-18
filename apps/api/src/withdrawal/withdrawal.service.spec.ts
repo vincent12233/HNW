@@ -169,7 +169,10 @@ describe('WithdrawalService', () => {
         }),
         update: jest.fn().mockResolvedValue({}),
       },
-      accountTransaction: { create: jest.fn().mockResolvedValue({}) },
+      accountTransaction: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue({}),
+      },
       notification: { create: jest.fn().mockResolvedValue({}) },
     };
     (service as any).prisma = {
@@ -257,7 +260,7 @@ describe('WithdrawalService', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       notification: { create: jest.fn() },
     };
     (service as any).prisma = {

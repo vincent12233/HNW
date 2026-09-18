@@ -1,4 +1,5 @@
 import { Prisma } from '../generated/prisma/client';
+import { createLedgerEntryIdempotent } from './ledger-idempotency';
 import { moneyDecimal } from './money';
 
 export type SettleIpoInput = {
@@ -170,17 +171,16 @@ export async function applyIncomingFundsToIpoDebts(
       }
     }
 
-    await tx.accountTransaction.create({
-      data: {
-        accountId: input.accountId,
-        type: 'IPO_REPAYMENT',
-        status: 'COMPLETED',
-        amount: payment,
-        balanceBefore: input.balanceBefore,
-        balanceAfter: input.balanceBefore,
-        referenceId: debt.id,
-        note: 'IPO debt repayment',
-      },
+    await createLedgerEntryIdempotent(tx, {
+      accountId: input.accountId,
+      type: 'IPO_REPAYMENT',
+      status: 'COMPLETED',
+      amount: payment,
+      balanceBefore: input.balanceBefore,
+      balanceAfter: input.balanceBefore,
+      referenceId: debt.id,
+      note: 'IPO debt repayment',
+      idempotencyKey: `IPO_REPAYMENT:${debt.id}:${payment.toFixed(2)}:${moneyDecimal(input.balanceBefore).toFixed(2)}`,
     });
 
     availableAmount = availableAmount.sub(payment);

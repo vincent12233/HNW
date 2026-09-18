@@ -126,7 +126,7 @@ model Account {
   ipoApplications    IpoApplication[]
   transactions       AccountTransaction[]
   loanApplications    LoanApplication[]
-  user               User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user               User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
   ipoDebts           IpoDebt[]
   orders             Order[]
   positions          Position[]
@@ -139,20 +139,21 @@ model Account {
 }
 
 model AccountTransaction {
-  id            String                   @id @default(uuid())
-  accountId     String
-  type          AccountTransactionType
-  status        AccountTransactionStatus @default(PENDING)
-  amount        Decimal                  @db.Decimal(18, 2)
-  balanceBefore Decimal                  @db.Decimal(18, 2)
-  balanceAfter  Decimal                  @db.Decimal(18, 2)
-  referenceId   String?
-  note          String?
-  createdById   String?
-  createdAt     DateTime                 @default(now())
-  updatedAt     DateTime                 @updatedAt
-  account       Account                  @relation(fields: [accountId], references: [id], onDelete: Cascade)
-  createdBy     User?                    @relation("TransactionCreator", fields: [createdById], references: [id])
+  id             String                   @id @default(uuid())
+  accountId      String
+  type           AccountTransactionType
+  status         AccountTransactionStatus @default(PENDING)
+  amount         Decimal                  @db.Decimal(18, 2)
+  balanceBefore  Decimal                  @db.Decimal(18, 2)
+  balanceAfter   Decimal                  @db.Decimal(18, 2)
+  referenceId    String?
+  idempotencyKey String?                  @unique
+  note           String?
+  createdById    String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  account        Account                  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdBy      User?                    @relation("TransactionCreator", fields: [createdById], references: [id])
 
   @@index([accountId, createdAt])
   @@index([status])
@@ -210,6 +211,7 @@ model Instrument {
   otcOffer       OtcOffer?
   otcOrders      OtcOrder[]
   ipos           Ipo[]
+  watchlistItems UserWatchlistItem[]
 
   @@unique([exchange, symbol])
   @@index([symbol])
@@ -1016,6 +1018,52 @@ model AppClientSetting {
   updatedBy          User?             @relation("AppClientSettingUpdater", fields: [updatedById], references: [id])
 
   @@map("app_client_settings")
+}
+
+/// Existing KYC table alignment (created by prior SQL migrations).
+/// Raw SQL KYC service paths may remain; this does not change KYC UX/flow.
+model KycSubmission {
+  id                String    @id @default(uuid())
+  userId            String
+  businessUserId    String
+  documentType      String
+  status            String    @default("PENDING")
+  fileName          String
+  filePath          String
+  mimeType          String?
+  recognizedType    String?
+  recognizedText    String?
+  reviewNote        String?
+  reviewedById      String?
+  reviewedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  backFileName      String?
+  backFilePath      String?
+  backMimeType      String?
+  selfieFilePath    String?
+  selfieMimeType    String?
+  signatureFilePath String?
+  fullName          String?
+  bankDetails       Json?
+
+  @@index([userId])
+  @@index([businessUserId, status])
+  @@map("kyc_submissions")
+}
+
+/// Existing client watchlist table alignment (created by prior SQL migrations).
+model UserWatchlistItem {
+  id           String   @id @default(uuid())
+  userId       String
+  instrumentId String
+  createdAt    DateTime @default(now())
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  instrument   Instrument @relation(fields: [instrumentId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, instrumentId])
+  @@index([userId, createdAt])
+  @@map("user_watchlist_items")
 }
 
 

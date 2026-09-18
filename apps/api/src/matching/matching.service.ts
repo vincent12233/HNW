@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -336,17 +337,16 @@ export class MatchingService {
     balanceBefore: Prisma.Decimal,
     balanceAfter: Prisma.Decimal,
   ): Promise<void> {
-    await tx.accountTransaction.create({
-      data: {
-        accountId: order.accountId,
-        type: 'TRADE_SETTLEMENT',
-        status: 'COMPLETED',
-        amount,
-        balanceBefore,
-        balanceAfter,
-        referenceId: `EXECUTION:${executionId}:SETTLEMENT`,
-        note: `${order.side} ${quantity} ${order.instrument.exchange}:${order.instrument.symbol} at ${price.toFixed(4)}`,
-      },
+    await createLedgerEntryIdempotent(tx, {
+      accountId: order.accountId,
+      type: 'TRADE_SETTLEMENT',
+      status: 'COMPLETED',
+      amount,
+      balanceBefore,
+      balanceAfter,
+      referenceId: `EXECUTION:${executionId}:SETTLEMENT`,
+      note: `${order.side} ${quantity} ${order.instrument.exchange}:${order.instrument.symbol} at ${price.toFixed(4)}`,
+      idempotencyKey: `EXECUTION:${executionId}:SETTLEMENT`,
     });
   }
 
@@ -371,17 +371,16 @@ export class MatchingService {
           frozenBalance: { decrement: order.frozenAmount },
         },
       });
-      await tx.accountTransaction.create({
-        data: {
-          accountId: order.accountId,
-          type: 'ORDER_RELEASE',
-          status: 'COMPLETED',
-          amount: order.frozenAmount,
-          balanceBefore: account.cashBalance,
-          balanceAfter: account.cashBalance,
-          referenceId: `ORDER:${order.id}:RELEASE`,
-          note: 'Released funds for unfilled order quantity',
-        },
+      await createLedgerEntryIdempotent(tx, {
+        accountId: order.accountId,
+        type: 'ORDER_RELEASE',
+        status: 'COMPLETED',
+        amount: order.frozenAmount,
+        balanceBefore: account.cashBalance,
+        balanceAfter: account.cashBalance,
+        referenceId: `ORDER:${order.id}:RELEASE`,
+        note: 'Released funds for unfilled order quantity',
+        idempotencyKey: `ORDER:${order.id}:RELEASE`,
       });
     } else if (order.side === 'SELL' && remaining > 0) {
       const position = await tx.position.findUniqueOrThrow({

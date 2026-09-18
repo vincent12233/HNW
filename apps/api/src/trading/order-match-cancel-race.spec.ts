@@ -65,7 +65,7 @@ describe('order match/cancel race guards', () => {
           cashBalance: new Prisma.Decimal('900'),
         }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn(),
@@ -81,7 +81,7 @@ describe('order match/cancel race guards', () => {
           cancelledAt: new Date(),
         }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       trade: { create: jest.fn() },
       account: { update: jest.fn() },
       position: { upsert: jest.fn(), update: jest.fn() },

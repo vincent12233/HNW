@@ -70,7 +70,7 @@ describe('MatchingService', () => {
           .fn()
           .mockResolvedValue({ cashBalance: new Prisma.Decimal('800') }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn(),
@@ -127,7 +127,7 @@ describe('MatchingService', () => {
           .fn()
           .mockResolvedValue({ cashBalance: new Prisma.Decimal('750') }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'position-1',
@@ -235,7 +235,7 @@ describe('MatchingService', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       trade: { create: jest.fn() },
     } as any;
     await createService(tx).matchOrder(order.id);
@@ -284,7 +284,7 @@ describe('MatchingService', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {},
       trade: { create: jest.fn() },
     } as any;
@@ -350,7 +350,7 @@ describe('MatchingService', () => {
           .fn()
           .mockResolvedValue({ cashBalance: new Prisma.Decimal('500') }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn(),
@@ -406,7 +406,7 @@ describe('MatchingService', () => {
           .fn()
           .mockResolvedValue({ cashBalance: new Prisma.Decimal('525') }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUnique: jest.fn().mockResolvedValue(null),
         upsert: jest.fn(),
@@ -475,7 +475,7 @@ describe('MatchingService', () => {
           .fn()
           .mockResolvedValue({ cashBalance: new Prisma.Decimal('255') }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUnique: jest.fn().mockResolvedValue({
           quantity: 5,

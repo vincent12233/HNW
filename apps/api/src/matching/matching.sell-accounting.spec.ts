@@ -68,7 +68,7 @@ describe('MatchingService partial SELL accounting', () => {
           cashBalance: new Prisma.Decimal('1125'),
         }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'position-1',
@@ -149,7 +149,7 @@ describe('MatchingService partial SELL accounting', () => {
           cashBalance: new Prisma.Decimal('1455'),
         }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUniqueOrThrow: jest.fn().mockResolvedValue({
           id: 'position-1',
@@ -229,7 +229,7 @@ describe('MatchingService partial SELL accounting', () => {
           cashBalance: new Prisma.Decimal('1125'),
         }),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       position: {
         findUniqueOrThrow: jest
           .fn()

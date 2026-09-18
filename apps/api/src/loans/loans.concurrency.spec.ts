@@ -31,7 +31,7 @@ describe('LoansService concurrency protection', () => {
           findUniqueOrThrow: jest.fn().mockImplementation(async () => loan),
         },
         account: { update: jest.fn() },
-        accountTransaction: { create: jest.fn() },
+        accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       };
       const prisma = {
         $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>
@@ -94,7 +94,7 @@ describe('LoansService concurrency protection', () => {
         updateMany: jest.fn().mockResolvedValue({ count: 0 }),
       },
       account: { update: jest.fn() },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
     };
     const prisma = {
       $transaction: jest.fn((callback: (client: typeof tx) => unknown) =>

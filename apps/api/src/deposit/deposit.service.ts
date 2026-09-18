@@ -7,6 +7,7 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { applyIncomingFundsToIpoDebts } from '../common/ipo-debt-repay';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { moneyDecimal } from '../common/money';
 
@@ -293,19 +294,18 @@ export class DepositService {
             },
           });
         }
-        await tx.accountTransaction.create({
-          data: {
-            accountId: deposit.accountId,
-            type: 'DEPOSIT',
-            status: 'COMPLETED',
-            amount: availableAmount,
-            balanceBefore,
-            balanceAfter: balanceBefore.add(availableAmount),
-            referenceId: depositId,
-            note: repayAmount.gt(0)
-              ? `Deposit approved; ${repayAmount.toFixed(2)} applied to IPO debt`
-              : 'Deposit approved',
-          },
+        await createLedgerEntryIdempotent(tx, {
+          accountId: deposit.accountId,
+          type: 'DEPOSIT',
+          status: 'COMPLETED',
+          amount: availableAmount,
+          balanceBefore,
+          balanceAfter: balanceBefore.add(availableAmount),
+          referenceId: depositId,
+          note: repayAmount.gt(0)
+            ? `Deposit approved; ${repayAmount.toFixed(2)} applied to IPO debt`
+            : 'Deposit approved',
+          idempotencyKey: `DEPOSIT:${depositId}`,
         });
         await tx.notification.create({
           data: {

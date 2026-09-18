@@ -17,7 +17,7 @@ describe('FreezeService consistency guards', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
     } as any;
 
     await service.freezeBuy(
@@ -48,7 +48,7 @@ describe('FreezeService consistency guards', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
     } as any;
 
     await expect(
@@ -76,7 +76,7 @@ describe('FreezeService consistency guards', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
     } as any;
 
     await expect(
@@ -101,7 +101,7 @@ describe('FreezeService consistency guards', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
     } as any;
 
     await expect(

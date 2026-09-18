@@ -3,6 +3,7 @@ import {
   ConflictException,
   Injectable,
 } from '@nestjs/common';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { availableCash } from '../common/money';
 import { Prisma } from '../generated/prisma/client';
 
@@ -36,17 +37,16 @@ export class FreezeService {
       },
     });
 
-    await tx.accountTransaction.create({
-      data: {
-        accountId,
-        type: 'ORDER_FREEZE',
-        status: 'COMPLETED',
-        amount: amount.negated(),
-        balanceBefore: cashBalance,
-        balanceAfter: cashBalance,
-        referenceId: `ORDER:${orderId}:FREEZE`,
-        note,
-      },
+    await createLedgerEntryIdempotent(tx, {
+      accountId,
+      type: 'ORDER_FREEZE',
+      status: 'COMPLETED',
+      amount: amount.negated(),
+      balanceBefore: cashBalance,
+      balanceAfter: cashBalance,
+      referenceId: `ORDER:${orderId}:FREEZE`,
+      note,
+      idempotencyKey: `ORDER:${orderId}:FREEZE`,
     });
   }
 
@@ -102,17 +102,16 @@ export class FreezeService {
       },
     });
 
-    await tx.accountTransaction.create({
-      data: {
-        accountId,
-        type: 'ORDER_RELEASE',
-        status: 'COMPLETED',
-        amount,
-        balanceBefore: cashBalance,
-        balanceAfter: cashBalance,
-        referenceId: `ORDER:${orderId}:RELEASE`,
-        note,
-      },
+    await createLedgerEntryIdempotent(tx, {
+      accountId,
+      type: 'ORDER_RELEASE',
+      status: 'COMPLETED',
+      amount,
+      balanceBefore: cashBalance,
+      balanceAfter: cashBalance,
+      referenceId: `ORDER:${orderId}:RELEASE`,
+      note,
+      idempotencyKey: `ORDER:${orderId}:RELEASE`,
     });
   }
 

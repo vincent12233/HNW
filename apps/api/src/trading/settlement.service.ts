@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
+import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { availableCash } from '../common/money';
 import { OrderSide, Prisma } from '../generated/prisma/client';
 import { CalculatorService } from './calculator.service';
@@ -56,17 +57,16 @@ export class SettlementService {
             },
     });
 
-    await tx.accountTransaction.create({
-      data: {
-        accountId: account.id,
-        type: 'TRADE_SETTLEMENT',
-        status: 'COMPLETED',
-        amount: side === OrderSide.BUY ? netAmount.negated() : netAmount,
-        balanceBefore,
-        balanceAfter: updatedAccount.cashBalance,
-        referenceId: `ORDER:${orderId}:SETTLEMENT`,
-        note: `${side} ${quantity} ${instrument.exchange}:${instrument.symbol} at ${fillPrice.toFixed(4)}`,
-      },
+    await createLedgerEntryIdempotent(tx, {
+      accountId: account.id,
+      type: 'TRADE_SETTLEMENT',
+      status: 'COMPLETED',
+      amount: side === OrderSide.BUY ? netAmount.negated() : netAmount,
+      balanceBefore,
+      balanceAfter: updatedAccount.cashBalance,
+      referenceId: `ORDER:${orderId}:SETTLEMENT`,
+      note: `${side} ${quantity} ${instrument.exchange}:${instrument.symbol} at ${fillPrice.toFixed(4)}`,
+      idempotencyKey: `ORDER:${orderId}:SETTLEMENT`,
     });
 
     if (side === OrderSide.BUY) {

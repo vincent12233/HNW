@@ -33,7 +33,7 @@ describe('IPO automatic payment from approved deposits', () => {
         update: jest.fn(),
       },
       ipoApplication: { update: jest.fn() },
-      accountTransaction: { create: jest.fn() },
+      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
       notification: { create: jest.fn() },
       order: {
         findUnique: jest.fn().mockResolvedValue(null),

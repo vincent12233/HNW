@@ -185,6 +185,45 @@ class TradingOrder {
     };
   }
 
+  TradingOrder withClientOrderId(String value) {
+    return TradingOrder(
+      orderId: orderId,
+      clientOrderId: value,
+      status: status,
+      type: type,
+      timeInForce: timeInForce,
+      limitPrice: limitPrice,
+      averageFillPrice: averageFillPrice,
+      rejectionReason: rejectionReason,
+      category: category,
+      filledQuantity: filledQuantity,
+      symbol: symbol,
+      exchange: exchange,
+      isBuy: isBuy,
+      quantity: quantity,
+      price: price,
+      placedAt: placedAt,
+      updatedAt: updatedAt,
+      completedAt: completedAt,
+      cancelledAt: cancelledAt,
+      fills: fills,
+    );
+  }
+
+  /// Logical order fingerprint used to decide when a new clientOrderId is required.
+  String submissionFingerprint() {
+    final limit = limitPrice?.toStringAsFixed(4) ?? '';
+    return [
+      exchange.toUpperCase(),
+      symbol.toUpperCase(),
+      isBuy ? 'BUY' : 'SELL',
+      type.toUpperCase(),
+      timeInForce.toUpperCase(),
+      quantity.toString(),
+      limit,
+    ].join('|');
+  }
+
   double get amount => quantity * (limitPrice ?? price);
 
   String get formattedTime {

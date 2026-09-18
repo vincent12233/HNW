@@ -49,6 +49,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
   bool watchlistSaving = false;
   String orderType = 'MARKET';
   String timeInForce = 'DAY';
+  String? _pendingClientOrderId;
+  String? _pendingOrderFingerprint;
   late bool socketConnected;
   Timer? freshnessTimer;
   Timer? priceFlashTimer;
@@ -287,7 +289,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 ? null
                 : () async {
                     setState(() => isSubmitting = true);
-                    final order = TradingOrder(
+                    final draft = TradingOrder(
                       symbol: liveStock.symbol,
                       exchange: liveStock.exchange,
                       isBuy: isBuy,
@@ -297,6 +299,19 @@ class _StockDetailPageState extends State<StockDetailPage> {
                       type: orderType,
                       timeInForce: timeInForce,
                       limitPrice: limitPrice,
+                    );
+                    final fingerprint = draft.submissionFingerprint();
+                    if (_pendingOrderFingerprint != fingerprint) {
+                      _pendingClientOrderId = null;
+                      _pendingOrderFingerprint = fingerprint;
+                    }
+                    _pendingClientOrderId ??=
+                        TradingService.createClientOrderId(
+                          exchange: draft.exchange,
+                          symbol: draft.symbol,
+                        );
+                    final order = draft.withClientOrderId(
+                      _pendingClientOrderId!,
                     );
 
                     TradingService.clearLastPlacedOrder();
@@ -312,6 +327,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
                       return;
                     }
 
+                    _pendingClientOrderId = null;
+                    _pendingOrderFingerprint = null;
                     Navigator.pop(dialogContext);
                     final message = confirmedOrder == null
                         ? '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order submitted'
@@ -835,8 +852,11 @@ class _StockDetailPageState extends State<StockDetailPage> {
                 return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
               }),
             ),
-            onSelectionChanged: (selection) =>
-                setState(() => isBuy = selection.first),
+            onSelectionChanged: (selection) => setState(() {
+              isBuy = selection.first;
+              _pendingClientOrderId = null;
+              _pendingOrderFingerprint = null;
+            }),
           ),
           const SizedBox(height: 14),
           SegmentedButton<String>(
@@ -854,6 +874,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
             onSelectionChanged: (selection) {
               setState(() {
                 orderType = selection.first;
+                _pendingClientOrderId = null;
+                _pendingOrderFingerprint = null;
                 if (orderType == 'LIMIT' &&
                     limitPriceController.text.trim().isEmpty) {
                   limitPriceController.text = liveStock.price.toStringAsFixed(
@@ -925,7 +947,11 @@ class _StockDetailPageState extends State<StockDetailPage> {
                             ? AppConfig.primaryColor
                             : AppConfig.borderColor,
                       ),
-                      onSelected: (_) => setState(() => timeInForce = value),
+                      onSelected: (_) => setState(() {
+                        timeInForce = value;
+                        _pendingClientOrderId = null;
+                        _pendingOrderFingerprint = null;
+                      }),
                     ),
                   ),
                 )

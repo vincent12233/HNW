@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
 import '../app_config.dart';
@@ -15,6 +16,8 @@ class TradingService {
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
   static TradingOrder? _lastPlacedOrder;
+  static final ClientOrderSubmissionGuard submissionGuard =
+      ClientOrderSubmissionGuard();
 
   static void clearLastPlacedOrder() {
     _lastPlacedOrder = null;
@@ -24,6 +27,21 @@ class TradingService {
     final order = _lastPlacedOrder;
     _lastPlacedOrder = null;
     return order;
+  }
+
+  /// Allocates a client order id once for a logical submission.
+  /// Retries must reuse the same value; only a new logical order gets a new id.
+  static String createClientOrderId({
+    required String exchange,
+    required String symbol,
+  }) {
+    return 'APP-${DateTime.now().microsecondsSinceEpoch}-'
+        '${exchange.toUpperCase()}-${symbol.toUpperCase()}';
+  }
+
+  @visibleForTesting
+  static void clearInFlightSubmissions() {
+    submissionGuard.clear();
   }
 
   Future<TradingAccountSnapshot?> fetchAccountSnapshot({
@@ -149,6 +167,21 @@ class TradingService {
   }
 
   Future<TradingOrder> placeOrder(TradingOrder order) async {
+    final clientOrderId =
+        (order.clientOrderId != null && order.clientOrderId!.trim().isNotEmpty)
+        ? order.clientOrderId!.trim()
+        : createClientOrderId(exchange: order.exchange, symbol: order.symbol);
+
+    return submissionGuard.run(
+      clientOrderId,
+      () => _submitOrder(order, clientOrderId),
+    );
+  }
+
+  Future<TradingOrder> _submitOrder(
+    TradingOrder order,
+    String clientOrderId,
+  ) async {
     _lastPlacedOrder = null;
     final session = await _authService.restoreSession();
 
@@ -157,8 +190,7 @@ class TradingService {
     }
 
     final body = <String, dynamic>{
-      'clientOrderId':
-          'APP-${DateTime.now().microsecondsSinceEpoch}-${order.exchange}-${order.symbol}',
+      'clientOrderId': clientOrderId,
       'exchange': order.exchange,
       'symbol': order.symbol,
       'side': order.isBuy ? 'BUY' : 'SELL',
@@ -208,10 +240,7 @@ class TradingService {
 
     final TradingOrder confirmedOrder;
     try {
-      confirmedOrder = TradingOrder.fromConfirmation(
-        decoded,
-        body['clientOrderId'] as String,
-      );
+      confirmedOrder = TradingOrder.fromConfirmation(decoded, clientOrderId);
     } catch (_) {
       throw const TradingException(
         'Order confirmation is unavailable. Check your orders before submitting again.',
@@ -353,6 +382,30 @@ class TradingException implements Exception {
 
   @override
   String toString() => message;
+}
+
+/// Coalesces concurrent submits that share the same clientOrderId.
+class ClientOrderSubmissionGuard {
+  final Map<String, Future<TradingOrder>> _inFlight = {};
+
+  @visibleForTesting
+  int get inFlightCount => _inFlight.length;
+
+  void clear() => _inFlight.clear();
+
+  Future<TradingOrder> run(
+    String clientOrderId,
+    Future<TradingOrder> Function() submit,
+  ) {
+    final existing = _inFlight[clientOrderId];
+    if (existing != null) return existing;
+
+    final future = submit();
+    _inFlight[clientOrderId] = future;
+    return future.whenComplete(() {
+      _inFlight.remove(clientOrderId);
+    });
+  }
 }
 
 String _apiMessage(dynamic decoded, String fallback) {

@@ -1,18 +1,15 @@
 "use client";
 
-import { IdcardOutlined, LockOutlined, SafetyCertificateOutlined, StockOutlined } from "@ant-design/icons";
+import { EyeInvisibleOutlined, EyeOutlined, IdcardOutlined, LockOutlined } from "@ant-design/icons";
 import { Alert, Button, Form, Input } from "antd";
 import { isAxiosError } from "axios";
 import { useRouter } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { backendRoleLabels, getBackendRole, type BackendRole } from "@/lib/backend-role";
 
 type Values = { employeeNo: string; password: string };
-
-const subscribeToBackendRole = () => () => undefined;
-const serverBackendRole = () => undefined;
 
 const roleHints: Record<BackendRole, string> = {
   ADMIN: "平台治理、产品上架、权限与审计",
@@ -35,11 +32,11 @@ export default function AdminLoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [capsLock, setCapsLock] = useState(false);
-  const deploymentRole = useSyncExternalStore<BackendRole | undefined>(
-    subscribeToBackendRole,
-    getBackendRole,
-    serverBackendRole,
-  );
+  const [deploymentRole, setDeploymentRole] = useState<BackendRole | undefined>(undefined);
+
+  useEffect(() => {
+    setDeploymentRole(getBackendRole());
+  }, []);
 
   async function submit(values: Values) {
     if (submitting) return;
@@ -62,10 +59,13 @@ export default function AdminLoginPage() {
       router.push(homeByRole[data.user.role] || "/dashboard");
     } catch (err: unknown) {
       const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;
+      const status = isAxiosError(err) ? err.response?.status : undefined;
       setError(
         isAxiosError(err) && !err.response
           ? "暂时无法连接后台服务，请检查网络后重试。"
-          : Array.isArray(message) ? message.join("，") : message || "登录失败，请检查员工编号、密码或后台服务。",
+          : status === 401
+            ? "登录已失效或凭据无效，请重新输入员工编号和密码。"
+            : Array.isArray(message) ? message.join("，") : message || "登录失败，请检查员工编号、密码或后台服务。",
       );
     } finally {
       setSubmitting(false);
@@ -73,56 +73,32 @@ export default function AdminLoginPage() {
   }
 
   const roleClass = deploymentRole ? `role-${deploymentRole.toLowerCase()}` : "";
+  const roleTitle = deploymentRole ? backendRoleLabels[deploymentRole] : "员工工作台";
 
   return (
     <main className={`admin-login ${roleClass}`.trim()}>
-      <div className="login-visual">
-        <div className="login-brand">
-          <span>
-            <StockOutlined />
-          </span>
-          <div>
-            <strong>India Trading</strong>
-            <small>Operations Platform</small>
-          </div>
-        </div>
-        <div>
-          <p>SECURE FINANCIAL OPERATIONS</p>
-          <h1>
-            统一管理，
-            <br />
-            清晰掌控每一步。
-          </h1>
-          <div className="login-points">
-            <span>
-              <SafetyCertificateOutlined /> 权限隔离
-            </span>
-            <span>五角色独立入口</span>
-            <span>完整操作审计</span>
-          </div>
-        </div>
-      </div>
-
-      <section className="login-card">
-        <div className="login-mobile-brand">
-          <StockOutlined /> India Trading
-        </div>
-        <p className="eyebrow">STAFF ACCESS</p>
-        <h2>{deploymentRole ? backendRoleLabels[deploymentRole] : "运营后台登录"}</h2>
+      <section className="login-card" aria-labelledby="staff-login-title">
+        <p className="login-brand-mark">HNW</p>
+        <p className="eyebrow">员工工作台</p>
+        <h1 id="staff-login-title">{roleTitle}</h1>
         <p className="subtitle">
           {deploymentRole
             ? `${roleHints[deploymentRole]}。请使用本角色员工编号登录，跨角色账号将被拒绝。`
-            : "超级管理员、管理员、财务、业务员与专用运营员使用员工编号登录对应入口。"}
+            : "请使用员工编号和密码登录对应工作台。"}
         </p>
-        {error && <div role="alert"><Alert type="error" title={error} showIcon /></div>}
-        <Form<Values> layout="vertical" onFinish={submit} size="large" disabled={submitting}>
+        {error && (
+          <div role="alert">
+            <Alert type="error" title={error} showIcon />
+          </div>
+        )}
+        <Form<Values> layout="vertical" onFinish={submit} size="large" disabled={submitting} requiredMark={false}>
           <Form.Item label="员工编号" name="employeeNo" rules={[{ required: true, whitespace: true, message: "请输入员工编号" }]}>
             <Input
               prefix={<IdcardOutlined />}
-              placeholder="例如 ADMIN001"
               autoCapitalize="characters"
               autoComplete="username"
               spellCheck={false}
+              aria-label="员工编号"
             />
           </Form.Item>
           <Form.Item
@@ -135,22 +111,25 @@ export default function AdminLoginPage() {
           >
             <Input.Password
               prefix={<LockOutlined />}
-              placeholder="请输入密码"
               autoComplete="current-password"
+              aria-label="密码"
+              iconRender={(visible) => (visible ? <EyeOutlined /> : <EyeInvisibleOutlined />)}
               onKeyDown={(event) => setCapsLock(event.getModifierState("CapsLock"))}
               onKeyUp={(event) => setCapsLock(event.getModifierState("CapsLock"))}
               onBlur={() => setCapsLock(false)}
               aria-describedby={capsLock ? "login-caps-warning" : undefined}
             />
           </Form.Item>
-          {capsLock && <p id="login-caps-warning" className="login-caps-warning" role="status">大写锁定已开启</p>}
-          <Button type="primary" htmlType="submit" loading={submitting} block>
-            {submitting ? "安全验证中…" : "登录工作台"}
+          {capsLock && (
+            <p id="login-caps-warning" className="login-caps-warning" role="status">
+              大写锁定已开启
+            </p>
+          )}
+          <Button type="primary" htmlType="submit" loading={submitting} block className="login-submit" style={{ width: "100%", height: 48 }}>
+            {submitting ? "正在登录…" : "登录工作台"}
           </Button>
         </Form>
-        <p className="login-foot">
-          <SafetyCertificateOutlined /> 仅限已授权员工访问，角色权限严格隔离，所有操作均会记录
-        </p>
+        <p className="login-foot">仅限已授权员工使用本入口。客户请使用移动端账户登录。</p>
       </section>
     </main>
   );

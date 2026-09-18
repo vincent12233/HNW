@@ -7,6 +7,9 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../app_config.dart';
 import '../services/auth_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/auth_layout.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/international_phone_field.dart';
 import '../widgets/onboarding_widgets.dart';
@@ -23,6 +26,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       code = TextEditingController(),
       password = TextEditingController(),
       confirm = TextEditingController();
+  String? phoneError;
   final storage = const FlutterSecureStorage(
     aOptions: AndroidOptions(
       migrateOnAlgorithmChange: true,
@@ -35,6 +39,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       polling = false,
       ready = false,
       obscure = true,
+      obscureConfirm = true,
       closed = false;
   List<Map<String, dynamic>> messages = [];
   Timer? timer;
@@ -109,7 +114,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         });
       }
     } catch (e) {
-      if (mounted) setState(() => error = clientErrorMessage(e));
+      final stored = await storage.read(key: 'recovery_token');
+      if (mounted) {
+        setState(() {
+          error = clientErrorMessage(e);
+          if (stored == null) token = null;
+        });
+      }
     } finally {
       polling = false;
     }
@@ -120,6 +131,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     setState(() {
       busy = true;
       error = null;
+      phoneError = null;
     });
     try {
       await action();
@@ -130,18 +142,26 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     }
   }
 
-  Future<void> _connect() => _run(() async {
+  Future<void> _connect() async {
+    if (busy) return;
     final number = internationalPhone(phone.text, country.countryCode);
     if (number == null) {
-      throw const AuthException('Enter your registered mobile number');
+      setState(() {
+        phoneError = 'Enter your registered Indian mobile number';
+        error = null;
+      });
+      return;
     }
-    final data = await _request('open', body: {'phone': number});
-    token = data['token'] as String;
-    await storage.write(key: 'recovery_token', value: token);
-    if (!mounted) return;
-    await _poll();
-    _startPolling();
-  });
+    await _run(() async {
+      final data = await _request('open', body: {'phone': number});
+      token = data['token'] as String;
+      await storage.write(key: 'recovery_token', value: token);
+      if (!mounted) return;
+      await _poll();
+      _startPolling();
+    });
+  }
+
   Future<void> _send() => _run(() async {
     if (message.text.trim().isEmpty) return;
     await _request('messages', body: {'content': message.text.trim()});
@@ -179,19 +199,53 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    backgroundColor: Colors.white,
-    appBar: AppBar(title: const AppText('Customer Support')),
+    backgroundColor: AuthLayout.pageBackground,
+    appBar: AppBar(
+      backgroundColor: AuthLayout.pageBackground,
+      title: const AppText('Customer Support'),
+    ),
+    resizeToAvoidBottomInset: true,
     body: !ready
         ? const Center(child: CircularProgressIndicator())
-        : Center(
+        : Align(
+            alignment: Alignment.topCenter,
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  20,
+                  16,
+                  20,
+                  24 + MediaQuery.viewInsetsOf(context).bottom,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                  const AuthBrandHeader(),
+                  const SizedBox(height: 20),
+                  const AppText(
+                    'Password recovery',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  const AppText(
+                    'Password reset is handled by customer support. After you connect, a support specialist can issue a recovery code. The app does not send an SMS or email code.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      height: 1.4,
+                      letterSpacing: 0,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   const VerificationBanner(
-                    title: 'Password Recovery',
-                    subtitle: 'Customer Support',
+                    title: 'Customer support recovery',
+                    subtitle:
+                        'Use Connect to Support with your registered mobile number. A recovery code appears only after support issues one.',
                     icon: Icons.support_agent,
                   ),
                   const SizedBox(height: 20),
@@ -200,21 +254,31 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       controller: phone,
                       country: country,
                       enabled: !busy,
+                      lockCountry: true,
+                      errorText: phoneError,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _connect(),
                       onCountryChanged: (c) => setState(() => country = c),
                     ),
                     const SizedBox(height: 16),
-                    FilledButton.icon(
-                      onPressed: busy ? null : _connect,
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const AppText('Connect to Support'),
+                    if (error != null) AuthFormError(message: error!),
+                    AuthSubmitButton(
+                      label: 'Connect to Support',
+                      busy: busy,
+                      onPressed: _connect,
                     ),
                   ] else ...[
                     if (messages.isEmpty)
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 24),
                         child: AppText(
-                          'Waiting for a support agent',
+                          'Waiting for a support agent. A reset code will appear only after support issues one.',
                           textAlign: TextAlign.center,
+                          style: TextStyle(
+                            letterSpacing: 0,
+                            height: 1.4,
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                       ),
                     for (final item in messages)
@@ -228,15 +292,16 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: item['sender'] == 'CLIENT'
-                                ? const Color(0xFFEAF1FF)
-                                : const Color(0xFFF5F6F8),
-                            borderRadius: BorderRadius.circular(6),
+                                ? AppColors.brandPrimarySoft
+                                : AppColors.surfaceSecondary,
+                            borderRadius: AppRadius.borderSm,
                           ),
                           child: SelectableText(item['content'] as String),
                         ),
                       ),
                     if (!closed) ...[
                       Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Expanded(
                             child: TextField(
@@ -244,6 +309,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               minLines: 1,
                               maxLines: 4,
                               maxLength: 2000,
+                              textInputAction: TextInputAction.send,
+                              onSubmitted: (_) => _send(),
                               decoration: onboardingInput(
                                 'Message',
                               ).copyWith(counterText: ''),
@@ -254,7 +321,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             onPressed: busy ? null : _send,
                             icon: const Icon(
                               Icons.send,
-                              color: AppConfig.primaryColor,
+                              color: AppColors.brandPrimary,
                             ),
                           ),
                         ],
@@ -267,36 +334,81 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      const AppText(
+                        'Enter the recovery code issued by support, then choose a new password. This is not an SMS one-time code.',
+                        style: TextStyle(
+                          fontSize: 13,
+                          height: 1.4,
+                          letterSpacing: 0,
+                          color: AppColors.textSecondary,
                         ),
                       ),
                       const SizedBox(height: 16),
                       TextField(
                         controller: code,
                         textCapitalization: TextCapitalization.characters,
-                        decoration: onboardingInput('Reset code from support'),
+                        decoration: onboardingInput(
+                          'Reset code from support',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: password,
                         obscureText: obscure,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        autofillHints: const [AutofillHints.newPassword],
                         decoration: onboardingInput('New password').copyWith(
                           suffixIcon: IconButton(
-                            tooltip: 'Show password',
+                            tooltip: obscure
+                                ? 'Show password'
+                                : 'Hide password',
                             onPressed: () => setState(() => obscure = !obscure),
-                            icon: const Icon(Icons.visibility_outlined),
+                            icon: Icon(
+                              obscure
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              semanticLabel: obscure
+                                  ? 'Show password'
+                                  : 'Hide password',
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: confirm,
-                        obscureText: obscure,
-                        decoration: onboardingInput('Confirm password'),
+                        obscureText: obscureConfirm,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        decoration: onboardingInput('Confirm password').copyWith(
+                          suffixIcon: IconButton(
+                            tooltip: obscureConfirm
+                                ? 'Show password'
+                                : 'Hide password',
+                            onPressed: () =>
+                                setState(() => obscureConfirm = !obscureConfirm),
+                            icon: Icon(
+                              obscureConfirm
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                              semanticLabel: obscureConfirm
+                                  ? 'Show password'
+                                  : 'Hide password',
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: busy ? null : _reset,
-                        child: const AppText('Update Password'),
+                      if (error != null) AuthFormError(message: error!),
+                      AuthSubmitButton(
+                        label: 'Update Password',
+                        busy: busy,
+                        onPressed: _reset,
                       ),
                     ] else ...[
                       const AppText('This support request is closed.'),
@@ -315,16 +427,13 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                       ),
                     ],
                   ],
-                  if (busy) const LinearProgressIndicator(),
-                  if (error != null)
+                  if (token != null && error != null && closed)
                     Padding(
                       padding: const EdgeInsets.only(top: 12),
-                      child: AppText(
-                        error!,
-                        style: const TextStyle(color: AppConfig.lossColor),
-                      ),
+                      child: AuthFormError(message: error!),
                     ),
                 ],
+                ),
               ),
             ),
           ),

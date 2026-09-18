@@ -71,6 +71,7 @@ void _showExpiredSessionLogin() {
   navigator.pushAndRemoveUntil(
     MaterialPageRoute<void>(
       builder: (_) => LoginPage(
+        notice: 'Your session has expired. Please sign in again.',
         onSignedIn: (_) {
           marketSocket.connect();
           navigator.pushReplacement(
@@ -219,7 +220,10 @@ class _AuthGateState extends State<AuthGate> {
       future: sessionFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState != ConnectionState.done) {
-          return const SplashPage();
+          return const SplashPage(
+            status: 'Checking saved session',
+            detail: 'Starting the app and verifying any saved token.',
+          );
         }
 
         if (!snapshot.hasError && snapshot.data != null) {
@@ -227,6 +231,9 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         return LoginPage(
+          notice: snapshot.hasError
+              ? 'Unable to restore your session. Check your connection and sign in.'
+              : null,
           onSignedIn: (_) {
             Navigator.of(context).pushReplacement(
               MaterialPageRoute<void>(builder: (_) => _marketHome()),

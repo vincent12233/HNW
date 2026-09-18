@@ -12,7 +12,13 @@ test('staff login currently uses employeeNo and password, not OTP', () => {
   assert.match(source, /name="employeeNo"/);
   assert.match(source, /name="password"/);
   assert.match(source, /\/auth\/login/);
+  assert.match(source, /员工工作台/);
+  assert.match(source, /Input.Password/);
+  assert.match(source, /EyeInvisibleOutlined/);
   assert.doesNotMatch(source, /smsOtp|verificationCode|\bOTP\b/);
+  assert.doesNotMatch(source, /totp|authenticator/i);
+  assert.doesNotMatch(source, /3002|3004|3005|3006|3007/);
+  assert.doesNotMatch(source, /accessToken|staff_access_/);
 });
 
 test('each staff role menu is an allowlist and does not include F&O, GTT, or basket routes', () => {

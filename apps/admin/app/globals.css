@@ -661,3 +661,126 @@ body {
 }
 .ops-stat-pill .label{display:block;color:#8492a6;font-size:12px;margin-bottom:4px}
 .ops-stat-pill .value{font-size:22px;font-weight:700;color:#102033;letter-spacing:-0.02em}
+
+/* Phase B.3: Admin KYC review layout and restrained motion */
+.kyc-review-workspace {
+  min-width: 0;
+}
+.kyc-review-workspace .ops-stat-pill span {
+  display: block;
+  color: #8492a6;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+.kyc-review-workspace .ops-stat-pill strong {
+  font-size: 22px;
+  font-weight: 700;
+  color: #102033;
+  letter-spacing: -0.02em;
+}
+.kyc-list-card {
+  overflow: auto;
+}
+.kyc-resubmit-hint {
+  max-width: 220px;
+  display: block;
+}
+.kyc-meta-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px 16px;
+}
+.kyc-preview-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.kyc-preview-card,
+.kyc-bank-card {
+  border-radius: 8px;
+}
+.kyc-preview-frame {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 160px;
+  max-width: 100%;
+  overflow: hidden;
+  background: #f8fafc;
+  border: 1px solid #e5edf5;
+  border-radius: 8px;
+}
+.kyc-preview-frame img,
+.kyc-preview-frame .ant-image {
+  max-width: 100%;
+  animation: kyc-fade-in 200ms ease-out;
+}
+.kyc-preview-frame--pdf {
+  width: 100%;
+  height: 420px;
+  border: 0;
+}
+.kyc-note-error,
+.kyc-note-hint {
+  display: block;
+  margin-top: 6px;
+}
+.kyc-review-modal-root .ant-modal,
+.kyc-confirm-modal-root .ant-modal {
+  max-width: calc(100vw - 16px);
+  animation: kyc-fade-in 200ms ease-out;
+}
+.kyc-review-modal-root .ant-modal-body {
+  max-height: min(70dvh, 640px);
+  overflow: auto;
+  padding-bottom: 8px;
+}
+.kyc-alert.ant-alert {
+  align-items: flex-start;
+}
+.kyc-alert .ant-alert-action {
+  margin-inline-start: 0;
+  margin-top: 8px;
+}
+.kyc-review-workspace .ant-table-wrapper {
+  max-width: 100%;
+}
+@keyframes kyc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (min-width: 768px) {
+  .kyc-meta-grid,
+  .kyc-preview-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (min-width: 1440px) {
+  .kyc-preview-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 390px) {
+  .kyc-review-workspace .ops-stat-strip {
+    grid-template-columns: 1fr 1fr;
+  }
+  .kyc-preview-frame--pdf {
+    height: 280px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kyc-preview-frame img,
+  .kyc-preview-frame .ant-image,
+  .kyc-review-modal-root .ant-modal,
+  .kyc-confirm-modal-root .ant-modal,
+  .kyc-review-workspace .ant-spin-dot,
+  .kyc-review-modal-root *,
+  .kyc-confirm-modal-root * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

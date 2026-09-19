@@ -11,6 +11,7 @@ import 'package:india_trading_app/pages/kyc_upload_page.dart';
 import 'package:india_trading_app/pages/login_page.dart';
 import 'package:india_trading_app/pages/register_page.dart';
 import 'package:india_trading_app/pages/splash_page.dart';
+import 'package:india_trading_app/theme/app_motion.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -34,47 +35,50 @@ void main() {
     var calls = 0;
     late Map<String, dynamic> body;
 
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: LoginPage(onSignedIn: (_) {}),
-        ),
-      );
-      expect(find.text('HNW'), findsOneWidget);
-      expect(find.text('+91'), findsOneWidget);
-      expect(find.text('Password'), findsOneWidget);
-      expect(find.byTooltip('Show password'), findsOneWidget);
-      expect(find.textContaining('OTP'), findsNothing);
-      expect(find.textContaining('SMS OTP'), findsNothing);
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: LoginPage(onSignedIn: (_) {}),
+          ),
+        );
+        expect(find.text('HNW'), findsOneWidget);
+        expect(find.text('+91'), findsOneWidget);
+        expect(find.text('Password'), findsOneWidget);
+        expect(find.byTooltip('Show password'), findsOneWidget);
+        expect(find.textContaining('OTP'), findsNothing);
+        expect(find.textContaining('SMS OTP'), findsNothing);
 
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.tap(find.byType(FilledButton));
-      await tester.pump();
-      await tester.tap(find.byType(FilledButton));
-      await tester.pump();
-      expect(calls, 1);
-      await tester.pumpWidget(const SizedBox.shrink());
-      pending.complete(
-        http.Response(
-          jsonEncode({
-            'accessToken': 'a',
-            'refreshToken': 'r',
-            'user': {'id': 'u1', 'role': 'CLIENT', 'status': 'ACTIVE'},
-            'account': {'id': 'a1'},
-          }),
-          200,
-        ),
-      );
-      await tester.pump();
-    }, () {
-      return MockClient((request) async {
-        calls++;
-        body = jsonDecode(request.body) as Map<String, dynamic>;
-        return pending.future;
-      });
-    });
+        await tester.enterText(find.byType(TextField).at(0), '9876543210');
+        await tester.enterText(find.byType(TextField).at(1), 'password1');
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        expect(calls, 1);
+        await tester.pumpWidget(const SizedBox.shrink());
+        pending.complete(
+          http.Response(
+            jsonEncode({
+              'accessToken': 'a',
+              'refreshToken': 'r',
+              'user': {'id': 'u1', 'role': 'CLIENT', 'status': 'ACTIVE'},
+              'account': {'id': 'a1'},
+            }),
+            200,
+          ),
+        );
+        await tester.pump();
+      },
+      () {
+        return MockClient((request) async {
+          calls++;
+          body = jsonDecode(request.body) as Map<String, dynamic>;
+          return pending.future;
+        });
+      },
+    );
 
     expect(body.keys.toSet(), {'phone', 'password'});
     expect(body.containsKey('confirmPassword'), isFalse);
@@ -101,28 +105,31 @@ void main() {
   testWidgets('login maps server and network errors into the form', (
     tester,
   ) async {
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: LoginPage(onSignedIn: (_) {}),
-        ),
-      );
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.tap(find.text('Login'));
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Account is suspended'), findsOneWidget);
-      expect(find.text('9876543210'), findsOneWidget);
-    }, () {
-      return MockClient(
-        (_) async => http.Response(
-          jsonEncode({'message': 'Account is suspended'}),
-          403,
-        ),
-      );
-    });
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light(),
+            home: LoginPage(onSignedIn: (_) {}),
+          ),
+        );
+        await tester.enterText(find.byType(TextField).at(0), '9876543210');
+        await tester.enterText(find.byType(TextField).at(1), 'password1');
+        await tester.tap(find.text('Login'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Account is suspended'), findsOneWidget);
+        expect(find.text('9876543210'), findsOneWidget);
+      },
+      () {
+        return MockClient(
+          (_) async => http.Response(
+            jsonEncode({'message': 'Account is suspended'}),
+            403,
+          ),
+        );
+      },
+    );
   });
 
   testWidgets('login shows session expiry notice without changing fields', (
@@ -154,34 +161,44 @@ void main() {
     addTearDown(tester.view.resetDevicePixelRatio);
 
     late Map<String, dynamic> body;
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
-      );
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.enterText(find.byType(TextField).at(2), 'password1');
-      await tester.enterText(find.byType(TextField).at(3), 'invite99');
-      await tester.tap(find.byType(Checkbox));
-      await tester.pump();
-      await tester.tap(find.text('Sign Up'));
-      await tester.pump();
-      await tester.pump();
-      expect(find.byType(KycUploadPage), findsOneWidget);
-      expect(find.text('ACTIVE'), findsNothing);
-    }, () {
-      return MockClient((request) async {
-        body = jsonDecode(request.body) as Map<String, dynamic>;
-        return http.Response(
-          jsonEncode({
-            'message': 'Registration successful',
-            'kycToken': 'kyc-token',
-            'user': {'id': 'u1', 'status': 'SUSPENDED'},
-          }),
-          201,
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
         );
-      });
-    });
+        await tester.enterText(find.byType(TextField).at(0), '9876543210');
+        await tester.enterText(find.byType(TextField).at(1), 'password1');
+        await tester.enterText(find.byType(TextField).at(2), 'password1');
+        await tester.enterText(find.byType(TextField).at(3), 'invite99');
+        await tester.ensureVisible(find.byType(Checkbox));
+        await tester.tap(find.byType(Checkbox));
+        await tester.pump();
+        await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign Up'));
+        await tester.tap(find.widgetWithText(FilledButton, 'Sign Up'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.byKey(const ValueKey('auth-success')), findsOneWidget);
+        await tester.pump(AppMotion.success);
+        await tester.pump();
+        expect(find.byType(KycUploadPage), findsOneWidget);
+        expect(find.text('ACTIVE'), findsNothing);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+      },
+      () {
+        return MockClient((request) async {
+          body = jsonDecode(request.body) as Map<String, dynamic>;
+          return http.Response(
+            jsonEncode({
+              'message': 'Registration successful',
+              'kycToken': 'kyc-token',
+              'user': {'id': 'u1', 'status': 'SUSPENDED'},
+            }),
+            201,
+          );
+        });
+      },
+    );
     expect(body.keys.toSet(), {'phone', 'password', 'inviteCode'});
     expect(body.containsKey('confirmPassword'), isFalse);
     expect(body['inviteCode'], 'INVITE99');
@@ -210,153 +227,177 @@ void main() {
     expect(find.textContaining('OTP'), findsNothing);
   });
 
-  testWidgets('recovery page is a support path and does not claim a sent code', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      const MaterialApp(home: ForgotPasswordPage()),
-    );
-    await tester.pump();
-    expect(find.text('Connect to Support'), findsOneWidget);
-    expect(find.textContaining('customer support'), findsWidgets);
-    expect(find.textContaining('verification code has been sent'), findsNothing);
-    expect(find.textContaining('OTP'), findsNothing);
-  });
-
-  testWidgets('login posts verificationCode only after authenticator is required', (
-    tester,
-  ) async {
-    var calls = 0;
-    late Map<String, dynamic> secondBody;
-    final pending = Completer<http.Response>();
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: LoginPage(onSignedIn: (_) {}),
-        ),
+  testWidgets(
+    'recovery page is a support path and does not claim a sent code',
+    (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: ForgotPasswordPage()));
+      await tester.pump();
+      expect(find.text('Connect to Support'), findsOneWidget);
+      expect(find.textContaining('customer support'), findsWidgets);
+      expect(
+        find.textContaining('verification code has been sent'),
+        findsNothing,
       );
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.tap(find.text('Login'));
-      await tester.pump();
-      await tester.pump();
+      expect(find.textContaining('OTP'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'login posts verificationCode only after authenticator is required',
+    (tester) async {
+      var calls = 0;
+      late Map<String, dynamic> secondBody;
+      final pending = Completer<http.Response>();
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light(),
+              home: LoginPage(onSignedIn: (_) {}),
+            ),
+          );
+          await tester.enterText(find.byType(TextField).at(0), '9876543210');
+          await tester.enterText(find.byType(TextField).at(1), 'password1');
+          await tester.tap(find.text('Login'));
+          await tester.pump();
+          await tester.pump();
       expect(find.text('Authenticator or recovery code'), findsOneWidget);
       expect(find.textContaining('SMS OTP'), findsNothing);
       expect(find.textContaining('recovery code'), findsWidgets);
       await tester.enterText(find.byType(TextField).at(2), '123456');
-      await tester.tap(find.text('Login'));
-      await tester.pump();
-      expect(calls, 2);
-      await tester.pumpWidget(const SizedBox.shrink());
-      pending.complete(
-        http.Response(
-          jsonEncode({
-            'accessToken': 'a',
-            'refreshToken': 'r',
-            'user': {'id': 'u1', 'role': 'CLIENT', 'status': 'ACTIVE'},
-            'account': {'id': 'a1'},
-          }),
-          200,
-        ),
-      );
-      await tester.pump();
-    }, () {
-      return MockClient((request) async {
-        calls++;
-        if (calls == 1) {
-          return http.Response(
-            jsonEncode({'twoFactorRequired': true, 'message': 'Two-factor required'}),
-            401,
+      await tester.ensureVisible(find.widgetWithText(FilledButton, 'Login'));
+      await tester.tap(find.widgetWithText(FilledButton, 'Login'));
+          await tester.pump();
+          expect(calls, 2);
+          await tester.pumpWidget(const SizedBox.shrink());
+          pending.complete(
+            http.Response(
+              jsonEncode({
+                'accessToken': 'a',
+                'refreshToken': 'r',
+                'user': {'id': 'u1', 'role': 'CLIENT', 'status': 'ACTIVE'},
+                'account': {'id': 'a1'},
+              }),
+              200,
+            ),
           );
-        }
-        secondBody = jsonDecode(request.body) as Map<String, dynamic>;
-        return pending.future;
+          await tester.pump();
+        },
+        () {
+          return MockClient((request) async {
+            calls++;
+            if (calls == 1) {
+              return http.Response(
+                jsonEncode({
+                  'twoFactorRequired': true,
+                  'message': 'Two-factor required',
+                }),
+                401,
+              );
+            }
+            secondBody = jsonDecode(request.body) as Map<String, dynamic>;
+            return pending.future;
+          });
+        },
+      );
+      expect(calls, 2);
+      expect(secondBody.keys.toSet(), {
+        'phone',
+        'password',
+        'verificationCode',
       });
-    });
-    expect(calls, 2);
-    expect(secondBody.keys.toSet(), {'phone', 'password', 'verificationCode'});
-    expect(secondBody['verificationCode'], '123456');
-    expect(secondBody.containsKey('smsOtp'), isFalse);
-  });
+      expect(secondBody['verificationCode'], '123456');
+      expect(secondBody.containsKey('smsOtp'), isFalse);
+    },
+  );
 
-  testWidgets('login maps a network failure into the form and keeps the phone', (
-    tester,
-  ) async {
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: LoginPage(onSignedIn: (_) {}),
-        ),
+  testWidgets(
+    'login maps a network failure into the form and keeps the phone',
+    (tester) async {
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            MaterialApp(
+              theme: AppTheme.light(),
+              home: LoginPage(onSignedIn: (_) {}),
+            ),
+          );
+          await tester.enterText(find.byType(TextField).at(0), '9876543210');
+          await tester.enterText(find.byType(TextField).at(1), 'password1');
+          await tester.tap(find.text('Login'));
+          await tester.pump();
+          await tester.pump();
+          expect(
+            find.text(
+              'Unable to connect. Please check your network and try again.',
+            ),
+            findsOneWidget,
+          );
+          expect(find.text('9876543210'), findsOneWidget);
+        },
+        () {
+          return MockClient((request) async {
+            throw http.ClientException('Failed to fetch', request.url);
+          });
+        },
       );
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.tap(find.text('Login'));
-      await tester.pump();
-      await tester.pump();
-      expect(
-        find.text('Unable to connect. Please check your network and try again.'),
-        findsOneWidget,
-      );
-      expect(find.text('9876543210'), findsOneWidget);
-    }, () {
-      return MockClient((request) async {
-        throw http.ClientException('Failed to fetch', request.url);
-      });
-    });
-  });
+    },
+  );
 
-  testWidgets('register blocks a second submit and never sends confirmPassword', (
-    tester,
-  ) async {
-    tester.view.physicalSize = const Size(390, 2000);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.resetPhysicalSize);
-    addTearDown(tester.view.resetDevicePixelRatio);
+  testWidgets(
+    'register blocks a second submit and never sends confirmPassword',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 2000);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
 
-    final pending = Completer<http.Response>();
-    var calls = 0;
-    late Map<String, dynamic> body;
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
+      final pending = Completer<http.Response>();
+      var calls = 0;
+      late Map<String, dynamic> body;
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
+          );
+          await tester.enterText(find.byType(TextField).at(0), '9876543210');
+          await tester.enterText(find.byType(TextField).at(1), 'password1');
+          await tester.enterText(find.byType(TextField).at(2), 'password1');
+          await tester.enterText(find.byType(TextField).at(3), 'invite99');
+          await tester.ensureVisible(find.byType(Checkbox));
+          await tester.tap(find.byType(Checkbox));
+          await tester.pump();
+          await tester.ensureVisible(find.text('Sign Up'));
+          await tester.tap(find.text('Sign Up'));
+          await tester.pump();
+          await tester.tap(find.byType(FilledButton), warnIfMissed: false);
+          await tester.pump();
+          expect(calls, 1);
+          await tester.pumpWidget(const SizedBox.shrink());
+          pending.complete(
+            http.Response(
+              jsonEncode({
+                'message': 'Registration successful',
+                'kycToken': 'kyc-token',
+                'user': {'id': 'u1', 'status': 'SUSPENDED'},
+              }),
+              201,
+            ),
+          );
+          await tester.pump();
+        },
+        () {
+          return MockClient((request) async {
+            calls++;
+            body = jsonDecode(request.body) as Map<String, dynamic>;
+            return pending.future;
+          });
+        },
       );
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.enterText(find.byType(TextField).at(2), 'password1');
-      await tester.enterText(find.byType(TextField).at(3), 'invite99');
-      await tester.ensureVisible(find.byType(Checkbox));
-      await tester.tap(find.byType(Checkbox));
-      await tester.pump();
-      await tester.ensureVisible(find.text('Sign Up'));
-      await tester.tap(find.text('Sign Up'));
-      await tester.pump();
-      await tester.tap(find.byType(FilledButton), warnIfMissed: false);
-      await tester.pump();
-      expect(calls, 1);
-      await tester.pumpWidget(const SizedBox.shrink());
-      pending.complete(
-        http.Response(
-          jsonEncode({
-            'message': 'Registration successful',
-            'kycToken': 'kyc-token',
-            'user': {'id': 'u1', 'status': 'SUSPENDED'},
-          }),
-          201,
-        ),
-      );
-      await tester.pump();
-    }, () {
-      return MockClient((request) async {
-        calls++;
-        body = jsonDecode(request.body) as Map<String, dynamic>;
-        return pending.future;
-      });
-    });
-    expect(body.keys.toSet(), {'phone', 'password', 'inviteCode'});
-    expect(body.containsKey('confirmPassword'), isFalse);
-  });
+      expect(body.keys.toSet(), {'phone', 'password', 'inviteCode'});
+      expect(body.containsKey('confirmPassword'), isFalse);
+    },
+  );
 
   testWidgets('register maps duplicate phone and invite errors near fields', (
     tester,
@@ -365,34 +406,39 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    await http.runWithClient(() async {
-      await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
-      );
-      await tester.enterText(find.byType(TextField).at(0), '9876543210');
-      await tester.enterText(find.byType(TextField).at(1), 'password1');
-      await tester.enterText(find.byType(TextField).at(2), 'password1');
-      await tester.enterText(find.byType(TextField).at(3), 'invite99');
-      await tester.ensureVisible(find.byType(Checkbox));
-      await tester.tap(find.byType(Checkbox));
-      await tester.pump();
-      await tester.ensureVisible(find.text('Sign Up'));
-      await tester.tap(find.text('Sign Up'));
-      await tester.pump();
-      await tester.pump();
-      expect(find.text('Phone number already registered'), findsOneWidget);
-      expect(find.textContaining('OTP'), findsNothing);
-    }, () {
-      return MockClient(
-        (_) async => http.Response(
-          jsonEncode({'message': 'Phone number already registered'}),
-          409,
-        ),
-      );
-    });
+    await http.runWithClient(
+      () async {
+        await tester.pumpWidget(
+          MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
+        );
+        await tester.enterText(find.byType(TextField).at(0), '9876543210');
+        await tester.enterText(find.byType(TextField).at(1), 'password1');
+        await tester.enterText(find.byType(TextField).at(2), 'password1');
+        await tester.enterText(find.byType(TextField).at(3), 'invite99');
+        await tester.ensureVisible(find.byType(Checkbox));
+        await tester.tap(find.byType(Checkbox));
+        await tester.pump();
+        await tester.ensureVisible(find.text('Sign Up'));
+        await tester.tap(find.text('Sign Up'));
+        await tester.pump();
+        await tester.pump();
+        expect(find.text('Phone number already registered'), findsOneWidget);
+        expect(find.textContaining('OTP'), findsNothing);
+      },
+      () {
+        return MockClient(
+          (_) async => http.Response(
+            jsonEncode({'message': 'Phone number already registered'}),
+            409,
+          ),
+        );
+      },
+    );
   });
 
-  testWidgets('splash states are display-only session messages', (tester) async {
+  testWidgets('splash states are display-only session messages', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: SplashPage(
@@ -403,7 +449,10 @@ void main() {
     );
     expect(find.text('HNW'), findsOneWidget);
     expect(find.text('Checking saved session'), findsOneWidget);
-    expect(find.text('Starting the app and verifying any saved token.'), findsOneWidget);
+    expect(
+      find.text('Starting the app and verifying any saved token.'),
+      findsOneWidget,
+    );
     expect(find.text('SUSPENDED'), findsNothing);
     expect(find.text('ACTIVE'), findsNothing);
     expect(find.text('DISABLED'), findsNothing);
@@ -482,14 +531,20 @@ void main() {
         MaterialApp(theme: AppTheme.light(), home: const RegisterPage()),
       );
       await tester.pump();
-      expect(find.text('Create Account'), findsOneWidget, reason: 'register $size');
+      expect(
+        find.text('Create Account'),
+        findsOneWidget,
+        reason: 'register $size',
+      );
       expect(tester.takeException(), isNull, reason: 'register overflow $size');
 
-      await tester.pumpWidget(
-        const MaterialApp(home: ForgotPasswordPage()),
-      );
+      await tester.pumpWidget(const MaterialApp(home: ForgotPasswordPage()));
       await tester.pump();
-      expect(find.text('Connect to Support'), findsOneWidget, reason: 'recovery $size');
+      expect(
+        find.text('Connect to Support'),
+        findsOneWidget,
+        reason: 'recovery $size',
+      );
       expect(tester.takeException(), isNull, reason: 'recovery overflow $size');
     }
   });

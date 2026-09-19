@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../services/device_biometrics.dart';
 import '../services/market_socket_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/auth_layout.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/international_phone_field.dart';
@@ -32,10 +33,11 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
   final verificationController = TextEditingController();
   final passwordFocus = FocusNode();
   final verificationFocus = FocusNode();
+  final verificationFieldKey = GlobalKey();
   bool requiresTwoFactor = false;
   final authService = AuthService();
   Country country = Country.parse('IN');
-  bool obscure = true, busy = false, remember = false;
+  bool obscure = true, busy = false, remember = false, succeeded = false;
   DeviceBiometric? biometric;
   String? formError;
   String? phoneError;
@@ -91,9 +93,10 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
   }
 
   Future<void> _run(Future<AuthSession> Function() action) async {
-    if (busy) return;
+    if (busy || succeeded) return;
     setState(() {
       busy = true;
+      succeeded = false;
       _clearErrors();
     });
     try {
@@ -101,42 +104,66 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
       if (!mounted) return;
       passwordController.clear();
       verificationController.clear();
+      setState(() => succeeded = true);
+      await authSuccessPause(context);
+      if (!mounted) return;
       MarketSocketService().connect();
       widget.onSignedIn(session);
     } on TwoFactorRequiredException {
       if (mounted) {
         setState(() {
+          succeeded = false;
           requiresTwoFactor = true;
           verificationError =
               'Enter the authenticator code or a recovery code issued for this account.';
         });
         verificationFocus.requestFocus();
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final target = verificationFieldKey.currentContext;
+          if (target == null) return;
+          Scrollable.ensureVisible(
+            target,
+            duration: AppMotion.duration(target, AppMotion.state),
+            curve: AppMotion.ease,
+            alignment: 0.2,
+          );
+        });
       }
     } on KycRequiredException catch (e) {
+      if (!mounted) return;
+      setState(() => succeeded = true);
+      await authSuccessPause(context);
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => KycUploadPage(accessToken: e.token),
+        ),
+      );
       if (mounted) {
-        await Navigator.push(
-          context,
-          MaterialPageRoute<void>(
-            builder: (_) => KycUploadPage(accessToken: e.token),
-          ),
-        );
+        setState(() {
+          busy = false;
+          succeeded = false;
+        });
       }
     } catch (e) {
       if (mounted) {
-        setState(
-          () => formError = clientErrorMessage(
+        passwordController.clear();
+        setState(() {
+          succeeded = false;
+          formError = clientErrorMessage(
             e,
             fallback: 'Unable to sign in. Please try again.',
-          ),
-        );
+          );
+        });
       }
     } finally {
-      if (mounted) setState(() => busy = false);
+      if (mounted && !succeeded) setState(() => busy = false);
     }
   }
 
   Future<void> _submit() async {
-    if (busy) return;
+    if (busy || succeeded) return;
     final phone = internationalPhone(phoneController.text, country.countryCode);
     String? nextPhoneError;
     String? nextPasswordError;
@@ -180,7 +207,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
   }
 
   Future<void> _biometric() async {
-    if (busy) return;
+    if (busy || succeeded) return;
     final capability = await DeviceBiometrics.available();
     if (capability == null) {
       if (mounted) setState(() => biometric = null);
@@ -222,188 +249,256 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
   });
 
   @override
-  Widget build(BuildContext context) => AuthPageScaffold(
-    child: AutofillGroup(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const AuthBrandHeader(),
-          const SizedBox(height: AuthLayout.sectionGap),
-          const Text('Welcome Back!', style: AuthLayout.title),
-          const SizedBox(height: AuthLayout.titleGap),
-          const AppText('Login to continue', style: AuthLayout.subtitle),
-          const SizedBox(height: 24),
-          if (widget.notice != null && widget.notice!.isNotEmpty)
-            AuthNoticeBanner(message: widget.notice!),
-          InternationalPhoneField(
-            controller: phoneController,
-            country: country,
-            enabled: !busy,
-            lockCountry: true,
-            errorText: phoneError,
-            textInputAction: TextInputAction.next,
-            onSubmitted: (_) => passwordFocus.requestFocus(),
-            onCountryChanged: (value) => setState(() => country = value),
-          ),
-          const SizedBox(height: AuthLayout.fieldGap),
-          TextField(
-            controller: passwordController,
-            focusNode: passwordFocus,
-            obscureText: obscure,
-            enabled: !busy,
-            autocorrect: false,
-            enableSuggestions: false,
-            autofillHints: const [AutofillHints.password],
-            textInputAction: requiresTwoFactor
-                ? TextInputAction.next
-                : TextInputAction.done,
-            onSubmitted: (_) {
-              if (requiresTwoFactor) {
-                verificationFocus.requestFocus();
-              } else {
-                _submit();
-              }
-            },
-            decoration: onboardingInput(
-              'Password',
-              errorText: passwordError,
-            ).copyWith(
-              suffixIcon: IconButton(
-                tooltip: obscure ? 'Show password' : 'Hide password',
-                onPressed: () => setState(() => obscure = !obscure),
-                icon: Icon(
-                  obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  size: 18,
-                  semanticLabel: obscure ? 'Show password' : 'Hide password',
+  Widget build(BuildContext context) {
+    final skipEntrance = widget.notice != null && widget.notice!.isNotEmpty;
+    return AuthPageScaffold(
+      child: AppEntranceScope(
+        play: !skipEntrance,
+        child: AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AppEntrance(
+                delay: const Duration(milliseconds: 80),
+                offsetY: 8,
+                child: const AuthBrandHeader(),
+              ),
+              const SizedBox(height: AuthLayout.sectionGap),
+              AppEntrance(
+                delay: const Duration(milliseconds: 140),
+                offsetY: 10,
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Welcome Back!', style: AuthLayout.title),
+                    SizedBox(height: AuthLayout.titleGap),
+                    AppText('Login to continue', style: AuthLayout.subtitle),
+                  ],
                 ),
               ),
-            ),
-          ),
-          if (requiresTwoFactor) ...[
-            const SizedBox(height: 16),
-            TextField(
-              controller: verificationController,
-              focusNode: verificationFocus,
-              enabled: !busy,
-              autocorrect: false,
-              enableSuggestions: false,
-              keyboardType: TextInputType.visiblePassword,
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _submit(),
-              decoration: onboardingInput(
-                'Authenticator or recovery code',
-                errorText: verificationError,
-                helperText:
-                    'Use the authenticator app or a support-issued recovery code. No SMS code is sent.',
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    child: Checkbox(
-                      value: remember,
-                      onChanged: busy
-                          ? null
-                          : (value) => setState(() => remember = value ?? false),
+              const SizedBox(height: 24),
+              if (widget.notice != null && widget.notice!.isNotEmpty)
+                AuthNoticeBanner(message: widget.notice!),
+              AppEntrance(
+                delay: const Duration(milliseconds: 220),
+                offsetY: 12,
+                child: AuthFocusGlow(
+                  child: AuthErrorShake(
+                    errorText: phoneError,
+                    child: InternationalPhoneField(
+                      controller: phoneController,
+                      country: country,
+                      enabled: !busy && !succeeded,
+                      lockCountry: true,
+                      errorText: phoneError,
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => passwordFocus.requestFocus(),
+                      onCountryChanged: (value) =>
+                          setState(() => country = value),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  const AppText(
-                    'Remember Me',
-                    style: TextStyle(fontSize: 13, letterSpacing: 0),
-                  ),
-                ],
-              ),
-              TextButton(
-                style: TextButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
                 ),
-                onPressed: busy
-                    ? null
-                    : () => Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => const ForgotPasswordPage(),
+              ),
+              const SizedBox(height: AuthLayout.fieldGap),
+              AppEntrance(
+                delay: const Duration(milliseconds: 280),
+                offsetY: 12,
+                child: AuthFocusGlow(
+                  child: AuthErrorShake(
+                    errorText: passwordError,
+                    child: TextField(
+                      controller: passwordController,
+                      focusNode: passwordFocus,
+                      obscureText: obscure,
+                      enabled: !busy && !succeeded,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      autofillHints: const [AutofillHints.password],
+                      textInputAction: requiresTwoFactor
+                          ? TextInputAction.next
+                          : TextInputAction.done,
+                      onSubmitted: (_) {
+                        if (requiresTwoFactor) {
+                          verificationFocus.requestFocus();
+                        } else {
+                          _submit();
+                        }
+                      },
+                      decoration:
+                          onboardingInput(
+                            'Password',
+                            errorText: passwordError,
+                          ).copyWith(
+                            suffixIcon: AuthPasswordToggle(
+                              obscure: obscure,
+                              onPressed: () =>
+                                  setState(() => obscure = !obscure),
+                            ),
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+              AnimatedSize(
+                duration: AppMotion.duration(context, AppMotion.state),
+                curve: AppMotion.ease,
+                alignment: Alignment.topCenter,
+                child: requiresTwoFactor
+                    ? Padding(
+                        key: verificationFieldKey,
+                        padding: const EdgeInsets.only(top: 16),
+                        child: AnimatedOpacity(
+                          duration: AppMotion.duration(
+                            context,
+                            AppMotion.state,
+                          ),
+                          opacity: 1,
+                          child: AuthFocusGlow(
+                            child: AuthErrorShake(
+                              errorText: verificationError,
+                              child: TextField(
+                                controller: verificationController,
+                                focusNode: verificationFocus,
+                                enabled: !busy && !succeeded,
+                                autocorrect: false,
+                                enableSuggestions: false,
+                                keyboardType: TextInputType.visiblePassword,
+                                textInputAction: TextInputAction.done,
+                                onSubmitted: (_) => _submit(),
+                                decoration: onboardingInput(
+                                  'Authenticator or recovery code',
+                                  errorText: verificationError,
+                                  helperText:
+                                      'Use the authenticator app or a support-issued recovery code. No SMS code is sent.',
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox(width: double.infinity),
+              ),
+              const SizedBox(height: 8),
+              AppEntrance(
+                delay: const Duration(milliseconds: 340),
+                offsetY: 0,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 24,
+                          child: Checkbox(
+                            value: remember,
+                            onChanged: busy || succeeded
+                                ? null
+                                : (value) =>
+                                      setState(() => remember = value ?? false),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const AppText(
+                          'Remember Me',
+                          style: TextStyle(fontSize: 13, letterSpacing: 0),
+                        ),
+                      ],
+                    ),
+                    TextButton(
+                      style: TextButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                      ),
+                      onPressed: busy || succeeded
+                          ? null
+                          : () => Navigator.push(
+                              context,
+                              AuthSlidePageRoute<void>(
+                                builder: (_) => const ForgotPasswordPage(),
+                              ),
+                            ),
+                      child: const AppText(
+                        'Forgot Password?',
+                        style: TextStyle(fontSize: 13, letterSpacing: 0),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              AppEntrance(
+                delay: const Duration(milliseconds: 400),
+                offsetY: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (formError != null) AuthFormError(message: formError!),
+                    AuthSubmitButton(
+                      label: 'Login',
+                      busy: busy,
+                      succeeded: succeeded,
+                      onPressed: _submit,
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Flexible(
+                          child: AppText(
+                            "Don't have an account?",
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 13,
+                              letterSpacing: 0,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          onPressed: busy || succeeded
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  AuthSlidePageRoute<void>(
+                                    builder: (_) => const RegisterPage(),
+                                  ),
+                                ),
+                          child: const AppText(
+                            'Create Account',
+                            style: TextStyle(fontSize: 13, letterSpacing: 0),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (biometric != null)
+                      OutlinedButton.icon(
+                        onPressed: busy || succeeded ? null : _biometric,
+                        icon: Icon(
+                          biometric == DeviceBiometric.face
+                              ? Icons.face
+                              : Icons.fingerprint,
+                        ),
+                        label: AppText(
+                          biometric == DeviceBiometric.face
+                              ? 'Login with Face ID'
+                              : 'Login with Fingerprint',
                         ),
                       ),
-                child: const AppText(
-                  'Forgot Password?',
-                  style: TextStyle(fontSize: 13, letterSpacing: 0),
+                    if (AppConfig.googleClientId.isNotEmpty)
+                      TextButton(
+                        onPressed: busy || succeeded ? null : _google,
+                        child: const AppText('Continue with Google'),
+                      ),
+                    const SecureFooter(),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          if (formError != null) AuthFormError(message: formError!),
-          AuthSubmitButton(
-            label: 'Login',
-            busy: busy,
-            onPressed: _submit,
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Flexible(
-                child: AppText(
-                  "Don't have an account?",
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 13,
-                    letterSpacing: 0,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ),
-              TextButton(
-                onPressed: busy
-                    ? null
-                    : () => Navigator.push(
-                        context,
-                        MaterialPageRoute<void>(
-                          builder: (_) => const RegisterPage(),
-                        ),
-                      ),
-                child: const AppText(
-                  'Create Account',
-                  style: TextStyle(fontSize: 13, letterSpacing: 0),
-                ),
-              ),
-            ],
-          ),
-          if (biometric != null)
-            OutlinedButton.icon(
-              onPressed: busy ? null : _biometric,
-              icon: Icon(
-                biometric == DeviceBiometric.face
-                    ? Icons.face
-                    : Icons.fingerprint,
-              ),
-              label: AppText(
-                biometric == DeviceBiometric.face
-                    ? 'Login with Face ID'
-                    : 'Login with Fingerprint',
-              ),
-            ),
-          if (AppConfig.googleClientId.isNotEmpty)
-            TextButton(
-              onPressed: busy ? null : _google,
-              child: const AppText('Continue with Google'),
-            ),
-          const SecureFooter(),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

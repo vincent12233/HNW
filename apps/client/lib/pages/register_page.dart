@@ -4,6 +4,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/auth_layout.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/international_phone_field.dart';
@@ -30,6 +31,7 @@ class _RegisterPageState extends State<RegisterPage> {
   Country country = Country.parse('IN');
   bool obscure = true, obscureConfirm = true, accepted = false, busy = false;
   bool continuingToKyc = false;
+  bool succeeded = false;
   String? formError;
   String? phoneError;
   String? passwordError;
@@ -57,6 +59,11 @@ class _RegisterPageState extends State<RegisterPage> {
           ),
         );
       };
+    passwordFocus.addListener(_onPasswordFocus);
+  }
+
+  void _onPasswordFocus() {
+    if (mounted) setState(() {});
   }
 
   @override
@@ -64,7 +71,9 @@ class _RegisterPageState extends State<RegisterPage> {
     for (final c in [phone, password, confirm, invite]) {
       c.dispose();
     }
-    passwordFocus.dispose();
+    passwordFocus
+      ..removeListener(_onPasswordFocus)
+      ..dispose();
     confirmFocus.dispose();
     inviteFocus.dispose();
     termsTap.dispose();
@@ -101,7 +110,7 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _submit() async {
-    if (busy || !accepted || continuingToKyc) return;
+    if (busy || !accepted || continuingToKyc || succeeded) return;
     final normalized = internationalPhone(phone.text, country.countryCode);
     String? nextPhoneError;
     String? nextPasswordError;
@@ -150,8 +159,11 @@ class _RegisterPageState extends State<RegisterPage> {
       confirm.clear();
       setState(() {
         busy = false;
-        continuingToKyc = true;
+        succeeded = true;
       });
+      await authSuccessPause(context);
+      if (!mounted) return;
+      continuingToKyc = true;
       Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
           builder: (_) => KycUploadPage(accessToken: token),
@@ -161,12 +173,15 @@ class _RegisterPageState extends State<RegisterPage> {
     } catch (e) {
       if (mounted) {
         setState(() {
+          succeeded = false;
           _clearErrors();
           _mapServerError(e);
         });
       }
     } finally {
-      if (mounted && !continuingToKyc) setState(() => busy = false);
+      if (mounted && !continuingToKyc && !succeeded) {
+        setState(() => busy = false);
+      }
     }
   }
 
@@ -186,10 +201,7 @@ class _RegisterPageState extends State<RegisterPage> {
           children: [
             AuthBrandHeader(),
             SizedBox(height: 32),
-            Text(
-              'Continue to identity verification',
-              style: AuthLayout.title,
-            ),
+            Text('Continue to identity verification', style: AuthLayout.title),
             SizedBox(height: 8),
             AppText(
               'Your account is not active yet. Complete the existing document verification steps. No SMS or email code is sent.',
@@ -222,202 +234,321 @@ class _RegisterPageState extends State<RegisterPage> {
         foregroundColor: AppColors.textPrimary,
         elevation: 0,
       ),
-      child: AutofillGroup(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text('Create Account', style: AuthLayout.title),
-            const SizedBox(height: AuthLayout.titleGap),
-            const AppText(
-              'Register with an Indian mobile number, password, and invite code.',
-              style: AuthLayout.subtitle,
-            ),
-            const SizedBox(height: 20),
-              const VerificationBanner(
-                title: 'Invite Code is Mandatory',
-                subtitle:
-                    'You need a valid invite code to create an account. No SMS or email verification is sent.',
-                icon: Icons.card_giftcard,
+      child: AppEntranceScope(
+        total: AppMotion.entranceRegister,
+        child: AutofillGroup(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppEntrance(
+                delay: Duration.zero,
+                offsetY: 10,
+                child: const Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text('Create Account', style: AuthLayout.title),
+                    SizedBox(height: AuthLayout.titleGap),
+                    AppText(
+                      'Register with an Indian mobile number, password, and invite code.',
+                      style: AuthLayout.subtitle,
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 20),
-              InternationalPhoneField(
-                controller: phone,
-                country: country,
-                enabled: !busy,
-                lockCountry: true,
-                errorText: phoneError,
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => passwordFocus.requestFocus(),
-                onCountryChanged: (v) => setState(() => country = v),
+              AppEntrance(
+                delay: const Duration(milliseconds: 80),
+                offsetY: 8,
+                child: const VerificationBanner(
+                  title: 'Invite Code is Mandatory',
+                  subtitle:
+                      'You need a valid invite code to create an account. No SMS or email verification is sent.',
+                  icon: Icons.card_giftcard,
+                ),
               ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: password,
-                focusNode: passwordFocus,
-                enabled: !busy,
-                obscureText: obscure,
-                autocorrect: false,
-                enableSuggestions: false,
-                autofillHints: const [AutofillHints.newPassword],
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => confirmFocus.requestFocus(),
-                onChanged: (_) => setState(() {}),
-                decoration: onboardingInput(
-                  'Password',
-                  errorText: passwordError,
-                  helperText: 'Use at least 8 characters.',
-                ).copyWith(
-                  suffixIcon: IconButton(
-                    tooltip: obscure ? 'Show password' : 'Hide password',
-                    icon: Icon(
-                      obscure
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      size: 18,
-                      semanticLabel: obscure ? 'Show password' : 'Hide password',
+              const SizedBox(height: 20),
+              AppEntrance(
+                delay: const Duration(milliseconds: 140),
+                offsetY: 12,
+                child: AuthFocusGlow(
+                  child: AuthErrorShake(
+                    errorText: phoneError,
+                    child: InternationalPhoneField(
+                      controller: phone,
+                      country: country,
+                      enabled: !busy && !succeeded,
+                      lockCountry: true,
+                      errorText: phoneError,
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => passwordFocus.requestFocus(),
+                      onCountryChanged: (v) => setState(() => country = v),
                     ),
-                    onPressed: () => setState(() => obscure = !obscure),
                   ),
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(
-                controller: confirm,
-                focusNode: confirmFocus,
-                enabled: !busy,
-                obscureText: obscureConfirm,
-                autocorrect: false,
-                enableSuggestions: false,
-                autofillHints: const [AutofillHints.newPassword],
-                textInputAction: TextInputAction.next,
-                onSubmitted: (_) => inviteFocus.requestFocus(),
-                onChanged: (_) => setState(() {}),
-                decoration: onboardingInput(
-                  'Confirm Password',
-                  errorText: confirmError,
-                  helperText: _confirmHelper,
-                ).copyWith(
-                  suffixIcon: IconButton(
-                    tooltip: obscureConfirm
-                        ? 'Show password'
-                        : 'Hide password',
-                    icon: Icon(
-                      obscureConfirm
-                          ? Icons.visibility_outlined
-                          : Icons.visibility_off_outlined,
-                      size: 18,
-                      semanticLabel: obscureConfirm
-                          ? 'Show password'
-                          : 'Hide password',
-                    ),
-                    onPressed: () =>
-                        setState(() => obscureConfirm = !obscureConfirm),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: invite,
-                focusNode: inviteFocus,
-                enabled: !busy,
-                textCapitalization: TextCapitalization.characters,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                decoration: onboardingInput(
-                  'Invite Code',
-                  errorText: inviteError,
-                  helperText: 'Required. 7 to 20 characters.',
-                ).copyWith(suffixIcon: const Icon(Icons.card_giftcard, size: 18)),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(
-                    width: 24,
-                    child: Checkbox(
-                      value: accepted,
-                      onChanged: busy
-                          ? null
-                          : (v) => setState(() => accepted = v ?? false),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text.rich(
-                      TextSpan(
-                        style: const TextStyle(
-                          fontSize: 13,
-                          letterSpacing: 0,
-                          color: AppColors.textSecondary,
-                          height: 1.4,
+              AppEntrance(
+                delay: const Duration(milliseconds: 200),
+                offsetY: 12,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    AuthFocusGlow(
+                      child: AuthErrorShake(
+                        errorText: passwordError,
+                        child: TextField(
+                          controller: password,
+                          focusNode: passwordFocus,
+                          enabled: !busy && !succeeded,
+                          obscureText: obscure,
+                          autocorrect: false,
+                          enableSuggestions: false,
+                          autofillHints: const [AutofillHints.newPassword],
+                          textInputAction: TextInputAction.next,
+                          onSubmitted: (_) => confirmFocus.requestFocus(),
+                          onChanged: (_) => setState(() {}),
+                          decoration:
+                              onboardingInput(
+                                'Password',
+                                errorText: passwordError,
+                              ).copyWith(
+                                suffixIcon: AuthPasswordToggle(
+                                  obscure: obscure,
+                                  onPressed: () =>
+                                      setState(() => obscure = !obscure),
+                                ),
+                              ),
                         ),
-                        children: [
-                          TextSpan(text: '${tr('I agree to the')} '),
-                          TextSpan(
-                            text: tr('Terms & Conditions'),
-                            style: const TextStyle(
-                              color: AppColors.brandPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            recognizer: termsTap,
-                          ),
-                          const TextSpan(text: ' and '),
-                          TextSpan(
-                            text: tr('Privacy'),
-                            style: const TextStyle(
-                              color: AppColors.brandPrimary,
-                              fontWeight: FontWeight.w700,
-                            ),
-                            recognizer: privacyTap,
-                          ),
-                          const TextSpan(text: '.'),
-                        ],
                       ),
                     ),
+                    AnimatedSize(
+                      duration: AppMotion.duration(context, AppMotion.micro),
+                      curve: AppMotion.ease,
+                      alignment: Alignment.topCenter,
+                      child: passwordFocus.hasFocus || password.text.isNotEmpty
+                          ? Padding(
+                              padding: const EdgeInsets.only(top: 8, left: 2),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    password.text.length >= 8
+                                        ? Icons.check_circle_outline
+                                        : Icons.radio_button_unchecked,
+                                    size: 16,
+                                    color: AppColors.textSecondary,
+                                    semanticLabel: password.text.length >= 8
+                                        ? 'Password has at least 8 characters'
+                                        : 'Password needs at least 8 characters',
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Expanded(
+                                    child: AppText(
+                                      'At least 8 characters',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        letterSpacing: 0,
+                                        color: AppColors.textSecondary,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          : const SizedBox(width: double.infinity),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppEntrance(
+                delay: const Duration(milliseconds: 260),
+                offsetY: 12,
+                child: AuthFocusGlow(
+                  child: AuthErrorShake(
+                    errorText: confirmError,
+                    child: TextField(
+                      controller: confirm,
+                      focusNode: confirmFocus,
+                      enabled: !busy && !succeeded,
+                      obscureText: obscureConfirm,
+                      autocorrect: false,
+                      enableSuggestions: false,
+                      autofillHints: const [AutofillHints.newPassword],
+                      textInputAction: TextInputAction.next,
+                      onSubmitted: (_) => inviteFocus.requestFocus(),
+                      onChanged: (_) => setState(() {}),
+                      decoration:
+                          onboardingInput(
+                            'Confirm Password',
+                            errorText: confirmError,
+                            helperText: _confirmHelper,
+                          ).copyWith(
+                            suffixIconConstraints: const BoxConstraints(
+                              minHeight: AppMotion.tapTarget,
+                              minWidth: AppMotion.tapTarget,
+                            ),
+                            suffixIcon: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (confirm.text.isNotEmpty &&
+                                    password.text == confirm.text)
+                                  const Padding(
+                                    padding: EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.check_circle_outline,
+                                      size: 18,
+                                      color: AppColors.textSecondary,
+                                      semanticLabel: 'Passwords match',
+                                    ),
+                                  ),
+                                AuthPasswordToggle(
+                                  obscure: obscureConfirm,
+                                  onPressed: () => setState(
+                                    () => obscureConfirm = !obscureConfirm,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                    ),
                   ),
-                ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppEntrance(
+                delay: const Duration(milliseconds: 320),
+                offsetY: 12,
+                child: AuthFocusGlow(
+                  child: AuthErrorShake(
+                    errorText: inviteError,
+                    child: TextField(
+                      controller: invite,
+                      focusNode: inviteFocus,
+                      enabled: !busy && !succeeded,
+                      textCapitalization: TextCapitalization.characters,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (_) => _submit(),
+                      decoration:
+                          onboardingInput(
+                            'Invite Code',
+                            errorText: inviteError,
+                            helperText: 'Required. 7 to 20 characters.',
+                          ).copyWith(
+                            suffixIcon: const Icon(
+                              Icons.card_giftcard,
+                              size: 18,
+                            ),
+                          ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              AppEntrance(
+                delay: const Duration(milliseconds: 380),
+                offsetY: 0,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SizedBox(
+                      width: 24,
+                      child: Checkbox(
+                        value: accepted,
+                        onChanged: busy || succeeded
+                            ? null
+                            : (v) => setState(() => accepted = v ?? false),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          style: const TextStyle(
+                            fontSize: 13,
+                            letterSpacing: 0,
+                            color: AppColors.textSecondary,
+                            height: 1.4,
+                          ),
+                          children: [
+                            TextSpan(text: '${tr('I agree to the')} '),
+                            TextSpan(
+                              text: tr('Terms & Conditions'),
+                              style: const TextStyle(
+                                color: AppColors.brandPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              recognizer: termsTap,
+                            ),
+                            const TextSpan(text: ' and '),
+                            TextSpan(
+                              text: tr('Privacy'),
+                              style: const TextStyle(
+                                color: AppColors.brandPrimary,
+                                fontWeight: FontWeight.w700,
+                              ),
+                              recognizer: privacyTap,
+                            ),
+                            const TextSpan(text: '.'),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
               const SizedBox(height: 12),
-              if (formError != null) AuthFormError(message: formError!),
-              AuthSubmitButton(
-                label: 'Sign Up',
-                busy: busy,
-                enabled: accepted,
-                onPressed: _submit,
-              ),
-              const SizedBox(height: 8),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Flexible(
-                    child: AppText(
-                      'Already have an account?',
-                      overflow: TextOverflow.ellipsis,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 13,
-                        letterSpacing: 0,
-                        color: AppColors.textSecondary,
-                      ),
+              AppEntrance(
+                delay: const Duration(milliseconds: 440),
+                offsetY: 8,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    if (formError != null) AuthFormError(message: formError!),
+                    AuthSubmitButton(
+                      label: 'Sign Up',
+                      busy: busy,
+                      succeeded: succeeded,
+                      enabled: accepted,
+                      onPressed: _submit,
                     ),
-                  ),
-                  TextButton(
-                    style: TextButton.styleFrom(
-                      visualDensity: VisualDensity.compact,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Flexible(
+                          child: AppText(
+                            'Already have an account?',
+                            overflow: TextOverflow.ellipsis,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: 13,
+                              letterSpacing: 0,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ),
+                        TextButton(
+                          style: TextButton.styleFrom(
+                            visualDensity: VisualDensity.compact,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                          ),
+                          onPressed: busy || succeeded
+                              ? null
+                              : () => Navigator.pop(context),
+                          child: const AppText(
+                            'Login',
+                            style: TextStyle(fontSize: 13, letterSpacing: 0),
+                          ),
+                        ),
+                      ],
                     ),
-                    onPressed: busy ? null : () => Navigator.pop(context),
-                    child: const AppText(
-                      'Login',
-                      style: TextStyle(fontSize: 13, letterSpacing: 0),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ],
           ),
         ),
+      ),
     );
   }
 }

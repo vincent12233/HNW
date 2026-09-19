@@ -95,25 +95,29 @@ class AuthFormError extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (message.trim().isEmpty) return const SizedBox.shrink();
-    return Semantics(
-      liveRegion: true,
-      child: Container(
-        width: double.infinity,
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: AppColors.lossSoft,
-          borderRadius: AppRadius.borderSm,
-          border: Border.all(color: AppColors.loss.withValues(alpha: 0.35)),
-        ),
-        child: AppText(
-          message,
-          style: const TextStyle(
-            color: AppColors.loss,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-            height: 1.35,
+    return AppStatusSwitch(
+      switchKey: message,
+      duration: AppMotion.micro,
+      child: Semantics(
+        liveRegion: true,
+        child: Container(
+          width: double.infinity,
+          margin: const EdgeInsets.only(bottom: 12),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: AppColors.lossSoft,
+            borderRadius: AppRadius.borderSm,
+            border: Border.all(color: AppColors.loss.withValues(alpha: 0.35)),
+          ),
+          child: AppText(
+            message,
+            style: const TextStyle(
+              color: AppColors.loss,
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0,
+              height: 1.35,
+            ),
           ),
         ),
       ),
@@ -162,6 +166,7 @@ class AuthSubmitButton extends StatelessWidget {
     required this.onPressed,
     this.icon,
     this.busy = false,
+    this.succeeded = false,
     this.enabled = true,
   });
 
@@ -169,79 +174,89 @@ class AuthSubmitButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final IconData? icon;
   final bool busy;
+  final bool succeeded;
   final bool enabled;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    height: AuthLayout.buttonHeight,
-    width: double.infinity,
-    child: FilledButton(
-      onPressed: busy || !enabled ? null : onPressed,
-      style: FilledButton.styleFrom(
-        minimumSize: const Size.fromHeight(AuthLayout.buttonHeight),
-        maximumSize: const Size.fromHeight(AuthLayout.buttonHeight),
-        padding: EdgeInsets.zero,
-        disabledBackgroundColor: busy
-            ? AppColors.brandPrimary
-            : AppColors.disabled,
-        disabledForegroundColor: busy
-            ? AppColors.textInverse
-            : AppColors.textDisabled,
-        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderSm),
-      ),
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          Opacity(
-            opacity: busy ? 0 : 1,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (icon != null) ...[
-                  Icon(
-                    icon,
-                    size: AppMotion.iconField,
-                    color: AppColors.textInverse,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Flexible(
-                  child: Text(
-                    label,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+  Widget build(BuildContext context) {
+    final inFlight = busy || succeeded;
+    return SizedBox(
+      height: AuthLayout.buttonHeight,
+      width: double.infinity,
+      child: FilledButton(
+        onPressed: inFlight || !enabled ? null : onPressed,
+        style: FilledButton.styleFrom(
+          minimumSize: const Size.fromHeight(AuthLayout.buttonHeight),
+          maximumSize: const Size.fromHeight(AuthLayout.buttonHeight),
+          padding: EdgeInsets.zero,
+          disabledBackgroundColor: inFlight
+              ? AppColors.brandPrimary
+              : AppColors.disabled,
+          disabledForegroundColor: inFlight
+              ? AppColors.textInverse
+              : AppColors.textDisabled,
+          overlayColor: AppColors.brandPrimaryPressed.withValues(alpha: 0.18),
+          shape: RoundedRectangleBorder(borderRadius: AppRadius.borderSm),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            AnimatedOpacity(
+              duration: AppMotion.duration(context, AppMotion.micro),
+              opacity: inFlight ? 0 : 1,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (icon != null) ...[
+                    Icon(
+                      icon,
+                      size: AppMotion.iconField,
                       color: AppColors.textInverse,
                     ),
+                    const SizedBox(width: 8),
+                  ],
+                  Flexible(
+                    child: Text(
+                      label,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                        color: AppColors.textInverse,
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ),
-          ),
-          if (busy)
-            const SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.textInverse,
+                ],
               ),
             ),
-        ],
+            if (succeeded)
+              const Icon(
+                Icons.check_rounded,
+                key: ValueKey('auth-success'),
+                size: 20,
+                color: AppColors.textInverse,
+              )
+            else if (busy)
+              const SizedBox(
+                key: ValueKey('auth-loading'),
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.textInverse,
+                ),
+              ),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class AuthPageScaffold extends StatelessWidget {
-  const AuthPageScaffold({
-    super.key,
-    required this.child,
-    this.appBar,
-  });
+  const AuthPageScaffold({super.key, required this.child, this.appBar});
 
   final Widget child;
   final PreferredSizeWidget? appBar;
@@ -275,13 +290,157 @@ class AuthPageScaffold extends StatelessWidget {
                         minHeight: (constraints.maxHeight - insets.vertical)
                             .clamp(0, double.infinity),
                       ),
-                      child: child,
+                      child: AuthOutgoingShift(child: child),
                     ),
                   ),
                 ),
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+class AuthFocusGlow extends StatefulWidget {
+  const AuthFocusGlow({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<AuthFocusGlow> createState() => _AuthFocusGlowState();
+}
+
+class _AuthFocusGlowState extends State<AuthFocusGlow> {
+  var _focused = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = AppMotion.reduce(context);
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (value) {
+        if (_focused == value) return;
+        setState(() => _focused = value);
+      },
+      child: AnimatedContainer(
+        duration: AppMotion.duration(context, AppMotion.micro),
+        curve: AppMotion.ease,
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.borderSm,
+          boxShadow: _focused && !reduce
+              ? [
+                  BoxShadow(
+                    color: AppColors.brandPrimary.withValues(alpha: 0.12),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : const [],
+        ),
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+class AuthErrorShake extends StatefulWidget {
+  const AuthErrorShake({
+    super.key,
+    required this.errorText,
+    required this.child,
+  });
+
+  final String? errorText;
+  final Widget child;
+
+  @override
+  State<AuthErrorShake> createState() => _AuthErrorShakeState();
+}
+
+class _AuthErrorShakeState extends State<AuthErrorShake>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  String? _playedFor;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: AppMotion.micro);
+    if (_hasError(widget.errorText)) {
+      _playedFor = widget.errorText;
+    }
+  }
+
+  @override
+  void didUpdateWidget(AuthErrorShake oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!_hasError(widget.errorText)) {
+      _playedFor = null;
+      return;
+    }
+    if (widget.errorText == _playedFor) return;
+    _playedFor = widget.errorText;
+    if (!AppMotion.reduce(context)) {
+      _controller.forward(from: 0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool _hasError(String? value) => value != null && value.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final t = _controller.value;
+        final dx = t == 0 || t == 1 ? 0.0 : 3 * (1 - t) * (t < 0.5 ? 1 : -1);
+        return Transform.translate(offset: Offset(dx, 0), child: child);
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class AuthPasswordToggle extends StatelessWidget {
+  const AuthPasswordToggle({
+    super.key,
+    required this.obscure,
+    required this.onPressed,
+  });
+
+  final bool obscure;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: AppMotion.tapTarget,
+      height: AppMotion.tapTarget,
+      child: IconButton(
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints(
+          minWidth: AppMotion.tapTarget,
+          minHeight: AppMotion.tapTarget,
+        ),
+        tooltip: obscure ? 'Show password' : 'Hide password',
+        onPressed: onPressed,
+        icon: AppStatusSwitch(
+          switchKey: obscure,
+          duration: AppMotion.micro,
+          child: Icon(
+            obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+            size: AuthLayout.passwordIconSize,
+            semanticLabel: obscure ? 'Show password' : 'Hide password',
+          ),
         ),
       ),
     );
@@ -338,7 +497,10 @@ class VerificationBanner extends StatelessWidget {
     final (background, accent) = switch (tone) {
       KycBannerTone.success => (AppColors.successSoft, AppColors.success),
       KycBannerTone.danger => (AppColors.lossSoft, AppColors.loss),
-      KycBannerTone.info => (AppColors.brandPrimarySoft, AppColors.brandPrimary),
+      KycBannerTone.info => (
+        AppColors.brandPrimarySoft,
+        AppColors.brandPrimary,
+      ),
       KycBannerTone.warning => (AppColors.warningSoft, AppColors.warning),
     };
 
@@ -389,11 +551,7 @@ class VerificationBanner extends StatelessWidget {
 }
 
 class KycProgressHeader extends StatelessWidget {
-  const KycProgressHeader({
-    super.key,
-    required this.completed,
-    this.total = 6,
-  });
+  const KycProgressHeader({super.key, required this.completed, this.total = 6});
 
   final int completed;
   final int total;
@@ -462,7 +620,13 @@ class KycStepTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (iconColor, ringColor, stateLabel, trailing, trailingColor) = switch (state) {
+    final (
+      iconColor,
+      ringColor,
+      stateLabel,
+      trailing,
+      trailingColor,
+    ) = switch (state) {
       KycStepUiState.completed => (
         AppColors.success,
         AppColors.successSoft,

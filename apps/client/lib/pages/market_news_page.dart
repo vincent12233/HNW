@@ -2,6 +2,13 @@ import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../models/market_news_item.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_page_scaffold.dart';
 
 class MarketNewsPage extends StatefulWidget {
   const MarketNewsPage({
@@ -49,6 +56,7 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+    backgroundColor: AppColors.background,
     appBar: AppBar(
       title: const AppText('Market News'),
       actions: [
@@ -60,108 +68,126 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
           ),
       ],
     ),
-    body: Column(
-      children: [
-        if (refreshing) const LinearProgressIndicator(),
-        if (refreshFailed)
-          const Padding(
-            padding: EdgeInsets.all(12),
-            child: AppText(
-              'News could not be updated. Please try again.',
-              textAlign: TextAlign.center,
-            ),
-          ),
-        Expanded(
-          child: RefreshIndicator(
-            onRefresh: refresh,
-            child: items.isEmpty
-                ? ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    children: [
-                      const SizedBox(height: 80),
-                      const Icon(Icons.newspaper_outlined, size: 48),
-                      const Center(
-                        child: AppText('Market news is unavailable'),
-                      ),
-                      if (widget.onRefresh != null)
-                        Center(
-                          child: TextButton(
-                            onPressed: refreshing ? null : refresh,
-                            child: const AppText('Retry'),
-                          ),
-                        ),
-                    ],
-                  )
-                : ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(16),
-                    itemCount: items.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 10),
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: () => widget.onOpen(item),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SizedBox(
-                                width: 104,
-                                height: 104,
-                                child: item.imageUrl?.isNotEmpty == true
-                                    ? Image.network(
-                                        item.imageUrl!,
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (_, _, _) =>
-                                            _fallbackImage,
-                                      )
-                                    : _fallbackImage,
-                              ),
-                              Expanded(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(12),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      AppText(
-                                        item.title,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.w700,
-                                          height: 1.3,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      AppText(
-                                        '${item.source} · ${_age(item.publishedAt)}',
-                                        style: const TextStyle(
-                                          color: Color(0xFF64748B),
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+    body: Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 960),
+        child: Column(
+          children: [
+            if (refreshing) const LinearProgressIndicator(minHeight: 2),
+            if (refreshFailed)
+              Padding(
+                padding: const EdgeInsets.all(AppSpacing.md),
+                child: AppText(
+                  'News could not be updated. Please try again.',
+                  textAlign: TextAlign.center,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.warning,
                   ),
-          ),
+                ),
+              ),
+            Expanded(
+              child: AppFadeIn(
+                switchKey: '${items.length}:$refreshFailed',
+                child: RefreshIndicator(
+                  onRefresh: refresh,
+                  child: items.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: AppSpacing.page,
+                          children: [
+                            const SizedBox(height: AppSpacing.xxxl),
+                            AppEmptyState(
+                              title: 'Market news is unavailable',
+                              message:
+                                  'Headlines will appear when the market news feed is available.',
+                              icon: Icons.newspaper_outlined,
+                              onRetry: widget.onRefresh == null
+                                  ? null
+                                  : refresh,
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: AppSpacing.page,
+                          itemCount: items.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AppSpacing.sm),
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            return AppCard(
+                              radius: AppRadius.sm,
+                              padding: EdgeInsets.zero,
+                              onTap: () => widget.onOpen(item),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  SizedBox(
+                                    width: 104,
+                                    height: 104,
+                                    child: item.imageUrl?.isNotEmpty == true
+                                        ? Image.network(
+                                            item.imageUrl!,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, _, _) =>
+                                                _fallbackImage,
+                                          )
+                                        : _fallbackImage,
+                                  ),
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(
+                                        AppSpacing.md,
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          AppText(
+                                            item.title,
+                                            maxLines: 3,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: AppTypography.titleSmall
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w800,
+                                                  height: 1.3,
+                                                ),
+                                          ),
+                                          const SizedBox(height: AppSpacing.sm),
+                                          AppText(
+                                            '${item.source} · ${_age(item.publishedAt)}',
+                                            style: AppTypography.caption
+                                                .copyWith(
+                                                  color:
+                                                      AppColors.textSecondary,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     ),
   );
 
   static const Widget _fallbackImage = ColoredBox(
-    color: Color(0xFFEEF5FF),
+    color: AppColors.brandPrimarySoft,
     child: Center(
-      child: Icon(Icons.candlestick_chart_rounded, color: Color(0xFF0878F9)),
+      child: Icon(
+        Icons.candlestick_chart_rounded,
+        color: AppColors.brandPrimary,
+      ),
     ),
   );
 

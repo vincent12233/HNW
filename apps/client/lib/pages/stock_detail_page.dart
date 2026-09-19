@@ -14,12 +14,15 @@ import '../services/market_data_service.dart';
 import '../services/trading_service.dart';
 import '../services/watchlist_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/markets/browse_only_banner.dart';
+import '../widgets/markets/instrument_browse.dart';
+import '../widgets/markets/stock_quote_hero.dart';
 import '../widgets/stock_history_chart.dart';
-import '../widgets/stock_logo.dart';
 
 class StockDetailPage extends StatefulWidget {
   const StockDetailPage({
@@ -57,6 +60,8 @@ class _StockDetailPageState extends State<StockDetailPage> {
   int priceDirection = 0;
   MarketHistorySeries? yearHistory;
   TradingAccountSnapshot? accountSnapshot;
+
+  bool get _browseOnly => isBrowseOnlyInstrument(liveStock);
 
   bool get isLimit => orderType == 'LIMIT';
 
@@ -237,6 +242,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
   }
 
   void placeOrder() {
+    if (_browseOnly) return;
     final quantity = int.tryParse(quantityController.text) ?? 0;
     final limitPrice = isLimit
         ? double.tryParse(limitPriceController.text.trim())
@@ -437,43 +443,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   String _statPrice(double? value) => value == null ? '--' : formatPrice(value);
 
-  Widget _quoteStatus() {
-    final age = DateTime.now().difference(liveStock.updatedAt);
-    final live = socketConnected && age <= const Duration(seconds: 60);
-    final color = live
-        ? AppConfig.gainColor
-        : socketConnected
-        ? Colors.orange.shade700
-        : AppConfig.neutralColor;
-    final label = live
-        ? 'LIVE'
-        : socketConnected
-        ? 'DELAYED'
-        : 'OFFLINE';
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withAlpha(24),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.circle, size: 8, color: color),
-          const SizedBox(width: 5),
-          AppText(
-            label,
-            style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   double? get _yearHigh {
     final data = yearHistory?.data;
     if (data == null || data.isEmpty) return null;
@@ -617,9 +586,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    final absoluteChange = liveStock.previousClose == null
-        ? null
-        : liveStock.price - liveStock.previousClose!;
     return AppPageScaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -660,89 +626,16 @@ class _StockDetailPageState extends State<StockDetailPage> {
           ),
         ],
       ),
-      bottomNavigationBar: _stickyTradeBar(),
+      bottomNavigationBar: _browseOnly ? null : _stickyTradeBar(),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
-          Card(
-            color: AppConfig.primaryColor,
-            elevation: 0,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      StockLogo(
-                        symbol: liveStock.symbol,
-                        logoUrl: liveStock.logoUrl,
-                        size: 44,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(
-                              liveStock.name,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            AppText(
-                              '${liveStock.symbol} · ${liveStock.exchange}',
-                              style: const TextStyle(
-                                color: Color(0xFFCAD9FF),
-                                fontSize: 11,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      _quoteStatus(),
-                    ],
-                  ),
-                  const SizedBox(height: 5),
-                  AppText(
-                    '${liveStock.exchange}  |  Updated ${_updatedTime(liveStock.updatedAt)} IST',
-                    style: const TextStyle(
-                      color: Color(0xFFCAD9FF),
-                      fontSize: 11,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  AppText(
-                    formatPrice(liveStock.price),
-                    style: TextStyle(
-                      color: priceDirection > 0
-                          ? const Color(0xFF67E8A5)
-                          : priceDirection < 0
-                          ? const Color(0xFFFFA6A6)
-                          : Colors.white,
-                      fontSize: 30,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  AppText(
-                    '${absoluteChange == null ? '' : '${formatSignedPrice(absoluteChange)}  '}'
-                    '(${liveStock.change > 0 ? '+' : ''}${liveStock.change.toStringAsFixed(2)}%)',
-                    style: TextStyle(
-                      color: liveStock.change > 0
-                          ? const Color(0xFF67E8A5)
-                          : liveStock.change < 0
-                          ? const Color(0xFFFFA6A6)
-                          : const Color(0xFFCAD9FF),
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+          AppFadeIn(
+            switchKey:
+                '${liveStock.symbol}:${liveStock.price}:${liveStock.quoteFresh}',
+            child: StockQuoteHero(
+              stock: liveStock,
+              quotesConnected: socketConnected,
             ),
           ),
           const SizedBox(height: 12),
@@ -827,146 +720,150 @@ class _StockDetailPageState extends State<StockDetailPage> {
             _marketRangeCard(),
           ],
           const SizedBox(height: 18),
-          const AppText(
-            'Place Order',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment<bool>(value: true, label: AppText('Buy')),
-              ButtonSegment<bool>(value: false, label: AppText('Sell')),
-            ],
-            selected: {isBuy},
-            style: ButtonStyle(
-              foregroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return Colors.white;
-                }
-                return AppConfig.textPrimaryColor;
-              }),
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (!states.contains(WidgetState.selected)) {
-                  return Colors.white;
-                }
-                return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
-              }),
+          if (_browseOnly)
+            const BrowseOnlyBanner()
+          else ...[
+            const AppText(
+              'Place Order',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            onSelectionChanged: (selection) => setState(() {
-              isBuy = selection.first;
-              _pendingClientOrderId = null;
-              _pendingOrderFingerprint = null;
-            }),
-          ),
-          const SizedBox(height: 14),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(
-                value: 'MARKET',
-                label: AppText('Market Order'),
+            const SizedBox(height: 12),
+            SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment<bool>(value: true, label: AppText('Buy')),
+                ButtonSegment<bool>(value: false, label: AppText('Sell')),
+              ],
+              selected: {isBuy},
+              style: ButtonStyle(
+                foregroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (states.contains(WidgetState.selected)) {
+                    return Colors.white;
+                  }
+                  return AppConfig.textPrimaryColor;
+                }),
+                backgroundColor: WidgetStateProperty.resolveWith((states) {
+                  if (!states.contains(WidgetState.selected)) {
+                    return Colors.white;
+                  }
+                  return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
+                }),
               ),
-              ButtonSegment<String>(
-                value: 'LIMIT',
-                label: AppText('Limit Order'),
-              ),
-            ],
-            selected: {orderType},
-            onSelectionChanged: (selection) {
-              setState(() {
-                orderType = selection.first;
+              onSelectionChanged: (selection) => setState(() {
+                isBuy = selection.first;
                 _pendingClientOrderId = null;
                 _pendingOrderFingerprint = null;
-                if (orderType == 'LIMIT' &&
-                    limitPriceController.text.trim().isEmpty) {
-                  limitPriceController.text = liveStock.price.toStringAsFixed(
-                    2,
-                  );
-                }
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: quantityController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              labelText: 'Quantity',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.numbers),
+              }),
             ),
-          ),
-          if (isLimit) ...[
             const SizedBox(height: 14),
-            TextField(
-              controller: limitPriceController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+            SegmentedButton<String>(
+              segments: const [
+                ButtonSegment<String>(
+                  value: 'MARKET',
+                  label: AppText('Market Order'),
+                ),
+                ButtonSegment<String>(
+                  value: 'LIMIT',
+                  label: AppText('Limit Order'),
+                ),
               ],
+              selected: {orderType},
+              onSelectionChanged: (selection) {
+                setState(() {
+                  orderType = selection.first;
+                  _pendingClientOrderId = null;
+                  _pendingOrderFingerprint = null;
+                  if (orderType == 'LIMIT' &&
+                      limitPriceController.text.trim().isEmpty) {
+                    limitPriceController.text = liveStock.price.toStringAsFixed(
+                      2,
+                    );
+                  }
+                });
+              },
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: quantityController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
               onChanged: (_) => setState(() {}),
               decoration: const InputDecoration(
-                labelText: 'Limit Price',
-                prefixText: '₹ ',
+                labelText: 'Quantity',
                 border: OutlineInputBorder(),
+                prefixIcon: Icon(Icons.numbers),
+              ),
+            ),
+            if (isLimit) ...[
+              const SizedBox(height: 14),
+              TextField(
+                controller: limitPriceController,
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [
+                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+                ],
+                onChanged: (_) => setState(() {}),
+                decoration: const InputDecoration(
+                  labelText: 'Limit Price',
+                  prefixText: '₹ ',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            const AppText(
+              'Validity',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              children: ['DAY', 'IOC', 'FOK']
+                  .map(
+                    (value) => Tooltip(
+                      message: switch (value) {
+                        'IOC' => 'Immediate or Cancel',
+                        'FOK' => 'Fill or Kill',
+                        _ => 'Valid for the trading day',
+                      },
+                      child: ChoiceChip(
+                        label: AppText(value),
+                        selected: timeInForce == value,
+                        selectedColor: AppConfig.primaryColor,
+                        backgroundColor: Colors.white,
+                        labelStyle: TextStyle(
+                          color: timeInForce == value
+                              ? Colors.white
+                              : AppConfig.textPrimaryColor,
+                          fontWeight: FontWeight.w700,
+                        ),
+                        side: BorderSide(
+                          color: timeInForce == value
+                              ? AppConfig.primaryColor
+                              : AppConfig.borderColor,
+                        ),
+                        onSelected: (_) => setState(() {
+                          timeInForce = value;
+                          _pendingClientOrderId = null;
+                          _pendingOrderFingerprint = null;
+                        }),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+            const SizedBox(height: 16),
+            _orderPreviewCard(),
+            const SizedBox(height: 8),
+            AppText(
+              'Use Buy / Sell below to review and submit your order.',
+              style: TextStyle(
+                color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
+                fontSize: 11,
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          const AppText(
-            'Validity',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: ['DAY', 'IOC', 'FOK']
-                .map(
-                  (value) => Tooltip(
-                    message: switch (value) {
-                      'IOC' => 'Immediate or Cancel',
-                      'FOK' => 'Fill or Kill',
-                      _ => 'Valid for the trading day',
-                    },
-                    child: ChoiceChip(
-                      label: AppText(value),
-                      selected: timeInForce == value,
-                      selectedColor: AppConfig.primaryColor,
-                      backgroundColor: Colors.white,
-                      labelStyle: TextStyle(
-                        color: timeInForce == value
-                            ? Colors.white
-                            : AppConfig.textPrimaryColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      side: BorderSide(
-                        color: timeInForce == value
-                            ? AppConfig.primaryColor
-                            : AppConfig.borderColor,
-                      ),
-                      onSelected: (_) => setState(() {
-                        timeInForce = value;
-                        _pendingClientOrderId = null;
-                        _pendingOrderFingerprint = null;
-                      }),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-          _orderPreviewCard(),
-          const SizedBox(height: 8),
-          AppText(
-            'Use Buy / Sell below to review and submit your order.',
-            style: TextStyle(
-              color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
-              fontSize: 11,
-            ),
-          ),
         ],
       ),
     );
@@ -1222,11 +1119,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
       return '${(volume / 1000).toStringAsFixed(1)} K';
     }
     return '$volume';
-  }
-
-  String _updatedTime(DateTime value) {
-    final ist = value.toUtc().add(const Duration(hours: 5, minutes: 30));
-    return '${ist.hour.toString().padLeft(2, '0')}:${ist.minute.toString().padLeft(2, '0')}:${ist.second.toString().padLeft(2, '0')}';
   }
 }
 

@@ -8,6 +8,8 @@ import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/watchlist_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_feedback.dart';
@@ -247,26 +249,51 @@ class _StockSearchPageState extends State<StockSearchPage> {
               AppSpacing.lg,
               AppSpacing.md,
             ),
-            child: TextField(
-              controller: _controller,
-              autofocus: true,
-              textInputAction: TextInputAction.search,
-              autocorrect: false,
-              onChanged: _onChanged,
-              onSubmitted: _submitSearch,
-              decoration: InputDecoration(
-                hintText: tr('Search symbol or company'),
-                prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: _controller.text.isEmpty
-                    ? null
-                    : IconButton(
-                        tooltip: tr('Clear'),
-                        onPressed: () {
-                          _controller.clear();
-                          _onChanged('');
-                        },
-                        icon: const Icon(Icons.close),
-                      ),
+            child: Semantics(
+              textField: true,
+              label: tr('Search stocks'),
+              child: TextField(
+                controller: _controller,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                autocorrect: false,
+                onChanged: _onChanged,
+                onSubmitted: _submitSearch,
+                decoration: InputDecoration(
+                  hintText: tr('Search symbol or company'),
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  filled: true,
+                  fillColor: AppColors.surface,
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.md,
+                    vertical: AppSpacing.sm,
+                  ),
+                  constraints: const BoxConstraints(
+                    minHeight: AppMotion.tapTarget,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: AppRadius.borderSm,
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: AppRadius.borderSm,
+                    borderSide: const BorderSide(color: AppColors.border),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: AppRadius.borderSm,
+                    borderSide: const BorderSide(color: AppColors.brandPrimary),
+                  ),
+                  suffixIcon: _controller.text.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: tr('Clear'),
+                          onPressed: () {
+                            _controller.clear();
+                            _onChanged('');
+                          },
+                          icon: const Icon(Icons.close),
+                        ),
+                ),
               ),
             ),
           ),
@@ -318,79 +345,82 @@ class _StockSearchPageState extends State<StockSearchPage> {
               ),
             ),
           Expanded(
-            child: visible.isEmpty && _loading
-                ? const AppLoadingView(message: 'Searching stocks…')
-                : visible.isEmpty && !_hasMore
-                ? (_failed
-                      ? AppErrorView(
-                          title: 'Unable to load stocks',
-                          message:
-                              'Search is temporarily unavailable. Please retry.',
-                          onRetry: _retrySearch,
-                        )
-                      : AppEmptyState(
-                          title: _controller.text.trim().isEmpty
-                              ? 'No instruments available'
-                              : 'No matching stocks',
-                          message: _controller.text.trim().isEmpty
-                              ? 'Try again when market data is available.'
-                              : 'Try a different symbol or company name.',
-                          icon: Icons.search_off,
-                          onRetry: _retrySearch,
-                        ))
-                : ListView.builder(
-                    key: ValueKey(_controller.text.trim()),
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                    itemCount: visible.length + (_hasMore ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      if (index == visible.length) {
-                        return Center(
-                          child: TextButton(
-                            onPressed: _loading
-                                ? null
-                                : () => _search(
-                                    _controller.text.trim(),
-                                    loadMore: true,
-                                  ),
-                            child: AppText(
-                              _loading
-                                  ? 'Loading…'
-                                  : _failedLoadMore
-                                  ? 'Retry'
-                                  : 'Load more',
+            child: AppFadeIn(
+              switchKey: '$_resultQuery:$_loading:$_failed:${visible.length}',
+              child: visible.isEmpty && _loading
+                  ? const AppLoadingView(message: 'Searching stocks…')
+                  : visible.isEmpty && !_hasMore
+                  ? (_failed
+                        ? AppErrorView(
+                            title: 'Unable to load stocks',
+                            message:
+                                'Search is temporarily unavailable. Please retry.',
+                            onRetry: _retrySearch,
+                          )
+                        : AppEmptyState(
+                            title: _controller.text.trim().isEmpty
+                                ? 'No instruments available'
+                                : 'No matching stocks',
+                            message: _controller.text.trim().isEmpty
+                                ? 'Try again when market data is available.'
+                                : 'Try a different symbol or company name.',
+                            icon: Icons.search_off,
+                            onRetry: _retrySearch,
+                          ))
+                  : ListView.builder(
+                      key: ValueKey(_controller.text.trim()),
+                      keyboardDismissBehavior:
+                          ScrollViewKeyboardDismissBehavior.onDrag,
+                      padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                      itemCount: visible.length + (_hasMore ? 1 : 0),
+                      itemBuilder: (context, index) {
+                        if (index == visible.length) {
+                          return Center(
+                            child: TextButton(
+                              onPressed: _loading
+                                  ? null
+                                  : () => _search(
+                                      _controller.text.trim(),
+                                      loadMore: true,
+                                    ),
+                              child: AppText(
+                                _loading
+                                    ? 'Loading…'
+                                    : _failedLoadMore
+                                    ? 'Retry'
+                                    : 'Load more',
+                              ),
                             ),
-                          ),
+                          );
+                        }
+                        final stock = visible[index];
+                        final key = WatchlistService.key(
+                          stock.exchange,
+                          stock.symbol,
                         );
-                      }
-                      final stock = visible[index];
-                      final key = WatchlistService.key(
-                        stock.exchange,
-                        stock.symbol,
-                      );
-                      return StockListTile(
-                        key: ValueKey(key),
-                        stock: stock,
-                        onLogoLoadFailed: () {
-                          if (!mounted ||
-                              stock.logoUrl == null ||
-                              _failedLogos.contains(stock.logoUrl)) {
-                            return;
-                          }
-                          setState(() => _failedLogos.add(stock.logoUrl!));
-                        },
-                        onTap: () => _select(stock),
-                        isFavorite: _watchlist.contains(key),
-                        onFavorite:
-                            _watchlistLoading ||
-                                _watchlistFailed ||
-                                _watchlistSaving.contains(key)
-                            ? null
-                            : () => _toggleWatchlist(stock),
-                      );
-                    },
-                  ),
+                        return StockListTile(
+                          key: ValueKey(key),
+                          stock: stock,
+                          onLogoLoadFailed: () {
+                            if (!mounted ||
+                                stock.logoUrl == null ||
+                                _failedLogos.contains(stock.logoUrl)) {
+                              return;
+                            }
+                            setState(() => _failedLogos.add(stock.logoUrl!));
+                          },
+                          onTap: () => _select(stock),
+                          isFavorite: _watchlist.contains(key),
+                          onFavorite:
+                              _watchlistLoading ||
+                                  _watchlistFailed ||
+                                  _watchlistSaving.contains(key)
+                              ? null
+                              : () => _toggleWatchlist(stock),
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

@@ -69,6 +69,7 @@ class SectorPerformance extends StatelessWidget {
             return SizedBox(
               width: 210,
               child: AppCard(
+                radius: AppRadius.sm,
                 child: Row(
                   children: [
                     Container(
@@ -97,7 +98,7 @@ class SectorPerformance extends StatelessWidget {
                             '${change.toStringAsFixed(2)}%',
                             style: AppTypography.labelMedium.copyWith(
                               color: color,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               fontFeatures: AppTypography.tabularFeatures,
                             ),
                           ),

@@ -81,13 +81,29 @@ class StockListTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: AppSpacing.xxs + 1),
-                AppText(
-                  changeText,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: changeColor,
-                    fontWeight: FontWeight.w700,
-                    fontFeatures: AppTypography.tabularFeatures,
-                  ),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      stock.change > 0
+                          ? Icons.arrow_drop_up_rounded
+                          : stock.change < 0
+                          ? Icons.arrow_drop_down_rounded
+                          : Icons.remove,
+                      size: 18,
+                      color: changeColor,
+                    ),
+                    Flexible(
+                      child: AppText(
+                        changeText,
+                        style: AppTypography.labelSmall.copyWith(
+                          color: changeColor,
+                          fontWeight: FontWeight.w700,
+                          fontFeatures: AppTypography.tabularFeatures,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             );

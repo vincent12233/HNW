@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../models/picked_bytes_file.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/auth_layout.dart';
 
@@ -159,12 +160,14 @@ class AuthSubmitButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onPressed,
+    this.icon,
     this.busy = false,
     this.enabled = true,
   });
 
   final String label;
   final VoidCallback? onPressed;
+  final IconData? icon;
   final bool busy;
   final bool enabled;
 
@@ -191,14 +194,31 @@ class AuthSubmitButton extends StatelessWidget {
         children: [
           Opacity(
             opacity: busy ? 0 : 1,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0,
-                color: AppColors.textInverse,
-              ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[
+                  Icon(
+                    icon,
+                    size: AppMotion.iconField,
+                    color: AppColors.textInverse,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Flexible(
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                      color: AppColors.textInverse,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
           if (busy)
@@ -484,7 +504,7 @@ class KycStepTile extends StatelessWidget {
                   color: ringColor,
                   borderRadius: AppRadius.borderSm,
                 ),
-                child: Icon(icon, color: iconColor, size: AuthLayout.iconSize),
+                child: Icon(icon, color: iconColor, size: AppMotion.iconStep),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -527,7 +547,19 @@ class KycStepTile extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(trailing, color: trailingColor, size: 18),
+              KycStatusSwitch(
+                switchKey: state,
+                duration: AppMotion.micro,
+                child: SizedBox(
+                  width: AppMotion.iconInline,
+                  height: AppMotion.iconInline,
+                  child: Icon(
+                    trailing,
+                    color: trailingColor,
+                    size: AppMotion.iconInline,
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -576,7 +608,7 @@ class AuthOutlinedButton extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (icon != null) ...[
-                  Icon(icon, size: AuthLayout.iconSize),
+                  Icon(icon, size: AppMotion.iconField),
                   const SizedBox(width: 8),
                 ],
                 Flexible(
@@ -722,80 +754,84 @@ class KycLocalFileCard extends StatelessWidget {
                 style: BorderStyle.solid,
               ),
             ),
-            child: selected
-                ? Column(
-                    children: [
-                      SizedBox(
-                        height: 148,
-                        width: double.infinity,
-                        child: _canPreview
-                            ? Image.memory(
-                                file!.bytes,
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, _, _) => const Center(
-                                  child: AppText('Preview unavailable'),
+            child: KycStatusSwitch(
+              switchKey: file?.name ?? 'empty',
+              child: selected
+                  ? Column(
+                      children: [
+                        SizedBox(
+                          height: 148,
+                          width: double.infinity,
+                          child: _canPreview
+                              ? Image.memory(
+                                  file!.bytes,
+                                  fit: BoxFit.contain,
+                                  gaplessPlayback: true,
+                                  errorBuilder: (_, _, _) => const Center(
+                                    child: AppText('Preview unavailable'),
+                                  ),
+                                )
+                              : Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(
+                                      Icons.description_outlined,
+                                      size: AppMotion.iconEmpty,
+                                      color: AppColors.brandPrimary,
+                                    ),
+                                    const SizedBox(height: 8),
+                                    AppText(
+                                      file!.name,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
                                 ),
-                              )
-                            : Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.description_outlined,
-                                    size: 42,
-                                    color: AppColors.brandPrimary,
-                                  ),
-                                  const SizedBox(height: 8),
-                                  AppText(
-                                    file!.name,
-                                    textAlign: TextAlign.center,
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                      ),
-                      const SizedBox(height: 8),
-                      const Align(
-                        alignment: Alignment.centerLeft,
-                        child: AppText(
-                          'Selected',
-                          style: TextStyle(
-                            fontSize: AuthLayout.helperSize,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0,
-                            color: AppColors.brandPrimary,
+                        ),
+                        const SizedBox(height: 8),
+                        const Align(
+                          alignment: Alignment.centerLeft,
+                          child: AppText(
+                            'Selected',
+                            style: TextStyle(
+                              fontSize: AuthLayout.helperSize,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0,
+                              color: AppColors.brandPrimary,
+                            ),
                           ),
                         ),
-                      ),
-                      const SizedBox(height: 2),
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: AppText(
-                          '${file!.name} · $_sizeLabel',
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            height: 1.35,
-                            letterSpacing: 0,
-                            color: AppColors.textSecondary,
+                        const SizedBox(height: 2),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: AppText(
+                            '${file!.name} · $_sizeLabel',
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 11,
+                              height: 1.35,
+                              letterSpacing: 0,
+                              color: AppColors.textSecondary,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.add_photo_alternate_outlined,
-                        size: 42,
-                        color: AppColors.brandPrimary,
-                      ),
-                      const SizedBox(height: 10),
-                      AppText(emptyLabel, textAlign: TextAlign.center),
-                    ],
-                  ),
+                      ],
+                    )
+                  : Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.upload_file,
+                          size: AppMotion.iconEmpty,
+                          color: AppColors.brandPrimary,
+                        ),
+                        const SizedBox(height: 10),
+                        AppText(emptyLabel, textAlign: TextAlign.center),
+                      ],
+                    ),
+            ),
           ),
         ),
         const SizedBox(height: 12),
@@ -806,19 +842,23 @@ class KycLocalFileCard extends StatelessWidget {
         const SizedBox(height: 8),
         AuthOutlinedButton(
           label: selected ? 'Replace File' : 'Choose File',
-          icon: selected
-              ? Icons.swap_horiz_outlined
-              : Icons.folder_open_outlined,
+          icon: selected ? Icons.swap_horiz : Icons.upload_file,
           onPressed: busy ? null : (selected ? onReplace : onChoose),
         ),
-        if (selected) ...[
-          const SizedBox(height: 8),
-          AuthOutlinedButton(
-            label: 'Remove File',
-            icon: Icons.delete_outline,
-            onPressed: busy ? null : onRemove,
-          ),
-        ],
+        KycStatusSwitch(
+          switchKey: selected ? 'remove' : 'idle',
+          duration: AppMotion.micro,
+          child: selected
+              ? Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: AuthOutlinedButton(
+                    label: 'Remove File',
+                    icon: Icons.delete_outline,
+                    onPressed: busy ? null : onRemove,
+                  ),
+                )
+              : const SizedBox.shrink(),
+        ),
       ],
     );
   }
@@ -843,16 +883,23 @@ class KycSelfieFrame extends StatelessWidget {
           ),
           padding: const EdgeInsets.all(8),
           child: ClipOval(
-            child: bytes == null
-                ? const ColoredBox(
-                    color: Color(0xFFF5F8FF),
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 110,
-                      color: AppColors.brandPrimary,
+            child: KycStatusSwitch(
+              switchKey: bytes == null ? 'empty' : identityHashCode(bytes),
+              child: bytes == null
+                  ? const ColoredBox(
+                      color: Color(0xFFF5F8FF),
+                      child: Icon(
+                        Icons.face_outlined,
+                        size: AppMotion.iconEmpty,
+                        color: AppColors.brandPrimary,
+                      ),
+                    )
+                  : Image.memory(
+                      bytes!,
+                      fit: BoxFit.cover,
+                      gaplessPlayback: true,
                     ),
-                  )
-                : Image.memory(bytes!, fit: BoxFit.cover),
+            ),
           ),
         ),
       );
@@ -910,11 +957,12 @@ class KycFlowFooter extends StatelessWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  if (errorText != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AuthFormError(message: errorText!),
-                    ),
+                  KycStatusSwitch(
+                    switchKey: errorText ?? 'none',
+                    child: errorText == null
+                        ? const SizedBox.shrink()
+                        : AuthFormError(message: errorText!),
+                  ),
                   AuthSubmitButton(
                     label: label,
                     busy: busy,

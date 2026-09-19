@@ -9,6 +9,7 @@ import 'package:image_picker/image_picker.dart';
 import '../models/picked_bytes_file.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/auth_layout.dart';
 import '../widgets/kyc_signature_pad.dart';
@@ -281,13 +282,23 @@ class _KycUploadPageState extends State<KycUploadPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                  if (step == 0 || _reviewLocked) ..._overviewChildren(),
-                  if (!_reviewLocked && step == 1) ..._documentStep(),
-                  if (!_reviewLocked && step == 2) ..._selfieStep(),
-                  if (!_reviewLocked && step == 3) ..._signatureStep(),
-                  if (!_reviewLocked && step == 5) ..._reviewStep(),
-                          const SizedBox(height: 24),
-                    ],
+                            if (step == 0 || _reviewLocked)
+                              ..._overviewChildren()
+                            else
+                              KycFadeIn(
+                                switchKey: step,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    if (step == 1) ..._documentStep(),
+                                    if (step == 2) ..._selfieStep(),
+                                    if (step == 3) ..._signatureStep(),
+                                    if (step == 5) ..._reviewStep(),
+                                  ],
+                                ),
+                              ),
+                            const SizedBox(height: 24),
+                          ],
                         ),
                       ),
                     ),
@@ -600,27 +611,34 @@ class _KycUploadPageState extends State<KycUploadPage> {
     const SizedBox(height: AuthLayout.fieldGap),
     KycSelfieFrame(bytes: selfieFile?.bytes),
     const SizedBox(height: 16),
-    if (selfieFile != null) ...[
-      const AppText(
-        'Selfie captured',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0,
-          color: AppColors.brandPrimary,
-        ),
-      ),
-      const SizedBox(height: 4),
-      const AppText(
-        'Waiting for manual review',
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: AuthLayout.helperSize,
-          color: AppColors.textSecondary,
-        ),
-      ),
-      const SizedBox(height: 16),
-    ],
+    KycStatusSwitch(
+      switchKey: selfieFile == null ? 'empty' : 'captured',
+      child: selfieFile == null
+          ? const SizedBox.shrink()
+          : const Column(
+              children: [
+                AppText(
+                  'Selfie captured',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+                SizedBox(height: 4),
+                AppText(
+                  'Waiting for manual review',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: AuthLayout.helperSize,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
+    ),
     const AppText(
       'Keep your face fully visible. Remove glasses, hats and masks. Use even lighting and avoid blur.',
       style: TextStyle(
@@ -633,12 +651,13 @@ class _KycUploadPageState extends State<KycUploadPage> {
     const SizedBox(height: 20),
     AuthSubmitButton(
       label: selfieFile == null ? 'Capture Selfie' : 'Retake',
+      icon: selfieFile == null ? Icons.camera_alt : Icons.refresh,
       onPressed: () => _pickSelfie(ImageSource.camera),
     ),
     const SizedBox(height: 8),
     AuthOutlinedButton(
       label: 'Choose from Gallery',
-      icon: Icons.photo_outlined,
+      icon: Icons.photo_library,
       onPressed: () => _pickSelfie(ImageSource.gallery),
     ),
     const SizedBox(height: 8),
@@ -659,53 +678,72 @@ class _KycUploadPageState extends State<KycUploadPage> {
       subtitle: 'Sign below using your finger or a stylus.',
     ),
     const SizedBox(height: AuthLayout.fieldGap),
-    if (signatureFile == null)
-      KycSignaturePad(
-        onSaved: (bytes) => setState(() {
-          signatureFile = PickedBytesFile(
-            name: 'signature.png',
-            bytes: bytes,
-          );
-          errorText = null;
-        }),
-        onChanged: () {
-          if (signatureFile != null) {
-            setState(() => signatureFile = null);
-          }
-        },
-      )
-    else ...[
-      SizedBox(
-        height: 180,
-        width: double.infinity,
-        child: Image.memory(
-          signatureFile!.bytes,
-          fit: BoxFit.contain,
-        ),
-      ),
-      const SizedBox(height: 12),
-      const AppText(
-        'Signature saved',
-        style: TextStyle(
-          fontWeight: FontWeight.w700,
-          color: AppColors.success,
-        ),
-      ),
-      const SizedBox(height: 4),
-      const AppText(
-        'Waiting for manual review',
-        style: TextStyle(
-          fontSize: AuthLayout.helperSize,
-          color: AppColors.textSecondary,
-        ),
-      ),
-      const SizedBox(height: 12),
-      AuthOutlinedButton(
-        label: 'Retake Signature',
-        icon: Icons.refresh,
-        onPressed: () => setState(() => signatureFile = null),
-      ),
-    ],
+    KycStatusSwitch(
+      switchKey: signatureFile == null ? 'pad' : 'saved',
+      child: signatureFile == null
+          ? KycSignaturePad(
+              onSaved: (bytes) => setState(() {
+                signatureFile = PickedBytesFile(
+                  name: 'signature.png',
+                  bytes: bytes,
+                );
+                errorText = null;
+              }),
+              onChanged: () {
+                if (signatureFile != null) {
+                  setState(() => signatureFile = null);
+                }
+              },
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 180,
+                  width: double.infinity,
+                  child: Image.memory(
+                    signatureFile!.bytes,
+                    fit: BoxFit.contain,
+                    gaplessPlayback: true,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                const Row(
+                  children: [
+                    Icon(
+                      Icons.check_circle,
+                      size: AppMotion.iconInline,
+                      color: AppColors.success,
+                    ),
+                    SizedBox(width: 6),
+                    Flexible(
+                      child: AppText(
+                        'Signature saved',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.success,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                const AppText(
+                  'Waiting for manual review',
+                  style: TextStyle(
+                    fontSize: AuthLayout.helperSize,
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AuthOutlinedButton(
+                  label: 'Retake Signature',
+                  icon: Icons.refresh,
+                  onPressed: () => setState(() => signatureFile = null),
+                ),
+              ],
+            ),
+    ),
   ];
 
   List<Widget> _reviewStep() {

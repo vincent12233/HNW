@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../widgets/onboarding_widgets.dart';
 
 class SelfieCameraPage extends StatefulWidget {
@@ -195,30 +196,45 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
       child: Column(
         children: [
           Expanded(
-            child: _error != null
-                ? Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          AppText(
-                            _error!,
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                          const SizedBox(height: 12),
-                          TextButton(
-                            onPressed: _open,
-                            child: const AppText('Retry'),
-                          ),
-                        ],
+            child: KycStatusSwitch(
+              switchKey: _error != null
+                  ? 'error'
+                  : (_camera == null ? 'loading' : 'preview'),
+              child: _error != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AppText(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton.icon(
+                              onPressed: _open,
+                              icon: const Icon(
+                                Icons.refresh,
+                                size: AppMotion.iconField,
+                              ),
+                              label: const AppText('Retry'),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  )
-                : _camera == null
-                ? const Center(child: CircularProgressIndicator())
-                : _preview(),
+                    )
+                  : _camera == null
+                  ? const Center(
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : _preview(),
+            ),
           ),
           DecoratedBox(
             key: const ValueKey('kyc-camera-footer'),

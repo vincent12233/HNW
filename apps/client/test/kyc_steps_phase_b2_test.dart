@@ -8,6 +8,7 @@ import 'package:india_trading_app/models/picked_bytes_file.dart';
 import 'package:india_trading_app/pages/bank_details_page.dart';
 import 'package:india_trading_app/pages/kyc_upload_page.dart';
 import 'package:india_trading_app/pages/selfie_camera_page.dart';
+import 'package:india_trading_app/theme/app_motion.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/theme/auth_layout.dart';
 import 'package:india_trading_app/widgets/kyc_signature_pad.dart';
@@ -41,6 +42,7 @@ void main() {
     required Widget home,
     Size size = const Size(390, 844),
     double textScale = 1,
+    bool reduceMotion = false,
   }) async {
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1;
@@ -52,6 +54,8 @@ void main() {
         builder: (context, child) => MediaQuery(
           data: MediaQuery.of(context).copyWith(
             textScaler: TextScaler.linear(textScale),
+            disableAnimations: reduceMotion,
+            accessibleNavigation: reduceMotion,
           ),
           child: child!,
         ),
@@ -193,6 +197,10 @@ void main() {
       expect(find.text('Selected'), findsNothing);
       expect(find.text('Choose File'), findsOneWidget);
       expectNoFalseClaims(tester, reason: 'local file actions');
+      expect(pickCount, 2);
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(pickCount, 2, reason: 'animation ticks must not pick again');
     });
 
     testWidgets('unsupported and oversized files stay on the document step', (
@@ -345,9 +353,12 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Save Signature'));
       await tester.pump();
-      await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 200)),
-      );
+      await tester.runAsync(() async {
+        final deadline = DateTime.now().add(const Duration(seconds: 2));
+        while (!saved && DateTime.now().isBefore(deadline)) {
+          await Future<void>.delayed(const Duration(milliseconds: 50));
+        }
+      });
       await tester.pump();
       expect(saved, isTrue);
 
@@ -583,6 +594,184 @@ void main() {
         tester.getSize(find.byType(AuthSubmitButton).last).height,
         AuthLayout.buttonHeight,
       );
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('motion and icons', () {
+    testWidgets('reduced motion has no slide or scale and keeps copy', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        reduceMotion: true,
+        home: const KycUploadPage(
+          debugHarness: KycUploadDebugHarness(
+            step: 1,
+            documentType: 'PAN',
+            fullName: 'Test Customer',
+          ),
+        ),
+      );
+      expect(find.text('PAN Card Front (Required)'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(KycFadeIn),
+          matching: find.byType(SlideTransition),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(KycFadeIn),
+          matching: find.byType(ScaleTransition),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(KycStatusSwitch),
+          matching: find.byType(ScaleTransition),
+        ),
+        findsNothing,
+      );
+      expect(find.text('Selected'), findsNothing);
+      expectNoFalseClaims(tester, reason: 'reduced motion document');
+
+      await pumpPage(
+        tester,
+        reduceMotion: true,
+        home: KycUploadPage(
+          debugHarness: KycUploadDebugHarness(
+            step: 2,
+            fullName: 'Test Customer',
+            selfieFile: _pngFile('selfie.png'),
+          ),
+        ),
+      );
+      expect(find.text('Selfie captured'), findsOneWidget);
+      expect(find.text('Waiting for manual review'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(KycStatusSwitch),
+          matching: find.byType(ScaleTransition),
+        ),
+        findsNothing,
+      );
+      expectNoFalseClaims(tester, reason: 'reduced motion selfie');
+    });
+
+    testWidgets('busy continue keeps 48px height', (tester) async {
+      await pumpPage(
+        tester,
+        home: BankDetailsPage(
+          initial: const {
+            'accountHolder': 'Test Customer',
+            'accountNumber': '123456789012',
+            'ifscCode': 'HDFC0001234',
+            'bankName': 'HDFC Bank',
+          },
+          onContinue: (_) {},
+        ),
+      );
+      await tester.enterText(find.byType(TextFormField).at(2), '123456789012');
+      final idle = tester.getSize(find.byType(AuthSubmitButton));
+      await tester.ensureVisible(find.byType(AuthSubmitButton));
+      await tester.tap(find.byType(AuthSubmitButton));
+      await tester.pump();
+      expect(tester.getSize(find.byType(AuthSubmitButton)).height, idle.height);
+      expect(tester.getSize(find.byType(AuthSubmitButton)).height, 48);
+    });
+
+    testWidgets('icon buttons expose labels and 44px targets', (tester) async {
+      await pumpPage(
+        tester,
+        home: const BankDetailsPage(initial: {'accountHolder': 'Test Customer'}),
+      );
+      final visibility = find.byTooltip('Show account number');
+      expect(visibility, findsWidgets);
+      final size = tester.getSize(visibility.first);
+      expect(size.width, greaterThanOrEqualTo(44));
+      expect(size.height, greaterThanOrEqualTo(44));
+
+      await pumpPage(
+        tester,
+        home: const KycUploadPage(
+          debugHarness: KycUploadDebugHarness(
+            step: 3,
+            fullName: 'Test Customer',
+          ),
+        ),
+      );
+      expect(find.byTooltip('Clear'), findsOneWidget);
+      final clear = tester.getSize(find.byTooltip('Clear'));
+      expect(clear.width, greaterThanOrEqualTo(44));
+      expect(clear.height, greaterThanOrEqualTo(44));
+      expect(find.byIcon(Icons.upload_file), findsNothing);
+    });
+
+    testWidgets('1.3 text scale keeps status icons visible', (tester) async {
+      await pumpPage(
+        tester,
+        textScale: 1.3,
+        size: const Size(320, 568),
+        home: KycUploadPage(
+          debugHarness: KycUploadDebugHarness(
+            step: 1,
+            documentType: 'PAN',
+            fullName: 'Test Customer',
+            selectedFile: _pngFile('pan-front.png'),
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.swap_horiz), findsOneWidget);
+      expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      expect(find.text('Selected'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+
+      await pumpPage(
+        tester,
+        textScale: 1.3,
+        size: const Size(320, 568),
+        home: KycUploadPage(
+          debugHarness: KycUploadDebugHarness(
+            step: 3,
+            fullName: 'Test Customer',
+            signatureFile: _pngFile('signature.png'),
+          ),
+        ),
+      );
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.text('Signature saved'), findsOneWidget);
+      expect(find.textContaining('Verified'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('320 width has no overflow after file preview fade', (
+      tester,
+    ) async {
+      await pumpPage(
+        tester,
+        size: const Size(320, 568),
+        home: KycUploadPage(
+          debugHarness: KycUploadDebugHarness(
+            step: 1,
+            documentType: 'PAN',
+            fullName: 'Test Customer',
+            pickDocument: ({required back}) async => _pngFile('pan-front.png'),
+          ),
+        ),
+      );
+      await tester.scrollUntilVisible(
+        find.text('Choose File'),
+        180,
+        scrollable: stepScroll(),
+      );
+      await tester.tap(find.text('Choose File'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('pan-front.png'), findsWidgets);
+      expect(find.text('Selected'), findsOneWidget);
+      expect(find.textContaining('%'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

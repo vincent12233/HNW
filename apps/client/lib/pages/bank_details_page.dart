@@ -2,6 +2,7 @@ import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/auth_layout.dart';
 import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
@@ -295,11 +296,13 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
             : IconButton(
                 onPressed: onToggleObscure,
                 tooltip: obscure ? 'Show account number' : 'Hide account number',
+                constraints: const BoxConstraints(
+                  minWidth: AppMotion.tapTarget,
+                  minHeight: AppMotion.tapTarget,
+                ),
                 icon: Icon(
-                  obscure
-                      ? Icons.visibility_outlined
-                      : Icons.visibility_off_outlined,
-                  size: AuthLayout.iconSize,
+                  obscure ? Icons.visibility : Icons.visibility_off,
+                  size: AppMotion.iconField,
                 ),
               ),
       ),

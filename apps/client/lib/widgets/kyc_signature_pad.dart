@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/auth_layout.dart';
 import '../widgets/onboarding_widgets.dart';
@@ -110,10 +111,19 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
               children: [
                 Align(
                   alignment: Alignment.centerRight,
-                  child: TextButton.icon(
-                    onPressed: _saving ? null : _clear,
-                    icon: const Icon(Icons.refresh, size: 16),
-                    label: const AppText('Clear'),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      minHeight: AppMotion.tapTarget,
+                      minWidth: AppMotion.tapTarget,
+                    ),
+                    child: Tooltip(
+                      message: 'Clear',
+                      child: TextButton.icon(
+                        onPressed: _saving ? null : _clear,
+                        icon: const Icon(Icons.close, size: AppMotion.iconInline),
+                        label: const AppText('Clear'),
+                      ),
+                    ),
                   ),
                 ),
                 SizedBox(
@@ -153,17 +163,22 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
       const SizedBox(height: 16),
       AuthOutlinedButton(
         label: _saving ? 'Saving…' : 'Save Signature',
-        icon: Icons.draw_outlined,
+        icon: Icons.draw,
         busy: _saving,
         onPressed: _save,
       ),
-      if (_error != null) ...[
-        const SizedBox(height: 8),
-        AppText(
-          _error!,
-          style: const TextStyle(color: AppColors.loss),
-        ),
-      ],
+      KycStatusSwitch(
+        switchKey: _error ?? 'none',
+        child: _error == null
+            ? const SizedBox.shrink()
+            : Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: AppText(
+                  _error!,
+                  style: const TextStyle(color: AppColors.loss),
+                ),
+              ),
+      ),
     ],
   );
 }

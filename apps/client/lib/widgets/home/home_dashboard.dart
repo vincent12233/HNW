@@ -53,6 +53,7 @@ class HomeDashboard extends StatefulWidget {
     required this.onOpenMarkets,
     required this.onOpenNews,
     required this.onOpenStock,
+    this.onOpenIndex,
     this.featured = const [],
     this.kycStatus = 'UNKNOWN',
     this.kycAvailable = false,
@@ -122,6 +123,7 @@ class HomeDashboard extends StatefulWidget {
   final VoidCallback onOpenMarkets;
   final ValueChanged<MarketNewsItem> onOpenNews;
   final ValueChanged<StockQuote> onOpenStock;
+  final ValueChanged<HomeIndexQuote>? onOpenIndex;
   final ValueChanged<String>? onSelectPeriod;
   final VoidCallback? onOpenKyc;
   final VoidCallback? onViewAllNews;
@@ -246,6 +248,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             _IndicesGrid(
               indices: widget.indices,
               onRetry: widget.onRetryQuotes,
+              onOpenIndex: widget.onOpenIndex,
             ),
             const SizedBox(height: AppSpacing.xs),
             AppText(
@@ -543,10 +546,15 @@ class _SectionTitle extends StatelessWidget {
 }
 
 class _IndicesGrid extends StatelessWidget {
-  const _IndicesGrid({required this.indices, required this.onRetry});
+  const _IndicesGrid({
+    required this.indices,
+    required this.onRetry,
+    this.onOpenIndex,
+  });
 
   final List<HomeIndexQuote> indices;
   final VoidCallback onRetry;
+  final ValueChanged<HomeIndexQuote>? onOpenIndex;
 
   @override
   Widget build(BuildContext context) {
@@ -594,7 +602,7 @@ class _IndicesGrid extends StatelessWidget {
                   0,
                   columns == 1 ? constraints.maxWidth : 168,
                 ),
-                child: _IndexChip(item: item),
+                child: _IndexChip(item: item, onOpen: onOpenIndex),
               ),
           ],
         );
@@ -604,9 +612,10 @@ class _IndicesGrid extends StatelessWidget {
 }
 
 class _IndexChip extends StatelessWidget {
-  const _IndexChip({required this.item});
+  const _IndexChip({required this.item, this.onOpen});
 
   final HomeIndexQuote item;
+  final ValueChanged<HomeIndexQuote>? onOpen;
 
   @override
   Widget build(BuildContext context) {
@@ -616,63 +625,71 @@ class _IndexChip extends StatelessWidget {
     final signed = item.changePercent > 0
         ? '+${item.changePercent.toStringAsFixed(2)}%'
         : '${item.changePercent.toStringAsFixed(2)}%';
-    return AppCard(
-      radius: AppRadius.sm,
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.sm + 2,
-        AppSpacing.md,
-        AppSpacing.sm + 2,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          AppText(
-            item.label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textTertiary,
-              fontWeight: FontWeight.w700,
-            ),
+    return Semantics(
+      button: onOpen != null,
+      label: item.label,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: AppMotion.tapTarget),
+        child: AppCard(
+          radius: AppRadius.sm,
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.sm + 2,
+            AppSpacing.md,
+            AppSpacing.sm + 2,
           ),
-          const SizedBox(height: AppSpacing.xs),
-          AppText(
-            item.available ? formatIndex(item.price) : '--',
-            style: AppTypography.numericSmall.copyWith(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Row(
+          onTap: onOpen == null ? null : () => onOpen!(item),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(
-                !item.available
-                    ? Icons.remove
-                    : item.changePercent > 0
-                    ? Icons.arrow_drop_up_rounded
-                    : item.changePercent < 0
-                    ? Icons.arrow_drop_down_rounded
-                    : Icons.remove,
-                size: 18,
-                color: color,
-              ),
-              Expanded(
-                child: AppText(
-                  item.available ? signed : 'Unavailable',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelSmall.copyWith(
-                    color: color,
-                    fontWeight: FontWeight.w800,
-                    fontFeatures: AppTypography.tabularFeatures,
-                  ),
+              AppText(
+                item.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.caption.copyWith(
+                  color: AppColors.textTertiary,
+                  fontWeight: FontWeight.w700,
                 ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              AppText(
+                item.available ? formatIndex(item.price) : '--',
+                style: AppTypography.numericSmall.copyWith(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Row(
+                children: [
+                  Icon(
+                    !item.available
+                        ? Icons.remove
+                        : item.changePercent > 0
+                        ? Icons.arrow_drop_up_rounded
+                        : item.changePercent < 0
+                        ? Icons.arrow_drop_down_rounded
+                        : Icons.remove,
+                    size: 18,
+                    color: color,
+                  ),
+                  Expanded(
+                    child: AppText(
+                      item.available ? signed : 'Unavailable',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall.copyWith(
+                        color: color,
+                        fontWeight: FontWeight.w800,
+                        fontFeatures: AppTypography.tabularFeatures,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

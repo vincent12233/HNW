@@ -9,6 +9,7 @@ import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_page_scaffold.dart';
+import '../widgets/markets/news_article_sheet.dart';
 
 class MarketNewsPage extends StatefulWidget {
   const MarketNewsPage({
@@ -119,7 +120,11 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
                             return AppCard(
                               radius: AppRadius.sm,
                               padding: EdgeInsets.zero,
-                              onTap: () => widget.onOpen(item),
+                              onTap: () => showMarketNewsSheet(
+                                context: context,
+                                item: item,
+                                onOpen: widget.onOpen,
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [

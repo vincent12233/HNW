@@ -4,9 +4,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../app_config.dart';
 import '../models/market_history.dart';
+import '../models/market_news_item.dart';
 import '../models/stock_quote.dart';
 import '../models/trading_order.dart';
 import '../services/market_socket_service.dart';
@@ -19,8 +22,11 @@ import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/app_card.dart';
 import '../widgets/markets/browse_only_banner.dart';
 import '../widgets/markets/instrument_browse.dart';
+import '../widgets/markets/instrument_news.dart';
+import '../widgets/markets/news_article_sheet.dart';
 import '../widgets/markets/stock_quote_hero.dart';
 import '../widgets/stock_history_chart.dart';
 
@@ -59,6 +65,10 @@ class _StockDetailPageState extends State<StockDetailPage> {
   Timer? priceFlashTimer;
   int priceDirection = 0;
   MarketHistorySeries? yearHistory;
+  bool yearHistoryFailed = false;
+  List<MarketNewsItem> relatedNews = [];
+  bool newsLoading = true;
+  bool newsFailed = false;
   TradingAccountSnapshot? accountSnapshot;
 
   bool get _browseOnly => isBrowseOnlyInstrument(liveStock);
@@ -126,12 +136,17 @@ class _StockDetailPageState extends State<StockDetailPage> {
     _loadWatchlistState();
     _loadYearStats();
     _loadAccountSnapshot();
+    unawaited(_loadRelatedNews());
   }
 
   Future<void> _loadAccountSnapshot() async {
-    final snapshot = await TradingService().fetchAccountSnapshot();
-    if (!mounted || snapshot == null) return;
-    setState(() => accountSnapshot = snapshot);
+    try {
+      final snapshot = await TradingService().fetchAccountSnapshot();
+      if (!mounted || snapshot == null) return;
+      setState(() => accountSnapshot = snapshot);
+    } catch (_) {
+      // Order ticket stays available; buying-power hints remain hidden.
+    }
   }
 
   Future<void> _loadYearStats() async {
@@ -141,10 +156,60 @@ class _StockDetailPageState extends State<StockDetailPage> {
         exchange: liveStock.exchange,
         range: '1Y',
       );
-      if (!mounted || history.data.length < 2) return;
-      setState(() => yearHistory = history);
+      if (!mounted) return;
+      setState(() {
+        yearHistory = history.data.length >= 2 ? history : yearHistory;
+        yearHistoryFailed = history.data.length < 2;
+      });
     } catch (_) {
-      // Keep the detail page clean when verified long-range data is unavailable.
+      if (mounted) setState(() => yearHistoryFailed = true);
+    }
+  }
+
+  Future<void> _loadRelatedNews() async {
+    if (!newsLoading || newsFailed) {
+      setState(() {
+        newsLoading = true;
+        newsFailed = false;
+      });
+    }
+    try {
+      final items = await MarketDataService().fetchMarketNews(limit: 50);
+      if (!mounted) return;
+      setState(() {
+        relatedNews = newsMentioningInstrument(items, liveStock);
+        newsLoading = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        newsLoading = false;
+        newsFailed = true;
+      });
+    }
+  }
+
+  Future<void> _openNews(MarketNewsItem item) async {
+    final uri = Uri.tryParse(item.url);
+    if (uri == null || !{'http', 'https'}.contains(uri.scheme)) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: AppText('Unable to open this news article')),
+      );
+      return;
+    }
+    try {
+      final opened = await launchUrl(uri, mode: LaunchMode.externalApplication);
+      if (!opened && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: AppText('Unable to open this news article')),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: AppText('Unable to open this news article')),
+      );
     }
   }
 
@@ -586,286 +651,468 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return AppPageScaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: AppConfig.textPrimaryColor,
-        surfaceTintColor: Colors.white,
-        elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            AppText(liveStock.symbol),
-            AppText(
-              liveStock.exchange,
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            tooltip: isWatched ? 'Remove from watchlist' : 'Add to watchlist',
-            onPressed: watchlistLoading || watchlistSaving
-                ? null
-                : _toggleWatchlist,
-            icon: watchlistSaving
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppConfig.primaryColor,
-                    ),
-                  )
-                : Icon(
-                    isWatched ? Icons.star : Icons.star_border,
-                    color: isWatched
-                        ? const Color(0xFFFFB000)
-                        : AppConfig.textPrimaryColor,
-                  ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _browseOnly ? null : _stickyTradeBar(),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          AppFadeIn(
-            switchKey:
-                '${liveStock.symbol}:${liveStock.price}:${liveStock.quoteFresh}',
-            child: StockQuoteHero(
-              stock: liveStock,
-              quotesConnected: socketConnected,
-            ),
-          ),
-          const SizedBox(height: 12),
-          StockHistoryChart(
-            symbol: liveStock.symbol,
-            exchange: liveStock.exchange,
-            latestPrice: liveStock.price,
-            latestAt: liveStock.updatedAt,
-            previousClose: liveStock.previousClose,
-          ),
-          const SizedBox(height: 12),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _marketStat(
-                          'Best Bid',
-                          _statPrice(liveStock.bid),
-                        ),
-                      ),
-                      Expanded(
-                        child: _marketStat(
-                          'Best Ask',
-                          _statPrice(liveStock.ask),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _marketStat('Open', _statPrice(liveStock.open)),
-                      ),
-                      Expanded(
-                        child: _marketStat(
-                          'Prev. Close',
-                          _statPrice(liveStock.previousClose),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _marketStat(
-                          "Day's High",
-                          _statPrice(liveStock.high),
-                        ),
-                      ),
-                      Expanded(
-                        child: _marketStat(
-                          "Day's Low",
-                          _statPrice(liveStock.low),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(height: 24),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _marketStat(
-                          'Volume',
-                          _formatVolume(liveStock.volume),
-                        ),
-                      ),
-                      Expanded(child: _marketStat('Symbol', liveStock.symbol)),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-          if (_hasMarketRangeData) ...[
-            const SizedBox(height: 12),
-            _marketRangeCard(),
-          ],
-          const SizedBox(height: 18),
-          if (_browseOnly)
-            const BrowseOnlyBanner()
-          else ...[
-            const AppText(
-              'Place Order',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 12),
-            SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment<bool>(value: true, label: AppText('Buy')),
-                ButtonSegment<bool>(value: false, label: AppText('Sell')),
-              ],
-              selected: {isBuy},
-              style: ButtonStyle(
-                foregroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (states.contains(WidgetState.selected)) {
-                    return Colors.white;
-                  }
-                  return AppConfig.textPrimaryColor;
-                }),
-                backgroundColor: WidgetStateProperty.resolveWith((states) {
-                  if (!states.contains(WidgetState.selected)) {
-                    return Colors.white;
-                  }
-                  return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
-                }),
-              ),
-              onSelectionChanged: (selection) => setState(() {
-                isBuy = selection.first;
-                _pendingClientOrderId = null;
-                _pendingOrderFingerprint = null;
-              }),
-            ),
-            const SizedBox(height: 14),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment<String>(
-                  value: 'MARKET',
-                  label: AppText('Market Order'),
-                ),
-                ButtonSegment<String>(
-                  value: 'LIMIT',
-                  label: AppText('Limit Order'),
-                ),
-              ],
-              selected: {orderType},
-              onSelectionChanged: (selection) {
-                setState(() {
-                  orderType = selection.first;
-                  _pendingClientOrderId = null;
-                  _pendingOrderFingerprint = null;
-                  if (orderType == 'LIMIT' &&
-                      limitPriceController.text.trim().isEmpty) {
-                    limitPriceController.text = liveStock.price.toStringAsFixed(
-                      2,
-                    );
-                  }
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: quantityController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Quantity',
-                border: OutlineInputBorder(),
-                prefixIcon: Icon(Icons.numbers),
-              ),
-            ),
-            if (isLimit) ...[
-              const SizedBox(height: 14),
-              TextField(
-                controller: limitPriceController,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                inputFormatters: [
-                  FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-                ],
-                onChanged: (_) => setState(() {}),
-                decoration: const InputDecoration(
-                  labelText: 'Limit Price',
-                  prefixText: '₹ ',
-                  border: OutlineInputBorder(),
+    return DefaultTabController(
+      length: 4,
+      child: AppPageScaffold(
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          foregroundColor: AppConfig.textPrimaryColor,
+          surfaceTintColor: Colors.white,
+          elevation: 0,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(liveStock.symbol),
+              AppText(
+                liveStock.exchange,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
             ],
-            const SizedBox(height: 16),
-            const AppText(
-              'Validity',
-              style: TextStyle(fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              children: ['DAY', 'IOC', 'FOK']
-                  .map(
-                    (value) => Tooltip(
-                      message: switch (value) {
-                        'IOC' => 'Immediate or Cancel',
-                        'FOK' => 'Fill or Kill',
-                        _ => 'Valid for the trading day',
-                      },
-                      child: ChoiceChip(
-                        label: AppText(value),
-                        selected: timeInForce == value,
-                        selectedColor: AppConfig.primaryColor,
-                        backgroundColor: Colors.white,
-                        labelStyle: TextStyle(
-                          color: timeInForce == value
-                              ? Colors.white
-                              : AppConfig.textPrimaryColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                        side: BorderSide(
-                          color: timeInForce == value
-                              ? AppConfig.primaryColor
-                              : AppConfig.borderColor,
-                        ),
-                        onSelected: (_) => setState(() {
-                          timeInForce = value;
-                          _pendingClientOrderId = null;
-                          _pendingOrderFingerprint = null;
-                        }),
+          ),
+          actions: [
+            IconButton(
+              tooltip: isWatched ? 'Remove from watchlist' : 'Add to watchlist',
+              onPressed: watchlistLoading || watchlistSaving
+                  ? null
+                  : _toggleWatchlist,
+              icon: watchlistSaving
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppConfig.primaryColor,
                       ),
+                    )
+                  : Icon(
+                      isWatched ? Icons.star : Icons.star_border,
+                      color: isWatched
+                          ? const Color(0xFFFFB000)
+                          : AppConfig.textPrimaryColor,
                     ),
-                  )
-                  .toList(),
             ),
-            const SizedBox(height: 16),
-            _orderPreviewCard(),
-            const SizedBox(height: 8),
-            AppText(
-              'Use Buy / Sell below to review and submit your order.',
-              style: TextStyle(
-                color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
-                fontSize: 11,
+          ],
+        ),
+        bottomNavigationBar: _browseOnly ? null : _stickyTradeBar(),
+        body: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child: AppFadeIn(
+                switchKey:
+                    '${liveStock.symbol}:${liveStock.price}:${liveStock.quoteFresh}',
+                child: StockQuoteHero(
+                  stock: liveStock,
+                  quotesConnected: socketConnected,
+                ),
+              ),
+            ),
+            const TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              labelColor: AppColors.brandPrimary,
+              unselectedLabelColor: AppColors.textSecondary,
+              indicatorColor: AppColors.brandPrimary,
+              tabs: [
+                Tab(text: 'Overview'),
+                Tab(text: 'Chart'),
+                Tab(text: 'News'),
+                Tab(text: 'Events'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  _overviewTab(),
+                  _chartTab(),
+                  _newsTab(),
+                  _eventsTab(),
+                ],
               ),
             ),
           ],
-        ],
+        ),
       ),
+    );
+  }
+
+  Widget _overviewTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        if (_browseOnly) ...[
+          const BrowseOnlyBanner(),
+          const SizedBox(height: 12),
+        ],
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _marketStat('Best Bid', _statPrice(liveStock.bid)),
+                    ),
+                    Expanded(
+                      child: _marketStat('Best Ask', _statPrice(liveStock.ask)),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _marketStat('Open', _statPrice(liveStock.open)),
+                    ),
+                    Expanded(
+                      child: _marketStat(
+                        'Prev. Close',
+                        _statPrice(liveStock.previousClose),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _marketStat(
+                        "Day's High",
+                        _statPrice(liveStock.high),
+                      ),
+                    ),
+                    Expanded(
+                      child: _marketStat(
+                        "Day's Low",
+                        _statPrice(liveStock.low),
+                      ),
+                    ),
+                  ],
+                ),
+                const Divider(height: 24),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _marketStat(
+                        'Volume',
+                        _formatVolume(liveStock.volume),
+                      ),
+                    ),
+                    Expanded(child: _marketStat('Symbol', liveStock.symbol)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+        if (_hasMarketRangeData) ...[
+          const SizedBox(height: 12),
+          _marketRangeCard(),
+        ],
+        const SizedBox(height: 18),
+        if (!_browseOnly) ...[
+          const AppText(
+            'Place Order',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          SegmentedButton<bool>(
+            segments: const [
+              ButtonSegment<bool>(value: true, label: AppText('Buy')),
+              ButtonSegment<bool>(value: false, label: AppText('Sell')),
+            ],
+            selected: {isBuy},
+            style: ButtonStyle(
+              foregroundColor: WidgetStateProperty.resolveWith((states) {
+                if (states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return AppConfig.textPrimaryColor;
+              }),
+              backgroundColor: WidgetStateProperty.resolveWith((states) {
+                if (!states.contains(WidgetState.selected)) {
+                  return Colors.white;
+                }
+                return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
+              }),
+            ),
+            onSelectionChanged: (selection) => setState(() {
+              isBuy = selection.first;
+              _pendingClientOrderId = null;
+              _pendingOrderFingerprint = null;
+            }),
+          ),
+          const SizedBox(height: 14),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment<String>(
+                value: 'MARKET',
+                label: AppText('Market Order'),
+              ),
+              ButtonSegment<String>(
+                value: 'LIMIT',
+                label: AppText('Limit Order'),
+              ),
+            ],
+            selected: {orderType},
+            onSelectionChanged: (selection) {
+              setState(() {
+                orderType = selection.first;
+                _pendingClientOrderId = null;
+                _pendingOrderFingerprint = null;
+                if (orderType == 'LIMIT' &&
+                    limitPriceController.text.trim().isEmpty) {
+                  limitPriceController.text = liveStock.price.toStringAsFixed(
+                    2,
+                  );
+                }
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: quantityController,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (_) => setState(() {}),
+            decoration: const InputDecoration(
+              labelText: 'Quantity',
+              border: OutlineInputBorder(),
+              prefixIcon: Icon(Icons.numbers),
+            ),
+          ),
+          if (isLimit) ...[
+            const SizedBox(height: 14),
+            TextField(
+              controller: limitPriceController,
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
+              ],
+              onChanged: (_) => setState(() {}),
+              decoration: const InputDecoration(
+                labelText: 'Limit Price',
+                prefixText: '₹ ',
+                border: OutlineInputBorder(),
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          const AppText(
+            'Validity',
+            style: TextStyle(fontWeight: FontWeight.w700),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            children: ['DAY', 'IOC', 'FOK']
+                .map(
+                  (value) => Tooltip(
+                    message: switch (value) {
+                      'IOC' => 'Immediate or Cancel',
+                      'FOK' => 'Fill or Kill',
+                      _ => 'Valid for the trading day',
+                    },
+                    child: ChoiceChip(
+                      label: AppText(value),
+                      selected: timeInForce == value,
+                      selectedColor: AppConfig.primaryColor,
+                      backgroundColor: Colors.white,
+                      labelStyle: TextStyle(
+                        color: timeInForce == value
+                            ? Colors.white
+                            : AppConfig.textPrimaryColor,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      side: BorderSide(
+                        color: timeInForce == value
+                            ? AppConfig.primaryColor
+                            : AppConfig.borderColor,
+                      ),
+                      onSelected: (_) => setState(() {
+                        timeInForce = value;
+                        _pendingClientOrderId = null;
+                        _pendingOrderFingerprint = null;
+                      }),
+                    ),
+                  ),
+                )
+                .toList(),
+          ),
+          const SizedBox(height: 16),
+          _orderPreviewCard(),
+          const SizedBox(height: 8),
+          AppText(
+            'Use Buy / Sell below to review and submit your order.',
+            style: TextStyle(
+              color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
+              fontSize: 11,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _chartTab() {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      children: [
+        StockHistoryChart(
+          symbol: liveStock.symbol,
+          exchange: liveStock.exchange,
+          latestPrice: liveStock.price,
+          latestAt: liveStock.updatedAt,
+          previousClose: liveStock.previousClose,
+        ),
+      ],
+    );
+  }
+
+  Widget _newsTab() {
+    if (newsLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (newsFailed) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppText(
+                'News could not be loaded. Please try again.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _loadRelatedNews,
+                child: const AppText('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    if (relatedNews.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: AppText(
+            'No verified headlines currently mention this stock.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemCount: relatedNews.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final item = relatedNews[index];
+        return AppCard(
+          padding: const EdgeInsets.all(14),
+          onTap: () => showMarketNewsSheet(
+            context: context,
+            item: item,
+            onOpen: _openNews,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                item.title,
+                style: const TextStyle(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 6),
+              AppText(
+                item.source,
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _eventsTab() {
+    if (yearHistoryFailed &&
+        (yearHistory == null || yearHistory!.events.isEmpty)) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const AppText(
+                'Corporate events could not be loaded. Please try again.',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              FilledButton(
+                onPressed: _loadYearStats,
+                child: const AppText('Retry'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final events = yearHistory?.events ?? const [];
+    if (events.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(24),
+          child: AppText(
+            'No dividend or split events were returned for this range.',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      itemCount: events.length,
+      separatorBuilder: (_, _) => const SizedBox(height: 10),
+      itemBuilder: (context, index) {
+        final event = events[index];
+        return AppCard(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText(
+                event.type == 'SPLIT' ? 'Split' : 'Dividend',
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              const SizedBox(height: 4),
+              AppText(
+                DateFormat('yyyy-MM-dd').format(event.date.toLocal()),
+                style: const TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+              if (event.label.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                AppText(event.label),
+              ],
+              if (event.value > 0) ...[
+                const SizedBox(height: 6),
+                AppText(
+                  event.value.toString(),
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 

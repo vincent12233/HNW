@@ -18,12 +18,15 @@ import '../theme/app_typography.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/home/home_dashboard_data.dart';
-import '../widgets/home/mini_line_chart_painter.dart';
 import '../widgets/markets/browse_only_banner.dart';
+import '../widgets/markets/market_index_ref.dart';
 import '../widgets/markets/markets_index_card.dart';
 import '../widgets/sector_performance.dart';
 import '../widgets/stock_list_tile.dart';
 import '../widgets/market_status_card.dart';
+import 'index_detail_page.dart';
+import 'index_list_page.dart';
+import 'movers_list_page.dart';
 import 'stock_search_page.dart';
 
 class MarketsPage extends StatefulWidget {
@@ -963,9 +966,20 @@ class _MarketsPageState extends State<MarketsPage> {
           'Market Movers',
           onViewAll: () => Navigator.of(context).push(
             MaterialPageRoute<void>(
-              builder: (_) => Scaffold(
-                appBar: AppBar(title: const AppText('Market Movers')),
-                body: _stockList(moverRows, emptyTitle: 'No stocks found'),
+              builder: (_) => MoversListPage(
+                gainers: gainers,
+                losers: losers,
+                mostActive: mostActive,
+                yearHigh: yearHigh,
+                yearLow: yearLow,
+                initialFilter: selectedMoverFilter,
+                yearRangesLoading: _yearRangesLoading,
+                onNeedYearRanges: () => unawaited(_loadYearRanges()),
+                onStockTap: widget.onStockTap,
+                marketOpen: widget.marketOpen,
+                marketHours: widget.marketHours,
+                quotesConnected: widget.quotesConnected,
+                onRefresh: _refreshAll,
               ),
             ),
           ),
@@ -1049,39 +1063,43 @@ class _MarketsPageState extends State<MarketsPage> {
   void _showIndices(String title, List<(String, double, double)> items) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: AppText(title)),
-          body: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              for (final item in items)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _indexCard(item),
-                      const SizedBox(height: 12),
-                      if ((_indexHistory[item.$1]?.length ?? 0) >= 2)
-                        SizedBox(
-                          height: 140,
-                          width: double.infinity,
-                          child: CustomPaint(
-                            painter: MiniLineChartPainter(
-                              color: item.$3 >= 0
-                                  ? AppColors.gain
-                                  : AppColors.loss,
-                              values: _indexHistory[item.$1]!,
-                            ),
-                          ),
-                        )
-                      else
-                        const AppText('Insufficient history'),
-                    ],
-                  ),
-                ),
-            ],
-          ),
+        builder: (_) => IndexListPage(
+          title: title,
+          items: items.map(_toIndexQuote).toList(),
+          marketOpen: widget.marketOpen,
+          marketHours: widget.marketHours,
+          quotesConnected: widget.quotesConnected,
+          onRefresh: _refreshAll,
+        ),
+      ),
+    );
+  }
+
+  MarketIndexQuote _toIndexQuote((String, double, double) item) {
+    final ref =
+        MarketIndexRef.byLabel(item.$1) ??
+        MarketIndexRef(
+          label: item.$1,
+          symbol: item.$1.replaceAll(' ', ''),
+          exchange: 'NSE',
+          venue: 'NSE',
+        );
+    return MarketIndexQuote(
+      ref: ref,
+      price: item.$2,
+      changePercent: item.$3,
+      history: _indexHistory[item.$1] ?? const <double>[],
+    );
+  }
+
+  void _openIndexDetail((String, double, double) item) {
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => IndexDetailPage(
+          quote: _toIndexQuote(item),
+          marketOpen: widget.marketOpen,
+          marketHours: widget.marketHours,
+          quotesConnected: widget.quotesConnected,
         ),
       ),
     );
@@ -1104,6 +1122,7 @@ class _MarketsPageState extends State<MarketsPage> {
       changePercent: item.$3,
       venue: venue,
       history: _indexHistory[item.$1] ?? const <double>[],
+      onTap: () => _openIndexDetail(item),
     );
   }
 

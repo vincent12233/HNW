@@ -9,6 +9,8 @@ import 'package:k_chart/flutter_k_chart.dart';
 import '../l10n/app_language.dart';
 import '../models/market_history.dart';
 import '../services/market_data_service.dart';
+import '../theme/app_spacing.dart';
+import 'app_page_scaffold.dart';
 
 typedef StockHistoryLoader =
     Future<MarketHistorySeries> Function({
@@ -176,12 +178,15 @@ class _StockHistoryChartState extends State<StockHistoryChart>
   void _fullscreen() {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => Scaffold(
-          appBar: AppBar(title: Text('${widget.symbol} · ${widget.exchange}')),
-          body: SafeArea(
-            top: false,
-            child: SingleChildScrollView(
-              child: StockHistoryChart(
+        builder: (_) => AppPageScaffold(
+          maxWidth: 1100,
+          appBar: AppBar(
+            title: AppText('${widget.symbol} · ${widget.exchange}'),
+          ),
+          body: ListView(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xl),
+            children: [
+              StockHistoryChart(
                 symbol: widget.symbol,
                 exchange: widget.exchange,
                 latestPrice: widget.latestPrice,
@@ -195,7 +200,7 @@ class _StockHistoryChartState extends State<StockHistoryChart>
                 initialLine: _line,
                 initialVolume: _volume,
               ),
-            ),
+            ],
           ),
         ),
       ),
@@ -240,272 +245,291 @@ class _StockHistoryChartState extends State<StockHistoryChart>
     final height = widget.expanded
         ? (MediaQuery.sizeOf(context).height - 270).clamp(300.0, 900.0)
         : (_secondary == SecondaryState.NONE ? 320.0 : 410.0);
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: widget.expanded ? 1100 : 960),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Expanded(
-                child: AppText(
-                  'Price Chart',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-                ),
-              ),
-              IconButton(
-                tooltip: tr('Refresh'),
-                onPressed: _loading || _refreshing
-                    ? null
-                    : () => _load(quiet: _data.isNotEmpty),
-                icon: const Icon(Icons.refresh, size: 20),
-              ),
-              IconButton(
-                tooltip: tr('Reset chart'),
-                onPressed: () => setState(() => _viewport++),
-                icon: const Icon(Icons.center_focus_strong, size: 20),
-              ),
-              if (!widget.expanded)
-                IconButton(
-                  tooltip: tr('Full screen'),
-                  onPressed: _fullscreen,
-                  icon: const Icon(Icons.fullscreen, size: 22),
-                ),
-            ],
-          ),
-          Wrap(
-            spacing: 12,
-            runSpacing: 4,
-            children: [
-              Text(
-                '${widget.exchange} · INR',
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-              if (_series != null)
-                Text(
-                  '${_series!.interval} · IST',
-                  style: Theme.of(context).textTheme.labelMedium,
-                ),
-              if (_series?.delayed == true || (_error != null && last != null))
-                AppText(
-                  'Chart delayed',
-                  style: TextStyle(color: scheme.error, fontSize: 12),
-                ),
-              if (_refreshing)
-                const SizedBox(
-                  width: 12,
-                  height: 12,
-                  child: CircularProgressIndicator(strokeWidth: 1.5),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: SegmentedButton<String>(
-              showSelectedIcon: false,
-              segments: [
-                for (final range in ['1D', '1W', '1M', '3M', '6M', '1Y'])
-                  ButtonSegment(value: range, label: Text(range)),
-              ],
-              selected: {_range},
-              onSelectionChanged: (value) {
-                setState(() {
-                  _range = value.single;
-                  _viewport++;
-                });
-                _load();
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 4,
-            crossAxisAlignment: WrapCrossAlignment.center,
-            children: [
-              IconButton(
-                tooltip: tr(_line ? 'Candlesticks' : 'Line chart'),
-                isSelected: !_line,
-                onPressed: () => setState(() => _line = !_line),
-                icon: Icon(_line ? Icons.candlestick_chart : Icons.show_chart),
-              ),
-              PopupMenuButton<MainState>(
-                tooltip: tr('Main indicator'),
-                initialValue: _main,
-                onSelected: (value) => setState(() => _main = value),
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: MainState.NONE,
-                    child: AppText('No overlay'),
-                  ),
-                  const PopupMenuItem(
-                    value: MainState.MA,
-                    child: Text('MA (5, 10, 20)'),
-                  ),
-                  const PopupMenuItem(
-                    value: MainState.BOLL,
-                    child: Text('BOLL (20, 2)'),
-                  ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _main == MainState.NONE ? tr('No overlay') : _main.name,
-                      ),
-                      const Icon(Icons.arrow_drop_down, size: 18),
-                    ],
-                  ),
-                ),
-              ),
-              PopupMenuButton<SecondaryState>(
-                tooltip: tr('Technical indicator'),
-                initialValue: _secondary,
-                onSelected: (value) => setState(() => _secondary = value),
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: SecondaryState.NONE,
-                    child: AppText('No indicator'),
-                  ),
-                  const PopupMenuItem(
-                    value: SecondaryState.RSI,
-                    child: Text('RSI (14)'),
-                  ),
-                  const PopupMenuItem(
-                    value: SecondaryState.MACD,
-                    child: Text('MACD (12, 26, 9)'),
-                  ),
-                ],
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (_secondary == SecondaryState.NONE)
-                        const Icon(Icons.query_stats, size: 20)
-                      else
-                        Text(_secondary.name),
-                      const Icon(Icons.arrow_drop_down, size: 18),
-                    ],
-                  ),
-                ),
-              ),
-              IconButton(
-                tooltip: tr('Volume'),
-                isSelected: _volume,
-                onPressed: () => setState(() => _volume = !_volume),
-                icon: const Icon(Icons.bar_chart),
-              ),
-            ],
-          ),
-          if (last != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Wrap(
-                spacing: 14,
-                runSpacing: 6,
+              Row(
                 children: [
-                  for (final entry in {
-                    'O': last.open,
-                    'H': last.high,
-                    'L': last.low,
-                    'C': last.close,
-                  }.entries)
-                    Text(
-                      '${entry.key} ${entry.value.toStringAsFixed(2)}',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
+                  const Expanded(
+                    child: AppText(
+                      'Price Chart',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
+                  ),
+                  IconButton(
+                    tooltip: tr('Refresh'),
+                    onPressed: _loading || _refreshing
+                        ? null
+                        : () => _load(quiet: _data.isNotEmpty),
+                    icon: const Icon(Icons.refresh, size: 20),
+                  ),
+                  IconButton(
+                    tooltip: tr('Reset chart'),
+                    onPressed: () => setState(() => _viewport++),
+                    icon: const Icon(Icons.center_focus_strong, size: 20),
+                  ),
+                  if (!widget.expanded)
+                    IconButton(
+                      tooltip: tr('Full screen'),
+                      onPressed: _fullscreen,
+                      icon: const Icon(Icons.fullscreen, size: 22),
+                    ),
+                ],
+              ),
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
+                children: [
                   Text(
-                    'VOL ${last.vol.toInt()}',
-                    style: const TextStyle(fontSize: 12),
+                    '${widget.exchange} · INR',
+                    style: Theme.of(context).textTheme.labelMedium,
                   ),
+                  if (_series != null)
+                    Text(
+                      '${_series!.interval} · IST',
+                      style: Theme.of(context).textTheme.labelMedium,
+                    ),
+                  if (_series?.delayed == true ||
+                      (_error != null && last != null))
+                    AppText(
+                      'Chart delayed',
+                      style: TextStyle(color: scheme.error, fontSize: 12),
+                    ),
+                  if (_refreshing)
+                    const SizedBox(
+                      width: 12,
+                      height: 12,
+                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                    ),
                 ],
               ),
-            ),
-          SizedBox(
-            height: height,
-            child: _loading
-                ? const Center(child: CircularProgressIndicator())
-                : _data.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.candlestick_chart_outlined,
-                          size: 32,
-                          color: scheme.outline,
-                        ),
-                        const SizedBox(height: 12),
-                        AppText(
-                          _error ?? 'No price history available',
-                          textAlign: TextAlign.center,
-                        ),
-                        TextButton.icon(
-                          onPressed: _load,
-                          icon: const Icon(Icons.refresh),
-                          label: const AppText('Retry'),
-                        ),
-                      ],
-                    ),
-                  )
-                : ClipRect(
-                    child: MediaQuery(
-                      // The library paints fixed-size axis labels and tooltip rows.
-                      data: MediaQuery.of(
-                        context,
-                      ).copyWith(textScaler: TextScaler.noScaling),
-                      child: KeyedSubtree(
-                        key: ValueKey('${widget.symbol}:$_range:$_viewport'),
-                        child: ProfessionalChartCanvas(
-                          data: _data,
-                          style: style,
-                          colors: colors,
-                          mainState: _main,
-                          secondaryState: _secondary,
-                          volHidden: !_volume,
-                          isLine: _line,
-                        ),
-                      ),
-                    ),
-                  ),
-          ),
-          if (last != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                '${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.fromMillisecondsSinceEpoch(last.time!))} IST',
-                style: TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
+              const SizedBox(height: 12),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: SegmentedButton<String>(
+                  showSelectedIcon: false,
+                  segments: [
+                    for (final range in ['1D', '1W', '1M', '3M', '6M', '1Y'])
+                      ButtonSegment(value: range, label: Text(range)),
+                  ],
+                  selected: {_range},
+                  onSelectionChanged: (value) {
+                    setState(() {
+                      _range = value.single;
+                      _viewport++;
+                    });
+                    _load();
+                  },
+                ),
               ),
-            ),
-          if (_series?.events.isNotEmpty ?? false)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
-                  for (final event in _series!.events)
-                    Chip(
-                      avatar: Icon(
-                        event.type == 'SPLIT'
-                            ? Icons.call_split
-                            : Icons.payments_outlined,
-                        size: 16,
+                  IconButton(
+                    tooltip: tr(_line ? 'Candlesticks' : 'Line chart'),
+                    isSelected: !_line,
+                    onPressed: () => setState(() => _line = !_line),
+                    icon: Icon(
+                      _line ? Icons.candlestick_chart : Icons.show_chart,
+                    ),
+                  ),
+                  PopupMenuButton<MainState>(
+                    tooltip: tr('Main indicator'),
+                    initialValue: _main,
+                    onSelected: (value) => setState(() => _main = value),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: MainState.NONE,
+                        child: AppText('No overlay'),
                       ),
-                      label: Text(
-                        '${event.date.toIso8601String().split('T').first} · ${event.label}',
+                      const PopupMenuItem(
+                        value: MainState.MA,
+                        child: Text('MA (5, 10, 20)'),
+                      ),
+                      const PopupMenuItem(
+                        value: MainState.BOLL,
+                        child: Text('BOLL (20, 2)'),
+                      ),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            _main == MainState.NONE
+                                ? tr('No overlay')
+                                : _main.name,
+                          ),
+                          const Icon(Icons.arrow_drop_down, size: 18),
+                        ],
                       ),
                     ),
+                  ),
+                  PopupMenuButton<SecondaryState>(
+                    tooltip: tr('Technical indicator'),
+                    initialValue: _secondary,
+                    onSelected: (value) => setState(() => _secondary = value),
+                    itemBuilder: (_) => [
+                      const PopupMenuItem(
+                        value: SecondaryState.NONE,
+                        child: AppText('No indicator'),
+                      ),
+                      const PopupMenuItem(
+                        value: SecondaryState.RSI,
+                        child: Text('RSI (14)'),
+                      ),
+                      const PopupMenuItem(
+                        value: SecondaryState.MACD,
+                        child: Text('MACD (12, 26, 9)'),
+                      ),
+                    ],
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_secondary == SecondaryState.NONE)
+                            const Icon(Icons.query_stats, size: 20)
+                          else
+                            Text(_secondary.name),
+                          const Icon(Icons.arrow_drop_down, size: 18),
+                        ],
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: tr('Volume'),
+                    isSelected: _volume,
+                    onPressed: () => setState(() => _volume = !_volume),
+                    icon: const Icon(Icons.bar_chart),
+                  ),
                 ],
               ),
-            ),
-        ],
+              if (last != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Wrap(
+                    spacing: 14,
+                    runSpacing: 6,
+                    children: [
+                      for (final entry in {
+                        'O': last.open,
+                        'H': last.high,
+                        'L': last.low,
+                        'C': last.close,
+                      }.entries)
+                        Text(
+                          '${entry.key} ${entry.value.toStringAsFixed(2)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      Text(
+                        'VOL ${last.vol.toInt()}',
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              SizedBox(
+                height: height,
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _data.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.candlestick_chart_outlined,
+                              size: 32,
+                              color: scheme.outline,
+                            ),
+                            const SizedBox(height: 12),
+                            AppText(
+                              _error ?? 'No price history available',
+                              textAlign: TextAlign.center,
+                            ),
+                            TextButton.icon(
+                              onPressed: _load,
+                              icon: const Icon(Icons.refresh),
+                              label: const AppText('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ClipRect(
+                        child: MediaQuery(
+                          // The library paints fixed-size axis labels and tooltip rows.
+                          data: MediaQuery.of(
+                            context,
+                          ).copyWith(textScaler: TextScaler.noScaling),
+                          child: KeyedSubtree(
+                            key: ValueKey(
+                              '${widget.symbol}:$_range:$_viewport',
+                            ),
+                            child: ProfessionalChartCanvas(
+                              data: _data,
+                              style: style,
+                              colors: colors,
+                              mainState: _main,
+                              secondaryState: _secondary,
+                              volHidden: !_volume,
+                              isLine: _line,
+                            ),
+                          ),
+                        ),
+                      ),
+              ),
+              if (last != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    '${DateFormat('yyyy-MM-dd HH:mm').format(DateTime.fromMillisecondsSinceEpoch(last.time!))} IST',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              if (_series?.events.isNotEmpty ?? false)
+                Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final event in _series!.events)
+                        Chip(
+                          avatar: Icon(
+                            event.type == 'SPLIT'
+                                ? Icons.call_split
+                                : Icons.payments_outlined,
+                            size: 16,
+                          ),
+                          label: Text(
+                            '${event.date.toIso8601String().split('T').first} · ${event.label}',
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }

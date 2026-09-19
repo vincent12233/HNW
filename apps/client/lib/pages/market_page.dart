@@ -18,6 +18,7 @@ import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
 import '../widgets/app_card.dart';
 import '../widgets/account_metrics.dart';
+import '../widgets/markets/market_index_ref.dart';
 import '../widgets/home/home_dashboard.dart';
 import '../widgets/home/home_dashboard_data.dart';
 import '../widgets/profile_menu.dart';
@@ -56,6 +57,7 @@ import '../widgets/floating_support_button.dart';
 import '../widgets/support_chat_launcher.dart';
 import '../widgets/support_ui_metrics.dart';
 import 'login_page.dart';
+import 'index_detail_page.dart';
 import 'markets_page.dart';
 import 'market_news_page.dart';
 import 'notifications_page.dart';
@@ -2048,6 +2050,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           onOpenMarkets: () => setState(() => selectedIndex = 1),
           onOpenNews: (item) => unawaited(_openNews(item)),
           onOpenStock: _openStock,
+          onOpenIndex: _openHomeIndex,
           onViewAllNews: marketNews.isEmpty
               ? null
               : () => unawaited(_openAllMarketNews()),
@@ -2204,6 +2207,32 @@ class _MarketHomePageState extends State<MarketHomePage>
             ),
           ),
       ],
+    );
+  }
+
+  void _openHomeIndex(HomeIndexQuote item) {
+    final ref =
+        MarketIndexRef.byLabel(item.label) ??
+        MarketIndexRef(
+          label: item.label,
+          symbol: item.label.replaceAll(' ', ''),
+          exchange: 'NSE',
+          venue: 'NSE',
+        );
+    Navigator.push<void>(
+      context,
+      MaterialPageRoute<void>(
+        builder: (_) => IndexDetailPage(
+          quote: MarketIndexQuote(
+            ref: ref,
+            price: item.price,
+            changePercent: item.changePercent,
+          ),
+          marketOpen: marketOpen,
+          marketHours: marketHours,
+          quotesConnected: marketConnected,
+        ),
+      ),
     );
   }
 

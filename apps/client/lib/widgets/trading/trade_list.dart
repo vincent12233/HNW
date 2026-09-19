@@ -57,245 +57,262 @@ class TradeList extends StatelessWidget {
     });
     final total = holdings;
     final pnl = holdings - invested;
-    return ListView(
+    return SingleChildScrollView(
+      key: const Key('trade-overview'),
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.lg,
         AppSpacing.sm - 2,
         AppSpacing.lg,
         AppSpacing.lg + 2,
       ),
-      children: [
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md + 2),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  'Trading Summary',
-                  style: AppTypography.titleMedium.copyWith(fontSize: 17),
-                ),
-                const SizedBox(height: AppSpacing.lg + 2),
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final compact = constraints.maxWidth < 380;
-                    if (compact) {
-                      return Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _summary(
-                                  'Trading Positions Value',
-                                  formatPrice(total),
-                                  AppColors.textPrimary,
-                                ),
-                              ),
-                              Expanded(
-                                child: _summary(
-                                  'Total Invested',
-                                  formatPrice(invested),
-                                  AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: AppSpacing.lg + 2),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _summary(
-                                  'Unrealized P&L',
-                                  '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                                  pnl >= 0 ? AppColors.gain : AppColors.loss,
-                                ),
-                              ),
-                              Expanded(
-                                child: _summary(
-                                  'Available Funds',
-                                  account == null
-                                      ? '--'
-                                      : formatPrice(account!.availableBalance),
-                                  AppColors.textPrimary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    }
-                    return IntrinsicHeight(
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: _summary(
-                              'Trading Positions Value',
-                              formatPrice(total),
-                              AppColors.textPrimary,
-                            ),
-                          ),
-                          const VerticalDivider(width: 1),
-                          Expanded(
-                            child: _summary(
-                              'Total Invested',
-                              formatPrice(invested),
-                              AppColors.textPrimary,
-                            ),
-                          ),
-                          const VerticalDivider(width: 1),
-                          Expanded(
-                            child: _summary(
-                              'Unrealized P&L',
-                              '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-                              pnl >= 0 ? AppColors.gain : AppColors.loss,
-                            ),
-                          ),
-                          const VerticalDivider(width: 1),
-                          Expanded(
-                            child: _summary(
-                              'Available Funds',
-                              account == null
-                                  ? '--'
-                                  : formatPrice(account!.availableBalance),
-                              AppColors.textPrimary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: AppSpacing.lg),
-        Row(
-          children: [
-            Expanded(
-              child: AppText(
-                'Recent Orders',
-                style: AppTypography.sectionTitle,
-              ),
-            ),
-            if (onViewOrders != null)
-              TextButton(
-                onPressed: onViewOrders,
-                child: const AppText('View All'),
-              ),
-          ],
-        ),
-        if (orders.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
-            child: AppText('No orders yet'),
-          ),
-        ...orders
-            .take(4)
-            .map(
-              (order) => ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Icon(
-                  order.isBuy ? Icons.call_received : Icons.call_made,
-                  color: OrderStatusPresentation.sideColor(
-                    order.isBuy ? 'BUY' : 'SELL',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.md + 2),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    'Trading Summary',
+                    style: AppTypography.titleMedium.copyWith(fontSize: 17),
                   ),
-                ),
-                title: AppText(order.symbol, style: AppTypography.titleSmall),
-                subtitle: AppText(
-                  '${order.exchange} · ${order.quantity} · ${OrderStatusPresentation.label(order.status)}',
-                  style: AppTypography.bodySmall,
-                ),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => showStandardOrderDetails(
-                  context,
-                  order: order,
-                  onCancel: onCancel,
-                ),
+                  const SizedBox(height: AppSpacing.lg + 2),
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      final compact = constraints.maxWidth < 380;
+                      if (compact) {
+                        return Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _summary(
+                                    'Trading Positions Value',
+                                    formatPrice(total),
+                                    AppColors.textPrimary,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _summary(
+                                    'Total Invested',
+                                    formatPrice(invested),
+                                    AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: AppSpacing.lg + 2),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _summary(
+                                    'Unrealized P&L',
+                                    '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                                    pnl >= 0 ? AppColors.gain : AppColors.loss,
+                                  ),
+                                ),
+                                Expanded(
+                                  child: _summary(
+                                    'Available Funds',
+                                    account == null
+                                        ? '--'
+                                        : formatPrice(
+                                            account!.availableBalance,
+                                          ),
+                                    AppColors.textPrimary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        );
+                      }
+                      return IntrinsicHeight(
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: _summary(
+                                'Trading Positions Value',
+                                formatPrice(total),
+                                AppColors.textPrimary,
+                              ),
+                            ),
+                            const VerticalDivider(width: 1),
+                            Expanded(
+                              child: _summary(
+                                'Total Invested',
+                                formatPrice(invested),
+                                AppColors.textPrimary,
+                              ),
+                            ),
+                            const VerticalDivider(width: 1),
+                            Expanded(
+                              child: _summary(
+                                'Unrealized P&L',
+                                '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+                                pnl >= 0 ? AppColors.gain : AppColors.loss,
+                              ),
+                            ),
+                            const VerticalDivider(width: 1),
+                            Expanded(
+                              child: _summary(
+                                'Available Funds',
+                                account == null
+                                    ? '--'
+                                    : formatPrice(account!.availableBalance),
+                                AppColors.textPrimary,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
-        const Divider(height: 28),
-        Row(
-          children: [
-            Expanded(
-              child: AppText(
-                '${tr('Open Holdings')} (${positions.length})',
-                style: AppTypography.sectionTitle,
-              ),
-            ),
-            TextButton(
-              onPressed: positions.isEmpty
-                  ? null
-                  : () => _showAllPositions(context),
-              style: TextButton.styleFrom(
-                minimumSize: const Size(0, 32),
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
-              ),
-              child: AppText(
-                'View All',
-                style: AppTypography.labelSmall.copyWith(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.brandPrimary,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm + 1),
-        Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppRadius.borderSm,
-            border: Border.all(color: AppColors.divider),
           ),
-          child: positions.isEmpty
-              ? Padding(
-                  padding: const EdgeInsets.all(AppSpacing.xxl),
-                  child: Center(
-                    child: AppText(
-                      'No open positions',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textTertiary,
-                      ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: AppText(
+                  'Recent Orders',
+                  style: AppTypography.sectionTitle,
+                ),
+              ),
+              if (onViewOrders != null)
+                TextButton(
+                  onPressed: onViewOrders,
+                  child: const AppText('View All'),
+                ),
+            ],
+          ),
+          if (orders.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.xl),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText('No orders yet'),
+                  SizedBox(height: AppSpacing.xs),
+                  AppText(
+                    'Submitted orders will appear here. This list is empty.',
+                  ),
+                ],
+              ),
+            ),
+          ...orders
+              .take(4)
+              .map(
+                (order) => ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  leading: Icon(
+                    order.isBuy ? Icons.call_received : Icons.call_made,
+                    color: OrderStatusPresentation.sideColor(
+                      order.isBuy ? 'BUY' : 'SELL',
                     ),
                   ),
-                )
-              : Column(
-                  children: positions.values
-                      .take(5)
-                      .map((position) => _positionRow(position))
-                      .toList(),
+                  title: AppText(order.symbol, style: AppTypography.titleSmall),
+                  subtitle: AppText(
+                    '${order.exchange} · ${order.quantity} · ${OrderStatusPresentation.label(order.status)}',
+                    style: AppTypography.bodySmall,
+                  ),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => showStandardOrderDetails(
+                    context,
+                    order: order,
+                    onCancel: onCancel,
+                  ),
                 ),
-        ),
-        const Divider(height: AppSpacing.xxl),
-        Row(
-          children: [
-            Expanded(
-              child: AppText(
-                'Total Holdings Value',
-                style: AppTypography.titleSmall,
               ),
-            ),
-            AppText(
-              formatPrice(holdings),
-              style: AppTypography.titleSmall.copyWith(
-                fontWeight: FontWeight.w800,
+          const Divider(height: 28),
+          Row(
+            children: [
+              Expanded(
+                child: AppText(
+                  '${tr('Open Holdings')} (${positions.length})',
+                  style: AppTypography.sectionTitle,
+                ),
               ),
+              TextButton(
+                onPressed: positions.isEmpty
+                    ? null
+                    : () => _showAllPositions(context),
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(0, 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                  ),
+                ),
+                child: AppText(
+                  'View All',
+                  style: AppTypography.labelSmall.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm + 1),
+          Container(
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: AppRadius.borderSm,
+              border: Border.all(color: AppColors.divider),
             ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm - 2),
-        Align(
-          alignment: Alignment.centerRight,
-          child: AppText(
-            '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
-            style: AppTypography.bodyMedium.copyWith(
-              color: pnl >= 0 ? AppColors.gain : AppColors.loss,
+            child: positions.isEmpty
+                ? Padding(
+                    padding: const EdgeInsets.all(AppSpacing.xxl),
+                    child: Center(
+                      child: AppText(
+                        'No open positions. Holdings appear after a fill.',
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.textTertiary,
+                        ),
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: positions.values
+                        .take(5)
+                        .map((position) => _positionRow(position))
+                        .toList(),
+                  ),
+          ),
+          const Divider(height: AppSpacing.xxl),
+          Row(
+            children: [
+              Expanded(
+                child: AppText(
+                  'Total Holdings Value',
+                  style: AppTypography.titleSmall,
+                ),
+              ),
+              AppText(
+                formatPrice(holdings),
+                style: AppTypography.titleSmall.copyWith(
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm - 2),
+          Align(
+            alignment: Alignment.centerRight,
+            child: AppText(
+              '${pnl >= 0 ? '+' : ''}${formatPrice(pnl)}',
+              style: AppTypography.bodyMedium.copyWith(
+                color: pnl >= 0 ? AppColors.gain : AppColors.loss,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: AppSpacing.md),
-      ],
+          const SizedBox(height: AppSpacing.md),
+        ],
+      ),
     );
   }
 

@@ -1142,6 +1142,10 @@ class _MarketHomePageState extends State<MarketHomePage>
           notificationCount: unreadNotificationCount,
           indexQuotes: indexQuotes,
           onViewMarkets: () => setState(() => selectedIndex = 1),
+          onOpenOrderTicket: _openStockForTrade,
+          marketOpen: marketOpen,
+          marketHours: marketHours,
+          quotesConnected: marketConnected,
         );
 
       case 3:
@@ -2237,11 +2241,21 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _openStock(StockQuote stock) {
+    _openStockForTrade(stock, isBuy: true);
+  }
+
+  void _openStockForTrade(StockQuote stock, {required bool isBuy}) {
     Navigator.push<void>(
       context,
       MaterialPageRoute<void>(
-        builder: (_) =>
-            StockDetailPage(stock: stock, onOrderPlaced: _placeOrder),
+        builder: (_) => StockDetailPage(
+          stock: stock,
+          onOrderPlaced: _placeOrder,
+          initialIsBuy: isBuy,
+          marketOpen: marketOpen,
+          marketHours: marketHours,
+          quotesConnected: marketConnected,
+        ),
       ),
     );
   }

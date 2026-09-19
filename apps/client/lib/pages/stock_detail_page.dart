@@ -3,7 +3,6 @@ import '../l10n/app_language.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -18,9 +17,6 @@ import '../services/trading_service.dart';
 import '../services/watchlist_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
-import '../theme/app_radius.dart';
-import '../theme/app_spacing.dart';
-import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/app_card.dart';
 import '../widgets/markets/browse_only_banner.dart';
@@ -29,16 +25,30 @@ import '../widgets/markets/instrument_news.dart';
 import '../widgets/markets/news_article_sheet.dart';
 import '../widgets/markets/stock_quote_hero.dart';
 import '../widgets/stock_history_chart.dart';
+import '../widgets/trading/order_ticket.dart';
 
 class StockDetailPage extends StatefulWidget {
   const StockDetailPage({
     super.key,
     required this.stock,
     required this.onOrderPlaced,
+    this.initialIsBuy = true,
+    this.marketOpen,
+    this.marketHours = '09:15 - 15:30 IST',
+    this.quotesConnected,
+    this.tradingService,
   });
 
   final StockQuote stock;
   final Future<String?> Function(TradingOrder) onOrderPlaced;
+  final bool initialIsBuy;
+  final bool? marketOpen;
+  final String marketHours;
+  final bool? quotesConnected;
+  final TradingService? tradingService;
+
+  @visibleForTesting
+  static TradingOrder? debugNextConfirmedOrder;
 
   @override
   State<StockDetailPage> createState() => _StockDetailPageState();
@@ -50,8 +60,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
   final marketSocket = MarketSocketService();
   final watchlistService = WatchlistService();
 
+  late final TradingService _tradingService;
   late StockQuote liveStock;
-  bool isBuy = true;
+  late bool isBuy;
   bool isSubmitting = false;
   bool isWatched = false;
   bool watchlistLoading = true;
@@ -122,10 +133,33 @@ class _StockDetailPageState extends State<StockDetailPage> {
     return (selectedOrderPrice - liveStock.price) / liveStock.price * 100;
   }
 
+  String? get quantityError {
+    final raw = quantityController.text.trim();
+    if (raw.isEmpty) return null;
+    final quantity = int.tryParse(raw);
+    if (quantity == null || quantity <= 0) {
+      return 'Enter a quantity greater than 0';
+    }
+    return null;
+  }
+
+  String? get priceError {
+    if (!isLimit) return null;
+    final raw = limitPriceController.text.trim();
+    if (raw.isEmpty) return null;
+    final price = double.tryParse(raw);
+    if (price == null || price <= 0) {
+      return 'Enter a limit price greater than 0';
+    }
+    return null;
+  }
+
   @override
   void initState() {
     super.initState();
     liveStock = widget.stock;
+    isBuy = widget.initialIsBuy;
+    _tradingService = widget.tradingService ?? TradingService();
     socketConnected = marketSocket.isConnected;
     limitPriceController.text = liveStock.price.toStringAsFixed(2);
     marketSocket.addQuoteListener(_handleQuoteUpdate);
@@ -141,7 +175,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   Future<void> _loadAccountSnapshot() async {
     try {
-      final snapshot = await TradingService().fetchAccountSnapshot();
+      final snapshot = await _tradingService.fetchAccountSnapshot();
       if (!mounted || snapshot == null) return;
       setState(() => accountSnapshot = snapshot);
     } catch (_) {
@@ -306,7 +340,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
     super.dispose();
   }
 
-  void placeOrder() {
+  Future<void> placeOrder() async {
     if (_browseOnly) return;
     final quantity = int.tryParse(quantityController.text) ?? 0;
     final limitPrice = isLimit
@@ -327,90 +361,92 @@ class _StockDetailPageState extends State<StockDetailPage> {
       return;
     }
 
-    final priceLabel = isLimit
-        ? 'Limit price: ${formatPrice(limitPrice!)}'
-        : 'Indicative price: ${formatPrice(selectedOrderPrice)}';
     final quoteDelayed =
         !socketConnected ||
         !liveStock.quoteFresh ||
         DateTime.now().difference(liveStock.updatedAt) >
             const Duration(minutes: 2);
-    final quoteNotice = quoteDelayed
-        ? '\n\nMarket price may be delayed. Review the order price before confirming.'
-        : '';
+    final riskNotice = [
+      if (widget.marketOpen == false)
+        'The exchange session is closed. Confirm stays disabled until the market is open. The server still verifies session state.',
+      if (quoteDelayed)
+        'Market price may be delayed. Review the order price before confirming.',
+    ].join('\n\n');
 
-    showDialog<void>(
+    String? successMessage;
+    TradingOrder? confirmedOrder;
+
+    await showOrderConfirmDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: AppText(isBuy ? 'Confirm Buy' : 'Confirm Sell'),
-        content: AppText(
-          '${isBuy ? 'Buy' : 'Sell'} $quantity shares of ${liveStock.symbol}\n\n'
-          '${isLimit ? 'Limit Order' : 'Market Order'} • $timeInForce\n'
-          '$priceLabel\n\n'
-          'Estimated amount: ${formatPrice(estimatedAmount)}'
-          '$quoteNotice',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: const AppText('Cancel'),
-          ),
-          FilledButton(
-            onPressed: isSubmitting
-                ? null
-                : () async {
-                    setState(() => isSubmitting = true);
-                    final draft = TradingOrder(
-                      symbol: liveStock.symbol,
-                      exchange: liveStock.exchange,
-                      isBuy: isBuy,
-                      quantity: quantity,
-                      price: selectedOrderPrice,
-                      placedAt: DateTime.now(),
-                      type: orderType,
-                      timeInForce: timeInForce,
-                      limitPrice: limitPrice,
-                    );
-                    final fingerprint = draft.submissionFingerprint();
-                    if (_pendingOrderFingerprint != fingerprint) {
-                      _pendingClientOrderId = null;
-                      _pendingOrderFingerprint = fingerprint;
-                    }
-                    _pendingClientOrderId ??=
-                        TradingService.createClientOrderId(
-                          exchange: draft.exchange,
-                          symbol: draft.symbol,
-                        );
-                    final order = draft.withClientOrderId(
-                      _pendingClientOrderId!,
-                    );
+      stock: liveStock,
+      isBuy: isBuy,
+      orderType: orderType,
+      timeInForce: timeInForce,
+      quantity: quantity,
+      estimatedAmount: estimatedAmount,
+      limitPrice: isLimit ? limitPrice : null,
+      marketOpen: widget.marketOpen,
+      marketHours: widget.marketHours,
+      riskNotice: riskNotice.isEmpty ? null : riskNotice,
+      onConfirm: () async {
+        if (isSubmitting) {
+          return 'Order is already being submitted.';
+        }
+        setState(() => isSubmitting = true);
+        final draft = TradingOrder(
+          symbol: liveStock.symbol,
+          exchange: liveStock.exchange,
+          isBuy: isBuy,
+          quantity: quantity,
+          price: selectedOrderPrice,
+          placedAt: DateTime.now(),
+          type: orderType,
+          timeInForce: timeInForce,
+          limitPrice: limitPrice,
+        );
+        final fingerprint = draft.submissionFingerprint();
+        if (_pendingOrderFingerprint != fingerprint) {
+          _pendingClientOrderId = null;
+          _pendingOrderFingerprint = fingerprint;
+        }
+        _pendingClientOrderId ??= TradingService.createClientOrderId(
+          exchange: draft.exchange,
+          symbol: draft.symbol,
+        );
+        final order = draft.withClientOrderId(_pendingClientOrderId!);
 
-                    TradingService.clearLastPlacedOrder();
-                    final errorMessage = await widget.onOrderPlaced(order);
-                    final confirmedOrder = TradingService.takeLastPlacedOrder();
+        TradingService.clearLastPlacedOrder();
+        final String? errorMessage;
+        try {
+          errorMessage = await widget.onOrderPlaced(order);
+        } catch (_) {
+          if (mounted) setState(() => isSubmitting = false);
+          return 'Order placement failed';
+        }
+        confirmedOrder =
+            TradingService.takeLastPlacedOrder() ??
+            StockDetailPage.debugNextConfirmedOrder;
+        StockDetailPage.debugNextConfirmedOrder = null;
 
-                    if (!mounted || !dialogContext.mounted) return;
-                    setState(() => isSubmitting = false);
+        if (!mounted) return errorMessage;
+        setState(() => isSubmitting = false);
 
-                    if (errorMessage != null) {
-                      Navigator.pop(dialogContext);
-                      _showMessage(errorMessage);
-                      return;
-                    }
+        if (errorMessage != null) {
+          return errorMessage;
+        }
 
-                    _pendingClientOrderId = null;
-                    _pendingOrderFingerprint = null;
-                    Navigator.pop(dialogContext);
-                    final message = confirmedOrder == null
-                        ? '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order submitted'
-                        : orderResultMessage(confirmedOrder);
-                    _showMessage(message, order: confirmedOrder);
-                  },
-            child: AppText(isSubmitting ? 'Submitting...' : 'Confirm'),
-          ),
-        ],
-      ),
+        _pendingClientOrderId = null;
+        _pendingOrderFingerprint = null;
+        successMessage = confirmedOrder == null
+            ? '${isBuy ? 'Buy' : 'Sell'} ${isLimit ? 'limit' : 'market'} order submitted'
+            : orderResultMessage(confirmedOrder!);
+        return null;
+      },
     );
+
+    if (successMessage != null) {
+      _showMessage(successMessage!, order: confirmedOrder);
+    }
   }
 
   void _showMessage(String message, {TradingOrder? order}) {
@@ -696,172 +732,180 @@ class _StockDetailPageState extends State<StockDetailPage> {
             ),
           ],
         ),
-        bottomNavigationBar: _browseOnly ? null : _stickyTradeBar(),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: AppFadeIn(
-                switchKey:
-                    '${liveStock.symbol}:${liveStock.price}:${liveStock.quoteFresh}',
-                child: StockQuoteHero(
-                  stock: liveStock,
-                  quotesConnected: socketConnected,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+            final compact = keyboard > 80 || constraints.maxHeight < 520;
+            final tabHeight = (constraints.maxHeight - (compact ? 160 : 280))
+                .clamp(220.0, 900.0);
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  children: [
+                    if (!compact)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                        child: AppFadeIn(
+                          switchKey:
+                              '${liveStock.symbol}:${liveStock.price}:${liveStock.quoteFresh}',
+                          child: StockQuoteHero(
+                            stock: liveStock,
+                            quotesConnected: socketConnected,
+                          ),
+                        ),
+                      ),
+                    const TabBar(
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
+                      labelColor: AppColors.brandPrimary,
+                      unselectedLabelColor: AppColors.textSecondary,
+                      indicatorColor: AppColors.brandPrimary,
+                      tabs: [
+                        Tab(text: 'Overview'),
+                        Tab(text: 'Chart'),
+                        Tab(text: 'News'),
+                        Tab(text: 'Events'),
+                      ],
+                    ),
+                    SizedBox(
+                      height: tabHeight,
+                      child: TabBarView(
+                        children: [
+                          _overviewTab(),
+                          _chartTab(),
+                          _newsTab(),
+                          _eventsTab(),
+                        ],
+                      ),
+                    ),
+                    if (!_browseOnly)
+                      OrderTicketBar(
+                        submitting: isSubmitting,
+                        onBuy: () {
+                          setState(() => isBuy = true);
+                          unawaited(placeOrder());
+                        },
+                        onSell: () {
+                          setState(() => isBuy = false);
+                          unawaited(placeOrder());
+                        },
+                      ),
+                  ],
                 ),
               ),
-            ),
-            const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              labelColor: AppColors.brandPrimary,
-              unselectedLabelColor: AppColors.textSecondary,
-              indicatorColor: AppColors.brandPrimary,
-              tabs: [
-                Tab(text: 'Overview'),
-                Tab(text: 'Chart'),
-                Tab(text: 'News'),
-                Tab(text: 'Events'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _overviewTab(),
-                  _chartTab(),
-                  _newsTab(),
-                  _eventsTab(),
-                ],
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
   Widget _overviewTab() {
-    return ListView(
+    return SingleChildScrollView(
+      key: const Key('stock-overview'),
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-      children: [
-        if (_browseOnly) ...[
-          const BrowseOnlyBanner(),
-          const SizedBox(height: 12),
-        ],
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: _marketStat('Best Bid', _statPrice(liveStock.bid)),
-                    ),
-                    Expanded(
-                      child: _marketStat('Best Ask', _statPrice(liveStock.ask)),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _marketStat('Open', _statPrice(liveStock.open)),
-                    ),
-                    Expanded(
-                      child: _marketStat(
-                        'Prev. Close',
-                        _statPrice(liveStock.previousClose),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_browseOnly) ...[
+            const BrowseOnlyBanner(),
+            const SizedBox(height: 12),
+          ],
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _marketStat(
+                          'Best Bid',
+                          _statPrice(liveStock.bid),
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _marketStat(
-                        "Day's High",
-                        _statPrice(liveStock.high),
+                      Expanded(
+                        child: _marketStat(
+                          'Best Ask',
+                          _statPrice(liveStock.ask),
+                        ),
                       ),
-                    ),
-                    Expanded(
-                      child: _marketStat(
-                        "Day's Low",
-                        _statPrice(liveStock.low),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _marketStat('Open', _statPrice(liveStock.open)),
                       ),
-                    ),
-                  ],
-                ),
-                const Divider(height: 24),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _marketStat(
-                        'Volume',
-                        _formatVolume(liveStock.volume),
+                      Expanded(
+                        child: _marketStat(
+                          'Prev. Close',
+                          _statPrice(liveStock.previousClose),
+                        ),
                       ),
-                    ),
-                    Expanded(child: _marketStat('Symbol', liveStock.symbol)),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _marketStat(
+                          "Day's High",
+                          _statPrice(liveStock.high),
+                        ),
+                      ),
+                      Expanded(
+                        child: _marketStat(
+                          "Day's Low",
+                          _statPrice(liveStock.low),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 24),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _marketStat(
+                          'Volume',
+                          _formatVolume(liveStock.volume),
+                        ),
+                      ),
+                      Expanded(child: _marketStat('Symbol', liveStock.symbol)),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-        if (_hasMarketRangeData) ...[
-          const SizedBox(height: 12),
-          _marketRangeCard(),
-        ],
-        const SizedBox(height: 18),
-        if (!_browseOnly) ...[
-          const AppText(
-            'Place Order',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
-          SegmentedButton<bool>(
-            segments: const [
-              ButtonSegment<bool>(value: true, label: AppText('Buy')),
-              ButtonSegment<bool>(value: false, label: AppText('Sell')),
-            ],
-            selected: {isBuy},
-            style: ButtonStyle(
-              foregroundColor: WidgetStateProperty.resolveWith((states) {
-                if (states.contains(WidgetState.selected)) {
-                  return Colors.white;
-                }
-                return AppConfig.textPrimaryColor;
+          if (_hasMarketRangeData) ...[
+            const SizedBox(height: 12),
+            _marketRangeCard(),
+          ],
+          const SizedBox(height: 18),
+          if (!_browseOnly) ...[
+            OrderTicketPanel(
+              stock: liveStock,
+              isBuy: isBuy,
+              orderType: orderType,
+              timeInForce: timeInForce,
+              quantityController: quantityController,
+              limitPriceController: limitPriceController,
+              account: accountSnapshot,
+              marketOpen: widget.marketOpen,
+              marketHours: widget.marketHours,
+              quotesConnected: widget.quotesConnected ?? socketConnected,
+              quantityError: quantityError,
+              priceError: priceError,
+              onBuyChanged: (value) => setState(() {
+                isBuy = value;
+                _pendingClientOrderId = null;
+                _pendingOrderFingerprint = null;
               }),
-              backgroundColor: WidgetStateProperty.resolveWith((states) {
-                if (!states.contains(WidgetState.selected)) {
-                  return Colors.white;
-                }
-                return isBuy ? AppConfig.gainColor : AppConfig.lossColor;
-              }),
-            ),
-            onSelectionChanged: (selection) => setState(() {
-              isBuy = selection.first;
-              _pendingClientOrderId = null;
-              _pendingOrderFingerprint = null;
-            }),
-          ),
-          const SizedBox(height: 14),
-          SegmentedButton<String>(
-            segments: const [
-              ButtonSegment<String>(
-                value: 'MARKET',
-                label: AppText('Market Order'),
-              ),
-              ButtonSegment<String>(
-                value: 'LIMIT',
-                label: AppText('Limit Order'),
-              ),
-            ],
-            selected: {orderType},
-            onSelectionChanged: (selection) {
-              setState(() {
-                orderType = selection.first;
+              onOrderTypeChanged: (value) => setState(() {
+                orderType = value;
                 _pendingClientOrderId = null;
                 _pendingOrderFingerprint = null;
                 if (orderType == 'LIMIT' &&
@@ -870,93 +914,46 @@ class _StockDetailPageState extends State<StockDetailPage> {
                     2,
                   );
                 }
-              });
-            },
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: quantityController,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              labelText: 'Quantity',
-              border: OutlineInputBorder(),
-              prefixIcon: Icon(Icons.numbers),
+              }),
+              onTimeInForceChanged: (value) => setState(() {
+                timeInForce = value;
+                _pendingClientOrderId = null;
+                _pendingOrderFingerprint = null;
+              }),
+              onChanged: () => setState(() {}),
             ),
-          ),
-          if (isLimit) ...[
-            const SizedBox(height: 14),
-            TextField(
-              controller: limitPriceController,
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [
-                FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-              ],
-              onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
-                labelText: 'Limit Price',
-                prefixText: '₹ ',
-                border: OutlineInputBorder(),
+            const SizedBox(height: 16),
+            OrderEstimateCard(
+              stock: liveStock,
+              isBuy: isBuy,
+              isLimit: isLimit,
+              quantity: int.tryParse(quantityController.text) ?? 0,
+              selectedPrice: selectedOrderPrice,
+              estimatedAmount: estimatedAmount,
+              account: accountSnapshot,
+              maxQuantity: isBuy ? maxBuyQuantity : availableSellQuantity,
+              deviationPercent: limitDeviationPercent,
+              quoteReady: orderQuoteReady,
+              onUseMax: () {
+                final maxQuantity = isBuy
+                    ? maxBuyQuantity
+                    : availableSellQuantity;
+                if (maxQuantity == null || maxQuantity <= 0) return;
+                quantityController.text = '$maxQuantity';
+                setState(() {});
+              },
+            ),
+            const SizedBox(height: 8),
+            AppText(
+              'Use Buy / Sell below to review the order. Confirm is required before it is sent.',
+              style: TextStyle(
+                color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
+                fontSize: 11,
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          const AppText(
-            'Validity',
-            style: TextStyle(fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: ['DAY', 'IOC', 'FOK']
-                .map(
-                  (value) => Tooltip(
-                    message: switch (value) {
-                      'IOC' => 'Immediate or Cancel',
-                      'FOK' => 'Fill or Kill',
-                      _ => 'Valid for the trading day',
-                    },
-                    child: ChoiceChip(
-                      label: AppText(value),
-                      selected: timeInForce == value,
-                      selectedColor: AppConfig.primaryColor,
-                      backgroundColor: Colors.white,
-                      labelStyle: TextStyle(
-                        color: timeInForce == value
-                            ? Colors.white
-                            : AppConfig.textPrimaryColor,
-                        fontWeight: FontWeight.w700,
-                      ),
-                      side: BorderSide(
-                        color: timeInForce == value
-                            ? AppConfig.primaryColor
-                            : AppConfig.borderColor,
-                      ),
-                      onSelected: (_) => setState(() {
-                        timeInForce = value;
-                        _pendingClientOrderId = null;
-                        _pendingOrderFingerprint = null;
-                      }),
-                    ),
-                  ),
-                )
-                .toList(),
-          ),
-          const SizedBox(height: 16),
-          _orderPreviewCard(),
-          const SizedBox(height: 8),
-          AppText(
-            'Use Buy / Sell below to review and submit your order.',
-            style: TextStyle(
-              color: AppConfig.textSecondaryColor.withValues(alpha: 0.9),
-              fontSize: 11,
-            ),
-          ),
         ],
-      ],
+      ),
     );
   }
 
@@ -1113,231 +1110,6 @@ class _StockDetailPageState extends State<StockDetailPage> {
           ),
         );
       },
-    );
-  }
-
-  Widget _stickyTradeBar() {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.lg,
-        AppSpacing.sm + 2,
-        AppSpacing.lg,
-        AppSpacing.sm + 2,
-      ),
-      decoration: const BoxDecoration(
-        color: AppColors.surface,
-        border: Border(top: BorderSide(color: AppColors.divider)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: SizedBox(
-              height: AppSpacing.buttonHeight + 4,
-              child: FilledButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () {
-                        setState(() => isBuy = true);
-                        placeOrder();
-                      },
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.buy,
-                  foregroundColor: AppColors.textInverse,
-                  disabledBackgroundColor: AppColors.disabled,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.borderMd,
-                  ),
-                ),
-                child: AppText(
-                  'BUY',
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: AppColors.textInverse,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm + 2),
-          Expanded(
-            child: SizedBox(
-              height: AppSpacing.buttonHeight + 4,
-              child: FilledButton(
-                onPressed: isSubmitting
-                    ? null
-                    : () {
-                        setState(() => isBuy = false);
-                        placeOrder();
-                      },
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.sell,
-                  foregroundColor: AppColors.textInverse,
-                  disabledBackgroundColor: AppColors.disabled,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: AppRadius.borderMd,
-                  ),
-                ),
-                child: AppText(
-                  'SELL',
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w800,
-                    fontSize: 15,
-                    color: AppColors.textInverse,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _orderPreviewCard() {
-    final quantity = int.tryParse(quantityController.text) ?? 0;
-    final maxQuantity = isBuy ? maxBuyQuantity : availableSellQuantity;
-    final deviation = limitDeviationPercent;
-    final largeDeviation = deviation != null && deviation.abs() >= 5;
-    final exceedsAvailable = maxQuantity != null && quantity > maxQuantity;
-    final marketPriceLabel = isBuy ? 'best ask' : 'best bid';
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                const Expanded(
-                  child: AppText(
-                    'Order details',
-                    style: TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-                AppText(
-                  selectedOrderPrice > 0 ? formatPrice(estimatedAmount) : '--',
-                  style: const TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            _previewRow(
-              'Indicative price',
-              selectedOrderPrice > 0 ? formatPrice(selectedOrderPrice) : '--',
-            ),
-            _previewRow(
-              'Price basis',
-              isLimit ? 'Limit price' : 'Current $marketPriceLabel',
-            ),
-            if (isBuy && accountSnapshot != null)
-              _previewRow(
-                'Available buying power',
-                formatPrice(accountSnapshot!.buyingPower),
-              ),
-            if (!isBuy && maxQuantity != null)
-              _previewRow('Available to sell', '$maxQuantity shares'),
-            if (maxQuantity != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AppText(
-                        '${isBuy ? 'Maximum quantity' : 'Available quantity'}: '
-                        '$maxQuantity',
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: maxQuantity <= 0
-                          ? null
-                          : () {
-                              quantityController.text = '$maxQuantity';
-                              setState(() {});
-                            },
-                      child: const AppText('Use max'),
-                    ),
-                  ],
-                ),
-              ),
-            const Divider(height: 20),
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: AppText(
-                'Final execution price and applicable charges are confirmed by the order result.',
-                style: TextStyle(color: Colors.black54, fontSize: 11),
-              ),
-            ),
-            if (largeDeviation || exceedsAvailable) ...[
-              const SizedBox(height: 10),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFF7ED),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: AppText(
-                  exceedsAvailable
-                      ? isBuy
-                            ? 'Estimated amount exceeds available buying power.'
-                            : 'Sell quantity exceeds the available holding.'
-                      : 'Limit price is ${deviation!.abs().toStringAsFixed(2)}% '
-                            '${deviation >= 0 ? 'above' : 'below'} the current price.',
-                  style: const TextStyle(
-                    color: Color(0xFF9A3412),
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-            if (!orderQuoteReady) ...[
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  const Expanded(
-                    child: AppText(
-                      'A current market quote is required before submission.',
-                      style: TextStyle(
-                        color: AppConfig.lossColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  TextButton.icon(
-                    onPressed: marketSocket.refreshSnapshot,
-                    icon: const Icon(Icons.refresh, size: 17),
-                    label: const AppText('Refresh'),
-                  ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _previewRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: AppText(
-              label,
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ),
-          AppText(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
-      ),
     );
   }
 

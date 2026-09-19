@@ -294,56 +294,241 @@ class SecureFooter extends StatelessWidget {
   );
 }
 
+enum KycBannerTone { info, warning, success, danger }
+
+enum KycStepUiState { notStarted, inProgress, completed }
+
 class VerificationBanner extends StatelessWidget {
   const VerificationBanner({
     super.key,
     required this.title,
     required this.subtitle,
     this.icon = Icons.verified_user,
+    this.tone = KycBannerTone.warning,
   });
   final String title, subtitle;
   final IconData icon;
+  final KycBannerTone tone;
 
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: AppColors.warningSoft,
-      borderRadius: AppRadius.borderSm,
-    ),
-    child: Row(
+  Widget build(BuildContext context) {
+    final (background, accent) = switch (tone) {
+      KycBannerTone.success => (AppColors.successSoft, AppColors.success),
+      KycBannerTone.danger => (AppColors.lossSoft, AppColors.loss),
+      KycBannerTone.info => (AppColors.brandPrimarySoft, AppColors.brandPrimary),
+      KycBannerTone.warning => (AppColors.warningSoft, AppColors.warning),
+    };
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.borderSm,
+        border: Border.all(color: accent.withValues(alpha: 0.28)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: accent, size: AuthLayout.iconSize),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  title,
+                  style: TextStyle(
+                    color: accent,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    letterSpacing: 0,
+                    height: 1.35,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                AppText(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.textSecondary,
+                    fontSize: AuthLayout.helperSize,
+                    height: 1.4,
+                    letterSpacing: 0,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class KycProgressHeader extends StatelessWidget {
+  const KycProgressHeader({
+    super.key,
+    required this.completed,
+    this.total = 6,
+  });
+
+  final int completed;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = total == 0 ? 0.0 : (completed / total).clamp(0.0, 1.0);
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, color: AppColors.warning, size: AuthLayout.iconSize),
-        const SizedBox(width: 10),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AppText(
-                title,
-                style: const TextStyle(
-                  color: AppColors.warning,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
-                  letterSpacing: 0,
-                ),
+        Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          runSpacing: 8,
+          spacing: 12,
+          children: [
+            const AppText(
+              'Verification Progress',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: AuthLayout.helperSize,
+                letterSpacing: 0,
+                color: AppColors.textPrimary,
               ),
-              const SizedBox(height: 4),
-              AppText(
-                subtitle,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: AuthLayout.helperSize,
-                  height: 1.35,
-                  letterSpacing: 0,
-                ),
+            ),
+            AppText(
+              '$completed of $total completed',
+              style: const TextStyle(
+                fontSize: AuthLayout.helperSize,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0,
+                color: AppColors.brandPrimary,
               ),
-            ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: AppRadius.borderSm,
+          child: LinearProgressIndicator(
+            value: value,
+            minHeight: 4,
+            backgroundColor: AppColors.brandPrimarySoft,
+            color: AppColors.brandPrimary,
           ),
         ),
       ],
-    ),
-  );
+    );
+  }
+}
+
+class KycStepTile extends StatelessWidget {
+  const KycStepTile({
+    super.key,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.state,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final KycStepUiState state;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final (iconColor, ringColor, stateLabel, trailing, trailingColor) = switch (state) {
+      KycStepUiState.completed => (
+        AppColors.success,
+        AppColors.successSoft,
+        'Completed',
+        Icons.check_circle,
+        AppColors.success,
+      ),
+      KycStepUiState.inProgress => (
+        AppColors.brandPrimary,
+        AppColors.brandPrimarySoft,
+        'In progress',
+        Icons.chevron_right,
+        AppColors.brandPrimary,
+      ),
+      KycStepUiState.notStarted => (
+        AppColors.textSecondary,
+        AppColors.surfaceSecondary,
+        'Not started',
+        Icons.chevron_right,
+        AppColors.textTertiary,
+      ),
+    };
+
+    return Material(
+      color: AuthLayout.pageBackground,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: AppRadius.borderSm,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: ringColor,
+                  borderRadius: AppRadius.borderSm,
+                ),
+                child: Icon(icon, color: iconColor, size: AuthLayout.iconSize),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      title,
+                      style: const TextStyle(
+                        fontSize: AuthLayout.bodySize,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                        height: 1.35,
+                        color: AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    AppText(
+                      subtitle,
+                      style: const TextStyle(
+                        fontSize: AuthLayout.helperSize,
+                        fontWeight: FontWeight.w400,
+                        letterSpacing: 0,
+                        height: 1.4,
+                        color: AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    AppText(
+                      stateLabel,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 0,
+                        height: 1.3,
+                        color: trailingColor,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(trailing, color: trailingColor, size: 18),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

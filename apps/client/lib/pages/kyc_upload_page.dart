@@ -1,4 +1,3 @@
-import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import 'dart:typed_data';
 import 'dart:async';
@@ -10,6 +9,9 @@ import 'package:image_picker/image_picker.dart';
 import '../models/picked_bytes_file.dart';
 import '../services/auth_service.dart';
 import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/auth_layout.dart';
 import '../widgets/kyc_signature_pad.dart';
 import '../widgets/aadhaar_mark.dart';
 import '../utils/client_error_message.dart';
@@ -114,431 +116,476 @@ class _KycUploadPageState extends State<KycUploadPage> {
     step == 5,
   ].where((value) => value).length;
 
+  bool get _reviewLocked =>
+      existingStatus == 'PENDING' || existingStatus == 'APPROVED';
+
+  List<({IconData icon, String title, String subtitle, bool complete})>
+  get _overviewSteps => [
+    (
+      icon: Icons.badge_outlined,
+      title: 'Personal Details',
+      subtitle: fullName.isEmpty ? 'Basic identity information' : fullName,
+      complete: _reviewLocked || fullName.isNotEmpty,
+    ),
+    (
+      icon: Icons.photo_camera_outlined,
+      title: 'Upload documents',
+      subtitle: 'Take a photo or choose a file',
+      complete: _reviewLocked || documentsReady,
+    ),
+    (
+      icon: Icons.face_outlined,
+      title: 'Selfie',
+      subtitle: 'A clear photo for manual review',
+      complete: _reviewLocked || selfieFile != null,
+    ),
+    (
+      icon: Icons.draw_outlined,
+      title: 'Signature',
+      subtitle: 'Sign using your finger or stylus',
+      complete: _reviewLocked || signatureFile != null,
+    ),
+    (
+      icon: Icons.account_balance_outlined,
+      title: 'Bank Details',
+      subtitle: 'Add your bank account information',
+      complete: _reviewLocked || bankDetails != null,
+    ),
+    (
+      icon: Icons.fact_check_outlined,
+      title: 'Review & submit',
+      subtitle: 'Your documents will be reviewed',
+      complete: _reviewLocked || step == 5,
+    ),
+  ];
+
+  KycStepUiState _stepState(int index, bool complete) {
+    if (complete) return KycStepUiState.completed;
+    final firstOpen = _overviewSteps.indexWhere((item) => !item.complete);
+    if (index == firstOpen) return KycStepUiState.inProgress;
+    return KycStepUiState.notStarted;
+  }
+
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !isSubmitting && step == 0,
-    onPopInvokedWithResult: (didPop, result) {
-      if (!didPop && !isSubmitting && step > 0) _goTo(step - 1);
-    },
-    child: AppPageScaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        leading: BackButton(
-          onPressed: isSubmitting
-              ? null
-              : () {
-                  if (step > 0) {
-                    _goTo(step - 1);
-                  } else {
-                    Navigator.maybePop(context);
-                  }
-                },
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final maxWidth = AuthLayout.formMaxWidth(media.size.width);
+    final horizontal = AuthLayout.horizontalPadding(media.size.width);
+
+    return PopScope(
+      canPop: !isSubmitting && step == 0,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop && !isSubmitting && step > 0) _goTo(step - 1);
+      },
+      child: Scaffold(
+        backgroundColor: AuthLayout.pageBackground,
+        resizeToAvoidBottomInset: true,
+        appBar: AppBar(
+          backgroundColor: AuthLayout.pageBackground,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          leading: BackButton(
+            onPressed: isSubmitting
+                ? null
+                : () {
+                    if (step > 0) {
+                      _goTo(step - 1);
+                    } else {
+                      Navigator.maybePop(context);
+                    }
+                  },
+          ),
+          title: AppText(
+            [
+              'KYC Verification',
+              documentType == 'PAN' ? 'Upload PAN Card' : 'Aadhaar Verification',
+              'Selfie Verification',
+              'Signature',
+              'Bank Details',
+              'Review Documents',
+            ][step],
+          ),
         ),
-        title: AppText(
-          [
-            'KYC Verification',
-            documentType == 'PAN' ? 'Upload PAN Card' : 'Aadhaar Verification',
-            'Selfie Verification',
-            'Signature',
-            'Bank Details',
-            'Review Documents',
-          ][step],
-        ),
-      ),
-      bottomNavigationBar: _footer(),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: ListView(
-            controller: _scrollController,
-            padding: const EdgeInsets.all(20),
+        body: SafeArea(
+          top: false,
+          child: Column(
             children: [
-              if (existingStatus == 'PENDING' ||
-                  existingStatus == 'APPROVED') ...[
-                VerificationBanner(
-                  title: existingStatus == 'PENDING'
-                      ? 'Verification in Progress'
-                      : 'Verification Complete',
-                  subtitle: existingStatus == 'PENDING'
-                      ? 'Your documents are waiting for business review.'
-                      : 'Your account has been verified.',
-                ),
-                const SizedBox(height: 20),
-                if (reviewNote != null) AppText(reviewNote!),
-                TextButton.icon(
-                  onPressed: _loadStatus,
-                  icon: const Icon(Icons.refresh),
-                  label: const AppText('Refresh Status'),
-                ),
-              ] else ...[
-                if (existingStatus == 'REJECTED')
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: AppText(
-                      reviewNote ??
-                          'Please update your documents and submit again.',
-                      style: const TextStyle(color: AppConfig.lossColor),
-                    ),
-                  ),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF5F8FF),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.verified_user,
-                        color: AppConfig.primaryColor,
-                        size: 30,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        key: const ValueKey('kyc-overview-scroll'),
+                        controller: _scrollController,
+                        clipBehavior: Clip.hardEdge,
+                        padding: EdgeInsets.fromLTRB(
+                          horizontal,
+                          AuthLayout.pagePaddingTop,
+                          horizontal,
+                          AuthLayout.fieldGap,
+                        ),
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
                         child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                  if (step == 0 || _reviewLocked) ..._overviewChildren(),
+                  if (!_reviewLocked && step == 1) ...[
+                    if (documentType == 'AADHAAR')
+                      const Padding(
+                        padding: EdgeInsets.only(bottom: 16),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             AppText(
-                              step == 0
-                                  ? 'Verification in Progress'
-                                  : step == 1
-                                  ? 'Add your identity document'
-                                  : step == 2
-                                  ? 'Take a clear selfie'
-                                  : step == 3
-                                  ? 'Provide your signature'
-                                  : 'Ready for your review',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w700,
-                              ),
+                              '1  Front',
+                              style: TextStyle(color: AppConfig.primaryColor),
                             ),
-                            const SizedBox(height: 4),
-                            AppText(
-                              step == 0
-                                  ? 'Securely verify your identity to access your account.'
-                                  : step == 2
-                                  ? 'Please take a clear selfie in good lighting. Make sure your face is fully visible.'
-                                  : step == 3
-                                  ? 'Sign on a white page using a dark pen and sign within the lines below.'
-                                  : 'Use a clear, readable image of your own document.',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppConfig.textSecondaryColor,
-                              ),
-                            ),
+                            AppText('2  Back'),
+                            AppText('3  Review'),
                           ],
                         ),
                       ),
+                    _uploadPanel(back: false),
+                    if (documentType == 'AADHAAR') ...[
+                      const SizedBox(height: 20),
+                      _uploadPanel(back: true),
                     ],
-                  ),
-                ),
-                const SizedBox(height: 22),
-                if (step == 0) ...[
-                  Wrap(
-                    alignment: WrapAlignment.spaceBetween,
-                    runSpacing: 8,
-                    children: [
+                  ] else if (!_reviewLocked && step == 2) ...[
+                    _selfiePanel(),
+                  ] else if (!_reviewLocked && step == 3) ...[
+                    if (signatureFile == null)
+                      KycSignaturePad(
+                        onSaved: (bytes) => setState(() {
+                          signatureFile = PickedBytesFile(
+                            name: 'signature.png',
+                            bytes: bytes,
+                          );
+                          errorText = null;
+                        }),
+                        onChanged: () {
+                          if (signatureFile != null) {
+                            setState(() => signatureFile = null);
+                          }
+                        },
+                      )
+                    else ...[
+                      Image.memory(
+                        signatureFile!.bytes,
+                        height: 180,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(height: 12),
                       const AppText(
-                        'Verification Progress',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 12,
-                        ),
+                        'Signature saved',
+                        style: TextStyle(color: AppConfig.gainColor),
                       ),
-                      AppText(
-                        '$completedSteps of 6 completed',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: AppConfig.primaryColor,
-                        ),
+                      TextButton.icon(
+                        onPressed: () => setState(() => signatureFile = null),
+                        icon: const Icon(Icons.refresh),
+                        label: const AppText('Retake Signature'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: completedSteps / 6,
-                    minHeight: 4,
-                    borderRadius: BorderRadius.circular(4),
-                    backgroundColor: const Color(0xFFEBF0FA),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-                if (step == 0) ...[
-                  const AppText(
-                    'Choose Identity Document',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _documentOption(
-                          'PAN',
-                          'PAN Card',
-                          'Front photo required',
-                          Icons.badge_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _documentOption(
-                          'AADHAAR',
-                          'Aadhaar Card',
-                          'Front & back required',
-                          Icons.fingerprint,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  const AppText(
-                    'Verification Steps',
-                    style: TextStyle(fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 10),
-                  _stepRow(
-                    Icons.badge_outlined,
-                    'Personal Details',
-                    fullName.isEmpty ? 'Basic identity information' : fullName,
-                    fullName.isNotEmpty,
-                  ),
-                  _stepRow(
-                    Icons.photo_camera_outlined,
-                    'Upload documents',
-                    'Take a photo or choose a file',
-                    documentsReady,
-                  ),
-                  _stepRow(
-                    Icons.face_outlined,
-                    'Selfie',
-                    'A clear photo for manual review',
-                    selfieFile != null,
-                  ),
-                  _stepRow(
-                    Icons.draw_outlined,
-                    'Signature',
-                    'Sign using your finger or stylus',
-                    signatureFile != null,
-                  ),
-                  _stepRow(
-                    Icons.fact_check_outlined,
-                    'Bank Details',
-                    'Add your bank account information',
-                    bankDetails != null,
-                  ),
-                  _stepRow(
-                    Icons.fact_check_outlined,
-                    'Review & submit',
-                    'Your documents will be reviewed',
-                    false,
-                  ),
-                ] else if (step == 1) ...[
-                  if (documentType == 'AADHAAR')
-                    const Padding(
-                      padding: EdgeInsets.only(bottom: 16),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          AppText(
-                            '1  Front',
-                            style: TextStyle(color: AppConfig.primaryColor),
-                          ),
-                          AppText('2  Back'),
-                          AppText('3  Review'),
-                        ],
-                      ),
-                    ),
-                  _uploadPanel(back: false),
-                  if (documentType == 'AADHAAR') ...[
-                    const SizedBox(height: 20),
-                    _uploadPanel(back: true),
-                  ],
-                ] else if (step == 2) ...[
-                  _selfiePanel(),
-                ] else if (step == 3) ...[
-                  if (signatureFile == null)
-                    KycSignaturePad(
-                      onSaved: (bytes) => setState(() {
-                        signatureFile = PickedBytesFile(
-                          name: 'signature.png',
-                          bytes: bytes,
-                        );
-                        errorText = null;
-                      }),
-                      onChanged: () {
-                        if (signatureFile != null) {
-                          setState(() => signatureFile = null);
-                        }
-                      },
-                    )
-                  else ...[
-                    Image.memory(
-                      signatureFile!.bytes,
-                      height: 180,
-                      fit: BoxFit.contain,
-                    ),
-                    const SizedBox(height: 12),
-                    const AppText(
-                      'Signature saved',
-                      style: TextStyle(color: AppConfig.gainColor),
-                    ),
-                    TextButton.icon(
-                      onPressed: () => setState(() => signatureFile = null),
-                      icon: const Icon(Icons.refresh),
-                      label: const AppText('Retake Signature'),
-                    ),
-                  ],
-                ] else ...[
-                  ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const AppText('Personal Details'),
-                    subtitle: AppText(fullName),
-                    trailing: TextButton(
-                      onPressed: _personalDetails,
-                      child: const AppText('Edit'),
-                    ),
-                  ),
-                  if (bankDetails != null)
+                  ] else if (!_reviewLocked && step == 5) ...[
                     ListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const AppText('Bank Details'),
-                      subtitle: AppText(
-                        '${bankDetails!['bankName']}\n${bankDetails!['accountHolder']}\n${bankDetails!['accountNumber']}',
-                      ),
+                      title: const AppText('Personal Details'),
+                      subtitle: AppText(fullName),
                       trailing: TextButton(
-                        onPressed: _bankDetails,
+                        onPressed: _personalDetails,
                         child: const AppText('Edit'),
                       ),
                     ),
-                  _reviewFile(selfieFile!, 'Selfie', editStep: 2),
-                  _reviewFile(signatureFile!, 'Signature', editStep: 3),
-                  _reviewFile(
-                    selectedFile!,
-                    documentType == 'PAN' ? 'PAN Card' : 'Aadhaar front',
-                  ),
-                  if (selectedBackFile != null && documentType == 'AADHAAR')
-                    _reviewFile(selectedBackFile!, 'Aadhaar back'),
-                  const SizedBox(height: 16),
-                  const AppText(
-                    'Check that all details are readable before submitting. Uploading documents does not mean your KYC has been approved.',
-                    style: TextStyle(
-                      color: AppConfig.textSecondaryColor,
-                      height: 1.6,
+                    if (bankDetails != null)
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const AppText('Bank Details'),
+                        subtitle: AppText(
+                          '${bankDetails!['bankName']}\n${bankDetails!['accountHolder']}\n${bankDetails!['accountNumber']}',
+                        ),
+                        trailing: TextButton(
+                          onPressed: _bankDetails,
+                          child: const AppText('Edit'),
+                        ),
+                      ),
+                    _reviewFile(selfieFile!, 'Selfie', editStep: 2),
+                    _reviewFile(signatureFile!, 'Signature', editStep: 3),
+                    _reviewFile(
+                      selectedFile!,
+                      documentType == 'PAN' ? 'PAN Card' : 'Aadhaar front',
                     ),
-                  ),
-                ],
-                const SizedBox(height: 24),
-              ],
-            ],
-          ),
-        ),
-      ),
-    ),
-  );
-
-  Widget _footer() => SafeArea(
-    top: false,
-    child: Align(
-      heightFactor: 1,
-      alignment: Alignment.bottomCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (errorText != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: AppText(
-                    errorText!,
-                    style: const TextStyle(color: AppConfig.lossColor),
+                    if (selectedBackFile != null && documentType == 'AADHAAR')
+                      _reviewFile(selectedBackFile!, 'Aadhaar back'),
+                    const SizedBox(height: 16),
+                    const AppText(
+                      'Check that all details are readable before submitting. Uploading documents does not mean your KYC has been approved.',
+                      style: TextStyle(
+                        color: AppConfig.textSecondaryColor,
+                        height: 1.6,
+                      ),
+                    ),
+                  ],
+                          const SizedBox(height: 24),
+                    ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              FilledButton(
-                onPressed: isSubmitting
-                    ? null
-                    : existingStatus == 'PENDING' ||
-                          existingStatus == 'APPROVED'
-                    ? () =>
-                          Navigator.popUntil(context, (route) => route.isFirst)
-                    : step == 5
-                    ? _submit
-                    : () {
-                        if (step == 0 && fullName.isEmpty) {
-                          _personalDetails();
-                          return;
-                        }
-                        if (step == 1 && !documentsReady) {
-                          setState(
-                            () => errorText = documentType == 'AADHAAR'
-                                ? 'Add both the front and back of Aadhaar'
-                                : 'Add your PAN document',
-                          );
-                          return;
-                        }
-                        if (step == 2 && selfieFile == null) {
-                          setState(
-                            () => errorText = 'Add your selfie to continue',
-                          );
-                          return;
-                        }
-                        if (step == 3 && signatureFile == null) {
-                          setState(
-                            () => errorText = 'Save your signature to continue',
-                          );
-                          return;
-                        }
-                        _goTo(step + 1);
-                      },
-                child: isSubmitting
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : AppText(
-                        existingStatus == 'PENDING' ||
-                                existingStatus == 'APPROVED'
-                            ? 'Back to Login'
-                            : step == 5
-                            ? 'Submit KYC for Review'
-                            : step == 0
-                            ? 'Continue Verification'
-                            : 'Continue',
-                      ),
               ),
-              const SizedBox(height: 16),
-              const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.lock_outline,
-                    size: 15,
-                    color: AppConfig.textSecondaryColor,
-                  ),
-                  SizedBox(width: 6),
-                  Flexible(
-                    child: AppText(
-                      'Used for identity verification',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppConfig.textSecondaryColor,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+              _footer(),
             ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+
+  List<Widget> _overviewChildren() {
+    final rejected = existingStatus == 'REJECTED';
+    final pending = existingStatus == 'PENDING';
+    final approved = existingStatus == 'APPROVED';
+    final progressCount = _reviewLocked ? 6 : completedSteps;
+    final steps = _overviewSteps;
+
+    return [
+      const AuthBrandHeader(showSlogan: false),
+      const SizedBox(height: AuthLayout.titleGap),
+      const Text('KYC Verification', style: AuthLayout.title),
+      const SizedBox(height: AuthLayout.titleGap),
+      const AppText(
+        'Use your PAN or Aadhaar, selfie, signature, and bank details.',
+        style: AuthLayout.subtitle,
+      ),
+      if (!_reviewLocked) ...[
+        const SizedBox(height: AuthLayout.fieldGap),
+        const AppText(
+          'Choose Identity Document',
+          style: TextStyle(
+            fontWeight: FontWeight.w700,
+            fontSize: AuthLayout.bodySize,
+            letterSpacing: 0,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        const SizedBox(height: 12),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final stacked = constraints.maxWidth < 360;
+            final pan = _documentOption(
+              'PAN',
+              'PAN Card',
+              'Front photo required',
+              Icons.badge_outlined,
+            );
+            final aadhaar = _documentOption(
+              'AADHAAR',
+              'Aadhaar Card',
+              'Front & back required',
+              Icons.fingerprint,
+            );
+            if (stacked) {
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [pan, const SizedBox(height: 12), aadhaar],
+              );
+            }
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(child: pan),
+                const SizedBox(width: 12),
+                Expanded(child: aadhaar),
+              ],
+            );
+          },
+        ),
+      ],
+      const SizedBox(height: AuthLayout.fieldGap),
+      if (pending)
+        const VerificationBanner(
+          tone: KycBannerTone.warning,
+          title: 'Verification in Progress',
+          subtitle: 'Your documents are waiting for business review.',
+        )
+      else if (approved)
+        const VerificationBanner(
+          tone: KycBannerTone.success,
+          icon: Icons.verified,
+          title: 'Verification Complete',
+          subtitle: 'Your account has been verified.',
+        )
+      else if (rejected)
+        VerificationBanner(
+          tone: KycBannerTone.danger,
+          icon: Icons.error_outline,
+          title: 'Needs resubmission',
+          subtitle:
+              reviewNote ??
+              'Please update your documents and submit again.',
+        )
+      else
+        const VerificationBanner(
+          tone: KycBannerTone.info,
+          title: 'Manual review required',
+          subtitle:
+              'Complete each step below. Uploading files does not mean KYC is approved.',
+        ),
+      if (_reviewLocked) ...[
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: _loadStatus,
+          icon: const Icon(Icons.refresh),
+          label: const AppText('Refresh Status'),
+        ),
+      ],
+      const SizedBox(height: AuthLayout.fieldGap),
+      KycProgressHeader(completed: progressCount),
+      const SizedBox(height: AuthLayout.fieldGap),
+      const AppText(
+        'Verification Steps',
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          fontSize: AuthLayout.bodySize,
+          letterSpacing: 0,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      const SizedBox(height: 8),
+      for (var index = 0; index < steps.length; index++)
+        KycStepTile(
+          key: ValueKey('kyc-step-$index'),
+          icon: steps[index].icon,
+          title: steps[index].title,
+          subtitle: steps[index].subtitle,
+          state: _stepState(index, steps[index].complete),
+          onTap: _reviewLocked
+              ? null
+              : steps[index].title == 'Personal Details'
+              ? _personalDetails
+              : null,
+        ),
+    ];
+  }
+
+  Widget _footer() {
+    final media = MediaQuery.of(context);
+    final maxWidth = AuthLayout.formMaxWidth(media.size.width);
+    final horizontal = AuthLayout.horizontalPadding(media.size.width);
+    final label = _reviewLocked
+        ? 'Back to Login'
+        : step == 5
+        ? 'Submit KYC for Review'
+        : step == 0
+        ? 'Continue Verification'
+        : 'Continue';
+    VoidCallback? onPressed;
+    if (isSubmitting) {
+      onPressed = null;
+    } else if (_reviewLocked) {
+      onPressed = () => Navigator.popUntil(context, (route) => route.isFirst);
+    } else if (step == 5) {
+      onPressed = _submit;
+    } else {
+      onPressed = () {
+        if (step == 0 && fullName.isEmpty) {
+          _personalDetails();
+          return;
+        }
+        if (step == 1 && !documentsReady) {
+          setState(
+            () => errorText = documentType == 'AADHAAR'
+                ? 'Add both the front and back of Aadhaar'
+                : 'Add your PAN document',
+          );
+          return;
+        }
+        if (step == 2 && selfieFile == null) {
+          setState(() => errorText = 'Add your selfie to continue');
+          return;
+        }
+        if (step == 3 && signatureFile == null) {
+          setState(() => errorText = 'Save your signature to continue');
+          return;
+        }
+        _goTo(step + 1);
+      };
+    }
+
+    return DecoratedBox(
+      key: const ValueKey('kyc-footer'),
+      decoration: BoxDecoration(
+        color: AuthLayout.pageBackground,
+        border: const Border(
+          top: BorderSide(color: AppColors.border),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: maxWidth),
+            child: Padding(
+              padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (errorText != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: AuthFormError(message: errorText!),
+                    ),
+                  AuthSubmitButton(
+                    label: label,
+                    busy: isSubmitting,
+                    onPressed: onPressed,
+                  ),
+                  const SizedBox(height: 12),
+                  const Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.lock_outline,
+                        size: 15,
+                        color: AppColors.textTertiary,
+                      ),
+                      SizedBox(width: 6),
+                      Flexible(
+                        child: AppText(
+                          'Used for identity verification',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: AuthLayout.helperSize,
+                            color: AppColors.textTertiary,
+                            height: 1.35,
+                            letterSpacing: 0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _documentOption(
     String value,
@@ -548,7 +595,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
   ) {
     final selected = documentType == value;
     return InkWell(
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: AppRadius.borderSm,
       onTap: () => setState(() {
         if (documentType != value) {
           selectedFile = null;
@@ -558,12 +605,13 @@ class _KycUploadPageState extends State<KycUploadPage> {
         errorText = null;
       }),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        width: double.infinity,
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFF5F8FF) : Colors.white,
-          borderRadius: BorderRadius.circular(8),
+          color: selected ? AppColors.brandPrimarySoft : AuthLayout.pageBackground,
+          borderRadius: AppRadius.borderSm,
           border: Border.all(
-            color: selected ? AppConfig.primaryColor : AppConfig.borderColor,
+            color: selected ? AppColors.brandPrimary : AppColors.border,
           ),
         ),
         child: Column(
@@ -575,50 +623,42 @@ class _KycUploadPageState extends State<KycUploadPage> {
                 if (value == 'AADHAAR')
                   const AadhaarMark()
                 else
-                  Icon(icon, color: AppConfig.primaryColor),
+                  Icon(icon, color: AppColors.brandPrimary),
                 Icon(
                   selected
                       ? Icons.radio_button_checked
                       : Icons.radio_button_off,
                   size: 17,
                   color: selected
-                      ? AppConfig.primaryColor
-                      : AppConfig.neutralColor,
+                      ? AppColors.brandPrimary
+                      : AppColors.textTertiary,
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            AppText(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+            AppText(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0,
+                height: 1.3,
+              ),
+            ),
             const SizedBox(height: 5),
-            AppText(subtitle, style: const TextStyle(fontSize: 11)),
+            AppText(
+              subtitle,
+              style: const TextStyle(
+                fontSize: AuthLayout.helperSize,
+                height: 1.35,
+                letterSpacing: 0,
+                color: AppColors.textSecondary,
+              ),
+            ),
           ],
         ),
       ),
     );
   }
-
-  Widget _stepRow(
-    IconData icon,
-    String title,
-    String subtitle,
-    bool complete,
-  ) => ListTile(
-    onTap: title == 'Personal Details' ? _personalDetails : null,
-    minTileHeight: 48,
-    visualDensity: VisualDensity.compact,
-    contentPadding: EdgeInsets.zero,
-    leading: Icon(icon, color: AppConfig.primaryColor, size: 22),
-    title: AppText(
-      title,
-      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
-    ),
-    subtitle: AppText(subtitle, style: const TextStyle(fontSize: 11)),
-    trailing: Icon(
-      complete ? Icons.check_circle : Icons.chevron_right,
-      color: complete ? AppConfig.gainColor : AppConfig.neutralColor,
-      size: 18,
-    ),
-  );
 
   Widget _uploadPanel({required bool back}) {
     final file = back ? selectedBackFile : selectedFile;

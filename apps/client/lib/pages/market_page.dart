@@ -18,8 +18,8 @@ import '../theme/app_typography.dart';
 import '../theme/app_ui.dart';
 import '../widgets/app_card.dart';
 import '../widgets/account_metrics.dart';
-import '../widgets/home/home_action_button.dart';
-import '../widgets/home/mini_line_chart_painter.dart';
+import '../widgets/home/home_dashboard.dart';
+import '../widgets/home/home_dashboard_data.dart';
 import '../widgets/profile_menu.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
@@ -35,7 +35,6 @@ import '../services/featured_instruments_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/app_settings_gates.dart';
 import '../widgets/home_announcement_banner.dart';
-import '../widgets/stock_list_tile.dart';
 import '../services/client_account_service.dart';
 import '../services/device_biometrics.dart';
 import '../services/ipo_service.dart';
@@ -53,9 +52,6 @@ import 'product_portfolio_page.dart';
 import 'two_factor_page.dart';
 import 'appearance_page.dart';
 import '../theme/appearance_settings.dart';
-import '../widgets/market_header.dart';
-import '../widgets/market_status_card.dart';
-import '../widgets/stock_logo.dart';
 import '../widgets/floating_support_button.dart';
 import '../widgets/support_chat_launcher.dart';
 import '../widgets/support_ui_metrics.dart';
@@ -635,7 +631,6 @@ class _MarketHomePageState extends State<MarketHomePage>
   Future<void> _refreshMarketData() async {
     final active = _marketRefreshInFlight;
     if (active != null) return active;
-    _failedHomeLogoUrls.clear();
     final refresh = _performMarketRefresh();
     _marketRefreshInFlight = refresh;
     try {
@@ -882,8 +877,8 @@ class _MarketHomePageState extends State<MarketHomePage>
   Future<void> _loadFeaturedStockHistory() async {
     final byInstrument = <String, StockQuote>{};
     for (final stock in <StockQuote>[
-      ..._topMovers(gainers: true),
-      ..._topMovers(gainers: false),
+      ...homeTopMovers(stocks, gainers: true),
+      ...homeTopMovers(stocks, gainers: false),
     ]) {
       byInstrument['${stock.exchange}:${stock.symbol}'] = stock;
     }
@@ -1158,223 +1153,6 @@ class _MarketHomePageState extends State<MarketHomePage>
     }
   }
 
-  Widget _homeFundsCard() {
-    double outstandingIpo = 0;
-    double holdingsValue = 0;
-
-    for (final application in ipoApplications) {
-      if (application.status == IpoApplicationStatus.allocated &&
-          application.remainingAmount > 0) {
-        outstandingIpo += application.remainingAmount;
-      }
-    }
-
-    for (final position in positions.values) {
-      final stock = _stockForOrNull(
-        position.symbol,
-        exchange: position.exchange,
-      );
-      holdingsValue += position.marketValue(
-        stock?.price ?? position.averageCost,
-      );
-    }
-
-    final totalPortfolioValue = cashBalance + holdingsValue;
-    final todayPnl = positions.values.fold<double>(0, (total, position) {
-      final stock = _stockForOrNull(
-        position.symbol,
-        exchange: position.exchange,
-      );
-      return total +
-          position.unrealizedProfitLoss(stock?.price ?? position.averageCost);
-    });
-    final pnlPositive = todayPnl >= 0;
-
-    return Column(
-      children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.fromLTRB(18, 16, 14, 18),
-          decoration: AppUi.heroGradient(radius: AppRadius.lg),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: AppText(
-                      _appContent.text(
-                        'home',
-                        'funds.total_asset_label',
-                        fallback: 'Total Asset Value',
-                      ),
-                      style: AppTypography.labelLarge.copyWith(
-                        color: AppColors.textInverse.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: tr(
-                      _amountsHidden ? 'Show balances' : 'Hide balances',
-                    ),
-                    onPressed: () =>
-                        setState(() => _amountsHidden = !_amountsHidden),
-                    icon: Icon(
-                      _amountsHidden
-                          ? Icons.visibility_off_outlined
-                          : Icons.visibility_outlined,
-                      color: AppColors.textInverse.withValues(alpha: 0.7),
-                      size: 20,
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    tooltip: 'Profit period',
-                    onSelected: (period) =>
-                        unawaited(_loadPortfolioHistory(period)),
-                    itemBuilder: (_) => ['1D', '1W', '1M', '3M', '1Y', 'All']
-                        .map(
-                          (period) => PopupMenuItem(
-                            value: period,
-                            child: AppText(period),
-                          ),
-                        )
-                        .toList(),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AppText(
-                          _portfolioPeriod,
-                          style: AppTypography.labelMedium.copyWith(
-                            color: AppColors.textInverse,
-                          ),
-                        ),
-                        const Icon(
-                          Icons.expand_more,
-                          color: AppColors.textInverse,
-                          size: 18,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final value = AppText(
-                    _balanceText(totalPortfolioValue),
-                    style: AppTypography.numericInverse.copyWith(fontSize: 28),
-                  );
-                  if (_amountsHidden || _portfolioSeries.length < 2) {
-                    return value;
-                  }
-                  final compact =
-                      constraints.maxWidth < 420 ||
-                      MediaQuery.textScalerOf(context).scale(14) > 18;
-                  final chart = ExcludeSemantics(
-                    child: SizedBox(
-                      width: compact ? double.infinity : 116,
-                      height: 40,
-                      child: CustomPaint(
-                        painter: MiniLineChartPainter(
-                          color: (_periodProfit ?? 0) < 0
-                              ? const Color(0xFFFCA5A5)
-                              : AppColors.chartGain,
-                          values: _portfolioSeries,
-                        ),
-                      ),
-                    ),
-                  );
-                  return compact
-                      ? Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            value,
-                            const SizedBox(height: AppSpacing.md),
-                            chart,
-                          ],
-                        )
-                      : Row(
-                          children: [
-                            Expanded(child: value),
-                            const SizedBox(width: AppSpacing.md),
-                            chart,
-                          ],
-                        );
-                },
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              AppText(
-                _amountsHidden
-                    ? '******'
-                    : _portfolioHistoryLoading
-                    ? 'Loading returns...'
-                    : _periodProfit == null
-                    ? 'Insufficient history'
-                    : '${formatPrice(_periodProfit!)} · $_portfolioPeriod',
-                style: AppTypography.labelLarge.copyWith(
-                  color: _amountsHidden || (_periodProfit ?? 0) == 0
-                      ? AppColors.textInverse.withValues(alpha: 0.7)
-                      : (_periodProfit ?? 0) > 0
-                      ? AppColors.chartGain
-                      : const Color(0xFFFCA5A5),
-                  fontWeight: FontWeight.w700,
-                  fontFeatures: AppTypography.tabularFeatures,
-                ),
-              ),
-              if (_historyError != null)
-                AppText(
-                  _historyError!,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textInverse.withValues(alpha: 0.7),
-                  ),
-                ),
-              if (_historyFrom != null && !_amountsHidden)
-                AppText(
-                  'Since $_historyFrom',
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textInverse.withValues(alpha: 0.7),
-                  ),
-                ),
-              if (outstandingIpo > 0) ...[
-                const SizedBox(height: AppSpacing.sm + 2),
-                AppText(
-                  _amountsHidden
-                      ? '******'
-                      : 'IPO Funds Required ${formatPrice(outstandingIpo)}',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.textInverse.withValues(alpha: 0.7),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        _homeQuickActions(),
-        const SizedBox(height: AppSpacing.sm),
-        _accountDataStatus(),
-        AppCard(
-          child: AccountMetrics(
-            items: [
-              AccountMetric('Available Funds', _balanceText(availableBalance)),
-              AccountMetric('Used Margin', _balanceText(frozenBalance)),
-              AccountMetric(
-                'Unrealized P&L',
-                _balanceText(todayPnl, signed: true),
-                color: _amountsHidden || !_accountSnapshotLoaded
-                    ? AppColors.textPrimary
-                    : pnlPositive
-                    ? AppColors.gain
-                    : AppColors.loss,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   String _balanceText(double value, {bool signed = false}) {
     if (_amountsHidden) return '******';
     if (!_accountSnapshotLoaded) return '--';
@@ -1389,577 +1167,128 @@ class _MarketHomePageState extends State<MarketHomePage>
   );
 
   Widget _companyShowcaseCard(CompanyShowcase company) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: AppSpacing.sm + 2),
-      decoration: AppUi.heroGradient(radius: AppRadius.lg),
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: AppColors.textInverse.withValues(alpha: .14),
-                    borderRadius: AppRadius.borderMd,
-                    border: Border.all(
-                      color: AppColors.textInverse.withValues(alpha: 0.24),
-                    ),
-                  ),
-                  child: company.logoUrl?.isNotEmpty == true
-                      ? ClipRRect(
-                          borderRadius: AppRadius.borderMd,
-                          child: Image.network(
-                            company.logoUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, _, _) => const Icon(
-                              Icons.business_rounded,
-                              color: AppColors.textInverse,
-                            ),
-                          ),
-                        )
-                      : const Icon(
-                          Icons.business_rounded,
-                          color: AppColors.textInverse,
-                        ),
-                ),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        company.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.titleMedium.copyWith(
-                          color: AppColors.textInverse,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      AppText(
-                        company.tagline,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelSmall.copyWith(
-                          color: AppColors.textInverse.withValues(alpha: 0.85),
-                          height: 1.3,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            if (company.videoUrl?.isNotEmpty == true) ...[
-              const SizedBox(height: AppSpacing.md),
-              InkWell(
-                onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
-                borderRadius: AppRadius.borderMd,
-                child: Container(
-                  height: 110,
-                  decoration: BoxDecoration(
-                    color: AppColors.brandDark.withValues(alpha: 0.55),
-                    borderRadius: AppRadius.borderMd,
-                    border: Border.all(
-                      color: AppColors.textInverse.withValues(alpha: 0.24),
-                    ),
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 44,
-                          height: 44,
-                          decoration: const BoxDecoration(
-                            color: AppColors.surface,
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.play_arrow_rounded,
-                            color: AppColors.brandDark,
-                            size: 30,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        AppText(
-                          _appContent.text(
-                            'home',
-                            'company.video_cta',
-                            fallback: 'Watch our company introduction',
-                          ),
-                          style: AppTypography.labelSmall.copyWith(
-                            color: AppColors.textInverse,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-            const SizedBox(height: AppSpacing.md),
-            AppText(
-              company.description,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: AppTypography.bodySmall.copyWith(
-                color: AppColors.textInverse.withValues(alpha: 0.9),
-                height: 1.45,
-              ),
-            ),
-            if (company.websiteUrl?.isNotEmpty == true) ...[
-              const SizedBox(height: AppSpacing.sm),
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton(
-                  onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textInverse,
-                  ),
-                  child: AppText(
-                    _appContent.text(
-                      'home',
-                      'company.website_cta',
-                      fallback: 'Visit website',
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _homeQuickActions() {
-    final actions = <Widget>[
-      HomeActionButton(
-        label: _appContent.text(
-          'home',
-          'funds.cta_label',
-          fallback: 'Add Funds',
-        ),
-        subtitle: _appContent.text(
-          'home',
-          'funds.cta_subtitle',
-          fallback: 'Contact support to fund',
-        ),
-        icon: Icons.account_balance_wallet_outlined,
-        color: AppColors.brandPrimary,
-        onTap: _openDepositSupport,
-      ),
-      HomeActionButton(
-        label: _appContent.text(
-          'home',
-          'funds.withdraw_cta_label',
-          fallback: 'Withdraw',
-        ),
-        subtitle: _appContent.text(
-          'home',
-          'funds.withdraw_cta_subtitle',
-          fallback: 'Transfer to Bank',
-        ),
-        icon: Icons.call_made_rounded,
-        color: AppColors.gain,
-        onTap: _openWithdrawalRequest,
-      ),
-      HomeActionButton(
-        label: _appContent.text(
-          'home',
-          'funds.trade_cta_label',
-          fallback: 'Trade',
-        ),
-        subtitle: _appContent.text(
-          'home',
-          'funds.trade_cta_subtitle',
-          fallback: 'Place orders',
-        ),
-        icon: Icons.swap_horiz_rounded,
-        color: AppColors.brandDark,
-        onTap: () => _onDestinationSelected(2),
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final columns = constraints.maxWidth >= 600 * scale
-            ? 3
-            : constraints.maxWidth >= 320 * scale
-            ? 2
-            : 1;
-        final width =
-            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
-        return Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (var index = 0; index < actions.length; index++)
-              SizedBox(
-                width: columns == 2 && index == 2
-                    ? constraints.maxWidth
-                    : width,
-                child: actions[index],
-              ),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _sectionTitle(String title, {VoidCallback? onViewAll}) {
-    return Row(
-      children: [
-        Expanded(child: AppText(title, style: AppUi.sectionTitle)),
-        if (onViewAll != null)
-          TextButton(
-            style: TextButton.styleFrom(
-              minimumSize: const Size(0, 32),
-              padding: const EdgeInsets.symmetric(horizontal: 4),
-              textStyle: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            onPressed: onViewAll,
-            child: AppText(
-              _appContent.text('home', 'view_all_cta', fallback: 'View All'),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _marketIndicesStrip() {
-    final vix =
-        indexQuotes['INDIAVIX'] ??
-        indexQuotes['INDIA VIX'] ??
-        indexQuotes['VIX'];
-    final indices = [
-      (
-        'NIFTY 50',
-        nifty50Price > 0 ? formatIndex(nifty50Price) : '--',
-        nifty50Change,
-      ),
-      (
-        'SENSEX',
-        sensexPrice > 0 ? formatIndex(sensexPrice) : '--',
-        sensexChange,
-      ),
-      (
-        'BANK NIFTY',
-        bankNiftyPrice > 0 ? formatIndex(bankNiftyPrice) : '--',
-        bankNiftyChange,
-      ),
-      (
-        'INDIA VIX',
-        vix != null && vix.$1 > 0 ? formatIndex(vix.$1) : '--',
-        vix?.$2 ?? 0,
-      ),
-    ];
-
-    return SizedBox(
-      height: 84,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: indices.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final item = indices[index];
-          final available = item.$2 != '--';
-          final positive = item.$3 >= 0;
-          final color = !available
-              ? AppColors.neutral
-              : positive
-              ? AppColors.gain
-              : AppColors.loss;
-          return SizedBox(
-            width: 148,
-            child: AppCard(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  AppText(
-                    item.$1,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textTertiary,
-                      fontWeight: FontWeight.w700,
-                      fontSize: 10,
-                    ),
-                  ),
-                  const Spacer(),
-                  AppText(
-                    item.$2,
-                    style: AppTypography.numericSmall.copyWith(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xxs),
-                  AppText(
-                    available
-                        ? '${positive ? '+' : ''}${item.$3.toStringAsFixed(2)}%'
-                        : 'Unavailable',
-                    style: AppTypography.labelSmall.copyWith(
-                      color: color,
-                      fontWeight: FontWeight.w700,
-                      fontFeatures: AppTypography.tabularFeatures,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _homeFeaturedList() {
-    return Column(
-      children: [
-        for (final stock in _homeFeatured.take(8))
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: AppCard(
-              child: stock.price <= 0
-                  ? ListTile(
-                      title: AppText(stock.symbol),
-                      subtitle: AppText(
-                        stock.name.isEmpty ? stock.exchange : stock.name,
-                      ),
-                      trailing: const AppText(
-                        'Unavailable',
-                        style: TextStyle(color: AppColors.textSecondary),
-                      ),
-                      onTap: () => _openStock(stock),
-                    )
-                  : StockListTile(stock: stock, onTap: () => _openStock(stock)),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _compactMovers() {
-    final gainers = _topMovers(gainers: true);
-    final losers = _topMovers(gainers: false);
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth < 300) {
-          return Column(
-            children: [
-              _compactMoverList('Top Gainers', gainers, true),
-              const SizedBox(height: 10),
-              _compactMoverList('Top Losers', losers, false),
-            ],
-          );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(child: _compactMoverList('Top Gainers', gainers, true)),
-            const SizedBox(width: 10),
-            Expanded(child: _compactMoverList('Top Losers', losers, false)),
-          ],
-        );
-      },
-    );
-  }
-
-  final Set<String> _failedHomeLogoUrls = {};
-
-  List<StockQuote> _topMovers({required bool gainers}) {
-    final movers = stocks
-        .where(
-          (stock) =>
-              stock.price > 0 &&
-              stock.change.isFinite &&
-              (gainers ? stock.change > 0 : stock.change < 0),
-        )
-        .toList();
-    movers.sort(
-      (left, right) => gainers
-          ? right.change.compareTo(left.change)
-          : left.change.compareTo(right.change),
-    );
-    return movers.take(3).toList();
-  }
-
-  Widget _compactMoverList(String title, List<StockQuote> list, bool positive) {
-    final color = positive ? AppColors.gain : AppColors.loss;
-    final items = list.take(3).toList();
-
     return AppCard(
-      padding: AppSpacing.card.copyWith(
-        top: AppSpacing.md,
-        bottom: AppSpacing.md,
-      ),
+      radius: AppRadius.sm,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Expanded(
-                child: AppText(
-                  title,
-                  style: AppTypography.labelMedium.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: AppColors.brandPrimarySoft,
+                  borderRadius: AppRadius.borderSm,
+                  border: Border.all(color: AppColors.border),
                 ),
-              ),
-              InkWell(
-                borderRadius: AppRadius.borderSm,
-                onTap: () => setState(() => selectedIndex = 1),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.xs,
-                    vertical: AppSpacing.xxs + 1,
-                  ),
-                  child: AppText(
-                    'View All',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.brandPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm + 2),
-          if (items.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-              child: AppText(
-                positive ? 'No gainers right now' : 'No losers right now',
-                style: AppTypography.labelSmall.copyWith(
-                  color: AppColors.textTertiary,
-                ),
-              ),
-            ),
-          ...items.map(
-            (stock) => InkWell(
-              onTap: () => _openStock(stock),
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm + 1),
-                child: Row(
-                  children: [
-                    StockLogo(
-                      symbol: stock.symbol,
-                      logoUrl: stock.logoUrl,
-                      size: 22,
-                      onLoadFailed: () {
-                        if (!mounted ||
-                            stock.logoUrl == null ||
-                            _failedHomeLogoUrls.contains(stock.logoUrl)) {
-                          return;
-                        }
-                        setState(() => _failedHomeLogoUrls.add(stock.logoUrl!));
-                      },
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            _shortStockName(stock),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.labelSmall.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                            ),
-                          ),
-                          if (stock.exchange.trim().isNotEmpty)
-                            AppText(
-                              stock.exchange,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: AppTypography.caption.copyWith(
-                                fontSize: 10,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    if ((stockHistory[stock.symbol]?.length ?? 0) >= 2) ...[
-                      const SizedBox(width: AppSpacing.xs),
-                      SizedBox(
-                        width: 34,
-                        height: 16,
-                        child: CustomPaint(
-                          painter: MiniLineChartPainter(
-                            color: stock.change >= 0
-                                ? AppColors.gain
-                                : AppColors.loss,
-                            values: stockHistory[stock.symbol]!,
+                child: company.logoUrl?.isNotEmpty == true
+                    ? ClipRRect(
+                        borderRadius: AppRadius.borderSm,
+                        child: Image.network(
+                          company.logoUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const Icon(
+                            Icons.business_rounded,
+                            color: AppColors.brandPrimary,
                           ),
                         ),
+                      )
+                    : const Icon(
+                        Icons.business_rounded,
+                        color: AppColors.brandPrimary,
                       ),
-                    ],
-                    const SizedBox(width: AppSpacing.xs),
-                    SizedBox(
-                      width: 62,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          FittedBox(
-                            child: AppText(
-                              formatPrice(stock.price),
-                              style: AppTypography.numericSmall.copyWith(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          AppText(
-                            '${stock.change > 0 ? '+' : ''}${stock.change.toStringAsFixed(2)}%',
-                            style: AppTypography.labelSmall.copyWith(
-                              color: color,
-                              fontWeight: FontWeight.w800,
-                              fontFeatures: AppTypography.tabularFeatures,
-                            ),
-                          ),
-                        ],
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      company.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.w800,
                       ),
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    AppText(
+                      company.tagline,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.labelSmall.copyWith(height: 1.3),
                     ),
                   ],
                 ),
               ),
-            ),
+            ],
           ),
+          if (company.videoUrl?.isNotEmpty == true) ...[
+            const SizedBox(height: AppSpacing.md),
+            InkWell(
+              onTap: () => launchUrl(Uri.parse(company.videoUrl!)),
+              borderRadius: AppRadius.borderSm,
+              child: Container(
+                height: 88,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceSecondary,
+                  borderRadius: AppRadius.borderSm,
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.play_circle_outline_rounded,
+                        color: AppColors.brandPrimary,
+                        size: 28,
+                      ),
+                      const SizedBox(width: AppSpacing.sm),
+                      AppText(
+                        _appContent.text(
+                          'home',
+                          'company.video_cta',
+                          fallback: 'Watch our company introduction',
+                        ),
+                        style: AppTypography.labelSmall.copyWith(
+                          color: AppColors.brandPrimary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: AppSpacing.md),
+          AppText(
+            company.description,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.bodySmall.copyWith(height: 1.45),
+          ),
+          if (company.websiteUrl?.isNotEmpty == true) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () => launchUrl(Uri.parse(company.websiteUrl!)),
+                child: AppText(
+                  _appContent.text(
+                    'home',
+                    'company.website_cta',
+                    fallback: 'Visit website',
+                  ),
+                ),
+              ),
+            ),
+          ],
         ],
       ),
     );
-  }
-
-  String _shortStockName(StockQuote stock) {
-    const names = {
-      'HDFCBANK': 'HDFC Bank',
-      'RELIANCE': 'Reliance Ind.',
-      'TCS': 'TCS',
-      'ICICIBANK': 'ICICI Bank',
-      'INFY': 'Infosys',
-      'ITC': 'ITC',
-      'HINDUNILVR': 'Hind. Unilever',
-      'NESTLEIND': 'Nestle India',
-      'LT': 'L&T',
-      'TITAN': 'Titan Company',
-    };
-    return names[stock.symbol] ?? stock.name;
   }
 
   void _openDepositSupport() {
@@ -2608,9 +1937,38 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _marketBody() {
-    final horizontalPadding = MediaQuery.sizeOf(context).width < 360
-        ? AppSpacing.md + 2
-        : AppSpacing.lg;
+    double outstandingIpo = 0;
+    double holdingsValue = 0;
+    for (final application in ipoApplications) {
+      if (application.status == IpoApplicationStatus.allocated &&
+          application.remainingAmount > 0) {
+        outstandingIpo += application.remainingAmount;
+      }
+    }
+    for (final position in positions.values) {
+      final stock = _stockForOrNull(
+        position.symbol,
+        exchange: position.exchange,
+      );
+      holdingsValue += position.marketValue(
+        stock?.price ?? position.averageCost,
+      );
+    }
+    final totalPortfolioValue = cashBalance + holdingsValue;
+    final todayPnl = positions.values.fold<double>(0, (total, position) {
+      final stock = _stockForOrNull(
+        position.symbol,
+        exchange: position.exchange,
+      );
+      return total +
+          position.unrealizedProfitLoss(stock?.price ?? position.averageCost);
+    });
+    final vix =
+        indexQuotes['INDIAVIX'] ??
+        indexQuotes['INDIA VIX'] ??
+        indexQuotes['VIX'];
+    final quotes = latestQuoteUpdatedAt(stocks);
+    final stale = quotesAreStale(stocks) || !marketConnected;
     return Container(
       color: AppColors.background,
       child: RefreshIndicator(
@@ -2621,90 +1979,85 @@ class _MarketHomePageState extends State<MarketHomePage>
             _reloadNews(),
           ]);
         },
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: EdgeInsets.fromLTRB(
-            horizontalPadding,
-            AppSpacing.md + 2,
-            horizontalPadding,
-            AppSpacing.xxl,
-          ),
-          children: [
-            if (isLoading) ...[
-              const LinearProgressIndicator(minHeight: 2),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-            // PRIMARY
-            MarketHeader(
-              accountName: accountName,
-              avatarBytes: profileAvatarBytes,
-              onAvatarTap: _pickProfileAvatar,
-              onSearchTap: _openStockSearch,
-              onNotificationTap: _openNotifications,
-              notificationCount: unreadNotificationCount,
+        child: HomeDashboard(
+          accountName: accountName,
+          avatarBytes: profileAvatarBytes,
+          onAvatarTap: () => unawaited(_pickProfileAvatar()),
+          onSearch: _openStockSearch,
+          onNotifications: () => unawaited(_openNotifications()),
+          notificationCount: unreadNotificationCount,
+          totalAssets: totalPortfolioValue,
+          availableFunds: availableBalance,
+          frozenFunds: frozenBalance,
+          todayPnl: todayPnl,
+          accountLoaded: _accountSnapshotLoaded,
+          accountFailed: _accountSnapshotFailed,
+          accountRefreshing: _accountSnapshotRefreshing,
+          quotesLoading: isLoading,
+          marketOpen: marketOpen,
+          marketHours: marketHours,
+          quotesConnected: marketConnected,
+          hideBalances: _amountsHidden,
+          onToggleHideBalances: () =>
+              setState(() => _amountsHidden = !_amountsHidden),
+          periodProfit: _periodProfit,
+          periodLabel: _portfolioPeriod,
+          periodLoading: _portfolioHistoryLoading,
+          historyError: _historyError,
+          historyFrom: _historyFrom,
+          portfolioSeries: _portfolioSeries,
+          outstandingIpo: outstandingIpo,
+          onSelectPeriod: (period) => unawaited(_loadPortfolioHistory(period)),
+          indices: [
+            HomeIndexQuote(
+              label: 'NIFTY 50',
+              price: nifty50Price,
+              changePercent: nifty50Change,
             ),
-            const SizedBox(height: AppSpacing.sm + 2),
-            MarketStatusCard(
-              isOpen: marketOpen,
-              hours: marketHours,
-              quotesConnected: marketConnected,
+            HomeIndexQuote(
+              label: 'SENSEX',
+              price: sensexPrice,
+              changePercent: sensexChange,
             ),
-            if (_homeAnnouncement != null) ...[
-              const SizedBox(height: AppSpacing.sm + 2),
-              HomeAnnouncementBanner(item: _homeAnnouncement!),
-            ],
-            const SizedBox(height: AppSpacing.md + 2),
-            _homeFundsCard(),
-            if (_homeFeatured.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl - 2),
-              _sectionTitle('Featured'),
-              const SizedBox(height: AppSpacing.sm + 2),
-              _homeFeaturedList(),
-            ],
-            // SECONDARY — market overview
-            const SizedBox(height: AppSpacing.xl - 2),
-            _sectionTitle(
-              _appContent.text(
-                'home',
-                'indices.section_title',
-                fallback: 'Market Indices',
-              ),
-              onViewAll: () => setState(() => selectedIndex = 1),
+            HomeIndexQuote(
+              label: 'BANK NIFTY',
+              price: bankNiftyPrice,
+              changePercent: bankNiftyChange,
             ),
-            const SizedBox(height: AppSpacing.sm + 2),
-            _marketIndicesStrip(),
-            const SizedBox(height: AppSpacing.xl - 2),
-            _compactMovers(),
-            // SECONDARY — discovery
-            const SizedBox(height: AppSpacing.xl - 2),
-            _sectionTitle(
-              _appContent.text(
-                'home',
-                'news.section_title',
-                fallback: 'Market News',
-              ),
-              onViewAll: marketNews.isEmpty
-                  ? null
-                  : () => unawaited(_openAllMarketNews()),
+            HomeIndexQuote(
+              label: 'INDIA VIX',
+              price: vix?.$1 ?? 0,
+              changePercent: vix?.$2 ?? 0,
             ),
-            const SizedBox(height: AppSpacing.sm + 2),
-            _marketNewsSection(),
-            // TERTIARY
-            if (companyShowcases.isNotEmpty) ...[
-              const SizedBox(height: AppSpacing.xl - 2),
-              _sectionTitle(
-                _appContent.text(
-                  'home',
-                  'company.section_title',
-                  fallback: 'Our Company',
-                ),
-              ),
-              const SizedBox(height: AppSpacing.sm + 2),
-              _companyShowcaseCard(companyShowcases.first),
-            ],
-            const SizedBox(height: AppSpacing.md + 2),
-            _homeTradingBanner(),
           ],
+          gainers: homeTopMovers(stocks, gainers: true),
+          losers: homeTopMovers(stocks, gainers: false),
+          news: List<MarketNewsItem>.from(marketNews),
+          featured: _homeFeatured,
+          quoteUpdatedAt: quotes,
+          quotesStale: stale,
+          kycStatus: kycStatus,
+          kycAvailable: !isLoading && accountPhone.isNotEmpty,
+          onOpenKyc: () => unawaited(_openAccountSettings('kyc')),
+          onDeposit: _openDepositSupport,
+          onWithdraw: () => unawaited(_openWithdrawalRequest()),
+          onTrade: () => _onDestinationSelected(2),
+          onRetryAccount: () => unawaited(_refreshAccountSnapshot()),
+          onRetryNews: () => unawaited(_reloadNews()),
+          onRetryQuotes: () => unawaited(_refreshMarketData()),
+          onOpenMarkets: () => setState(() => selectedIndex = 1),
+          onOpenNews: (item) => unawaited(_openNews(item)),
+          onOpenStock: _openStock,
+          onViewAllNews: marketNews.isEmpty
+              ? null
+              : () => unawaited(_openAllMarketNews()),
+          announcement: _homeAnnouncement == null
+              ? null
+              : HomeAnnouncementBanner(item: _homeAnnouncement!),
+          companyCard: companyShowcases.isEmpty
+              ? null
+              : _companyShowcaseCard(companyShowcases.first),
+          bottomPadding: SupportUiMetrics.of(context).fabBottom + AppSpacing.lg,
         ),
       ),
     );
@@ -2745,139 +2098,6 @@ class _MarketHomePageState extends State<MarketHomePage>
     }
   }
 
-  Widget _marketNewsSection() {
-    if (marketNews.isEmpty) {
-      return AppCard(
-        child: Row(
-          children: [
-            const Icon(Icons.newspaper_outlined, color: AppColors.textTertiary),
-            const SizedBox(width: AppSpacing.md),
-            Expanded(
-              child: AppText(
-                _appContent.text(
-                  'home',
-                  'news.empty',
-                  fallback: 'Live market news is temporarily unavailable.',
-                ),
-                style: AppTypography.bodySmall.copyWith(
-                  color: AppColors.textTertiary,
-                ),
-              ),
-            ),
-            IconButton(
-              onPressed: _reloadNews,
-              tooltip: 'Retry news',
-              icon: const Icon(Icons.refresh),
-            ),
-          ],
-        ),
-      );
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final oneColumn = constraints.maxWidth < 340;
-        final width = oneColumn
-            ? constraints.maxWidth
-            : (constraints.maxWidth - AppSpacing.sm - 2) / 2;
-        return Wrap(
-          spacing: AppSpacing.sm + 2,
-          runSpacing: AppSpacing.sm + 2,
-          children: marketNews
-              .take(2)
-              .map(
-                (item) => SizedBox(
-                  width: width,
-                  child: AppCard(
-                    padding: EdgeInsets.zero,
-                    onTap: () => _openNews(item),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(
-                          width: double.infinity,
-                          height: 78,
-                          child: item.imageUrl?.isNotEmpty == true
-                              ? Image.network(
-                                  item.imageUrl!,
-                                  fit: BoxFit.cover,
-                                  loadingBuilder: (context, child, progress) {
-                                    if (progress == null) return child;
-                                    return const ColoredBox(
-                                      color: AppColors.surfaceSecondary,
-                                      child: Center(
-                                        child: SizedBox(
-                                          width: 18,
-                                          height: 18,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                      ),
-                                    );
-                                  },
-                                  errorBuilder: (_, _, _) => const ColoredBox(
-                                    color: AppColors.brandPrimarySoft,
-                                    child: Icon(
-                                      Icons.candlestick_chart_rounded,
-                                      color: AppColors.brandPrimary,
-                                      size: 32,
-                                    ),
-                                  ),
-                                )
-                              : const ColoredBox(
-                                  color: AppColors.brandPrimarySoft,
-                                  child: Icon(
-                                    Icons.candlestick_chart_rounded,
-                                    color: AppColors.brandPrimary,
-                                    size: 32,
-                                  ),
-                                ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.all(AppSpacing.sm + 3),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              AppText(
-                                item.title,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.labelMedium.copyWith(
-                                  fontWeight: FontWeight.w800,
-                                  height: 1.28,
-                                ),
-                              ),
-                              const SizedBox(height: AppSpacing.sm),
-                              AppText(
-                                '${item.source}  ·  ${_newsAge(item.publishedAt)}',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: AppTypography.caption.copyWith(
-                                  fontSize: 10,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-              .toList(),
-        );
-      },
-    );
-  }
-
-  String _newsAge(DateTime publishedAt) {
-    final difference = DateTime.now().difference(publishedAt);
-    if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    return '${difference.inDays}d ago';
-  }
-
   Future<void> _openNews(MarketNewsItem item) async {
     final uri = Uri.tryParse(item.url);
     if (uri == null || !{'http', 'https'}.contains(uri.scheme)) {
@@ -2916,54 +2136,6 @@ class _MarketHomePageState extends State<MarketHomePage>
       ..showSnackBar(
         const SnackBar(content: AppText('Unable to open this news article')),
       );
-  }
-
-  Widget _homeTradingBanner() {
-    final title = _appContent.text(
-      'home',
-      'banner.title',
-      fallback: 'Track live markets & place orders on the go',
-    );
-    final subtitle = _appContent.text(
-      'home',
-      'banner.subtitle',
-      fallback: 'Explore equities, institutional offers, OTC and IPOs',
-    );
-    return AppCard(
-      backgroundColor: AppColors.brandPrimarySoft,
-      bordered: false,
-      onTap: () => setState(() => selectedIndex = 2),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                AppText(
-                  title,
-                  style: AppTypography.labelLarge.copyWith(
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                AppText(
-                  subtitle,
-                  style: AppTypography.caption.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.md),
-          const Icon(
-            Icons.candlestick_chart_rounded,
-            size: 40,
-            color: AppColors.brandPrimary,
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _openNotifications() async {

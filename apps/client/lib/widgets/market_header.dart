@@ -60,8 +60,11 @@ class MarketHeader extends StatelessWidget {
                           : AppText(
                               accountName.trim().isEmpty
                                   ? 'C'
-                                  : accountName.trim().characters.first
-                                      .toUpperCase(),
+                                  : accountName
+                                        .trim()
+                                        .characters
+                                        .first
+                                        .toUpperCase(),
                               style: AppTypography.titleMedium.copyWith(
                                 color: AppColors.brandPrimary,
                                 fontWeight: FontWeight.w800,
@@ -145,6 +148,7 @@ class MarketHeader extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Semantics(
           button: true,
+          label: 'Search stocks',
           child: Material(
             color: Colors.transparent,
             child: InkWell(
@@ -161,7 +165,7 @@ class MarketHeader extends StatelessWidget {
                   border: Border.all(color: AppColors.border),
                 ),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 26),
+                  constraints: const BoxConstraints(minHeight: 44),
                   child: Row(
                     children: [
                       const Icon(

@@ -28,6 +28,7 @@ class HomeActionButton extends StatelessWidget {
     return Semantics(
       button: true,
       child: AppCard(
+        radius: AppRadius.sm,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,

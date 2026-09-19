@@ -40,9 +40,9 @@ class HomeAnnouncementBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       color: _accent.withValues(alpha: 0.08),
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         onTap: () {
           showModalBottomSheet<void>(
             context: context,

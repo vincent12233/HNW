@@ -438,6 +438,7 @@ const hindi = <String, String>{
   'Total P&L': 'कुल लाभ / हानि',
   'Total Returns': 'कुल रिटर्न',
   'Available Funds': 'उपलब्ध राशि',
+  'Frozen Funds': 'अवरुद्ध राशि',
   'Used Margin': 'इस्तेमाल किया गया मार्जिन',
   'Unrealized P&L': 'अप्राप्त लाभ / हानि',
   'Realized P&L': 'प्राप्त लाभ / हानि',

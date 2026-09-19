@@ -26,8 +26,8 @@ abstract final class AppMotion {
       reduce(context) ? Duration.zero : normal;
 }
 
-class KycFadeIn extends StatelessWidget {
-  const KycFadeIn({super.key, required this.switchKey, required this.child});
+class AppFadeIn extends StatelessWidget {
+  const AppFadeIn({super.key, required this.switchKey, required this.child});
 
   final Object switchKey;
   final Widget child;
@@ -50,8 +50,8 @@ class KycFadeIn extends StatelessWidget {
   }
 }
 
-class KycStatusSwitch extends StatelessWidget {
-  const KycStatusSwitch({
+class AppStatusSwitch extends StatelessWidget {
+  const AppStatusSwitch({
     super.key,
     required this.switchKey,
     required this.child,
@@ -78,4 +78,17 @@ class KycStatusSwitch extends StatelessWidget {
       child: KeyedSubtree(key: ValueKey(switchKey), child: child),
     );
   }
+}
+
+class KycFadeIn extends AppFadeIn {
+  const KycFadeIn({super.key, required super.switchKey, required super.child});
+}
+
+class KycStatusSwitch extends AppStatusSwitch {
+  const KycStatusSwitch({
+    super.key,
+    required super.switchKey,
+    required super.child,
+    super.duration,
+  });
 }

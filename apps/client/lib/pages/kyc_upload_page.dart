@@ -1,14 +1,13 @@
 import '../l10n/app_language.dart';
-import 'dart:typed_data';
 import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../models/picked_bytes_file.dart';
 import '../services/auth_service.dart';
-import '../app_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/auth_layout.dart';
@@ -19,10 +18,44 @@ import '../widgets/onboarding_widgets.dart';
 import 'bank_details_page.dart';
 import 'selfie_camera_page.dart';
 
+@visibleForTesting
+class KycUploadDebugHarness {
+  const KycUploadDebugHarness({
+    this.step,
+    this.documentType,
+    this.fullName,
+    this.selectedFile,
+    this.selectedBackFile,
+    this.selfieFile,
+    this.signatureFile,
+    this.bankDetails,
+    this.existingStatus,
+    this.reviewNote,
+    this.pickDocument,
+    this.pickSelfie,
+  });
+
+  final int? step;
+  final String? documentType;
+  final String? fullName;
+  final PickedBytesFile? selectedFile;
+  final PickedBytesFile? selectedBackFile;
+  final PickedBytesFile? selfieFile;
+  final PickedBytesFile? signatureFile;
+  final Map<String, String>? bankDetails;
+  final String? existingStatus;
+  final String? reviewNote;
+  final Future<PickedBytesFile?> Function({required bool back})? pickDocument;
+  final Future<PickedBytesFile?> Function({required ImageSource source})?
+  pickSelfie;
+}
+
 class KycUploadPage extends StatefulWidget {
-  const KycUploadPage({super.key, this.accessToken});
+  const KycUploadPage({super.key, this.accessToken, this.debugHarness});
 
   final String? accessToken;
+  @visibleForTesting
+  final KycUploadDebugHarness? debugHarness;
 
   @override
   State<KycUploadPage> createState() => _KycUploadPageState();
@@ -67,7 +100,22 @@ class _KycUploadPageState extends State<KycUploadPage> {
   @override
   void initState() {
     super.initState();
-    _loadStatus();
+    final harness = widget.debugHarness;
+    if (harness != null) {
+      step = harness.step ?? step;
+      documentType = harness.documentType ?? documentType;
+      fullName = harness.fullName ?? fullName;
+      selectedFile = harness.selectedFile;
+      selectedBackFile = harness.selectedBackFile;
+      selfieFile = harness.selfieFile;
+      signatureFile = harness.signatureFile;
+      bankDetails = harness.bankDetails;
+      existingStatus = harness.existingStatus;
+      reviewNote = harness.reviewNote;
+    }
+    if (harness?.existingStatus == null) {
+      _loadStatus();
+    }
   }
 
   Future<void> _loadStatus() async {
@@ -234,101 +282,10 @@ class _KycUploadPageState extends State<KycUploadPage> {
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
                   if (step == 0 || _reviewLocked) ..._overviewChildren(),
-                  if (!_reviewLocked && step == 1) ...[
-                    if (documentType == 'AADHAAR')
-                      const Padding(
-                        padding: EdgeInsets.only(bottom: 16),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            AppText(
-                              '1  Front',
-                              style: TextStyle(color: AppConfig.primaryColor),
-                            ),
-                            AppText('2  Back'),
-                            AppText('3  Review'),
-                          ],
-                        ),
-                      ),
-                    _uploadPanel(back: false),
-                    if (documentType == 'AADHAAR') ...[
-                      const SizedBox(height: 20),
-                      _uploadPanel(back: true),
-                    ],
-                  ] else if (!_reviewLocked && step == 2) ...[
-                    _selfiePanel(),
-                  ] else if (!_reviewLocked && step == 3) ...[
-                    if (signatureFile == null)
-                      KycSignaturePad(
-                        onSaved: (bytes) => setState(() {
-                          signatureFile = PickedBytesFile(
-                            name: 'signature.png',
-                            bytes: bytes,
-                          );
-                          errorText = null;
-                        }),
-                        onChanged: () {
-                          if (signatureFile != null) {
-                            setState(() => signatureFile = null);
-                          }
-                        },
-                      )
-                    else ...[
-                      Image.memory(
-                        signatureFile!.bytes,
-                        height: 180,
-                        fit: BoxFit.contain,
-                      ),
-                      const SizedBox(height: 12),
-                      const AppText(
-                        'Signature saved',
-                        style: TextStyle(color: AppConfig.gainColor),
-                      ),
-                      TextButton.icon(
-                        onPressed: () => setState(() => signatureFile = null),
-                        icon: const Icon(Icons.refresh),
-                        label: const AppText('Retake Signature'),
-                      ),
-                    ],
-                  ] else if (!_reviewLocked && step == 5) ...[
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: const AppText('Personal Details'),
-                      subtitle: AppText(fullName),
-                      trailing: TextButton(
-                        onPressed: _personalDetails,
-                        child: const AppText('Edit'),
-                      ),
-                    ),
-                    if (bankDetails != null)
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: const AppText('Bank Details'),
-                        subtitle: AppText(
-                          '${bankDetails!['bankName']}\n${bankDetails!['accountHolder']}\n${bankDetails!['accountNumber']}',
-                        ),
-                        trailing: TextButton(
-                          onPressed: _bankDetails,
-                          child: const AppText('Edit'),
-                        ),
-                      ),
-                    _reviewFile(selfieFile!, 'Selfie', editStep: 2),
-                    _reviewFile(signatureFile!, 'Signature', editStep: 3),
-                    _reviewFile(
-                      selectedFile!,
-                      documentType == 'PAN' ? 'PAN Card' : 'Aadhaar front',
-                    ),
-                    if (selectedBackFile != null && documentType == 'AADHAAR')
-                      _reviewFile(selectedBackFile!, 'Aadhaar back'),
-                    const SizedBox(height: 16),
-                    const AppText(
-                      'Check that all details are readable before submitting. Uploading documents does not mean your KYC has been approved.',
-                      style: TextStyle(
-                        color: AppConfig.textSecondaryColor,
-                        height: 1.6,
-                      ),
-                    ),
-                  ],
+                  if (!_reviewLocked && step == 1) ..._documentStep(),
+                  if (!_reviewLocked && step == 2) ..._selfieStep(),
+                  if (!_reviewLocked && step == 3) ..._signatureStep(),
+                  if (!_reviewLocked && step == 5) ..._reviewStep(),
                           const SizedBox(height: 24),
                     ],
                         ),
@@ -473,9 +430,6 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Widget _footer() {
-    final media = MediaQuery.of(context);
-    final maxWidth = AuthLayout.formMaxWidth(media.size.width);
-    final horizontal = AuthLayout.horizontalPadding(media.size.width);
     final label = _reviewLocked
         ? 'Back to Login'
         : step == 5
@@ -516,74 +470,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
       };
     }
 
-    return DecoratedBox(
-      key: const ValueKey('kyc-footer'),
-      decoration: BoxDecoration(
-        color: AuthLayout.pageBackground,
-        border: const Border(
-          top: BorderSide(color: AppColors.border),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: maxWidth),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(horizontal, 12, horizontal, 12),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (errorText != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: AuthFormError(message: errorText!),
-                    ),
-                  AuthSubmitButton(
-                    label: label,
-                    busy: isSubmitting,
-                    onPressed: onPressed,
-                  ),
-                  const SizedBox(height: 12),
-                  const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.lock_outline,
-                        size: 15,
-                        color: AppColors.textTertiary,
-                      ),
-                      SizedBox(width: 6),
-                      Flexible(
-                        child: AppText(
-                          'Used for identity verification',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: AuthLayout.helperSize,
-                            color: AppColors.textTertiary,
-                            height: 1.35,
-                            letterSpacing: 0,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return KycFlowFooter(
+      label: label,
+      busy: isSubmitting,
+      errorText: errorText,
+      onPressed: onPressed,
     );
   }
 
@@ -660,6 +551,272 @@ class _KycUploadPageState extends State<KycUploadPage> {
     );
   }
 
+  List<Widget> _documentStep() {
+    final pan = documentType == 'PAN';
+    return [
+      KycStepIntro(
+        current: 2,
+        total: 6,
+        title: pan ? 'Upload PAN Card' : 'Aadhaar Verification',
+        subtitle: pan
+            ? 'Upload a clear photo of the front of your PAN. Files are stored for manual review.'
+            : 'Upload clear photos of the front and back of your Aadhaar. Files are stored for manual review.',
+      ),
+      const SizedBox(height: AuthLayout.fieldGap),
+      AppText(
+        pan ? 'You have selected PAN Card' : 'You have selected Aadhaar Card',
+        style: const TextStyle(
+          fontSize: AuthLayout.bodySize,
+          fontWeight: FontWeight.w600,
+          letterSpacing: 0,
+          color: AppColors.textPrimary,
+        ),
+      ),
+      const SizedBox(height: 8),
+      const AppText(
+        'PDF, JPG, PNG, WEBP, HEIC or HEIF · Maximum 15 MB',
+        style: TextStyle(
+          fontSize: AuthLayout.helperSize,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      const SizedBox(height: AuthLayout.fieldGap),
+      _uploadPanel(back: false),
+      if (!pan) ...[
+        const SizedBox(height: 20),
+        _uploadPanel(back: true),
+      ],
+    ];
+  }
+
+  List<Widget> _selfieStep() => [
+    const KycStepIntro(
+      current: 3,
+      total: 6,
+      title: 'Take a Clear Selfie',
+      subtitle:
+          'Take a selfie in good lighting. Keep your face fully visible. This photo is stored for manual review.',
+    ),
+    const SizedBox(height: AuthLayout.fieldGap),
+    KycSelfieFrame(bytes: selfieFile?.bytes),
+    const SizedBox(height: 16),
+    if (selfieFile != null) ...[
+      const AppText(
+        'Selfie captured',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0,
+          color: AppColors.brandPrimary,
+        ),
+      ),
+      const SizedBox(height: 4),
+      const AppText(
+        'Waiting for manual review',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          fontSize: AuthLayout.helperSize,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      const SizedBox(height: 16),
+    ],
+    const AppText(
+      'Keep your face fully visible. Remove glasses, hats and masks. Use even lighting and avoid blur.',
+      style: TextStyle(
+        fontSize: AuthLayout.helperSize,
+        height: 1.5,
+        letterSpacing: 0,
+        color: AppColors.textSecondary,
+      ),
+    ),
+    const SizedBox(height: 20),
+    AuthSubmitButton(
+      label: selfieFile == null ? 'Capture Selfie' : 'Retake',
+      onPressed: () => _pickSelfie(ImageSource.camera),
+    ),
+    const SizedBox(height: 8),
+    AuthOutlinedButton(
+      label: 'Choose from Gallery',
+      icon: Icons.photo_outlined,
+      onPressed: () => _pickSelfie(ImageSource.gallery),
+    ),
+    const SizedBox(height: 8),
+    const AppText(
+      'Maximum 2 MB · Submitted for manual review',
+      style: TextStyle(
+        fontSize: AuthLayout.helperSize,
+        color: AppColors.textSecondary,
+      ),
+    ),
+  ];
+
+  List<Widget> _signatureStep() => [
+    const KycStepIntro(
+      current: 4,
+      total: 6,
+      title: 'Provide Your Signature',
+      subtitle: 'Sign below using your finger or a stylus.',
+    ),
+    const SizedBox(height: AuthLayout.fieldGap),
+    if (signatureFile == null)
+      KycSignaturePad(
+        onSaved: (bytes) => setState(() {
+          signatureFile = PickedBytesFile(
+            name: 'signature.png',
+            bytes: bytes,
+          );
+          errorText = null;
+        }),
+        onChanged: () {
+          if (signatureFile != null) {
+            setState(() => signatureFile = null);
+          }
+        },
+      )
+    else ...[
+      SizedBox(
+        height: 180,
+        width: double.infinity,
+        child: Image.memory(
+          signatureFile!.bytes,
+          fit: BoxFit.contain,
+        ),
+      ),
+      const SizedBox(height: 12),
+      const AppText(
+        'Signature saved',
+        style: TextStyle(
+          fontWeight: FontWeight.w700,
+          color: AppColors.success,
+        ),
+      ),
+      const SizedBox(height: 4),
+      const AppText(
+        'Waiting for manual review',
+        style: TextStyle(
+          fontSize: AuthLayout.helperSize,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      const SizedBox(height: 12),
+      AuthOutlinedButton(
+        label: 'Retake Signature',
+        icon: Icons.refresh,
+        onPressed: () => setState(() => signatureFile = null),
+      ),
+    ],
+  ];
+
+  List<Widget> _reviewStep() {
+    final missing = <String>[
+      if (fullName.isEmpty) 'Personal details',
+      if (!documentsReady)
+        documentType == 'AADHAAR'
+            ? 'Aadhaar front and back'
+            : 'PAN document',
+      if (selfieFile == null) 'Selfie',
+      if (signatureFile == null) 'Signature',
+      if (bankDetails == null) 'Bank details',
+    ];
+    return [
+      const KycStepIntro(
+        current: 6,
+        total: 6,
+        title: 'Review Documents',
+        subtitle:
+            'Check each step before submitting. Uploading files does not mean KYC is approved.',
+      ),
+      const SizedBox(height: AuthLayout.fieldGap),
+      const VerificationBanner(
+        tone: KycBannerTone.info,
+        title: 'Waiting for manual review',
+        subtitle:
+            'After you submit, a reviewer will check your documents. There is no instant verification.',
+      ),
+      const SizedBox(height: AuthLayout.fieldGap),
+      if (missing.isNotEmpty) ...[
+        VerificationBanner(
+          tone: KycBannerTone.danger,
+          icon: Icons.error_outline,
+          title: 'Missing information',
+          subtitle: missing.join(', '),
+        ),
+        const SizedBox(height: AuthLayout.fieldGap),
+      ],
+      _reviewRow(
+        'Personal Details',
+        fullName.isEmpty ? 'Not added' : fullName,
+        complete: fullName.isNotEmpty,
+        onEdit: _personalDetails,
+      ),
+      _reviewRow(
+        'Upload documents',
+        documentsReady
+            ? (documentType == 'PAN'
+                  ? selectedFile?.name ?? 'PAN Card'
+                  : 'Aadhaar front and back selected')
+            : 'Not added',
+        complete: documentsReady,
+        onEdit: () => _goTo(1),
+      ),
+      _reviewRow(
+        'Selfie',
+        selfieFile?.name ?? 'Not added',
+        complete: selfieFile != null,
+        onEdit: () => _goTo(2),
+      ),
+      _reviewRow(
+        'Signature',
+        signatureFile?.name ?? 'Not added',
+        complete: signatureFile != null,
+        onEdit: () => _goTo(3),
+      ),
+      _reviewRow(
+        'Bank Details',
+        bankDetails == null
+            ? 'Not added'
+            : '${bankDetails!['bankName']}\n${bankDetails!['accountHolder']}\n${_maskedAccount(bankDetails!['accountNumber'] ?? '')}',
+        complete: bankDetails != null,
+        onEdit: _bankDetails,
+      ),
+      const SizedBox(height: 16),
+      const AppText(
+        'Check that all details are readable before submitting. Uploading documents does not mean your KYC has been approved.',
+        style: TextStyle(
+          color: AppColors.textSecondary,
+          height: 1.6,
+          letterSpacing: 0,
+        ),
+      ),
+    ];
+  }
+
+  Widget _reviewRow(
+    String title,
+    String subtitle, {
+    required bool complete,
+    required VoidCallback onEdit,
+  }) => ListTile(
+    contentPadding: EdgeInsets.zero,
+    leading: Icon(
+      complete ? Icons.check_circle : Icons.radio_button_unchecked,
+      color: complete ? AppColors.success : AppColors.textTertiary,
+    ),
+    title: AppText(title),
+    subtitle: AppText(subtitle),
+    trailing: TextButton(
+      onPressed: isSubmitting ? null : onEdit,
+      child: const AppText('Edit'),
+    ),
+  );
+
+  String _maskedAccount(String value) {
+    final trimmed = value.trim();
+    if (trimmed.length <= 4) return '••••';
+    return '•••• ${trimmed.substring(trimmed.length - 4)}';
+  }
+
   Widget _uploadPanel({required bool back}) {
     final file = back ? selectedBackFile : selectedFile;
     final label = documentType == 'PAN'
@@ -667,141 +824,75 @@ class _KycUploadPageState extends State<KycUploadPage> {
         : back
         ? 'Aadhaar Back'
         : 'Aadhaar Front';
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        AppText(
-          '$label (Required)',
-          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
-        ),
-        const SizedBox(height: 6),
-        const AppText(
-          'Keep all corners visible and avoid glare.',
-          style: TextStyle(fontSize: 11),
-        ),
-        const SizedBox(height: 12),
-        InkWell(
-          borderRadius: BorderRadius.circular(8),
-          onTap: isSubmitting ? null : () => _pickFile(back: back),
-          child: Container(
-            height: 170,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: const Color(0xFFF8FAFE),
-              border: Border.all(color: AppConfig.borderColor),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child:
-                file != null &&
-                    const {
-                      'jpg',
-                      'jpeg',
-                      'png',
-                      'webp',
-                    }.contains(file.extension?.toLowerCase())
-                ? Image.memory(
-                    file.bytes,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, _, _) =>
-                        const Center(child: AppText('Preview unavailable')),
-                  )
-                : Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        file == null
-                            ? Icons.add_photo_alternate_outlined
-                            : Icons.description_outlined,
-                        size: 42,
-                        color: AppConfig.primaryColor,
-                      ),
-                      const SizedBox(height: 10),
-                      AppText(
-                        file?.name ?? 'Add $label',
-                        textAlign: TextAlign.center,
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        FilledButton.icon(
-          onPressed: isSubmitting ? null : () => _takePhoto(back: back),
-          icon: const Icon(Icons.photo_camera_outlined, size: 18),
-          label: AppText('Capture ${back ? 'Back' : 'Front'}'),
-        ),
-        const SizedBox(height: 6),
-        AppText(
-          file == null
-              ? 'PDF, JPG, PNG, WEBP, HEIC or HEIF · Maximum 15 MB'
-              : '${file.name} · ${(file.size / 1024).toStringAsFixed(1)} KB',
-          style: const TextStyle(
-            fontSize: 10,
-            color: AppConfig.textSecondaryColor,
-          ),
-        ),
-      ],
+    return KycLocalFileCard(
+      key: ValueKey(back ? 'kyc-document-back' : 'kyc-document-front'),
+      title: '$label (Required)',
+      hint: 'Keep all corners visible and avoid glare.',
+      emptyLabel: 'Add $label',
+      captureLabel: 'Capture ${back ? 'Back' : 'Front'}',
+      file: file,
+      busy: isSubmitting,
+      onCapture: () => _takePhoto(back: back),
+      onChoose: () => _pickFile(back: back),
+      onReplace: () => _pickFile(back: back),
+      onRemove: () => _confirmRemove(back: back),
     );
   }
 
-  Widget _reviewFile(PickedBytesFile file, String title, {int editStep = 1}) =>
-      ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: const Icon(Icons.check_circle, color: AppConfig.gainColor),
-        title: AppText(title),
-        subtitle: AppText(file.name),
-        trailing: TextButton(
-          onPressed: isSubmitting ? null : () => _goTo(editStep),
-          child: const AppText('Edit'),
+  Future<void> _confirmRemove({required bool back}) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const AppText('Remove this file?'),
+        content: const AppText(
+          'This only clears the file selected on this device. It does not delete anything already submitted for review.',
         ),
-      );
-  Widget _selfiePanel() => Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: [
-      Center(
-        child: Container(
-          width: 210,
-          height: 210,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: AppConfig.primaryColor),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const AppText('Cancel'),
           ),
-          padding: const EdgeInsets.all(8),
-          child: ClipOval(
-            child: selfieFile == null
-                ? const ColoredBox(
-                    color: Color(0xFFF5F8FF),
-                    child: Icon(
-                      Icons.person_outline,
-                      size: 110,
-                      color: AppConfig.primaryColor,
-                    ),
-                  )
-                : Image.memory(selfieFile!.bytes, fit: BoxFit.cover),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const AppText('Remove'),
           ),
-        ),
+        ],
       ),
-      const SizedBox(height: 20),
-      const AppText(
-        'Take a clear selfie in good lighting. Keep your face fully visible and remove glasses, hats and masks.',
-        style: TextStyle(fontSize: 12, height: 1.6),
-      ),
-      const SizedBox(height: 20),
-      FilledButton.icon(
-        onPressed: () => _pickSelfie(ImageSource.camera),
-        icon: const Icon(Icons.photo_camera_outlined),
-        label: const AppText('Capture Selfie'),
-      ),
-      const SizedBox(height: 8),
-      const AppText(
-        'Maximum 2 MB · Submitted for manual review',
-        style: TextStyle(fontSize: 11),
-      ),
-    ],
-  );
+    );
+    if (confirmed == true && mounted) {
+      setState(() {
+        if (back) {
+          selectedBackFile = null;
+        } else {
+          selectedFile = null;
+        }
+        errorText = null;
+      });
+    }
+  }
 
   Future<void> _pickSelfie(ImageSource source) async {
     try {
+      final debugPick = widget.debugHarness?.pickSelfie;
+      if (debugPick != null) {
+        final file = await debugPick(source: source);
+        if (!mounted || file == null) return;
+        if (file.bytes.isEmpty || file.size > 2 * 1024 * 1024) {
+          setState(() => errorText = 'Choose an image no larger than 2 MB');
+          return;
+        }
+        final extension = file.extension ?? _imageExtension(file.bytes);
+        if (extension == null ||
+            !const {'jpg', 'jpeg', 'png', 'webp'}.contains(extension)) {
+          setState(() => errorText = 'Choose a JPG, PNG or WebP image');
+          return;
+        }
+        setState(() {
+          selfieFile = file;
+          errorText = null;
+        });
+        return;
+      }
       if (source == ImageSource.camera) {
         final bytes = await Navigator.push<Uint8List>(
           context,
@@ -880,22 +971,31 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Future<void> _readPickedFile({bool back = false}) async {
-    final picked = await FilePicker.pickFile(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
-    );
+    final PickedBytesFile? file;
+    final debugPick = widget.debugHarness?.pickDocument;
+    if (debugPick != null) {
+      file = await debugPick(back: back);
+    } else {
+      final picked = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'],
+      );
+      if (!mounted || picked == null) {
+        return;
+      }
+      file = PickedBytesFile(name: picked.name, bytes: await picked.readAsBytes());
+    }
 
-    if (!mounted || picked == null) {
+    if (!mounted || file == null) {
       return;
     }
-    final bytes = await picked.readAsBytes();
-    final file = PickedBytesFile(name: picked.name, bytes: bytes);
     if (!_validateFile(file)) return;
+    final chosen = file;
     setState(() {
       if (back) {
-        selectedBackFile = file;
+        selectedBackFile = chosen;
       } else {
-        selectedFile = file;
+        selectedFile = chosen;
       }
       errorText = null;
     });
@@ -915,6 +1015,10 @@ class _KycUploadPageState extends State<KycUploadPage> {
   }
 
   Future<void> _captureDocument({bool back = false}) async {
+    if (widget.debugHarness?.pickDocument != null) {
+      await _readPickedFile(back: back);
+      return;
+    }
     final bytes = await Navigator.of(context).push<Uint8List>(
       MaterialPageRoute(
         builder: (_) => SelfieCameraPage(

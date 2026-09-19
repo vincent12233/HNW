@@ -1,8 +1,11 @@
 import '../l10n/app_language.dart';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+
+import '../theme/app_colors.dart';
+import '../widgets/onboarding_widgets.dart';
 
 class SelfieCameraPage extends StatefulWidget {
   const SelfieCameraPage({
@@ -12,6 +15,7 @@ class SelfieCameraPage extends StatefulWidget {
     this.captureLabel = 'Capture Selfie',
     this.maxBytes = 2 * 1024 * 1024,
     this.preserveOriginal = false,
+    this.debugForceError,
   });
 
   final CameraLensDirection lensDirection;
@@ -19,6 +23,8 @@ class SelfieCameraPage extends StatefulWidget {
   final String captureLabel;
   final int maxBytes;
   final bool preserveOriginal;
+  @visibleForTesting
+  final String? debugForceError;
 
   @override
   State<SelfieCameraPage> createState() => _SelfieCameraPageState();
@@ -34,7 +40,11 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _open();
+    if (widget.debugForceError != null) {
+      _error = widget.debugForceError;
+    } else {
+      _open();
+    }
   }
 
   Future<void> _open() async {
@@ -142,34 +152,97 @@ class _SelfieCameraPageState extends State<SelfieCameraPage>
     }
   }
 
+  bool get _selfieMode =>
+      widget.lensDirection == CameraLensDirection.front &&
+      !widget.preserveOriginal;
+
+  Widget _preview() {
+    final camera = _camera!;
+    if (!_selfieMode) {
+      return Center(child: CameraPreview(camera));
+    }
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final diameter = (constraints.biggest.shortestSide - 48).clamp(
+          180.0,
+          320.0,
+        );
+        return Center(
+          child: Container(
+            width: diameter,
+            height: diameter,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: AppColors.brandPrimary, width: 3),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: ClipOval(child: CameraPreview(camera)),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: Colors.black,
-    appBar: AppBar(title: AppText(widget.title)),
-    body: _error != null
-        ? Center(
-            child: Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  AppText(_error!, style: const TextStyle(color: Colors.white)),
-                  TextButton(onPressed: _open, child: const AppText('Retry')),
-                ],
+    appBar: AppBar(
+      backgroundColor: Colors.black,
+      foregroundColor: Colors.white,
+      title: AppText(widget.title),
+    ),
+    body: SafeArea(
+      child: Column(
+        children: [
+          Expanded(
+            child: _error != null
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AppText(
+                            _error!,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: _open,
+                            child: const AppText('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                : _camera == null
+                ? const Center(child: CircularProgressIndicator())
+                : _preview(),
+          ),
+          DecoratedBox(
+            key: const ValueKey('kyc-camera-footer'),
+            decoration: const BoxDecoration(
+              color: Colors.black,
+              border: Border(top: BorderSide(color: Color(0x33FFFFFF))),
+            ),
+            child: SafeArea(
+              top: false,
+              child: Align(
+                alignment: Alignment.bottomCenter,
+                heightFactor: 1,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+                  child: AuthSubmitButton(
+                    label: _capturing ? 'Capturing...' : widget.captureLabel,
+                    busy: _capturing,
+                    onPressed: _camera == null || _capturing ? null : _capture,
+                  ),
+                ),
               ),
             ),
-          )
-        : _camera == null
-        ? const Center(child: CircularProgressIndicator())
-        : Center(child: CameraPreview(_camera!)),
-    bottomNavigationBar: SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: FilledButton.icon(
-          onPressed: _camera == null || _capturing ? null : _capture,
-          icon: const Icon(Icons.camera_alt_outlined),
-          label: AppText(_capturing ? 'Capturing...' : widget.captureLabel),
-        ),
+          ),
+        ],
       ),
     ),
   );

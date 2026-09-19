@@ -2,7 +2,10 @@ import '../l10n/app_language.dart';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
-import '../app_config.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_radius.dart';
+import '../theme/auth_layout.dart';
+import '../widgets/onboarding_widgets.dart';
 
 /// Normalized points preserve the signature when the layout width changes.
 class KycSignaturePad extends StatefulWidget {
@@ -38,6 +41,15 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
         );
       }
     });
+  }
+
+  void _clear() {
+    if (_saving) return;
+    setState(() {
+      _strokes.clear();
+      _error = null;
+    });
+    widget.onChanged();
   }
 
   Future<void> _save() async {
@@ -82,64 +94,76 @@ class _KycSignaturePadState extends State<KycSignaturePad> {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const AppText(
-        'Sign in the box below',
-        style: TextStyle(fontWeight: FontWeight.w700),
-      ),
-      const SizedBox(height: 12),
       LayoutBuilder(
         builder: (context, constraints) {
-          final size = Size(constraints.maxWidth, 200);
-          return Container(
-            height: size.height,
+          final width = constraints.maxWidth;
+          final height = (width * 0.5).clamp(140.0, 200.0);
+          final size = Size(width, height);
+          return DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: AppConfig.borderColor),
-              borderRadius: BorderRadius.circular(8),
+              color: AuthLayout.pageBackground,
+              border: Border.all(color: AppColors.border),
+              borderRadius: AppRadius.borderSm,
             ),
-            clipBehavior: Clip.antiAlias,
-            child: GestureDetector(
-              key: const ValueKey('signature-canvas'),
-              behavior: HitTestBehavior.opaque,
-              onPanStart: (details) =>
-                  _point(details.localPosition, size, start: true),
-              onPanUpdate: (details) => _point(details.localPosition, size),
-              child: CustomPaint(
-                painter: SignaturePainter(_strokes),
-                size: size,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: _saving ? null : _clear,
+                    icon: const Icon(Icons.refresh, size: 16),
+                    label: const AppText('Clear'),
+                  ),
+                ),
+                SizedBox(
+                  width: width,
+                  height: height,
+                  child: ClipRRect(
+                    borderRadius: AppRadius.borderSm,
+                    child: GestureDetector(
+                      key: const ValueKey('signature-canvas'),
+                      behavior: HitTestBehavior.opaque,
+                      onPanStart: (details) =>
+                          _point(details.localPosition, size, start: true),
+                      onPanUpdate: (details) =>
+                          _point(details.localPosition, size),
+                      child: CustomPaint(
+                        painter: SignaturePainter(_strokes),
+                        size: size,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         },
       ),
-      Align(
-        alignment: Alignment.centerRight,
-        child: TextButton.icon(
-          onPressed: _saving
-              ? null
-              : () {
-                  setState(() {
-                    _strokes.clear();
-                    _error = null;
-                  });
-                  widget.onChanged();
-                },
-          icon: const Icon(Icons.refresh, size: 16),
-          label: const AppText('Clear'),
-        ),
-      ),
+      const SizedBox(height: 12),
       const AppText(
         'Use your finger or a stylus. Your signature will be submitted with your identity documents.',
-        style: TextStyle(fontSize: 12, color: AppConfig.textSecondaryColor),
+        style: TextStyle(
+          fontSize: AuthLayout.helperSize,
+          height: 1.4,
+          letterSpacing: 0,
+          color: AppColors.textSecondary,
+        ),
       ),
       const SizedBox(height: 16),
-      OutlinedButton.icon(
-        onPressed: _saving ? null : _save,
-        icon: const Icon(Icons.draw_outlined, size: 18),
-        label: AppText(_saving ? 'Saving…' : 'Save Signature'),
+      AuthOutlinedButton(
+        label: _saving ? 'Saving…' : 'Save Signature',
+        icon: Icons.draw_outlined,
+        busy: _saving,
+        onPressed: _save,
       ),
-      if (_error != null)
-        AppText(_error!, style: const TextStyle(color: AppConfig.lossColor)),
+      if (_error != null) ...[
+        const SizedBox(height: 8),
+        AppText(
+          _error!,
+          style: const TextStyle(color: AppColors.loss),
+        ),
+      ],
     ],
   );
 }
@@ -151,7 +175,7 @@ class SignaturePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final pen = Paint()
-      ..color = AppConfig.textPrimaryColor
+      ..color = AppColors.textPrimary
       ..strokeWidth = size.width / 220
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round

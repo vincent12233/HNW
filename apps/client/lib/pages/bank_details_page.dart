@@ -1,11 +1,11 @@
-import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../app_config.dart';
-import '../services/client_account_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/auth_layout.dart';
+import '../services/client_account_service.dart';
 import '../utils/client_error_message.dart';
+import '../widgets/onboarding_widgets.dart';
 
 class BankDetailsPage extends StatefulWidget {
   const BankDetailsPage({super.key, this.onContinue, this.initial = const {}});
@@ -18,13 +18,18 @@ class BankDetailsPage extends StatefulWidget {
 
 class _BankDetailsPageState extends State<BankDetailsPage> {
   final _form = GlobalKey<FormState>();
+  final _scroll = ScrollController();
   final _holder = TextEditingController();
   final _number = TextEditingController();
   final _confirm = TextEditingController();
   final _ifsc = TextEditingController();
   final _bank = TextEditingController();
   bool _saving = false;
+  bool _hideNumber = true;
+  bool _hideConfirm = true;
   String? _error;
+
+  bool get _kycFlow => widget.onContinue != null;
 
   @override
   void initState() {
@@ -38,6 +43,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
 
   @override
   void dispose() {
+    _scroll.dispose();
     for (final controller in [_holder, _number, _confirm, _ifsc, _bank]) {
       controller.dispose();
     }
@@ -45,14 +51,17 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
   }
 
   Future<void> _save() async {
-    if (_saving || !_form.currentState!.validate()) return;
+    if (_saving) return;
+    if (!_form.currentState!.validate()) return;
+    final payload = <String, String>{
+      'bankName': _bank.text.trim(),
+      'accountHolder': _holder.text.trim(),
+      'accountNumber': _number.text.trim(),
+      'ifscCode': _ifsc.text.trim().toUpperCase(),
+    };
     if (widget.onContinue != null) {
-      widget.onContinue!({
-        'bankName': _bank.text.trim(),
-        'accountHolder': _holder.text.trim(),
-        'accountNumber': _number.text.trim(),
-        'ifscCode': _ifsc.text.trim().toUpperCase(),
-      });
+      setState(() => _saving = true);
+      widget.onContinue!(payload);
       return;
     }
     setState(() {
@@ -60,12 +69,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
       _error = null;
     });
     try {
-      await ClientAccountService().addBank({
-        'bankName': _bank.text.trim(),
-        'accountHolder': _holder.text.trim(),
-        'accountNumber': _number.text.trim(),
-        'ifscCode': _ifsc.text.trim().toUpperCase(),
-      });
+      await ClientAccountService().addBank(payload);
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) setState(() => _error = clientErrorMessage(error));
@@ -75,177 +79,231 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_saving,
-    child: AppPageScaffold(
-      appBar: AppBar(title: const AppText('Bank Details')),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
-          child: Form(
-            key: _form,
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: AppColors.brandPrimarySoft,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: const Row(
-                    children: [
-                      Icon(
-                        Icons.account_balance,
-                        color: AppConfig.primaryColor,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(
-                              'Add Bank Account',
-                              style: TextStyle(fontWeight: FontWeight.w700),
-                            ),
-                            SizedBox(height: 4),
-                            AppText(
-                              'Enter your bank details for withdrawals.',
-                              style: TextStyle(fontSize: 12),
-                            ),
-                          ],
+  Widget build(BuildContext context) {
+    final media = MediaQuery.of(context);
+    final maxWidth = AuthLayout.formMaxWidth(media.size.width);
+    final horizontal = AuthLayout.horizontalPadding(media.size.width);
+
+    return PopScope(
+      canPop: !_saving,
+      child: Scaffold(
+        backgroundColor: AuthLayout.pageBackground,
+        resizeToAvoidBottomInset: true,
+        appBar: AppBar(
+          backgroundColor: AuthLayout.pageBackground,
+          foregroundColor: AppColors.textPrimary,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: const AppText('Bank Details'),
+        ),
+        body: SafeArea(
+          top: false,
+          child: Column(
+            children: [
+              Expanded(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: Form(
+                        key: _form,
+                        child: SingleChildScrollView(
+                          key: const ValueKey('kyc-bank-scroll'),
+                          controller: _scroll,
+                          clipBehavior: Clip.hardEdge,
+                          keyboardDismissBehavior:
+                              ScrollViewKeyboardDismissBehavior.onDrag,
+                          padding: EdgeInsets.fromLTRB(
+                            horizontal,
+                            AuthLayout.pagePaddingTop,
+                            horizontal,
+                            AuthLayout.fieldGap + media.viewInsets.bottom,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (_kycFlow)
+                                const KycStepIntro(
+                                  current: 5,
+                                  total: 6,
+                                  title: 'Add Bank Account',
+                                  subtitle:
+                                      'Enter the bank account that will be used for withdrawals after manual review.',
+                                )
+                              else ...[
+                                Text(
+                                  'Add Bank Account',
+                                  style: AuthLayout.title.copyWith(fontSize: 24),
+                                ),
+                                const SizedBox(height: AuthLayout.titleGap),
+                                const AppText(
+                                  'Enter your bank details for withdrawals.',
+                                  style: AuthLayout.subtitle,
+                                ),
+                              ],
+                              const SizedBox(height: AuthLayout.fieldGap),
+                              const VerificationBanner(
+                                tone: KycBannerTone.info,
+                                icon: Icons.account_balance_outlined,
+                                title: 'Bank details for this account',
+                                subtitle:
+                                    'These details are stored with your application. They are not checked instantly against a bank.',
+                              ),
+                              const SizedBox(height: AuthLayout.sectionGap),
+                              _field(
+                                'Account Holder Name',
+                                'Enter full name as per bank record',
+                                _holder,
+                                keyboard: TextInputType.name,
+                                capitalization: TextCapitalization.words,
+                                validator: (value) =>
+                                    (value?.trim().length ?? 0) < 2
+                                    ? 'Enter the account holder name'
+                                    : null,
+                              ),
+                              _field(
+                                'Account Number',
+                                'Enter your bank account number',
+                                _number,
+                                numeric: true,
+                                obscure: _hideNumber,
+                                onToggleObscure: () => setState(
+                                  () => _hideNumber = !_hideNumber,
+                                ),
+                                validator: (value) =>
+                                    !RegExp(
+                                      r'^\d{6,18}$',
+                                    ).hasMatch(value?.trim() ?? '')
+                                    ? 'Enter 6 to 18 digits'
+                                    : null,
+                              ),
+                              _field(
+                                'Confirm Account Number',
+                                'Re-enter your account number',
+                                _confirm,
+                                numeric: true,
+                                obscure: _hideConfirm,
+                                onToggleObscure: () => setState(
+                                  () => _hideConfirm = !_hideConfirm,
+                                ),
+                                validator: (value) =>
+                                    value?.trim() != _number.text.trim()
+                                    ? 'Account numbers do not match'
+                                    : null,
+                              ),
+                              _field(
+                                _kycFlow
+                                    ? 'IFSC Code (Optional)'
+                                    : 'IFSC Code',
+                                'Enter the 11-character IFSC code',
+                                _ifsc,
+                                keyboard: TextInputType.visiblePassword,
+                                capitalization: TextCapitalization.characters,
+                                validator: (value) =>
+                                    _kycFlow && (value?.trim().isEmpty ?? true)
+                                    ? null
+                                    : !RegExp(
+                                        r'^[A-Z]{4}0[A-Z0-9]{6}$',
+                                      ).hasMatch(
+                                        value?.trim().toUpperCase() ?? '',
+                                      )
+                                    ? 'Enter a valid IFSC code'
+                                    : null,
+                              ),
+                              _field(
+                                'Bank Name',
+                                'Enter your bank name',
+                                _bank,
+                                keyboard: TextInputType.name,
+                                capitalization: TextCapitalization.words,
+                                validator: (value) =>
+                                    (value?.trim().length ?? 0) < 2
+                                    ? 'Enter your bank name'
+                                    : null,
+                              ),
+                              const SizedBox(height: 8),
+                              const VerificationBanner(
+                                tone: KycBannerTone.info,
+                                icon: Icons.lock_outline,
+                                title: 'How these details are used',
+                                subtitle:
+                                    'Your bank details are used for account verification and withdrawals.',
+                              ),
+                            ],
+                          ),
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                _field(
-                  'Account Holder Name',
-                  'Enter full name as per bank record',
-                  _holder,
-                  validator: (value) => (value?.trim().length ?? 0) < 2
-                      ? 'Enter the account holder name'
-                      : null,
-                ),
-                _field(
-                  'Account Number',
-                  'Enter your bank account number',
-                  _number,
-                  numeric: true,
-                  validator: (value) =>
-                      !RegExp(r'^\d{6,18}$').hasMatch(value?.trim() ?? '')
-                      ? 'Enter 6 to 18 digits'
-                      : null,
-                ),
-                _field(
-                  'Confirm Account Number',
-                  'Re-enter your account number',
-                  _confirm,
-                  numeric: true,
-                  validator: (value) => value?.trim() != _number.text.trim()
-                      ? 'Account numbers do not match'
-                      : null,
-                ),
-                _field(
-                  widget.onContinue != null
-                      ? 'IFSC Code (Optional)'
-                      : 'IFSC Code',
-                  'Enter the 11-character IFSC code',
-                  _ifsc,
-                  validator: (value) =>
-                      widget.onContinue != null &&
-                          (value?.trim().isEmpty ?? true)
-                      ? null
-                      : !RegExp(
-                          r'^[A-Z]{4}0[A-Z0-9]{6}$',
-                        ).hasMatch(value?.trim().toUpperCase() ?? '')
-                      ? 'Enter a valid IFSC code'
-                      : null,
-                ),
-                _field(
-                  'Bank Name',
-                  'Enter your bank name',
-                  _bank,
-                  validator: (value) => (value?.trim().length ?? 0) < 2
-                      ? 'Enter your bank name'
-                      : null,
-                ),
-                const SizedBox(height: 8),
-                const ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    Icons.lock_outline,
-                    color: AppConfig.primaryColor,
-                    size: 20,
-                  ),
-                  title: AppText(
-                    'Your bank details are used for account verification and withdrawals.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-                if (_error != null)
-                  AppText(
-                    _error!,
-                    style: const TextStyle(color: AppConfig.lossColor),
-                  ),
-                const SizedBox(height: 24),
-                FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(
-                          dimension: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const AppText('Continue'),
-                ),
-              ],
-            ),
+              ),
+              KycFlowFooter(
+                label: 'Continue',
+                busy: _saving,
+                errorText: _error,
+                helper: 'Used for identity verification',
+                onPressed: _saving ? null : _save,
+              ),
+            ],
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 
   Widget _field(
     String label,
     String hint,
     TextEditingController controller, {
     bool numeric = false,
+    bool obscure = false,
+    VoidCallback? onToggleObscure,
+    TextInputType? keyboard,
+    TextCapitalization capitalization = TextCapitalization.none,
     required FormFieldValidator<String> validator,
   }) => Padding(
     padding: const EdgeInsets.only(bottom: 20),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          enabled: !_saving,
-          keyboardType: numeric ? TextInputType.number : TextInputType.text,
-          inputFormatters: numeric
-              ? <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly]
-              : label.startsWith('IFSC')
-              ? <TextInputFormatter>[
-                  TextInputFormatter.withFunction(
-                    (oldValue, newValue) =>
-                        newValue.copyWith(text: newValue.text.toUpperCase()),
-                  ),
-                  LengthLimitingTextInputFormatter(11),
-                ]
-              : null,
-          textInputAction: TextInputAction.next,
-          decoration: InputDecoration(hintText: tr(hint)),
-          validator: validator,
-        ),
-      ],
+    child: TextFormField(
+      controller: controller,
+      enabled: !_saving,
+      obscureText: obscure,
+      keyboardType: numeric ? TextInputType.number : keyboard,
+      textCapitalization: capitalization,
+      autocorrect: false,
+      enableSuggestions: false,
+      autofillHints: const <String>[],
+      inputFormatters: numeric
+          ? <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly]
+          : label.startsWith('IFSC')
+          ? <TextInputFormatter>[
+              TextInputFormatter.withFunction(
+                (oldValue, newValue) =>
+                    newValue.copyWith(text: newValue.text.toUpperCase()),
+              ),
+              LengthLimitingTextInputFormatter(11),
+            ]
+          : null,
+      textInputAction: TextInputAction.next,
+      style: const TextStyle(height: 1.2, letterSpacing: 0),
+      decoration: onboardingInput(
+        label,
+        helperText: hint,
+        suffixIcon: onToggleObscure == null
+            ? null
+            : IconButton(
+                onPressed: onToggleObscure,
+                tooltip: obscure ? 'Show account number' : 'Hide account number',
+                icon: Icon(
+                  obscure
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: AuthLayout.iconSize,
+                ),
+              ),
+      ),
+      validator: validator,
     ),
   );
 }

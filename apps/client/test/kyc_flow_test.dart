@@ -86,11 +86,7 @@ void main() {
     await tester.enterText(find.byType(TextFormField).at(0), 'Test Account');
     await tester.enterText(find.byType(TextFormField).at(1), '123456789');
     await tester.enterText(find.byType(TextFormField).at(2), '987654321');
-    await tester.scrollUntilVisible(
-      find.text('Continue'),
-      250,
-      scrollable: find.byType(Scrollable).first,
-    );
+    await tester.ensureVisible(find.text('Continue'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();

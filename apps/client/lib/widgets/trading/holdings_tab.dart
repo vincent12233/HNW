@@ -5,10 +5,13 @@ import '../../app_config.dart';
 import '../../models/portfolio_position.dart';
 import '../../models/stock_quote.dart';
 import '../../services/app_content_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_motion.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/product_category.dart';
 import '../stock_logo.dart';
 import '../responsive_empty_state.dart';
+import '../holding_detail_sheet.dart';
 
 class HoldingsTab extends StatefulWidget {
   const HoldingsTab({
@@ -28,6 +31,7 @@ class HoldingsTab extends StatefulWidget {
 
 class _HoldingsTabState extends State<HoldingsTab> {
   String selectedCategory = 'ALL';
+  String selectedView = 'HOLDINGS';
 
   StockQuote? _findStock(String symbol, String exchange) {
     for (final stock in widget.stocks) {
@@ -59,29 +63,42 @@ class _HoldingsTabState extends State<HoldingsTab> {
           selectedCategory;
     }).toList();
 
-    if (allPositions.isEmpty) {
-      final content = AppContentService.instance.current;
-      return _emptyState(
-        content.text(
-          'trading',
-          'holdings.empty_title',
-          fallback: 'No holdings',
-        ),
-        content.text(
-          'trading',
-          'holdings.empty_subtitle',
-          fallback:
-              'Your holdings will appear here after settled positions are added.',
-        ),
-      );
-    }
-
     return Column(
       children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-          scrollDirection: Axis.horizontal,
-          child: Row(
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _viewChip('HOLDINGS', 'Holdings'),
+              _viewChip('POSITIONS', 'Positions'),
+            ],
+          ),
+        ),
+        if (allPositions.isEmpty)
+          Expanded(
+            child: AppStatusSwitch(
+              switchKey: selectedView,
+              child: _emptyState(
+                selectedView == 'POSITIONS' ? 'No positions' : 'No holdings',
+                selectedView == 'POSITIONS'
+                    ? 'Open positions will appear here after the account has live exposure.'
+                    : AppContentService.instance.current.text(
+                        'trading',
+                        'holdings.empty_subtitle',
+                        fallback:
+                            'Your holdings will appear here after settled positions are added.',
+                      ),
+              ),
+            ),
+          )
+        else ...[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Wrap(
+            spacing: 8,
+            runSpacing: 8,
             children: [
               _categoryChip('ALL', 'All'),
               _categoryChip('EQUITY', 'Equities'),
@@ -97,7 +114,10 @@ class _HoldingsTabState extends State<HoldingsTab> {
                   'No ${_categoryLabel(selectedCategory)} holdings',
                   'Positions in this category will appear here after settlement.',
                 )
-              : ListView.separated(
+              : AppStatusSwitch(
+                  switchKey: '$selectedView|$selectedCategory|${positionList.length}',
+                  child: ListView.separated(
+                  key: ValueKey('$selectedView|$selectedCategory'),
                   padding: const EdgeInsets.all(16),
                   itemCount: positionList.length,
                   separatorBuilder: (_, _) => const SizedBox(height: 10),
@@ -108,25 +128,34 @@ class _HoldingsTabState extends State<HoldingsTab> {
                       position.exchange,
                     );
 
-                    final currentPrice = stock?.price ?? position.averageCost;
+                    final usableQuote = holdingQuoteUsable(stock);
+                    final delayed = stock != null && !stock.quoteFresh;
+                    final currentPrice = usableQuote ? stock!.price : null;
                     final invested = position.quantity * position.averageCost;
-                    final marketValue = position.marketValue(currentPrice);
-                    final profitLoss = position.unrealizedProfitLoss(
-                      currentPrice,
-                    );
-                    final returnPercent = position.returnPercent(currentPrice);
+                    final marketValue = currentPrice == null
+                        ? null
+                        : position.marketValue(currentPrice);
+                    final profitLoss = currentPrice == null
+                        ? null
+                        : position.unrealizedProfitLoss(currentPrice);
+                    final returnPercent = currentPrice == null
+                        ? null
+                        : position.returnPercent(currentPrice);
+                    final frozen = holdingFrozenQuantity(position);
                     final category = _positionCategory(position, stock);
                     final dayChange =
-                        stock?.previousClose != null &&
+                        currentPrice != null &&
+                            stock?.previousClose != null &&
                             stock!.previousClose! > 0
                         ? (currentPrice - stock.previousClose!) *
                               position.quantity
                         : null;
-                    final dayChangePercent = stock?.change;
+                    final dayChangePercent =
+                        usableQuote ? stock?.change : null;
 
-                    final profitColor = profitLoss > 0
+                    final profitColor = (profitLoss ?? 0) > 0
                         ? AppConfig.gainColor
-                        : profitLoss < 0
+                        : (profitLoss ?? 0) < 0
                         ? AppConfig.lossColor
                         : AppConfig.neutralColor;
                     final dayColor = (dayChange ?? 0) > 0
@@ -140,11 +169,12 @@ class _HoldingsTabState extends State<HoldingsTab> {
                       borderRadius: BorderRadius.circular(12),
                       child: InkWell(
                         borderRadius: BorderRadius.circular(12),
-                        onTap: stock == null
-                            ? null
-                            : () {
-                                widget.onStockTap(stock);
-                              },
+                        onTap: () => showHoldingDetails(
+                          context,
+                          position: position,
+                          quote: stock,
+                          onSell: widget.onStockTap,
+                        ),
                         child: Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
@@ -201,6 +231,12 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                             _holdingTag(
                                               '${position.quantity} qty',
                                             ),
+                                            if (selectedView == 'POSITIONS')
+                                              _holdingTag(
+                                                frozen > 0
+                                                    ? 'Frozen $frozen'
+                                                    : 'Unfrozen',
+                                              ),
                                           ],
                                         ),
                                       ],
@@ -213,7 +249,9 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                           CrossAxisAlignment.end,
                                       children: [
                                         AppText(
-                                          formatPrice(currentPrice),
+                                          currentPrice == null
+                                              ? 'Unavailable'
+                                              : formatPrice(currentPrice),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.end,
@@ -222,10 +260,23 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                             fontSize: 14,
                                           ),
                                         ),
+                                        if (delayed) ...[
+                                          const SizedBox(height: 3),
+                                          AppText(
+                                            'Delayed quote',
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                              color: AppColors.warning,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.w700,
+                                            ),
+                                          ),
+                                        ],
                                         if (dayChangePercent != null) ...[
                                           const SizedBox(height: 3),
                                           AppText(
-                                            '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}%',
+                                            '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}% · ${dayChangePercent > 0 ? 'Gain' : dayChangePercent < 0 ? 'Loss' : 'Unchanged'}',
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             textAlign: TextAlign.end,
@@ -262,14 +313,21 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                       ),
                                       _metricColumn(
                                         'Current',
-                                        formatPrice(marketValue),
+                                        marketValue == null
+                                            ? 'Unavailable'
+                                            : formatPrice(marketValue),
                                       ),
                                       _metricColumn(
-                                        'P&L',
-                                        '${profitLoss >= 0 ? '+' : ''}${formatPrice(profitLoss.abs())}',
-                                        valueColor: profitColor,
-                                        subtitle:
-                                            '${returnPercent >= 0 ? '+' : ''}${returnPercent.toStringAsFixed(2)}%',
+                                        'Unrealized P&L',
+                                        profitLoss == null
+                                            ? 'Unavailable'
+                                            : '${formatSignedPrice(profitLoss)} · ${profitLoss > 0 ? 'Gain' : profitLoss < 0 ? 'Loss' : 'Unchanged'}',
+                                        valueColor: profitLoss == null
+                                            ? AppColors.textSecondary
+                                            : profitColor,
+                                        subtitle: returnPercent == null
+                                            ? null
+                                            : '${returnPercent >= 0 ? '+' : ''}${returnPercent.toStringAsFixed(2)}%',
                                       ),
                                     ];
                                     if (stacked) {
@@ -317,7 +375,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                     const SizedBox(width: 8),
                                     Flexible(
                                       child: AppText(
-                                        '${dayChange >= 0 ? '+' : ''}${formatPrice(dayChange.abs())}',
+                                        '${formatSignedPrice(dayChange)} · ${dayChange > 0 ? 'Gain' : dayChange < 0 ? 'Loss' : 'Unchanged'}',
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
                                         textAlign: TextAlign.end,
@@ -336,7 +394,9 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                 children: [
                                   Expanded(
                                     child: AppText(
-                                      'Avg ${formatPrice(position.averageCost)}',
+                                      selectedView == 'POSITIONS'
+                                          ? 'Frozen $frozen · Avail ${position.availableQuantity}'
+                                          : 'Avg ${formatPrice(position.averageCost)}',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       style: const TextStyle(
@@ -348,7 +408,9 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                   const SizedBox(width: 8),
                                   Flexible(
                                     child: AppText(
-                                      'Avail ${position.availableQuantity}',
+                                      selectedView == 'POSITIONS'
+                                          ? 'Avg ${formatPrice(position.averageCost)}'
+                                          : 'Avail ${position.availableQuantity} · Frozen $frozen',
                                       maxLines: 1,
                                       overflow: TextOverflow.ellipsis,
                                       textAlign: TextAlign.end,
@@ -367,8 +429,24 @@ class _HoldingsTabState extends State<HoldingsTab> {
                     );
                   },
                 ),
+                ),
         ),
+        ],
       ],
+    );
+  }
+
+  Widget _viewChip(String value, String label) {
+    final selected = selectedView == value;
+    return ChoiceChip(
+      key: ValueKey('holding-filter-$value'),
+      label: AppText(label),
+      selected: selected,
+      labelStyle: TextStyle(
+        color: selected ? Colors.white : AppConfig.textPrimaryColor,
+        fontWeight: FontWeight.w700,
+      ),
+      onSelected: (_) => setState(() => selectedView = value),
     );
   }
 
@@ -378,6 +456,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: ChoiceChip(
+        key: ValueKey('holding-category-$value'),
         label: AppText(label),
         selected: selected,
         labelStyle: TextStyle(

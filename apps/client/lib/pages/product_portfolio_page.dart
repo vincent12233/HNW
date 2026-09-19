@@ -4,6 +4,7 @@ import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -33,6 +34,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   bool _loading = false;
   bool _hidden = false;
   int _request = 0;
+  String _productView = 'HOLDINGS';
 
   static Color _categoryColor(Object? category) {
     switch ('$category') {
@@ -54,6 +56,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   }
 
   Future<void> _load([String? period]) async {
+    if (_loading && (period == null || period == _period)) return;
     final request = ++_request;
     setState(() {
       if (period != null && period != _period) _data = null;
@@ -103,9 +106,42 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       : _availableNumber(value) == null
       ? '--'
       : '$value';
+
+  String _frozenText(Map<String, dynamic> position) {
+    final quantity = _availableNumber(position['quantity']);
+    final available = _availableNumber(position['availableQuantity']);
+    if (quantity == null || available == null) return '--';
+    if (_hidden) return '******';
+    return '${(quantity - available).clamp(0, quantity).toInt()}';
+  }
   String _date(dynamic value) {
-    final date = DateTime.tryParse('$value')?.toLocal();
-    return date == null ? '--' : date.toString().substring(0, 16);
+    final parsed = DateTime.tryParse('$value');
+    if (parsed == null) return '--';
+    final ist = parsed.toUtc().add(const Duration(hours: 5, minutes: 30));
+    String two(int number) => number.toString().padLeft(2, '0');
+    return '${two(ist.day)}/${two(ist.month)}/${ist.year} '
+        '${two(ist.hour)}:${two(ist.minute)} IST';
+  }
+
+  String _signed(dynamic value) {
+    if (_hidden) return '******';
+    final number = _availableNumber(value);
+    return number == null ? '--' : formatSignedPrice(number);
+  }
+
+  String _pnlWord(dynamic value) {
+    if (_hidden) return '';
+    final number = _availableNumber(value);
+    if (number == null) return '';
+    if (number > 0) return 'Gain';
+    if (number < 0) return 'Loss';
+    return 'Unchanged';
+  }
+
+  String _pnlText(dynamic value) {
+    final word = _pnlWord(value);
+    final amount = _signed(value);
+    return word.isEmpty ? amount : '$amount · $word';
   }
 
   Color _pnlColor(dynamic value) => _hidden || _number(value) == 0
@@ -117,9 +153,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   @override
   Widget build(BuildContext context) {
     final data = _data;
-    return RefreshIndicator(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 760),
+        child: RefreshIndicator(
       onRefresh: _load,
       child: ListView(
+        key: const Key('portfolio-list'),
         physics: const AlwaysScrollableScrollPhysics(),
         padding: AppSpacing.page,
         children: [
@@ -211,8 +252,17 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 ),
               ),
             ),
-          if (data != null) ..._content(data),
+          if (data != null)
+            AppFadeIn(
+              switchKey: '$_period|${data['asOf']}|${data['positionCount']}',
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: _content(data),
+              ),
+            ),
         ],
+      ),
+    ),
       ),
     );
   }
@@ -278,9 +328,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                           left: AppSpacing.xxs + 1,
                         ),
                         child: ChoiceChip(
+                          key: ValueKey('portfolio-period-$period'),
                           label: AppText(period),
                           selected: _period == period,
-                          onSelected: (_) => _load(period),
+                          onSelected: (_) {
+                            if (period == _period) return;
+                            _load(period);
+                          },
                           showCheckmark: false,
                           selectedColor: AppColors.textInverse,
                           backgroundColor: Colors.transparent,
@@ -308,15 +362,19 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             AppText(
-              '${tr('Total Returns')}: ${_money(data['totalPnl'])}',
-              style: AppTypography.bodyMedium.copyWith(color: inverseMuted),
+              '${tr('Total Returns')}: ${_pnlText(data['totalPnl'])}',
+              style: AppTypography.bodyMedium.copyWith(
+                color: _hidden ? inverseMuted : _pnlColor(data['totalPnl']),
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             if (!empty && !_hidden)
               SizedBox(
                 height: 64,
                 width: double.infinity,
-                child: _loading
+                child: AppStatusSwitch(
+                  switchKey: '$_period|$hasHistory|$_loading',
+                  child: _loading
                     ? const Center(
                         child: CircularProgressIndicator(
                           color: AppColors.textInverse,
@@ -339,7 +397,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                               .toList(),
                         ),
                       ),
+                ),
               ),
+            const SizedBox(height: AppSpacing.sm),
+            AppText(
+              'Source: product valuation snapshots · Range: $_period · Updated ${_date(data['asOf'])}'
+              '${hasHistory ? '' : ' · No curve until two snapshot points exist.'}',
+              style: AppTypography.caption.copyWith(color: inverseMuted),
+            ),
           ],
         ),
       ),
@@ -362,11 +427,21 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md + 2,
         ),
-        child: _metrics([
-          ('Current Value', data['currentValue']),
-          ('Invested', data['invested']),
-          ('Total Returns', data['totalPnl']),
-        ]),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _metrics([
+              ('Invested', data['invested']),
+              ('Current Value', data['currentValue']),
+              ('Total Returns', data['totalPnl']),
+            ]),
+            const SizedBox(height: AppSpacing.md),
+            AppText(
+              "Day's return unavailable. This product summary does not include a daily P&L field.",
+              style: AppTypography.caption,
+            ),
+          ],
+        ),
       ),
       if (empty) ...[
         const SizedBox(height: AppSpacing.sectionGap),
@@ -409,6 +484,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             fallback: 'Asset Allocation',
           ),
           action: () => _showHoldings(categories),
+        ),
+        AppText(
+          'Source: product holdings · Range: $_period · Updated ${_date(data['asOf'])}',
+          style: AppTypography.caption,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
@@ -612,6 +691,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
+        _heading('Holdings and Positions'),
+        AppText(
+          'Product holdings from the current portfolio response. Equity positions remain under Trade.',
+          style: AppTypography.caption,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        ..._productHoldings(categories, data['asOf']),
+        const SizedBox(height: AppSpacing.md),
         // DETAIL: Performance
         _heading('Performance', action: () => _showPerformance(data, history)),
         const SizedBox(height: AppSpacing.md),
@@ -660,6 +747,185 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ],
       const SizedBox(height: AppSpacing.xxl),
     ];
+  }
+
+  List<Widget> _productHoldings(
+    List<Map<String, dynamic>> categories,
+    dynamic asOf,
+  ) {
+    final positions = [
+      for (final category in categories) ..._rows(category['positions']),
+    ];
+    if (positions.isEmpty) {
+      return [
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+          child: AppText(
+            'No product holdings in the current response.',
+            style: AppTypography.bodyMedium,
+          ),
+        ),
+      ];
+    }
+    return [
+      Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.sm,
+        children: [
+          for (final item in const [
+            ('HOLDINGS', 'Holdings'),
+            ('POSITIONS', 'Positions'),
+          ])
+            ChoiceChip(
+              key: ValueKey('portfolio-view-${item.$1}'),
+              label: AppText(item.$2),
+              selected: _productView == item.$1,
+              onSelected: (_) => setState(() => _productView = item.$1),
+            ),
+        ],
+      ),
+      const SizedBox(height: AppSpacing.sm),
+      AppStatusSwitch(
+        switchKey: _productView,
+        child: Column(
+          children: [
+            ...positions
+                .take(4)
+                .map((position) => _productPositionCard(position, asOf)),
+          ],
+        ),
+      ),
+      if (positions.length > 4)
+        Align(
+          alignment: Alignment.centerRight,
+          child: TextButton(
+            onPressed: () => _showHoldings(categories),
+            child: const AppText('View Details'),
+          ),
+        ),
+    ];
+  }
+
+  Widget _productPositionCard(Map<String, dynamic> position, dynamic asOf) {
+    final quantity = _availableNumber(position['quantity']);
+    final available = _availableNumber(position['availableQuantity']);
+    final frozen = quantity != null && available != null
+        ? (quantity - available).clamp(0, quantity)
+        : null;
+    final costValued = position['valuationSource'] == 'COST';
+    return AppCard(
+      key: ValueKey('product-holding-${position['symbol']}'),
+      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+      onTap: () => _showPositionSheet(position, asOf),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AppText(
+            '${position['symbol'] ?? '--'} · ${position['exchange'] ?? '--'}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w800),
+          ),
+          AppText(
+            '${position['name'] ?? '--'}',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.caption,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          AppText(
+            _productView == 'POSITIONS'
+                ? 'Frozen ${frozen == null ? '--' : _hidden ? '******' : '${frozen.toInt()}'} · Avail ${_quantity(position['availableQuantity'])} · Qty ${_quantity(position['quantity'])}'
+                : 'Qty ${_quantity(position['quantity'])} · Avail ${_quantity(position['availableQuantity'])} · Frozen ${frozen == null ? '--' : _hidden ? '******' : '${frozen.toInt()}'}',
+            style: AppTypography.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          _metrics([
+            ('Average price', position['averagePrice']),
+            ('Current Value', position['currentValue']),
+            ('Unrealized P&L', position['unrealizedPnl']),
+          ]),
+          if (costValued)
+            Padding(
+              padding: const EdgeInsets.only(top: AppSpacing.sm),
+              child: AppText(
+                'Valued at cost. Market quote unavailable.',
+                style: AppTypography.caption.copyWith(color: AppColors.warning),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showPositionSheet(Map<String, dynamic> position, dynamic asOf) {
+    final quantity = _availableNumber(position['quantity']);
+    final available = _availableNumber(position['availableQuantity']);
+    final frozen = quantity != null && available != null
+        ? (quantity - available).clamp(0, quantity)
+        : null;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.xxl,
+          ),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                AppText(
+                  '${position['symbol'] ?? '--'}',
+                  style: AppTypography.headline.copyWith(fontSize: 20),
+                ),
+                AppText('${position['name'] ?? '--'} · ${position['exchange'] ?? '--'}'),
+                const SizedBox(height: AppSpacing.lg),
+                AppText('Quantity: ${_quantity(position['quantity'])}'),
+                AppText('Available: ${_quantity(position['availableQuantity'])}'),
+                AppText(
+                  'Frozen: ${frozen == null ? '--' : _hidden ? '******' : '${frozen.toInt()}'}',
+                ),
+                AppText('Average cost: ${_money(position['averagePrice'])}'),
+                AppText(
+                  'Current price: ${position['valuationSource'] == 'COST' ? 'Unavailable' : _money(position['currentPrice'])}',
+                ),
+                AppText('Current value: ${_money(position['currentValue'])}'),
+                AppText(
+                  'Invested: ${quantity == null || _availableNumber(position['averagePrice']) == null ? '--' : _money(quantity * _number(position['averagePrice']))}',
+                ),
+                AppText(
+                  'Realized P&L: ${_availableNumber(position['realizedPnl']) == null ? 'Unavailable' : _pnlText(position['realizedPnl'])}',
+                ),
+                AppText('Unrealized P&L: ${_pnlText(position['unrealizedPnl'])}'),
+                const AppText("Day P&L: Unavailable"),
+                const SizedBox(height: AppSpacing.md),
+                AppText(
+                  position['valuationSource'] == 'COST'
+                      ? 'Valued at cost. Market quote unavailable.'
+                      : 'Valued from the current market quote in this response.',
+                  style: AppTypography.caption,
+                ),
+                AppText(
+                  '${tr('As of')} ${_date(asOf)}',
+                  style: AppTypography.caption,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                const AppText(
+                  'Related fills are not included in this product holding record.',
+                  style: AppTypography.caption,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _heading(String title, {VoidCallback? action}) => LayoutBuilder(
@@ -720,6 +986,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                       AppText(
                         item.$1 == 'Allocation'
                             ? _percent(item.$2)
+                            : item.$1.contains('P&L') ||
+                                  item.$1.contains('Returns')
+                            ? _pnlText(item.$2)
                             : _money(item.$2),
                         style: AppTypography.numericSmall.copyWith(
                           fontSize: 12,
@@ -788,7 +1057,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         ),
                         const SizedBox(height: AppSpacing.md),
                         AppText(
-                          '${tr('Quantity')}: ${_quantity(position['quantity'])} · ${tr('Available')}: ${_quantity(position['availableQuantity'])}',
+                          '${tr('Quantity')}: ${_quantity(position['quantity'])} · ${tr('Available')}: ${_quantity(position['availableQuantity'])} · Frozen ${_frozenText(position)}',
                           style: AppTypography.bodySmall,
                         ),
                         const SizedBox(height: AppSpacing.md),
@@ -919,7 +1188,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             AppText('${tr('As of')}: ${_date(history['to'])}'),
             const SizedBox(height: AppSpacing.md),
             const AppText(
-              'Returns cover recorded observations only. Deposits and ordinary stocks are excluded.',
+              'Source: recorded product snapshots. Returns cover recorded observations only. Deposits and ordinary stocks are excluded.',
             ),
           ],
         ),

@@ -9,10 +9,9 @@ import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
-import '../../utils/order_status_presentation.dart';
 import '../stock_logo.dart';
 import '../../models/trading_order.dart';
-import 'standard_order_details_sheet.dart';
+import 'order_card.dart';
 
 class TradeList extends StatelessWidget {
   const TradeList({
@@ -203,31 +202,18 @@ class TradeList extends StatelessWidget {
                   ),
                 ],
               ),
-            ),
-          ...orders
-              .take(4)
-              .map(
-                (order) => ListTile(
-                  contentPadding: EdgeInsets.zero,
-                  leading: Icon(
-                    order.isBuy ? Icons.call_received : Icons.call_made,
-                    color: OrderStatusPresentation.sideColor(
-                      order.isBuy ? 'BUY' : 'SELL',
-                    ),
-                  ),
-                  title: AppText(order.symbol, style: AppTypography.titleSmall),
-                  subtitle: AppText(
-                    '${order.exchange} · ${order.quantity} · ${OrderStatusPresentation.label(order.status)}',
-                    style: AppTypography.bodySmall,
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () => showStandardOrderDetails(
-                    context,
-                    order: order,
-                    onCancel: onCancel,
-                  ),
+            )
+          else
+            ...orders.take(4).map(
+              (order) => Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                child: OrderCard(
+                  order: order,
+                  compact: true,
+                  onCancel: onCancel,
                 ),
               ),
+            ),
           const Divider(height: 28),
           Row(
             children: [

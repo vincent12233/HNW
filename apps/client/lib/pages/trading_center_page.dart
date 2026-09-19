@@ -323,12 +323,18 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     }
   }
 
+  final Set<String> _cancellingOrderIds = <String>{};
+
   Future<String?> _cancelStandardOrder(TradingOrder order) async {
     final orderId = order.orderId;
     if (orderId == null || orderId.isEmpty) {
       return 'Order reference is unavailable';
     }
+    if (_cancellingOrderIds.contains(orderId)) {
+      return 'Cancellation is already in progress';
+    }
 
+    _cancellingOrderIds.add(orderId);
     try {
       await _tradingService.cancelOrder(orderId);
       await _refreshTradingData(ensureAfterCurrent: true);
@@ -337,12 +343,17 @@ class _TradingCenterPageState extends State<TradingCenterPage>
       return error.message;
     } catch (error) {
       return error.toString();
+    } finally {
+      _cancellingOrderIds.remove(orderId);
     }
   }
 
-  List<TradingOrder> get _activeOrders => _orders
+  List<TradingOrder> get _openAndPendingOrders => _orders
       .where(
-        (order) => order.status == 'OPEN' || order.status == 'PARTIALLY_FILLED',
+        (order) =>
+            order.status == 'OPEN' ||
+            order.status == 'PARTIALLY_FILLED' ||
+            order.status == 'PENDING',
       )
       .toList();
 
@@ -875,13 +886,18 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         );
       case 3:
         return PendingCenterTab(
-          activeOrders: _activeOrders,
+          activeOrders: _openAndPendingOrders,
           ipoApplications: widget.ipoApplications,
-          onOrderCancelled: () =>
-              unawaited(_refreshTradingData(ensureAfterCurrent: true)),
+          onCancel: _cancelStandardOrder,
         );
       case 4:
-        return OrdersTab(orders: _orders, onCancel: _cancelStandardOrder);
+        return OrdersTab(
+          orders: _orders,
+          onCancel: _cancelStandardOrder,
+          loading: _transactionsLoading && _orders.isEmpty,
+          failed: _ordersFailed,
+          onRefresh: () => _refreshTradingData(ensureAfterCurrent: true),
+        );
       case 5:
         return const OtcTab();
       case 6:
@@ -891,7 +907,10 @@ class _TradingCenterPageState extends State<TradingCenterPage>
           onApply: widget.onApplyIpo,
         );
       case 7:
-        return HistoryTab(orders: _orders);
+        return HistoryTab(
+          orders: _orders,
+          onRefresh: () => _refreshTradingData(ensureAfterCurrent: true),
+        );
       case 8:
         return FundsTab(
           transactions: _transactions,

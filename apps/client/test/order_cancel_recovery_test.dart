@@ -40,7 +40,9 @@ void main() {
     await tester.ensureVisible(find.text('Cancel Order'));
     await tester.tap(find.text('Cancel Order'));
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Cancel Order'));
+    expect(find.text('Keep order'), findsOneWidget);
+    expect(find.text('Confirm cancel'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Confirm cancel'));
     await tester.pumpAndSettle();
     expect(calls, 1);
     expect(find.text('Cancelling...'), findsNothing);

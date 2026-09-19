@@ -26,6 +26,7 @@ import '../widgets/markets/news_article_sheet.dart';
 import '../widgets/markets/stock_quote_hero.dart';
 import '../widgets/stock_history_chart.dart';
 import '../widgets/trading/order_ticket.dart';
+import '../widgets/trading/standard_order_details_sheet.dart';
 
 class StockDetailPage extends StatefulWidget {
   const StockDetailPage({
@@ -468,78 +469,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   void _showOrderDetails(TradingOrder order) {
     if (!mounted) return;
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        final price = order.averageFillPrice ?? order.limitPrice ?? order.price;
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppText(
-                        '${order.symbol} Order',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    AppText(order.status.replaceAll('_', ' ')),
-                  ],
-                ),
-                const SizedBox(height: 18),
-                _detailRow('Side', order.isBuy ? 'BUY' : 'SELL'),
-                _detailRow('Exchange', order.exchange),
-                _detailRow(
-                  'Order Type',
-                  '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                ),
-                _detailRow('Order Quantity', '${order.quantity}'),
-                _detailRow('Filled Quantity', '${order.filledQuantity}'),
-                _detailRow('Remaining Quantity', '${order.remainingQuantity}'),
-                _detailRow(
-                  order.isLimit ? 'Limit Price' : 'Execution Price',
-                  price > 0 ? formatPrice(price) : '--',
-                ),
-                if (order.orderId?.isNotEmpty == true)
-                  _detailRow('Order ID', order.orderId!),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      child: Row(
-        children: [
-          Expanded(
-            child: AppText(
-              label,
-              style: const TextStyle(color: Colors.black54),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: AppText(
-              value,
-              textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
-          ),
-        ],
-      ),
-    );
+    showStandardOrderDetails(context, order: order);
   }
 
   String _statPrice(double? value) => value == null ? '--' : formatPrice(value);

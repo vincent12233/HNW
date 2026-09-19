@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 
 import '../../app_config.dart';
 import '../../models/trading_order.dart';
+import '../../theme/app_colors.dart';
 import '../../utils/number_formatters.dart';
+import '../../utils/order_status_presentation.dart';
 
 Future<void> showStandardOrderDetails(
   BuildContext context, {
@@ -38,12 +40,16 @@ class _StandardOrderDetailsSheetState
   @override
   Widget build(BuildContext context) {
     final order = widget.order;
-    final sideColor = order.isBuy ? AppConfig.gainColor : AppConfig.lossColor;
+    final sideColor = OrderStatusPresentation.sideColor(
+      order.isBuy ? 'BUY' : 'SELL',
+    );
     final statusColor = _statusColor(order.status);
     final displayPrice = order.limitPrice ?? order.price;
     final averageFillPrice = order.filledQuantity > 0
         ? order.averageFillPrice
         : null;
+    final canCancel =
+        OrderStatusPresentation.canCancel(order) && widget.onCancel != null;
 
     return SafeArea(
       top: false,
@@ -80,7 +86,7 @@ class _StandardOrderDetailsSheetState
               ),
               const SizedBox(height: 6),
               AppText(
-                '${tr(order.type == 'LIMIT' ? 'Limit Order' : 'Market Order')} · ${order.timeInForce}',
+                '${tr(order.type == 'LIMIT' ? 'Limit Order' : 'Market Order')} · ${OrderStatusPresentation.tifLabel(order.timeInForce)}',
                 style: const TextStyle(color: AppConfig.textSecondaryColor),
               ),
               const SizedBox(height: 12),
@@ -89,7 +95,7 @@ class _StandardOrderDetailsSheetState
                 runSpacing: 8,
                 children: [
                   _pill(order.isBuy ? 'BUY' : 'SELL', sideColor),
-                  _pill(_statusLabel(order.status), statusColor),
+                  _pill(OrderStatusPresentation.label(order.status), statusColor),
                 ],
               ),
               const SizedBox(height: 20),
@@ -102,67 +108,55 @@ class _StandardOrderDetailsSheetState
                 ),
                 child: Column(
                   children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _value('Order Quantity', '${order.quantity}'),
-                        ),
-                        Expanded(
-                          child: _value(
-                            'Filled Quantity',
-                            '${order.filledQuantity}',
-                          ),
-                        ),
-                        Expanded(
-                          child: _value(
-                            'Remaining Quantity',
-                            '${order.remainingQuantity}',
-                          ),
-                        ),
-                      ],
-                    ),
+                    _metricGrid([
+                      ('Order Quantity', '${order.quantity}'),
+                      ('Filled Quantity', '${order.filledQuantity}'),
+                      ('Remaining Quantity', '${order.remainingQuantity}'),
+                    ]),
                     const SizedBox(height: 18),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _value(
-                            order.isLimit ? 'Limit Price' : 'Order Price',
-                            displayPrice > 0 ? formatPrice(displayPrice) : '--',
-                          ),
-                        ),
-                        Expanded(
-                          child: _value(
-                            'Avg. Fill Price',
-                            averageFillPrice != null && averageFillPrice > 0
-                                ? formatPrice(averageFillPrice)
-                                : '--',
-                          ),
-                        ),
-                        Expanded(
-                          child: _value(
-                            'Order Value',
-                            displayPrice > 0
-                                ? formatPrice(order.quantity * displayPrice)
-                                : '--',
-                          ),
-                        ),
-                      ],
-                    ),
+                    _metricGrid([
+                      (
+                        order.isLimit ? 'Limit Price' : 'Order Price',
+                        displayPrice > 0 ? formatPrice(displayPrice) : '--',
+                      ),
+                      (
+                        'Avg. Fill Price',
+                        averageFillPrice != null && averageFillPrice > 0
+                            ? formatPrice(averageFillPrice)
+                            : '--',
+                      ),
+                      (
+                        'Order Value',
+                        displayPrice > 0
+                            ? formatPrice(order.quantity * displayPrice)
+                            : '--',
+                      ),
+                    ]),
                   ],
                 ),
               ),
               const SizedBox(height: 18),
-              _detailRow(
-                'Order Type',
-                order.type == 'LIMIT' ? 'Limit Order' : 'Market Order',
-              ),
-              _detailRow('Exchange', order.exchange),
-              _detailRow('Validity', order.timeInForce),
-              _detailRow('Placed', order.formattedTime),
+              _detailRow('Order Type', order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'),
+              _detailRow('Exchange', OrderStatusPresentation.missing(order.exchange)),
+              _detailRow('Validity', OrderStatusPresentation.tifLabel(order.timeInForce)),
+              _detailRow('Placed', OrderStatusPresentation.formatIst(order.placedAt)),
+              if (order.updatedAt != null)
+                _detailRow('Updated', OrderStatusPresentation.formatIst(order.updatedAt!)),
               if (order.clientOrderId?.isNotEmpty == true)
-                _detailRow('Reference', order.clientOrderId!),
+                _detailRow(
+                  'Client order',
+                  OrderStatusPresentation.maskReference(order.clientOrderId),
+                ),
               if (order.orderId?.isNotEmpty == true)
-                _detailRow('Order ID', order.orderId!),
+                _detailRow(
+                  'Order ID',
+                  OrderStatusPresentation.maskReference(order.orderId),
+                ),
+              if (order.status == 'REJECTED')
+                _detailRow(
+                  'Rejection reason',
+                  OrderStatusPresentation.missing(order.rejectionReason),
+                ),
               const SizedBox(height: 18),
               const AppText(
                 'Order timeline',
@@ -182,7 +176,7 @@ class _StandardOrderDetailsSheetState
                   order.updatedAt != order.completedAt &&
                   order.updatedAt != order.cancelledAt)
                 _timelineItem(
-                  label: _statusLabel(order.status),
+                  label: OrderStatusPresentation.label(order.status),
                   time: order.updatedAt!,
                   color: statusColor,
                   last: order.completedAt == null && order.cancelledAt == null,
@@ -228,8 +222,21 @@ class _StandardOrderDetailsSheetState
                     ),
                   ),
                 ),
+              ] else ...[
+                const SizedBox(height: 8),
+                const AppText(
+                  'Executions',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 10),
+                AppText(
+                  order.filledQuantity > 0
+                      ? 'Filled ${order.filledQuantity}/${order.quantity}. No execution details are available.'
+                      : 'No execution details are available for this order.',
+                  style: const TextStyle(color: Color(0xFF64748B)),
+                ),
               ],
-              if (order.isActive && widget.onCancel != null) ...[
+              if (canCancel) ...[
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
@@ -255,27 +262,11 @@ class _StandardOrderDetailsSheetState
 
   Future<void> _cancel() async {
     if (cancelling || confirmingCancellation || widget.onCancel == null) return;
+    if (!OrderStatusPresentation.canCancel(widget.order)) return;
     confirmingCancellation = true;
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const AppText('Cancel Order?'),
-        content: AppText(
-          'Cancel the remaining ${widget.order.remainingQuantity} shares of '
-          '${widget.order.symbol} ${widget.order.isBuy ? 'BUY' : 'SELL'} order?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const AppText('Keep Order'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(backgroundColor: AppConfig.lossColor),
-            child: const AppText('Cancel Order'),
-          ),
-        ],
-      ),
+    final confirmed = await confirmCancelTradingOrder(
+      context,
+      order: widget.order,
     );
     confirmingCancellation = false;
     if (confirmed != true || !mounted) return;
@@ -324,6 +315,27 @@ class _StandardOrderDetailsSheetState
     );
   }
 
+  Widget _metricGrid(List<(String, String)> items) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final columns = constraints.maxWidth < 340 ? 2 : 3;
+        final itemWidth =
+            (constraints.maxWidth - (columns - 1) * 8) / columns;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 18,
+          children: [
+            for (final item in items)
+              SizedBox(
+                width: itemWidth,
+                child: _value(item.$1, item.$2),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _value(String label, String value) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,6 +347,8 @@ class _StandardOrderDetailsSheetState
         const SizedBox(height: 5),
         AppText(
           value,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
         ),
       ],
@@ -476,23 +490,6 @@ class _StandardOrderDetailsSheetState
         '${two(ist.hour)}:${two(ist.minute)}:${two(ist.second)} IST';
   }
 
-  String _statusLabel(String status) {
-    switch (status) {
-      case 'OPEN':
-        return 'Open';
-      case 'PARTIALLY_FILLED':
-        return 'Partial';
-      case 'FILLED':
-        return 'Completed';
-      case 'CANCELLED':
-        return 'Cancelled';
-      case 'REJECTED':
-        return 'Rejected';
-      default:
-        return status;
-    }
-  }
-
   Color _statusColor(String status) {
     switch (status) {
       case 'FILLED':
@@ -501,6 +498,8 @@ class _StandardOrderDetailsSheetState
         return AppConfig.neutralColor;
       case 'REJECTED':
         return AppConfig.lossColor;
+      case 'PENDING':
+        return AppColors.pending;
       default:
         return const Color(0xFF2563EB);
     }

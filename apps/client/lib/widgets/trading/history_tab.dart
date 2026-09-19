@@ -3,179 +3,154 @@ import 'package:flutter/material.dart';
 
 import '../../models/trading_order.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_radius.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../utils/number_formatters.dart';
-import '../../utils/order_status_presentation.dart';
-import '../app_chip.dart';
-import 'standard_order_details_sheet.dart';
 import '../responsive_empty_state.dart';
+import 'order_card.dart';
 
-class HistoryTab extends StatelessWidget {
-  const HistoryTab({super.key, required this.orders});
+class HistoryTab extends StatefulWidget {
+  const HistoryTab({super.key, required this.orders, this.onRefresh});
 
   final List<TradingOrder> orders;
+  final Future<void> Function()? onRefresh;
+
+  @override
+  State<HistoryTab> createState() => _HistoryTabState();
+}
+
+class _HistoryTabState extends State<HistoryTab> {
+  String status = 'ALL';
+  String side = 'ALL';
+
+  List<TradingOrder> get _history {
+    final rows = widget.orders.where((order) {
+      final terminal =
+          order.status == 'FILLED' ||
+          order.status == 'CANCELLED' ||
+          order.status == 'REJECTED';
+      if (!terminal) return false;
+      final matchesStatus = status == 'ALL' || order.status == status;
+      final matchesSide =
+          side == 'ALL' ||
+          (side == 'BUY' && order.isBuy) ||
+          (side == 'SELL' && !order.isBuy);
+      return matchesStatus && matchesSide;
+    }).toList()
+      ..sort((a, b) => b.placedAt.compareTo(a.placedAt));
+    return rows;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final history = orders
-        .where(
-          (order) =>
-              order.status == 'FILLED' ||
-              order.status == 'CANCELLED' ||
-              order.status == 'REJECTED',
-        )
-        .toList();
-
-    if (history.isEmpty) {
+    final allHistory = widget.orders.where(
+      (order) =>
+          order.status == 'FILLED' ||
+          order.status == 'CANCELLED' ||
+          order.status == 'REJECTED',
+    );
+    if (allHistory.isEmpty) {
       return const ResponsiveEmptyState(
         icon: Icons.history,
         title: 'No order history',
-        subtitle: 'Completed and cancelled orders will appear here.',
+        subtitle: 'Completed, cancelled, and rejected orders will appear here.',
       );
     }
 
-    return ListView.separated(
-      padding: AppSpacing.page,
-      itemCount: history.length,
-      separatorBuilder: (_, _) => const SizedBox(height: AppSpacing.md),
-      itemBuilder: (context, index) {
-        final order = history[index];
-        final sideColor = OrderStatusPresentation.sideColor(
-          order.isBuy ? 'BUY' : 'SELL',
-        );
-        final displayPrice = order.limitPrice ?? order.price;
-
-        return InkWell(
-          borderRadius: AppRadius.borderLg,
-          onTap: () => showStandardOrderDetails(context, order: order),
-          child: Container(
-            padding: AppSpacing.card,
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: AppRadius.borderLg,
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.sm + 2,
-                        vertical: AppSpacing.xs + 1,
-                      ),
-                      decoration: BoxDecoration(
-                        color: sideColor.withValues(alpha: 0.10),
-                        borderRadius: AppRadius.borderSm,
-                      ),
-                      child: AppText(
-                        OrderStatusPresentation.sideLabel(
-                          order.isBuy ? 'BUY' : 'SELL',
-                        ),
-                        style: AppTypography.labelSmall.copyWith(
-                          color: sideColor,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm + 2),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AppText(
-                            order.symbol,
-                            style: AppTypography.titleMedium.copyWith(
-                              fontSize: 17,
-                            ),
-                          ),
-                          AppText(
-                            order.exchange,
-                            style: AppTypography.caption.copyWith(
-                              color: AppColors.textTertiary,
-                              fontSize: 10,
-                            ),
-                          ),
-                          const SizedBox(height: 3),
-                          AppText(
-                            '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                            style: AppTypography.bodySmall.copyWith(
-                              color: AppColors.textTertiary,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    AppStatusChip(
-                      label: OrderStatusPresentation.label(order.status),
-                      variant: OrderStatusPresentation.chipVariant(
-                        order.status,
-                      ),
-                      compact: true,
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    const Icon(
-                      Icons.chevron_right_rounded,
-                      size: 20,
-                      color: AppColors.textDisabled,
-                    ),
-                  ],
-                ),
-                const Divider(height: AppSpacing.xxl),
-                Row(
-                  children: [
-                    Expanded(child: _value('Quantity', '${order.quantity}')),
-                    Expanded(
-                      child: _value(
-                        order.isLimit ? 'Limit Price' : 'Execution Price',
-                        displayPrice > 0 ? formatPrice(displayPrice) : '--',
-                      ),
-                    ),
-                    Expanded(
-                      child: _value(
-                        'Filled Quantity',
-                        '${order.filledQuantity}',
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: AppText(
-                    order.formattedTime,
-                    style: AppTypography.bodySmall.copyWith(
-                      color: AppColors.textTertiary,
-                    ),
-                  ),
-                ),
-              ],
+    final filtered = _history;
+    return Column(
+      children: [
+        _chips(
+          const [
+            ('ALL', 'All'),
+            ('FILLED', 'Filled'),
+            ('CANCELLED', 'Cancelled'),
+            ('REJECTED', 'Rejected'),
+          ],
+          status,
+          (value) => setState(() => status = value),
+          group: 'history-status',
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _chips(
+          const [
+            ('ALL', 'All sides'),
+            ('BUY', 'BUY'),
+            ('SELL', 'SELL'),
+          ],
+          side,
+          (value) => setState(() => side = value),
+          group: 'history-side',
+        ),
+        if (status != 'ALL' || side != 'ALL')
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => setState(() {
+                status = 'ALL';
+                side = 'ALL';
+              }),
+              child: const AppText('Clear filters'),
             ),
           ),
-        );
-      },
+        Expanded(
+          child: AppStatusSwitch(
+            switchKey: '$status|$side|${filtered.length}',
+            child: filtered.isEmpty
+                ? const ResponsiveEmptyState(
+                    icon: Icons.filter_alt_outlined,
+                    title: 'No matching history',
+                    subtitle: 'Nothing in the currently loaded orders matches these filters.',
+                  )
+                : ListView.separated(
+                    padding: AppSpacing.page,
+                    itemCount: filtered.length,
+                    separatorBuilder: (_, _) =>
+                        const SizedBox(height: AppSpacing.md),
+                    itemBuilder: (context, index) => OrderCard(
+                      order: filtered[index],
+                    ),
+                  ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _value(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        AppText(
-          value,
-          style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
-        ),
-      ],
+  Widget _chips(
+    List<(String, String)> items,
+    String selected,
+    ValueChanged<String> onSelect, {
+    required String group,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: [
+          for (final item in items)
+            ChoiceChip(
+              key: ValueKey('order-filter-$group-${item.$1}'),
+              label: AppText(item.$2),
+              selected: selected == item.$1,
+              selectedColor: AppColors.brandPrimary,
+              backgroundColor: AppColors.surface,
+              labelStyle: AppTypography.labelMedium.copyWith(
+                color: selected == item.$1
+                    ? AppColors.textInverse
+                    : AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+              side: BorderSide(
+                color: selected == item.$1
+                    ? AppColors.brandPrimary
+                    : AppColors.border,
+              ),
+              onSelected: (_) => onSelect(item.$1),
+            ),
+        ],
+      ),
     );
   }
 }

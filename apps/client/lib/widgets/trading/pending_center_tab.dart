@@ -3,36 +3,31 @@ import 'package:flutter/material.dart';
 
 import '../../models/ipo.dart';
 import '../../models/trading_order.dart';
-import '../../services/trading_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
-import '../../utils/order_status_presentation.dart';
 import '../stock_logo.dart';
+import 'order_card.dart';
 
 class PendingCenterTab extends StatefulWidget {
   const PendingCenterTab({
     super.key,
     required this.activeOrders,
     required this.ipoApplications,
-    this.onOrderCancelled,
+    this.onCancel,
   });
 
   final List<TradingOrder> activeOrders;
   final List<IpoApplication> ipoApplications;
-  final VoidCallback? onOrderCancelled;
+  final Future<String?> Function(TradingOrder order)? onCancel;
 
   @override
   State<PendingCenterTab> createState() => _PendingCenterTabState();
 }
 
 class _PendingCenterTabState extends State<PendingCenterTab> {
-  final TradingService _tradingService = TradingService();
-  final Set<String> _locallyCancelledOrderIds = <String>{};
-  final Set<String> _cancellingOrderIds = <String>{};
-
   int selectedSection = 0;
   final List<String> sections = const ['Open orders', 'IPO Applications'];
 
@@ -80,13 +75,8 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
   }
 
   Widget _buildActiveOrders() {
-    final orders = widget.activeOrders
-        .where(
-          (order) =>
-              order.orderId == null ||
-              !_locallyCancelledOrderIds.contains(order.orderId),
-        )
-        .toList();
+    final orders = List<TradingOrder>.of(widget.activeOrders)
+      ..sort((a, b) => b.placedAt.compareTo(a.placedAt));
 
     if (orders.isEmpty) {
       return Center(
@@ -107,7 +97,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
               ),
               const SizedBox(height: AppSpacing.sm),
               AppText(
-                'Open and partially filled orders will appear here.',
+                'Open, pending, and partially filled orders will appear here.',
                 textAlign: TextAlign.center,
                 style: AppTypography.bodyMedium.copyWith(
                   color: AppColors.textSecondary,
@@ -123,200 +113,11 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
       padding: const EdgeInsets.all(16),
       itemCount: orders.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _pendingOrderCard(orders[index]),
-    );
-  }
-
-  Widget _pendingOrderCard(TradingOrder order) {
-    final sideColor = OrderStatusPresentation.sideColor(
-      order.isBuy ? 'BUY' : 'SELL',
-    );
-    final orderId = order.orderId;
-    final cancelling = orderId != null && _cancellingOrderIds.contains(orderId);
-    final displayPrice = order.limitPrice ?? order.price;
-
-    return Container(
-      padding: AppSpacing.card,
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: AppRadius.borderLg,
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              StockLogo(symbol: order.symbol, size: 42),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(order.symbol, style: AppTypography.titleMedium),
-                    const SizedBox(height: 3),
-                    AppText(
-                      '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.sm + 2,
-                  vertical: AppSpacing.xs + 1,
-                ),
-                decoration: BoxDecoration(
-                  color: sideColor.withValues(alpha: 0.10),
-                  borderRadius: AppRadius.borderPill,
-                ),
-                child: AppText(
-                  OrderStatusPresentation.sideLabel(
-                    order.isBuy ? 'BUY' : 'SELL',
-                  ),
-                  style: AppTypography.labelSmall.copyWith(
-                    color: sideColor,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 12,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 26),
-          Row(
-            children: [
-              Expanded(child: _orderValue('Quantity', '${order.quantity}')),
-              Expanded(
-                child: _orderValue(
-                  order.isLimit ? 'Limit Price' : 'Price',
-                  displayPrice > 0 ? formatPrice(displayPrice) : '--',
-                ),
-              ),
-              Expanded(
-                child: _orderValue(
-                  'Status',
-                  OrderStatusPresentation.label(order.status),
-                ),
-              ),
-            ],
-          ),
-          if (order.filledQuantity > 0) ...[
-            const SizedBox(height: AppSpacing.md + 2),
-            Row(
-              children: [
-                Expanded(
-                  child: _orderValue(
-                    'Filled Quantity',
-                    '${order.filledQuantity}',
-                  ),
-                ),
-                Expanded(
-                  child: _orderValue(
-                    'Remaining Quantity',
-                    '${order.remainingQuantity}',
-                  ),
-                ),
-                const Expanded(child: SizedBox()),
-              ],
-            ),
-          ],
-          const SizedBox(height: AppSpacing.md + 2),
-          Row(
-            children: [
-              Expanded(
-                child: AppText(
-                  order.formattedTime,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.textTertiary,
-                  ),
-                ),
-              ),
-              OutlinedButton(
-                onPressed: orderId == null || cancelling
-                    ? null
-                    : () => _confirmCancel(order),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.loss,
-                ),
-                child: AppText(cancelling ? 'Cancelling...' : 'Cancel Order'),
-              ),
-            ],
-          ),
-        ],
+      itemBuilder: (context, index) => OrderCard(
+        order: orders[index],
+        onCancel: widget.onCancel,
       ),
     );
-  }
-
-  Widget _orderValue(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        AppText(
-          value,
-          style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w700),
-        ),
-      ],
-    );
-  }
-
-  Future<void> _confirmCancel(TradingOrder order) async {
-    final orderId = order.orderId;
-    if (orderId == null) return;
-
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const AppText('Cancel Order?'),
-        content: AppText(
-          'Cancel the remaining ${order.remainingQuantity} shares of '
-          '${order.symbol} ${order.isBuy ? 'BUY' : 'SELL'} order?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const AppText('Keep Order'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            style: FilledButton.styleFrom(backgroundColor: AppColors.loss),
-            child: const AppText('Cancel Order'),
-          ),
-        ],
-      ),
-    );
-
-    if (confirmed != true || !mounted) return;
-
-    setState(() => _cancellingOrderIds.add(orderId));
-    try {
-      await _tradingService.cancelOrder(orderId);
-      if (!mounted) return;
-      setState(() {
-        _cancellingOrderIds.remove(orderId);
-        _locallyCancelledOrderIds.add(orderId);
-      });
-      widget.onOrderCancelled?.call();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: AppText('${order.symbol} order cancelled')),
-      );
-    } on TradingException catch (error) {
-      if (!mounted) return;
-      setState(() => _cancellingOrderIds.remove(orderId));
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: AppText(error.message)));
-    }
   }
 
   Widget _buildIpoApplications() {

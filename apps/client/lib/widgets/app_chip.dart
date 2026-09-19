@@ -45,6 +45,8 @@ class AppStatusChip extends StatelessWidget {
       ),
       child: Text(
         label,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTypography.labelSmall.copyWith(
           color: fg,
           fontWeight: FontWeight.w700,

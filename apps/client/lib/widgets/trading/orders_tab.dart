@@ -3,20 +3,27 @@ import 'package:flutter/material.dart';
 
 import '../../models/trading_order.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_radius.dart';
+import '../../theme/app_motion.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../../utils/number_formatters.dart';
-import '../../utils/order_status_presentation.dart';
-import '../app_chip.dart';
-import 'standard_order_details_sheet.dart';
 import '../responsive_empty_state.dart';
+import 'order_card.dart';
 
 class OrdersTab extends StatefulWidget {
-  const OrdersTab({super.key, required this.orders, this.onCancel});
+  const OrdersTab({
+    super.key,
+    required this.orders,
+    this.onCancel,
+    this.loading = false,
+    this.failed = false,
+    this.onRefresh,
+  });
 
   final List<TradingOrder> orders;
   final Future<String?> Function(TradingOrder order)? onCancel;
+  final bool loading;
+  final bool failed;
+  final Future<void> Function()? onRefresh;
 
   @override
   State<OrdersTab> createState() => _OrdersTabState();
@@ -25,27 +32,76 @@ class OrdersTab extends StatefulWidget {
 class _OrdersTabState extends State<OrdersTab> {
   String query = '';
   String status = 'ALL';
+  String side = 'ALL';
+  var _refreshing = false;
 
-  @override
-  Widget build(BuildContext context) {
-    if (widget.orders.isEmpty) {
-      return const ResponsiveEmptyState(
-        icon: Icons.receipt_long_outlined,
-        title: 'No orders',
-        subtitle: 'Your order activity will appear here.',
-      );
-    }
-
-    final filtered = widget.orders.where((order) {
-      final needle = query.toLowerCase();
+  List<TradingOrder> get _filtered {
+    final needle = query.toLowerCase();
+    final rows = widget.orders.where((order) {
       final matchesQuery =
           needle.isEmpty ||
           order.symbol.toLowerCase().contains(needle) ||
           order.exchange.toLowerCase().contains(needle) ||
           (order.orderId?.toLowerCase().contains(needle) ?? false);
-      return matchesQuery && (status == 'ALL' || order.status == status);
+      final matchesSide =
+          side == 'ALL' ||
+          (side == 'BUY' && order.isBuy) ||
+          (side == 'SELL' && !order.isBuy);
+      final matchesStatus = switch (status) {
+        'ALL' => true,
+        'OPEN_PENDING' =>
+          order.status == 'OPEN' || order.status == 'PENDING',
+        _ => order.status == status,
+      };
+      return matchesQuery && matchesSide && matchesStatus;
     }).toList();
+    rows.sort((a, b) => b.placedAt.compareTo(a.placedAt));
+    return rows;
+  }
 
+  Future<void> _refresh() async {
+    final action = widget.onRefresh;
+    if (action == null || _refreshing) return;
+    setState(() => _refreshing = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.loading && widget.orders.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    if (widget.failed && widget.orders.isEmpty) {
+      return ResponsiveEmptyState(
+        icon: Icons.warning_amber_rounded,
+        title: 'Orders could not be loaded',
+        subtitle: 'The last refresh failed. Your previous orders were not removed.',
+        action: TextButton(
+          onPressed: widget.onRefresh == null || _refreshing ? null : _refresh,
+          child: AppText(_refreshing ? 'Refreshing...' : 'Retry'),
+        ),
+      );
+    }
+    if (widget.orders.isEmpty) {
+      return ResponsiveEmptyState(
+        icon: Icons.receipt_long_outlined,
+        title: 'No orders',
+        subtitle: 'Your order activity will appear here. No sample orders are shown.',
+        action: widget.onRefresh == null
+            ? null
+            : IconButton(
+                tooltip: 'Refresh orders',
+                onPressed: _refreshing ? null : _refresh,
+                icon: const Icon(Icons.refresh_rounded),
+              ),
+      );
+    }
+
+    final filtered = _filtered;
     return Column(
       children: [
         Padding(
@@ -55,223 +111,136 @@ class _OrdersTabState extends State<OrdersTab> {
             AppSpacing.lg,
             AppSpacing.sm,
           ),
-          child: TextField(
-            onChanged: (value) => setState(() => query = value.trim()),
-            decoration: const InputDecoration(
-              hintText: 'Search symbol or order ID',
-              prefixIcon: Icon(Icons.search_rounded),
-              isDense: true,
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  onChanged: (value) => setState(() => query = value.trim()),
+                  decoration: const InputDecoration(
+                    hintText: 'Search symbol or order ID',
+                    prefixIcon: Icon(Icons.search_rounded),
+                    isDense: true,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Refresh orders',
+                onPressed: widget.onRefresh == null || _refreshing ? null : _refresh,
+                icon: _refreshing
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh_rounded),
+              ),
+            ],
+          ),
+        ),
+        _chipRow(
+          [
+            ('ALL', 'All'),
+            ('OPEN_PENDING', 'Open / Pending'),
+            ('PARTIALLY_FILLED', 'Partially Filled'),
+            ('FILLED', 'Filled'),
+            ('CANCELLED', 'Cancelled'),
+            ('REJECTED', 'Rejected'),
+          ],
+          status,
+          (value) => setState(() => status = value),
+          group: 'status',
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        _chipRow(
+          const [
+            ('ALL', 'All sides'),
+            ('BUY', 'BUY'),
+            ('SELL', 'SELL'),
+          ],
+          side,
+          (value) => setState(() => side = value),
+          group: 'side',
+        ),
+        if (query.isNotEmpty || status != 'ALL' || side != 'ALL')
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => setState(() {
+                query = '';
+                status = 'ALL';
+                side = 'ALL';
+              }),
+              child: const AppText('Clear filters'),
             ),
           ),
-        ),
-        SizedBox(
-          height: 42,
-          child: ListView(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-            scrollDirection: Axis.horizontal,
-            children:
-                [
-                      'ALL',
-                      'OPEN',
-                      'PARTIALLY_FILLED',
-                      'FILLED',
-                      'CANCELLED',
-                      'REJECTED',
-                    ]
-                    .map(
-                      (value) => Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.sm),
-                        child: ChoiceChip(
-                          label: AppText(
-                            value == 'ALL'
-                                ? 'All'
-                                : OrderStatusPresentation.label(value),
-                          ),
-                          selected: status == value,
-                          selectedColor: AppColors.brandPrimary,
-                          backgroundColor: AppColors.surface,
-                          labelStyle: AppTypography.labelMedium.copyWith(
-                            color: status == value
-                                ? AppColors.textInverse
-                                : AppColors.textPrimary,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          side: BorderSide(
-                            color: status == value
-                                ? AppColors.brandPrimary
-                                : AppColors.border,
-                          ),
-                          onSelected: (_) => setState(() => status = value),
-                        ),
-                      ),
-                    )
-                    .toList(),
-          ),
-        ),
         Expanded(
-          child: filtered.isEmpty
-              ? const Center(child: AppText('No matching orders'))
-              : ListView.separated(
-                  padding: AppSpacing.page,
-                  itemCount: filtered.length,
-                  separatorBuilder: (_, _) =>
-                      const SizedBox(height: AppSpacing.md),
-                  itemBuilder: (context, index) {
-                    final order = filtered[index];
-                    final sideColor = OrderStatusPresentation.sideColor(
-                      order.isBuy ? 'BUY' : 'SELL',
-                    );
-                    final displayPrice = order.limitPrice ?? order.price;
-
-                    return InkWell(
-                      borderRadius: AppRadius.borderLg,
-                      onTap: () => showStandardOrderDetails(
-                        context,
-                        order: order,
-                        onCancel: order.isActive ? widget.onCancel : null,
-                      ),
-                      child: Container(
-                        padding: AppSpacing.card,
-                        decoration: BoxDecoration(
-                          color: AppColors.surface,
-                          borderRadius: AppRadius.borderLg,
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Flexible(
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: AppSpacing.sm + 2,
-                                      vertical: AppSpacing.xs + 1,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: sideColor.withValues(alpha: 0.10),
-                                      borderRadius: AppRadius.borderSm,
-                                    ),
-                                    child: AppText(
-                                      OrderStatusPresentation.sideLabel(
-                                        order.isBuy ? 'BUY' : 'SELL',
-                                      ),
-                                      style: AppTypography.labelSmall.copyWith(
-                                        color: sideColor,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: AppSpacing.sm + 2),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      AppText(
-                                        order.symbol,
-                                        style: AppTypography.titleMedium
-                                            .copyWith(fontSize: 17),
-                                      ),
-                                      AppText(
-                                        order.exchange,
-                                        style: AppTypography.caption.copyWith(
-                                          color: AppColors.textTertiary,
-                                          fontSize: 10,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 3),
-                                      AppText(
-                                        '${order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'} • ${order.timeInForce}',
-                                        style: AppTypography.bodySmall.copyWith(
-                                          color: AppColors.textTertiary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                AppStatusChip(
-                                  label: OrderStatusPresentation.label(
-                                    order.status,
-                                  ),
-                                  variant: OrderStatusPresentation.chipVariant(
-                                    order.status,
-                                  ),
-                                  compact: true,
-                                ),
-                                const SizedBox(width: AppSpacing.xs),
-                                const Icon(
-                                  Icons.chevron_right_rounded,
-                                  size: 20,
-                                  color: AppColors.textDisabled,
-                                ),
-                              ],
-                            ),
-                            const Divider(height: AppSpacing.xxl),
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: _value(
-                                    'Quantity',
-                                    '${order.quantity}',
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _value(
-                                    order.isLimit
-                                        ? 'Limit Price'
-                                        : 'Execution Price',
-                                    displayPrice > 0
-                                        ? formatPrice(displayPrice)
-                                        : '--',
-                                  ),
-                                ),
-                                Expanded(
-                                  child: _value(
-                                    'Filled Quantity',
-                                    '${order.filledQuantity}',
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: AppSpacing.md + 2),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: AppText(
-                                order.formattedTime,
-                                style: AppTypography.bodySmall.copyWith(
-                                  color: AppColors.textTertiary,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+          child: AppStatusSwitch(
+            switchKey: '$status|$side|$query|${filtered.length}',
+            child: filtered.isEmpty
+                ? const ResponsiveEmptyState(
+                    icon: Icons.filter_alt_outlined,
+                    title: 'No matching orders',
+                    subtitle: 'Nothing in the currently loaded orders matches these filters.',
+                  )
+                : RefreshIndicator(
+                    onRefresh: widget.onRefresh == null
+                        ? () async {}
+                        : _refresh,
+                    child: ListView.separated(
+                      key: const Key('orders-list'),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: AppSpacing.page,
+                      itemCount: filtered.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.md),
+                      itemBuilder: (context, index) {
+                        return OrderCard(
+                          order: filtered[index],
+                          onCancel: widget.onCancel,
+                        );
+                      },
+                    ),
+                  ),
+          ),
         ),
       ],
     );
   }
 
-  Widget _value(String label, String value) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppText(
-          label,
-          style: AppTypography.bodySmall.copyWith(
-            color: AppColors.textTertiary,
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        AppText(
-          value,
-          style: AppTypography.labelLarge.copyWith(fontWeight: FontWeight.w600),
-        ),
-      ],
+  Widget _chipRow(
+    List<(String, String)> items,
+    String selected,
+    ValueChanged<String> onSelect, {
+    required String group,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+      child: Wrap(
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: [
+          for (final item in items)
+            ChoiceChip(
+              key: ValueKey('order-filter-$group-${item.$1}'),
+              label: AppText(item.$2),
+              selected: selected == item.$1,
+              selectedColor: AppColors.brandPrimary,
+              backgroundColor: AppColors.surface,
+              labelStyle: AppTypography.labelMedium.copyWith(
+                color: selected == item.$1
+                    ? AppColors.textInverse
+                    : AppColors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
+              side: BorderSide(
+                color: selected == item.$1
+                    ? AppColors.brandPrimary
+                    : AppColors.border,
+              ),
+              onSelected: (_) => onSelect(item.$1),
+            ),
+        ],
+      ),
     );
   }
 }

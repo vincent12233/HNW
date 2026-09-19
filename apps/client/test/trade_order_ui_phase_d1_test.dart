@@ -96,9 +96,14 @@ Future<void> reveal(
 Finder confirmButton() => find.byKey(const Key('order-confirm'));
 
 Future<void> openConfirm(WidgetTester tester, {bool buy = true}) async {
-  await tester.tap(find.widgetWithText(FilledButton, buy ? 'BUY' : 'SELL'));
+  FocusManager.instance.primaryFocus?.unfocus();
+  await tester.pump();
+  final button = find.widgetWithText(FilledButton, buy ? 'BUY' : 'SELL');
+  await tester.ensureVisible(button);
+  await tester.tap(button);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 50));
+  await tester.pump(const Duration(milliseconds: 400));
   await tester.pump(const Duration(milliseconds: 400));
 }
 
@@ -278,6 +283,8 @@ void main() {
     await tester.tap(find.text('IOC'));
     await pumpFrames(tester);
     await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '3');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pump();
     await reveal(tester, find.byTooltip('Sell'));
     await tester.tap(find.byTooltip('Sell'));
     await pumpFrames(tester);

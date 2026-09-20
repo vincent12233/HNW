@@ -7,8 +7,9 @@ function isIsolatedLocalTestDatabase(url: string | undefined) {
     const host = parsed.hostname;
     const database = parsed.pathname.replace(/^\//, '').split('?')[0];
     const localHosts = new Set(['localhost', '127.0.0.1', 'postgres', '::1']);
+    const dockerDns = !host.includes('.') && host !== 'localhost';
     return (
-      (localHosts.has(host) || host.endsWith('.local')) &&
+      (localHosts.has(host) || host.endsWith('.local') || dockerDns) &&
       /e2e|test|local|dev/i.test(database)
     );
   } catch {

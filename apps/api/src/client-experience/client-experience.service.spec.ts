@@ -4,13 +4,26 @@ import sharp from 'sharp';
 describe('Client profile and asset history', () => {
   it('updates membership and records previous and new tiers in one transaction', async () => {
     const tx = {
+      $executeRaw: jest.fn(),
       user: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({ role: 'CLIENT', clientTier: 'STANDARD' }),
-        update: jest
-          .fn()
-          .mockResolvedValue({ id: 'client', clientTier: 'GOLD' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'client',
+          role: 'CLIENT',
+          clientTier: 'STANDARD',
+          account: { id: 'acct' },
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      vipTierHistory: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
+      vipTierConfiguration: { findMany: jest.fn().mockResolvedValue([]) },
+      depositRequest: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+      },
+      accountTransaction: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
       },
       auditLog: { create: jest.fn() },
     };
@@ -24,20 +37,21 @@ describe('Client profile and asset history', () => {
       data: expect.objectContaining({
         actorId: 'admin',
         resourceId: 'client',
-        metadata: { previous: 'STANDARD', tier: 'GOLD' },
+        metadata: expect.objectContaining({
+          previous: 'STANDARD',
+          tier: 'GOLD',
+        }),
       }),
     });
+    expect(tx.vipTierHistory.create).toHaveBeenCalledTimes(1);
     await expect(service.updateTier('admin', 'client', 'VIP')).rejects.toThrow(
       'Invalid client tier',
     );
-    tx.user.findUnique.mockResolvedValue({
-      role: 'ADMIN',
-      clientTier: 'STANDARD',
-    });
+    tx.user.findFirst.mockResolvedValue(null);
     await expect(
       service.updateTier('admin', 'client', 'SILVER'),
     ).rejects.toThrow('Client not found');
-    expect(tx.user.update).toHaveBeenCalledTimes(1);
+    expect(tx.user.updateMany).toHaveBeenCalledTimes(1);
   });
   it('rejects arbitrary avatar payloads and stores a resized raster image', async () => {
     const update = jest.fn(async ({ data }: any) => data);

@@ -19,6 +19,7 @@ import { IpoService } from '../ipo/ipo.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { moneyDecimal } from '../common/money';
+import { applyManualVipTierChange } from '../vip/vip-tier-change';
 
 type CreateBusinessInput = {
   password: string;
@@ -984,44 +985,24 @@ export class BusinessService {
     return updated;
   }
 
-  async updateCustomerTier(actorId: string, customerId: string, tier: unknown) {
-    if (
-      typeof tier !== 'string' ||
-      !['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].includes(tier)
-    ) {
-      throw new BadRequestException('Invalid membership tier');
-    }
-    return this.prisma.$transaction(async (tx) => {
-      const scope = {
-        id: customerId,
-        role: UserRole.CLIENT,
-        assignedBusinessId: actorId,
-      };
-      const previous = await tx.user.findFirst({
-        where: scope,
-        select: { clientTier: true },
-      });
-      if (!previous)
-        throw new NotFoundException(
-          'Customer not assigned to this business user',
-        );
-      const result = await tx.user.updateMany({
-        where: scope,
-        data: { clientTier: tier },
-      });
-      if (result.count !== 1)
-        throw new NotFoundException('Customer assignment changed');
-      await tx.auditLog.create({
-        data: {
+  async updateCustomerTier(
+    actorId: string,
+    customerId: string,
+    tier: unknown,
+    reason?: unknown,
+  ) {
+    return this.prisma.$transaction(
+      (tx) =>
+        applyManualVipTierChange(tx, {
           actorId,
-          action: 'BUSINESS_CLIENT_TIER_UPDATED',
-          resource: 'User',
-          resourceId: customerId,
-          metadata: { previous: previous.clientTier, tier },
-        },
-      });
-      return { id: customerId, clientTier: tier };
-    });
+          userId: customerId,
+          tier,
+          reason,
+          source: 'MANUAL',
+          requireReason: false,
+        }),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async myIpoApplications(businessUserId: string) {

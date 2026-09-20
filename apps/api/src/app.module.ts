@@ -32,6 +32,7 @@ import { StorageModule } from './storage/storage.module';
 import { AppContentModule } from './app-content/app-content.module';
 import { CompanyShowcaseModule } from './company-showcase/company-showcase.module';
 import { OpsContentModule } from './ops-content/ops-content.module';
+import { VipModule } from './vip/vip.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { OpsContentModule } from './ops-content/ops-content.module';
     AppContentModule,
     CompanyShowcaseModule,
     OpsContentModule,
+    VipModule,
   ],
   controllers: [HealthController],
 })

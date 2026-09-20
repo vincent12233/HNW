@@ -90,7 +90,7 @@ export class ClientExperienceController {
     @Param('id') id: string,
     @Body() body: Record<string, unknown>,
   ) {
-    return this.service.updateTier(req.user.userId, id, body.tier);
+    return this.service.updateTier(req.user.userId, id, body.tier, body.reason);
   }
   @Get('client/assets/history') @Roles(UserRole.CLIENT) history(
     @Req() req: AuthenticatedRequest,

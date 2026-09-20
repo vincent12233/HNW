@@ -275,12 +275,13 @@ export class BusinessController {
   updateCustomerTier(
     @Req() req: AuthenticatedRequest,
     @Param('customerId') customerId: string,
-    @Body() body: { tier: unknown },
+    @Body() body: { tier: unknown; reason?: unknown },
   ) {
     return this.businessService.updateCustomerTier(
       req.user.userId,
       customerId,
       body.tier,
+      body.reason,
     );
   }
 

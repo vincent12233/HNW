@@ -11,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { productCategory, summarizeProducts } from './product-portfolio';
 import { moneyDecimal } from '../common/money';
 import { Prisma } from '../generated/prisma/client';
+import { applyManualVipTierChange } from '../vip/vip-tier-change';
 
 @Injectable()
 export class ClientExperienceService {
@@ -373,32 +374,19 @@ export class ClientExperienceService {
     });
   }
 
-  async updateTier(actorId: string, userId: string, tier: unknown) {
-    if (
-      typeof tier !== 'string' ||
-      !['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].includes(tier)
-    )
-      throw new BadRequestException('Invalid client tier');
-    return this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { id: userId } });
-      if (!user || user.role !== 'CLIENT')
-        throw new NotFoundException('Client not found');
-      const result = await tx.user.update({
-        where: { id: userId },
-        data: { clientTier: tier },
-        select: { id: true, clientTier: true },
-      });
-      await tx.auditLog.create({
-        data: {
+  async updateTier(actorId: string, userId: string, tier: unknown, reason?: unknown) {
+    return this.prisma.$transaction(
+      (tx) =>
+        applyManualVipTierChange(tx, {
           actorId,
-          action: 'CLIENT_TIER_UPDATED',
-          resource: 'User',
-          resourceId: userId,
-          metadata: { previous: user.clientTier, tier },
-        },
-      });
-      return result;
-    });
+          userId,
+          tier,
+          reason,
+          source: 'ADMIN',
+          requireReason: false,
+        }),
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   async assetHistory(userId: string, period: string) {

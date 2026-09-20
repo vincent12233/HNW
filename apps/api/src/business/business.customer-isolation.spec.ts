@@ -5,9 +5,26 @@ import { BusinessService } from './business.service';
 describe('BusinessService customer isolation', () => {
   it('limits membership writes to owned customers and audits the change', async () => {
     const tx = {
+      $executeRaw: jest.fn(),
       user: {
-        findFirst: jest.fn().mockResolvedValue({ clientTier: 'STANDARD' }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'client-1',
+          role: 'CLIENT',
+          clientTier: 'STANDARD',
+          account: { id: 'acct-1' },
+        }),
         updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+      },
+      vipTierHistory: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
+      vipTierConfiguration: { findMany: jest.fn().mockResolvedValue([]) },
+      depositRequest: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
+      },
+      accountTransaction: {
+        aggregate: jest.fn().mockResolvedValue({ _sum: { amount: 0 } }),
       },
       auditLog: { create: jest.fn() },
     };
@@ -24,10 +41,12 @@ describe('BusinessService customer isolation', () => {
         id: 'client-1',
         role: 'CLIENT',
         assignedBusinessId: 'business-1',
+        deletedAt: null,
       },
       data: { clientTier: 'GOLD' },
     });
     expect(tx.auditLog.create).toHaveBeenCalledTimes(1);
+    expect(tx.vipTierHistory.create).toHaveBeenCalledTimes(1);
     tx.user.findFirst.mockResolvedValue(null);
     await expect(
       service.updateCustomerTier('business-1', 'other-client', 'GOLD'),

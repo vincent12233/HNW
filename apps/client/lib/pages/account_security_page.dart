@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import '../services/client_account_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_expiry_service.dart';
+import '../theme/app_motion.dart';
 import '../utils/client_error_message.dart';
 
 class AccountSecurityPage extends StatefulWidget {
@@ -26,6 +27,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
   final _next = TextEditingController();
   final _confirm = TextEditingController();
   late final _service = widget.accountService ?? ClientAccountService();
+  final _visible = <TextEditingController>{};
   bool _loading = true;
   bool _saving = false;
   bool _configured = false;
@@ -122,7 +124,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
     padding: const EdgeInsets.only(bottom: 18),
     child: TextFormField(
       controller: controller,
-      obscureText: true,
+      obscureText: !_visible.contains(controller),
       enabled: !_saving,
       enableSuggestions: false,
       autocorrect: false,
@@ -144,7 +146,25 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
               LengthLimitingTextInputFormatter(6),
             ]
           : null,
-      decoration: InputDecoration(labelText: tr(label)),
+      decoration: InputDecoration(
+        labelText: tr(label),
+        suffixIcon: IconButton(
+          tooltip: _visible.contains(controller) ? tr('Hide') : tr('Show'),
+          onPressed: () => setState(() {
+            if (!_visible.add(controller)) _visible.remove(controller);
+          }),
+          constraints: const BoxConstraints(
+            minWidth: AppMotion.tapTarget,
+            minHeight: AppMotion.tapTarget,
+          ),
+          icon: Icon(
+            _visible.contains(controller)
+                ? Icons.visibility_off
+                : Icons.visibility,
+            size: AppMotion.iconField,
+          ),
+        ),
+      ),
       validator: (value) {
         if (value == null || value.isEmpty) return tr('This field is required');
         if (pin && !RegExp(r'^\d{6}$').hasMatch(value)) {
@@ -176,7 +196,16 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
         ),
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: 12),
+                  AppText('Loading security settings'),
+                ],
+              ),
+            )
           : _loadFailed
           ? AppEmptyState(
               title: 'Unable to load security settings',
@@ -217,7 +246,9 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                         ),
                       ),
                     ),
-                  FilledButton(
+                  SizedBox(
+                    height: AppMotion.tapTarget,
+                    child: FilledButton(
                     onPressed: _saving ? null : _save,
                     child: _saving
                         ? const SizedBox.square(
@@ -225,6 +256,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const AppText('Save changes'),
+                  ),
                   ),
                 ],
               ),

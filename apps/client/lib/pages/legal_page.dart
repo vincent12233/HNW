@@ -174,7 +174,7 @@ const _privacySections = <_LegalSection>[
   ),
   _LegalSection(
     '4. Why we use data',
-    'We use personal data to create and protect accounts; authenticate users; complete KYC and other required checks; provide market information; accept, review, process and settle transactions under the applicable product workflow; maintain bank-account records; send OTPs and service notifications; provide support; investigate fraud, abuse and security incidents; maintain audit records; improve reliability; and comply with lawful obligations.',
+    'We use personal data to create and protect accounts; authenticate users; complete KYC and other required checks; provide market information; accept, review, process and settle transactions under the applicable product workflow; maintain bank-account records; send service notifications; provide support; investigate fraud, abuse and security incidents; maintain audit records; improve reliability; and comply with lawful obligations.',
   ),
   _LegalSection(
     '5. Consent and required processing',
@@ -182,7 +182,7 @@ const _privacySections = <_LegalSection>[
   ),
   _LegalSection(
     '6. Who receives data',
-    'We may share only the information reasonably necessary with cloud and security providers, SMS/OTP providers, Google authentication, market-data providers, banks and settlement service providers, the business or support team assigned to your account, professional advisers, and competent government, regulatory or law-enforcement authorities. We do not sell personal data for money.',
+    'We may share only the information reasonably necessary with cloud and security providers, authenticator and notification providers, Google authentication, market-data providers, banks and settlement service providers, the business or support team assigned to your account, professional advisers, and competent government, regulatory or law-enforcement authorities. We do not sell personal data for money.',
   ),
   _LegalSection(
     '7. Storage, transfer and retention',
@@ -190,7 +190,7 @@ const _privacySections = <_LegalSection>[
   ),
   _LegalSection(
     '8. Security',
-    'We use access controls, encrypted transport, password hashing, expiring OTPs, authentication controls, audit logging and operational safeguards appropriate to the nature of the data. No system can guarantee absolute security. Keep your password, OTP and transaction key confidential and notify Online Customer Service immediately if you suspect unauthorised access.',
+    'We use access controls, encrypted transport, password hashing, optional authenticator-app codes, authentication controls, audit logging and operational safeguards appropriate to the nature of the data. No system can guarantee absolute security. Keep your password, authenticator app code, recovery code and transaction key confidential and notify Online Customer Service immediately if you suspect unauthorised access.',
   ),
   _LegalSection(
     '9. Your choices and rights',
@@ -213,7 +213,7 @@ const _termsSections = <_LegalSection>[
   ),
   _LegalSection(
     '2. Account security',
-    'You are responsible for protecting your password, OTP, transaction key and registered device. Google and biometric quick login are optional. Device biometrics only unlock a stored quick-login credential; they do not replace transaction authorisation where a transaction key or another confirmation is required. Report suspected unauthorised access immediately.',
+    'You are responsible for protecting your password, authenticator app code, recovery code, transaction key and registered device. Google and biometric quick login are optional. Device biometrics only unlock a stored quick-login credential; they do not replace transaction authorisation where a transaction key or another confirmation is required. Report suspected unauthorised access immediately.',
   ),
   _LegalSection(
     '3. Services and product workflows',
@@ -284,7 +284,7 @@ const _riskSections = <_LegalSection>[
   ),
   _LegalSection(
     '8. Fraud and account-security risk',
-    'Fraudsters may impersonate staff or promise guaranteed returns. Never share passwords, OTPs or transaction keys, and use only verified in-app support channels. Report unauthorised activity promptly. India Trading does not guarantee returns or ask you to bypass the displayed transaction workflow.',
+    'Fraudsters may impersonate staff or promise guaranteed returns. Never share passwords, authenticator app codes, recovery codes or transaction keys, and use only verified in-app support channels. Report unauthorised activity promptly. India Trading does not guarantee returns or ask you to bypass the displayed transaction workflow.',
   ),
   _LegalSection(
     '9. Regulatory and tax risk',

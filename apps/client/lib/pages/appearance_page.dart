@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/client_account_service.dart';
 import '../theme/appearance_settings.dart';
+import '../theme/app_motion.dart';
 import '../utils/client_error_message.dart';
 
 class AppearancePage extends StatefulWidget {
@@ -43,6 +44,7 @@ class _AppearancePageState extends State<AppearancePage> {
             title: AppText(option.value),
             enabled: !_busy,
             onTap: () => _select(option.key),
+            minTileHeight: AppMotion.tapTarget,
             trailing: AppearanceSettings.instance.value == option.key
                 ? const Icon(Icons.check)
                 : null,

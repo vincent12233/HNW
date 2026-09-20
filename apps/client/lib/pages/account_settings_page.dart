@@ -4,8 +4,13 @@ import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../services/client_account_service.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/profile_identity.dart';
 import 'kyc_upload_page.dart';
 import 'bank_details_page.dart';
 
@@ -32,6 +37,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   int _loadGeneration = 0;
   final Set<String> _savingPreferences = <String>{};
   final _profileNameController = TextEditingController();
+  final Set<String> _revealedBanks = <String>{};
   @override
   void initState() {
     super.initState();
@@ -94,7 +100,19 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   Widget build(BuildContext context) => AppPageScaffold(
     appBar: AppBar(title: AppText(_title)),
     body: loading
-        ? const Center(child: CircularProgressIndicator())
+        ? const Center(
+            child: Padding(
+              padding: EdgeInsets.all(AppSpacing.xxl),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  CircularProgressIndicator(),
+                  SizedBox(height: AppSpacing.md),
+                  AppText('Loading account'),
+                ],
+              ),
+            ),
+          )
         : error != null
         ? AppEmptyState(
             title: 'Unable to load account',
@@ -102,7 +120,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             icon: Icons.cloud_off_outlined,
             onRetry: load,
           )
-        : _body(),
+        : AppFadeIn(switchKey: widget.section, child: _body()),
   );
   String get _title =>
       {
@@ -125,6 +143,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     return ListView(
       padding: const EdgeInsets.all(20),
       children: [
+        const AppText(
+          'Account ID is assigned by the server and cannot be edited here.',
+          style: AppTypography.caption,
+        ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           title: const AppText('Account ID'),
@@ -133,6 +155,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 data?['id']?.toString() ??
                 '--',
           ),
+          trailing: const AppText(
+            'Read-only',
+            style: AppTypography.caption,
+          ),
         ),
         const SizedBox(height: 14),
         TextField(
@@ -140,42 +166,48 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
           enabled: !_savingProfile,
           textCapitalization: TextCapitalization.words,
           autofillHints: const [AutofillHints.name],
-          decoration: InputDecoration(labelText: tr('Full name')),
+          decoration: InputDecoration(
+            labelText: tr('Full name'),
+            helperText: 'This is the only profile field that can be saved.',
+          ),
         ),
         const SizedBox(height: 20),
-        FilledButton(
-          onPressed: _savingProfile
-              ? null
-              : () async {
-                  if (_savingProfile) return;
-                  final fullName = _profileNameController.text.trim();
-                  if (fullName.length < 2) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: AppText('Enter your full name')),
-                    );
-                    return;
-                  }
-                  setState(() => _savingProfile = true);
-                  try {
-                    await service.updateProfile(fullName);
-                    await authService.updateCachedFullName(fullName);
-                    if (mounted) Navigator.pop(context, true);
-                  } catch (error) {
-                    if (mounted) {
+        SizedBox(
+          height: AppMotion.tapTarget,
+          child: FilledButton(
+            onPressed: _savingProfile
+                ? null
+                : () async {
+                    if (_savingProfile) return;
+                    final fullName = _profileNameController.text.trim();
+                    if (fullName.length < 2) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: AppText(clientErrorMessage(error))),
+                        const SnackBar(content: AppText('Enter your full name')),
                       );
+                      return;
                     }
-                  } finally {
-                    if (mounted) setState(() => _savingProfile = false);
-                  }
-                },
-          child: _savingProfile
-              ? const SizedBox.square(
-                  dimension: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const AppText('Save changes'),
+                    setState(() => _savingProfile = true);
+                    try {
+                      await service.updateProfile(fullName);
+                      await authService.updateCachedFullName(fullName);
+                      if (mounted) Navigator.pop(context, true);
+                    } catch (error) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: AppText(clientErrorMessage(error))),
+                        );
+                      }
+                    } finally {
+                      if (mounted) setState(() => _savingProfile = false);
+                    }
+                  },
+            child: _savingProfile
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const AppText('Save changes'),
+          ),
         ),
       ],
     );
@@ -205,27 +237,73 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                 AppText('No bank account linked'),
                 SizedBox(height: 4),
                 AppText(
-                  'Add a bank account before withdrawing funds.',
+                  'Add a bank account before withdrawing funds. Saved details are not a completed bank verification.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.black54),
                 ),
               ],
             ),
           ),
-        ...rows.map(
-          (bank) => Card(
-            child: ListTile(
-              leading: const Icon(Icons.account_balance),
-              title: AppText(bank['bankName']?.toString() ?? ''),
-              subtitle: AppText(_bankSubtitle(bank)),
-              trailing: IconButton(
-                tooltip: 'Remove bank account',
-                icon: const Icon(Icons.delete_outline_rounded),
-                onPressed: _deletingBank ? null : () => _deleteBank(bank),
+        ...rows.map((bank) {
+          final id = bank['id']?.toString() ?? '';
+          final revealed = _revealedBanks.contains(id);
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(4, 4, 4, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.account_balance),
+                    title: AppText(
+                      bank['bankName']?.toString() ?? '',
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: AppText(_bankSubtitle(bank, revealed: revealed)),
+                  ),
+                  OverflowBar(
+                    alignment: MainAxisAlignment.end,
+                    children: [
+                      IconButton(
+                        tooltip: revealed
+                            ? 'Hide account number'
+                            : 'Show account number',
+                        constraints: const BoxConstraints(
+                          minWidth: AppMotion.tapTarget,
+                          minHeight: AppMotion.tapTarget,
+                        ),
+                        onPressed: id.isEmpty
+                            ? null
+                            : () => setState(() {
+                                if (revealed) {
+                                  _revealedBanks.remove(id);
+                                } else {
+                                  _revealedBanks.add(id);
+                                }
+                              }),
+                        icon: Icon(
+                          revealed ? Icons.visibility_off : Icons.visibility,
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Remove bank account',
+                        constraints: const BoxConstraints(
+                          minWidth: AppMotion.tapTarget,
+                          minHeight: AppMotion.tapTarget,
+                        ),
+                        icon: const Icon(Icons.delete_outline_rounded),
+                        onPressed: _deletingBank
+                            ? null
+                            : () => _deleteBank(bank),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ),
-        ),
+          );
+        }),
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: _deletingBank ? null : _addBank,
@@ -276,16 +354,18 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     }
   }
 
-  String _bankSubtitle(Map<String, dynamic> bank) {
+  String _bankSubtitle(Map<String, dynamic> bank, {required bool revealed}) {
     final number = bank['accountNumber']?.toString() ?? '';
-    final suffix = number.length <= 4
-        ? number
-        : number.substring(number.length - 4);
-    final masked = suffix.isEmpty
+    final display = number.isEmpty
         ? 'Account number unavailable'
-        : '•••• $suffix';
+        : revealed
+        ? number
+        : (number.length <= 4
+              ? '•••• $number'
+              : '•••• ${number.substring(number.length - 4)}');
     final status = bank['status']?.toString().trim() ?? '';
-    return status.isEmpty ? masked : '$masked · $status';
+    final note = status.isEmpty ? 'Not a completed bank verification' : status;
+    return '$display · $note';
   }
 
   Future<void> _addBank() async {
@@ -391,32 +471,39 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         ? Map<String, dynamic>.from(data as Map)
         : <String, dynamic>{};
     final status = k['status']?.toString() ?? 'NOT_SUBMITTED';
-    return Center(
-      child: Card(
-        margin: const EdgeInsets.all(20),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
+    final label = profileKycLabel(status);
+    return ListView(
+      padding: const EdgeInsets.all(20),
+      children: [
+        Card(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
               Icon(
                 status == 'APPROVED'
-                    ? Icons.verified_user
+                    ? Icons.badge_outlined
+                    : status == 'REJECTED'
+                    ? Icons.error_outline
                     : Icons.hourglass_top,
                 size: 52,
-                color: status == 'APPROVED'
-                    ? AppConfig.gainColor
-                    : status == 'REJECTED'
-                    ? AppConfig.lossColor
-                    : AppConfig.neutralColor,
+                color: profileKycColor(status) == AppColors.textSecondary
+                    ? AppConfig.neutralColor
+                    : profileKycColor(status),
               ),
               const SizedBox(height: 14),
               AppText(
-                status,
+                label,
                 style: const TextStyle(
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
+              ),
+              const SizedBox(height: 8),
+              const AppText(
+                'Review is completed by the operations team. This screen does not confirm identity or bank checks automatically.',
+                textAlign: TextAlign.center,
               ),
               if (status != 'APPROVED') ...[
                 const SizedBox(height: 18),
@@ -424,7 +511,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                   onPressed: _startKyc,
                   icon: const Icon(Icons.upload_file_rounded),
                   label: AppText(
-                    status == 'NOT_SUBMITTED'
+                    status == 'REJECTED'
+                        ? 'Resubmit documents'
+                        : status == 'NOT_SUBMITTED'
                         ? 'Start verification'
                         : 'Update documents',
                   ),
@@ -432,14 +521,16 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               ],
               const SizedBox(height: 8),
               AppText(
-                k['reviewNote']?.toString() ??
-                    'Your latest KYC verification status is shown here.',
+                k['reviewNote']?.toString().trim().isNotEmpty == true
+                    ? k['reviewNote'].toString()
+                    : 'Your latest KYC verification status is shown here.',
                 textAlign: TextAlign.center,
               ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
+      ],
     );
   }
 

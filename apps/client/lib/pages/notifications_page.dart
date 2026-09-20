@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 
 import '../app_config.dart';
 import '../services/client_account_service.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key, this.accountService});
@@ -135,12 +137,32 @@ class _NotificationsPageState extends State<NotificationsPage> {
         ),
       ],
     ),
-    body: loading && items.isEmpty
-        ? const Center(child: CircularProgressIndicator())
+    body: AppStatusSwitch(
+      switchKey: '$loading|$errorMessage|${items.length}',
+      child: loading && items.isEmpty
+        ? const Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: AppSpacing.md),
+                AppText('Loading notifications'),
+              ],
+            ),
+          )
         : errorMessage != null && items.isEmpty
-        ? _ErrorState(message: errorMessage!, onRetry: load)
+        ? AppEmptyState(
+            title: 'Unable to load notifications',
+            message: 'The server did not return notifications. You can retry.',
+            icon: Icons.cloud_off_outlined,
+            onRetry: load,
+          )
         : items.isEmpty
-        ? const Center(child: AppText('No notifications yet'))
+        ? const AppEmptyState(
+            title: 'No notifications yet',
+            message: 'Account and order updates will appear here when the server sends them.',
+            icon: Icons.notifications_none,
+          )
         : RefreshIndicator(
             onRefresh: load,
             child: ListView.builder(
@@ -255,6 +277,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
               },
             ),
           ),
+    ),
   );
 
   IconData _icon(String? type) {
@@ -278,30 +301,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (rawDate == null || rawDate.isEmpty) return body;
     final date = DateTime.tryParse(rawDate)?.toLocal();
     if (date == null) return body;
+    final ist = date.toUtc().add(const Duration(hours: 5, minutes: 30));
+    String two(int number) => number.toString().padLeft(2, '0');
     final stamp =
-        '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')} '
-        '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+        '${two(ist.day)}/${two(ist.month)}/${ist.year} '
+        '${two(ist.hour)}:${two(ist.minute)} IST';
     return body.isEmpty ? stamp : '$body\n$stamp';
   }
-}
-
-class _ErrorState extends StatelessWidget {
-  const _ErrorState({required this.message, required this.onRetry});
-
-  final String message;
-  final VoidCallback onRetry;
-
-  @override
-  Widget build(BuildContext context) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.cloud_off_outlined, size: 44),
-        const SizedBox(height: 12),
-        AppText(message),
-        const SizedBox(height: 12),
-        OutlinedButton(onPressed: onRetry, child: const AppText('Retry')),
-      ],
-    ),
-  );
 }

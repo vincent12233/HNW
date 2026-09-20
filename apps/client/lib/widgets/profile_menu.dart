@@ -108,9 +108,7 @@ class ProfileMenuRow extends StatelessWidget {
                   AppText(
                     status!,
                     style: AppTypography.caption.copyWith(
-                      color: status == 'Verified'
-                          ? AppColors.gain
-                          : AppColors.textSecondary,
+                      color: AppColors.textSecondary,
                       fontWeight: FontWeight.w700,
                     ),
                   ),

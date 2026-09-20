@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'loan_page.dart';
-import '../widgets/membership_tier_badge.dart';
 import 'dart:math' as math;
 import 'dart:convert';
 
@@ -21,6 +20,8 @@ import '../widgets/account_metrics.dart';
 import '../widgets/markets/market_index_ref.dart';
 import '../widgets/home/home_dashboard.dart';
 import '../widgets/home/home_dashboard_data.dart';
+import '../theme/app_motion.dart';
+import '../widgets/profile_identity.dart';
 import '../widgets/profile_menu.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
@@ -97,6 +98,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   DeviceBiometric? _biometricCapability;
   bool _biometricEnabled = false;
   bool _biometricBusy = false;
+  bool _signingOut = false;
   bool isLoading = true;
   bool _accountSnapshotLoaded = false;
   bool _accountSnapshotFailed = false;
@@ -2166,23 +2168,14 @@ class _MarketHomePageState extends State<MarketHomePage>
     }
   }
 
-  String get _accountInitials {
-    final parts = accountName
-        .trim()
-        .split(RegExp(r'\s+'))
-        .where((part) => part.isNotEmpty)
-        .toList();
-    if (parts.isEmpty) return 'C';
-    if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return '${parts.first[0]}${parts.last[0]}'.toUpperCase();
-  }
-
   Widget _notificationButton() {
     return Stack(
       clipBehavior: Clip.none,
       children: [
         IconButton(
-          tooltip: 'Notifications',
+          tooltip: unreadNotificationCount > 0
+              ? 'Notifications ($unreadNotificationCount unread)'
+              : 'Notifications',
           onPressed: _openNotifications,
           icon: const Icon(Icons.notifications_none_rounded, size: 22),
         ),
@@ -2389,169 +2382,18 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _profileHeader() {
-    final phone = accountPhone.isEmpty
-        ? '--'
-        : accountPhone.startsWith('+')
-        ? accountPhone
-        : '+91 $accountPhone';
-    final mutedInverse = AppColors.textInverse.withValues(alpha: 0.70);
-    return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppConfig.primaryDarkColor,
-        borderRadius: AppRadius.borderSm,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Tooltip(
-                message: tr('Edit profile photo'),
-                child: InkWell(
-                  onTap: _pickProfileAvatar,
-                  child: CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.textInverse,
-                    backgroundImage: profileAvatarBytes == null
-                        ? null
-                        : MemoryImage(profileAvatarBytes!),
-                    child: profileAvatarBytes == null
-                        ? AppText(
-                            _accountInitials,
-                            style: const TextStyle(
-                              color: AppConfig.primaryColor,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          )
-                        : null,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md + 2),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      accountName,
-                      style: AppTypography.titleLarge.copyWith(
-                        color: AppColors.textInverse,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xs + 1),
-                    AppText(
-                      phone,
-                      style: AppTypography.caption.copyWith(
-                        color: mutedInverse,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    AppText(
-                      '${tr('Account ID')}: $accountNumber',
-                      style: AppTypography.caption.copyWith(
-                        color: mutedInverse,
-                        fontSize: 11,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm + 2),
-                    Wrap(
-                      spacing: AppSpacing.sm + 2,
-                      runSpacing: AppSpacing.sm,
-                      crossAxisAlignment: WrapCrossAlignment.center,
-                      children: [
-                        _profileStatusPill(
-                          icon: kycStatus == 'APPROVED'
-                              ? Icons.verified
-                              : Icons.info_outline,
-                          iconColor: kycStatus == 'APPROVED'
-                              ? AppColors.gain
-                              : mutedInverse,
-                          label: kycStatus == 'UNKNOWN'
-                              ? 'Verification status unavailable'
-                              : kycStatus == 'APPROVED'
-                              ? 'KYC Verified'
-                              : kycStatus == 'PENDING'
-                              ? 'KYC Pending Review'
-                              : 'KYC Required',
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: tr('Edit profile'),
-                onPressed: _editProfile,
-                icon: Icon(Icons.edit_outlined, color: mutedInverse, size: 20),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xl + 2),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              for (final item in <(String, String)>[
-                ('Client Tier', _profileData['clientTier']?.toString() ?? '--'),
-                (
-                  'Member Since',
-                  _profileData['createdAt']?.toString().split('T').first ??
-                      '--',
-                ),
-                ('Account Status', _profileData['status']?.toString() ?? '--'),
-              ])
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: AppSpacing.sm - 2),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          item.$1,
-                          style: AppTypography.caption.copyWith(
-                            color: mutedInverse,
-                            fontSize: 10,
-                          ),
-                        ),
-                        const SizedBox(height: AppSpacing.xs + 1),
-                        if (item.$1 == 'Client Tier')
-                          MembershipTierBadge(tier: item.$2)
-                        else
-                          Wrap(
-                            spacing: AppSpacing.xs + 1,
-                            runSpacing: AppSpacing.xxs,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Icon(
-                                item.$1 == 'Member Since'
-                                    ? Icons.calendar_month_outlined
-                                    : Icons.check_circle_outline,
-                                size: 18,
-                                color: item.$2 == 'ACTIVE'
-                                    ? AppColors.gain
-                                    : mutedInverse,
-                              ),
-                              AppText(
-                                item.$2,
-                                style: AppTypography.caption.copyWith(
-                                  color: item.$2 == 'ACTIVE'
-                                      ? AppColors.gain
-                                      : AppColors.textInverse,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
+    return ProfileIdentityHeader(
+      name: accountName,
+      accountNumber: accountNumber,
+      phone: accountPhone,
+      kycStatus: kycStatus,
+      clientTier: _profileData['clientTier']?.toString() ?? '--',
+      memberSince:
+          _profileData['createdAt']?.toString().split('T').first ?? '--',
+      accountStatus: _profileData['status']?.toString() ?? '--',
+      avatarBytes: profileAvatarBytes,
+      onAvatarTap: _pickProfileAvatar,
+      onEdit: _editProfile,
     );
   }
 
@@ -2585,7 +2427,9 @@ class _MarketHomePageState extends State<MarketHomePage>
     final horizontalPadding = MediaQuery.sizeOf(context).width < 360
         ? AppSpacing.md + 2
         : AppSpacing.lg;
-    return ListView(
+    return AppFadeIn(
+      switchKey: 'profile|$accountNumber|$kycStatus|${_profileData['status']}',
+      child: ListView(
       padding: EdgeInsets.fromLTRB(
         horizontalPadding,
         AppSpacing.md + 2,
@@ -2676,14 +2520,8 @@ class _MarketHomePageState extends State<MarketHomePage>
             ProfileMenuRow(
               icon: Icons.verified_user_outlined,
               title: 'KYC Verification',
-              subtitle: 'Identity documents and verification status',
-              status: kycStatus == 'UNKNOWN'
-                  ? 'Verification status unavailable'
-                  : kycStatus == 'APPROVED'
-                  ? 'Verified'
-                  : kycStatus == 'PENDING'
-                  ? 'Pending'
-                  : 'Required',
+              subtitle: 'Identity documents and review status',
+              status: profileKycLabel(kycStatus),
               onTap: () => _openAccountSettings('kyc'),
               color: AppColors.gain,
             ),
@@ -2957,41 +2795,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
         ),
       ],
-    );
-  }
-
-  Widget _profileStatusPill({
-    required IconData icon,
-    required String label,
-    required Color iconColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.sm - 1,
-        vertical: AppSpacing.xxs + 2,
-      ),
-      decoration: BoxDecoration(
-        color: AppColors.textInverse.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: AppColors.textInverse.withValues(alpha: 0.24),
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: iconColor, size: 12),
-          const SizedBox(width: AppSpacing.xxs + 2),
-          AppText(
-            label,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textInverse,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+    ),
     );
   }
 
@@ -3146,6 +2950,8 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _confirmSignOut() {
+    if (_signingOut) return;
+    var started = false;
     showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -3158,20 +2964,19 @@ class _MarketHomePageState extends State<MarketHomePage>
         actions: [
           TextButton(
             onPressed: () {
+              if (started) return;
               Navigator.pop(dialogContext);
             },
             child: const AppText('Cancel'),
           ),
           FilledButton(
             onPressed: () async {
+              if (started || _signingOut) return;
+              started = true;
+              setState(() => _signingOut = true);
               Navigator.pop(dialogContext);
-
               await AuthService().clearSession();
-
-              if (!mounted) {
-                return;
-              }
-
+              if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute<void>(
                   builder: (_) => LoginPage(

@@ -9,6 +9,7 @@ import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/auth_service.dart';
 import '../services/salesmartly_service.dart';
+import '../theme/app_motion.dart';
 import '../widgets/scrolling_notice_text.dart';
 import '../widgets/support_ui_metrics.dart';
 
@@ -43,8 +44,8 @@ class _SupportChatPageState extends State<SupportChatPage>
     _selectedMessage = widget.initialMessage;
     _intro = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 360),
-    )..forward();
+      duration: AppMotion.page,
+    );
     _appContent.addListener(_onContentChanged);
     unawaited(_appContent.load());
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,6 +60,18 @@ class _SupportChatPageState extends State<SupportChatPage>
     _appContent.removeListener(_onContentChanged);
     _intro.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_intro.isDismissed) {
+      if (AppMotion.reduce(context)) {
+        _intro.value = 1;
+      } else {
+        _intro.forward();
+      }
+    }
   }
 
   void _onContentChanged() {
@@ -127,8 +140,10 @@ class _SupportChatPageState extends State<SupportChatPage>
     final bubbleText =
         _error ??
         (_opening
-            ? 'Connecting you to an agent…'
-            : (_chatAvailable ? greeting : '$greeting\n\n$hours'));
+            ? 'Opening the external customer chat…'
+            : (_chatAvailable
+                ? '$greeting\n\nThis screen opens an external customer chat. It does not mean an agent is already connected.'
+                : '$greeting\n\n$hours'));
 
     // Always show the CMS hours notice unless the user dismisses it.
     final showNotice = _noticeVisible && hours.trim().isNotEmpty;
@@ -167,6 +182,17 @@ class _SupportChatPageState extends State<SupportChatPage>
                       isConnecting: _opening,
                       metrics: m,
                     ),
+                    if (_error != null) ...[
+                      SizedBox(height: 8 * m.scale),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: OutlinedButton.icon(
+                          onPressed: _opening ? null : () => _open(),
+                          icon: const Icon(Icons.refresh),
+                          label: const AppText('Retry'),
+                        ),
+                      ),
+                    ],
                     SizedBox(height: 10 * m.scale),
                     AppText(
                       content.text(
@@ -316,9 +342,11 @@ class _SupportChatPageState extends State<SupportChatPage>
                     width: 9 * m.scale,
                     height: 9 * m.scale,
                     decoration: BoxDecoration(
-                      color: _opening
+                      color: _error != null
+                          ? const Color(0xFFEF4444)
+                          : _opening
                           ? const Color(0xFFFBBF24)
-                          : const Color(0xFF22C55E),
+                          : const Color(0xFF94A3B8),
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 1.5),
                     ),
@@ -348,8 +376,12 @@ class _SupportChatPageState extends State<SupportChatPage>
                   SizedBox(height: 1 * m.scale),
                   AppText(
                     _opening
-                        ? 'Connecting…'
-                        : (_chatAvailable ? 'Online now' : 'In-app support'),
+                        ? 'Opening chat…'
+                        : _error != null
+                        ? 'Could not open chat'
+                        : (_chatAvailable
+                            ? 'Opens external customer chat'
+                            : 'In-app support'),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -478,9 +510,9 @@ class _SupportChatPageState extends State<SupportChatPage>
                       decoration: InputDecoration(
                         isDense: true,
                         hintText: _opening
-                            ? 'Connecting…'
+                            ? 'Opening chat…'
                             : (_chatAvailable
-                                  ? 'Message opens in live chat'
+                                  ? 'Message opens in the external chat'
                                   : _appContent.current.text(
                                       'support',
                                       'composer_hint',
@@ -509,13 +541,21 @@ class _SupportChatPageState extends State<SupportChatPage>
             child: InkWell(
               onTap: _opening ? null : () => _open(),
               customBorder: const CircleBorder(),
-              child: SizedBox(
-                width: m.sendButtonSize,
-                height: m.sendButtonSize,
-                child: Icon(
-                  _chatAvailable ? Icons.send_rounded : Icons.refresh_rounded,
-                  color: Colors.white,
-                  size: 18 * m.scale,
+              child: Semantics(
+                button: true,
+                label: _chatAvailable
+                    ? 'Open external customer chat'
+                    : 'Retry customer chat',
+                child: SizedBox(
+                  width: m.sendButtonSize,
+                  height: m.sendButtonSize,
+                  child: Icon(
+                    _chatAvailable
+                        ? Icons.send_rounded
+                        : Icons.refresh_rounded,
+                    color: Colors.white,
+                    size: 18 * m.scale,
+                  ),
                 ),
               ),
             ),

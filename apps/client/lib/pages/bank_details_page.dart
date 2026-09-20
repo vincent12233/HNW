@@ -140,7 +140,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                                 ),
                                 const SizedBox(height: AuthLayout.titleGap),
                                 const AppText(
-                                  'Enter your bank details for withdrawals.',
+                                  'Enter your bank details for withdrawals. Adding an account does not mean the bank has verified it.',
                                   style: AuthLayout.subtitle,
                                 ),
                               ],
@@ -240,11 +240,13 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                   ),
                 ),
               ),
-              KycFlowFooter(
+                              KycFlowFooter(
                 label: 'Continue',
                 busy: _saving,
                 errorText: _error,
-                helper: 'Used for identity verification',
+                helper: _kycFlow
+                    ? 'Used for identity verification'
+                    : 'Saved for withdrawals after you submit. This is not a completed bank verification.',
                 onPressed: _saving ? null : _save,
               ),
             ],

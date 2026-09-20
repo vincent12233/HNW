@@ -5,6 +5,9 @@ import '../l10n/app_language.dart';
 import '../services/auth_service.dart';
 import '../services/client_account_service.dart';
 import '../services/session_expiry_service.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
 
 class TwoFactorPage extends StatefulWidget {
@@ -19,6 +22,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
   late final _service = widget.accountService ?? ClientAccountService();
   bool _busy = true;
   bool? _enabled;
+  bool _hidePassword = true;
   String? _secret, _error;
   List<String>? _recovery;
   @override
@@ -131,10 +135,11 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                   ),
                 ),
               if (!_busy && _enabled == null)
-                TextButton.icon(
-                  onPressed: _load,
-                  icon: const Icon(Icons.refresh),
-                  label: const AppText('Retry'),
+                AppEmptyState(
+                  title: 'Unable to load authenticator settings',
+                  message: _error,
+                  onRetry: _load,
+                  icon: Icons.cloud_off_outlined,
                 ),
               if (_recovery != null) ...[
                 const Icon(
@@ -149,7 +154,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                 ),
                 const SizedBox(height: 12),
                 const AppText(
-                  'Store these codes securely. Each code can be used once if you lose access to your authenticator.',
+                  'Store these recovery codes securely. Each recovery code can be used once if you lose access to your authenticator app. These are not text-message or Aadhaar one-time passwords.',
                 ),
                 const SizedBox(height: 20),
                 SelectableText(
@@ -169,14 +174,29 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
+                const SizedBox(height: AppSpacing.md),
+                const AppText(
+                  'Authenticator app codes and recovery codes are optional. Sign-in still uses your mobile number and password. These are not text-message or Aadhaar one-time passwords.',
+                  style: AppTypography.bodySmall,
+                ),
                 const SizedBox(height: 20),
                 if (_secret == null)
                   TextField(
                     controller: _password,
-                    obscureText: true,
+                    obscureText: _hidePassword,
                     enabled: !_busy,
                     decoration: InputDecoration(
                       labelText: tr('Current login password'),
+                      suffixIcon: IconButton(
+                        tooltip: _hidePassword ? tr('Show') : tr('Hide'),
+                        onPressed: () =>
+                            setState(() => _hidePassword = !_hidePassword),
+                        icon: Icon(
+                          _hidePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                        ),
+                      ),
                     ),
                   ),
                 if (_secret != null) ...[
@@ -210,13 +230,18 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                       labelText: tr(
                         _enabled!
                             ? 'Authenticator or recovery code'
-                            : 'Authenticator code',
+                            : 'Authenticator app code',
                       ),
+                      helperText: _enabled!
+                          ? 'Enter a 6-digit authenticator app code or a recovery code.'
+                          : 'Enter the 6-digit authenticator app code.',
                     ),
                   ),
                 ],
                 const SizedBox(height: 24),
-                FilledButton(
+                SizedBox(
+                  height: AppMotion.tapTarget,
+                  child: FilledButton(
                   onPressed: _busy ? null : _submit,
                   child: AppText(
                     _enabled!
@@ -225,6 +250,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                         ? 'Set up authenticator'
                         : 'Confirm and enable',
                   ),
+                ),
                 ),
               ],
             ],

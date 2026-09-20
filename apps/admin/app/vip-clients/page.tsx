@@ -20,6 +20,7 @@ export default function VipClientsPage() {
           endpoint="/admin/vip-clients"
           historyEndpoint={(userId) => `/admin/vip-clients/${userId}/history`}
           emptyText="暂无客户 VIP 数据"
+          showAdminLinks
         />
       </Space>
     </AdminShell>

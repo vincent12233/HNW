@@ -1,19 +1,46 @@
 "use client";
 
-import { HistoryOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Modal, Select, Space, Table, Tag, Typography, Input } from "antd";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  HistoryOutlined,
+  ProfileOutlined,
+  ReloadOutlined,
+  SettingOutlined,
+  AuditOutlined,
+} from "@ant-design/icons";
+import {
+  Alert,
+  Button,
+  Card,
+  Descriptions,
+  Drawer,
+  Empty,
+  Modal,
+  Select,
+  Skeleton,
+  Space,
+  Table,
+  Tag,
+  Typography,
+  Input,
+} from "antd";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api";
 import VipSuggestionTag from "@/components/VipSuggestionTag";
 import {
+  filterVipClients,
+  formatVipTimestamp,
   suggestionLabel,
+  summarizeVipClients,
+  vipBusinessBreakdown,
+  vipBusinessOptions,
   VIP_TIERS,
   vipTierLabel,
   type VipClientRow,
   type VipHistoryRow,
+  type VipSuggestionStatus,
 } from "@/lib/vip";
 
-const { Paragraph } = Typography;
+const { Paragraph, Text } = Typography;
 
 type Props = {
   endpoint: string;
@@ -21,6 +48,8 @@ type Props = {
   adjustEndpoint?: (userId: string) => string;
   allowAdjust?: boolean;
   emptyText: string;
+  showAdminLinks?: boolean;
+  showBusinessBreakdown?: boolean;
 };
 
 export default function VipClientsWorkspace({
@@ -29,14 +58,20 @@ export default function VipClientsWorkspace({
   adjustEndpoint,
   allowAdjust = false,
   emptyText,
+  showAdminLinks = false,
+  showBusinessBreakdown = false,
 }: Props) {
   const [rows, setRows] = useState<VipClientRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [configured, setConfigured] = useState(true);
+  const [tierFilter, setTierFilter] = useState<string>();
+  const [businessFilter, setBusinessFilter] = useState<string>();
+  const [statusFilter, setStatusFilter] = useState<VipSuggestionStatus | "KEEP">();
   const [historyOpen, setHistoryOpen] = useState(false);
   const [historyRows, setHistoryRows] = useState<VipHistoryRow[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [detail, setDetail] = useState<VipClientRow | null>(null);
   const [adjusting, setAdjusting] = useState<VipClientRow | null>(null);
   const [tier, setTier] = useState("STANDARD");
   const [reason, setReason] = useState("");
@@ -60,6 +95,22 @@ export default function VipClientsWorkspace({
   useEffect(() => {
     void load();
   }, [load]);
+
+  const summary = useMemo(() => summarizeVipClients(rows), [rows]);
+  const businessOptions = useMemo(() => vipBusinessOptions(rows), [rows]);
+  const breakdown = useMemo(
+    () => (showBusinessBreakdown ? vipBusinessBreakdown(rows) : []),
+    [rows, showBusinessBreakdown],
+  );
+  const visibleRows = useMemo(
+    () =>
+      filterVipClients(rows, {
+        tier: tierFilter,
+        businessId: businessFilter,
+        suggestionStatus: statusFilter,
+      }),
+    [rows, tierFilter, businessFilter, statusFilter],
+  );
 
   async function openHistory(userId: string) {
     setHistoryOpen(true);
@@ -106,24 +157,128 @@ export default function VipClientsWorkspace({
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }}>
+    <Space direction="vertical" size={16} style={{ width: "100%" }} className="vip-workspace">
       {!configured ? (
         <Alert type="info" showIcon message="累计充值门槛尚未配置，因此不会生成建议等级。" />
       ) : null}
       {error ? (
         <Alert type="error" showIcon message={error} action={<Button onClick={() => void load()}>重试</Button>} />
       ) : null}
+      {showAdminLinks ? (
+        <Space wrap>
+          <Button icon={<SettingOutlined />} href="/vip-settings">
+            门槛配置
+          </Button>
+          <Button icon={<HistoryOutlined />} href="/vip-history">
+            变更历史
+          </Button>
+          <Button icon={<AuditOutlined />} href="/audit-logs">
+            配置审计
+          </Button>
+        </Space>
+      ) : null}
+      {loading && rows.length === 0 && !error ? (
+        <div className="vip-summary-skeleton" aria-label="正在加载 VIP 汇总">
+          <Skeleton active title={false} paragraph={{ rows: 2 }} />
+        </div>
+      ) : null}
+      {!error && rows.length > 0 ? (
+        <>
+          <Text type="secondary">以下数量来自当前 VIP 客户接口返回的完整列表，不是单独汇总接口。</Text>
+          <div className="vip-summary-grid" aria-label="VIP 汇总">
+            {VIP_TIERS.map((item) => (
+              <div key={item.value} className="vip-summary-card">
+                <span>{item.label}</span>
+                <strong>{summary.byTier[item.value] ?? 0}</strong>
+              </div>
+            ))}
+            <div className="vip-summary-card">
+              <span>未配置门槛</span>
+              <strong>{summary.notConfigured}</strong>
+            </div>
+            <div className="vip-summary-card">
+              <span>建议升级</span>
+              <strong>{summary.upgrade}</strong>
+            </div>
+            <div className="vip-summary-card">
+              <span>建议降级</span>
+              <strong>{summary.downgrade}</strong>
+            </div>
+            <div className="vip-summary-card">
+              <span>保持当前</span>
+              <strong>{summary.keepCurrent}</strong>
+            </div>
+          </div>
+        </>
+      ) : null}
+      {showBusinessBreakdown && breakdown.length > 0 ? (
+        <Card size="small" title="各业务员客户数量" className="vip-breakdown-card">
+          <Table
+            rowKey="id"
+            size="small"
+            pagination={false}
+            dataSource={breakdown}
+            columns={[
+              { title: "业务员", dataIndex: "name" },
+              { title: "客户数", dataIndex: "clientCount", width: 90 },
+              {
+                title: "等级分布",
+                render: (_, row) =>
+                  VIP_TIERS.map((item) => `${item.label.replace(/ .*/, "")} ${row.byTier[item.value] ?? 0}`).join(" · "),
+              },
+            ]}
+          />
+        </Card>
+      ) : null}
       <Card>
-        <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} style={{ marginBottom: 12 }}>
-          刷新
-        </Button>
+        <Space wrap className="vip-toolbar">
+          <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} aria-label="刷新 VIP 客户列表">
+            刷新
+          </Button>
+          <Select
+            allowClear
+            aria-label="按当前等级筛选"
+            placeholder="当前等级"
+            style={{ minWidth: 160 }}
+            value={tierFilter}
+            options={[...VIP_TIERS]}
+            onChange={setTierFilter}
+          />
+          <Select
+            allowClear
+            showSearch
+            optionFilterProp="label"
+            aria-label="按所属业务员筛选"
+            placeholder="所属业务员"
+            style={{ minWidth: 200 }}
+            value={businessFilter}
+            options={businessOptions}
+            onChange={setBusinessFilter}
+          />
+          <Select
+            allowClear
+            aria-label="按建议状态筛选"
+            placeholder="建议状态"
+            style={{ minWidth: 160 }}
+            value={statusFilter}
+            options={[
+              { value: "NOT_CONFIGURED", label: "未配置" },
+              { value: "UPGRADE", label: "建议升级" },
+              { value: "DOWNGRADE", label: "建议降级" },
+              { value: "KEEP", label: "保持当前" },
+            ]}
+            onChange={setStatusFilter}
+          />
+        </Space>
         <Table
           rowKey="userId"
           loading={loading}
-          dataSource={rows}
-          locale={{ emptyText }}
+          dataSource={visibleRows}
+          locale={{
+            emptyText: error ? "加载失败" : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} />,
+          }}
           pagination={{ pageSize: 20 }}
-          scroll={{ x: 980 }}
+          scroll={{ x: 1180 }}
           columns={[
             { title: "客户", dataIndex: "displayName", render: (value, row) => `${value} · ${row.clientId ?? "-"}` },
             { title: "手机号", dataIndex: "maskedPhone", width: 120, render: (value) => value || "-" },
@@ -152,17 +307,37 @@ export default function VipClientsWorkspace({
               render: (value) => <VipSuggestionTag status={value} />,
             },
             {
+              title: "最后调整",
+              dataIndex: "lastTierChangedAt",
+              width: 170,
+              render: (value) => formatVipTimestamp(value),
+            },
+            {
               title: "操作",
               key: "actions",
               render: (_, row) => (
                 <Space>
-                  <Button size="small" icon={<HistoryOutlined />} onClick={() => void openHistory(row.userId)}>
+                  <Button
+                    size="small"
+                    icon={<ProfileOutlined />}
+                    aria-label={`查看 ${row.displayName} 的 VIP 详情`}
+                    onClick={() => setDetail(row)}
+                  >
+                    详情
+                  </Button>
+                  <Button
+                    size="small"
+                    icon={<HistoryOutlined />}
+                    aria-label={`查看 ${row.displayName} 的 VIP 历史`}
+                    onClick={() => void openHistory(row.userId)}
+                  >
                     历史
                   </Button>
                   {allowAdjust ? (
                     <Button
                       size="small"
                       type="primary"
+                      aria-label={`调整 ${row.displayName} 的 VIP 等级`}
                       onClick={() => {
                         setAdjusting(row);
                         setTier(row.currentTier);
@@ -178,12 +353,44 @@ export default function VipClientsWorkspace({
           ]}
         />
       </Card>
+      <Drawer
+        title="客户 VIP 详情"
+        open={detail !== null}
+        onClose={() => setDetail(null)}
+        width={420}
+        className="vip-detail-drawer"
+        destroyOnClose
+      >
+        {detail ? (
+          <Descriptions column={1} size="small">
+            <Descriptions.Item label="客户">{detail.displayName}</Descriptions.Item>
+            <Descriptions.Item label="客户编号">{detail.clientId ?? "-"}</Descriptions.Item>
+            <Descriptions.Item label="手机号">{detail.maskedPhone || "-"}</Descriptions.Item>
+            <Descriptions.Item label="所属业务员">
+              {detail.assignedBusiness
+                ? `${detail.assignedBusiness.fullName}${detail.assignedBusiness.employeeNo ? ` · ${detail.assignedBusiness.employeeNo}` : ""}`
+                : "-"}
+            </Descriptions.Item>
+            <Descriptions.Item label="当前等级">{vipTierLabel(detail.currentTier)}</Descriptions.Item>
+            <Descriptions.Item label="建议等级">{vipTierLabel(detail.suggestedTier)}</Descriptions.Item>
+            <Descriptions.Item label="建议状态">
+              <VipSuggestionTag status={detail.suggestionStatus} />
+            </Descriptions.Item>
+            <Descriptions.Item label="建议说明">
+              <span className="vip-wrap-text">{detail.suggestionReason || "—"}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="累计确认充值">{detail.cumulativeConfirmedDeposit}</Descriptions.Item>
+            <Descriptions.Item label="最后调整">{formatVipTimestamp(detail.lastTierChangedAt)}</Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </Drawer>
       <Modal
         title="VIP 等级调整历史"
         open={historyOpen}
         footer={null}
         onCancel={() => setHistoryOpen(false)}
         width={720}
+        className="vip-history-dialog"
       >
         <Table
           rowKey="id"
@@ -197,7 +404,11 @@ export default function VipClientsWorkspace({
             { title: "新等级", dataIndex: "newTier", render: vipTierLabel },
             { title: "当时建议", dataIndex: "suggestedTierAtChange", render: vipTierLabel },
             { title: "累计充值快照", dataIndex: "cumulativeDepositAtChange" },
-            { title: "原因", dataIndex: "reason" },
+            {
+              title: "原因",
+              dataIndex: "reason",
+              render: (value) => <span className="vip-wrap-text">{value}</span>,
+            },
             { title: "操作人", dataIndex: ["changedBy", "fullName"] },
           ]}
         />
@@ -214,6 +425,7 @@ export default function VipClientsWorkspace({
         }}
         closable={!saving}
         maskClosable={!saving}
+        className="vip-adjust-dialog"
       >
         <Paragraph>
           {adjusting?.displayName} · 当前 {vipTierLabel(adjusting?.currentTier)} · 建议{" "}

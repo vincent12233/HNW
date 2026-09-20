@@ -20,6 +20,7 @@ export default function TeamVipPage() {
           endpoint="/team/vip-clients"
           historyEndpoint={(userId) => `/team/vip-clients/${userId}/history`}
           emptyText="当前团队暂无客户 VIP 数据"
+          showBusinessBreakdown
         />
       </Space>
     </AdminShell>

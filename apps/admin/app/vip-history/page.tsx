@@ -43,8 +43,8 @@ export default function VipHistoryPage() {
         {error ? (
           <Alert type="error" showIcon message={error} action={<Button onClick={() => void load()}>重试</Button>} />
         ) : null}
-        <Card>
-          <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} style={{ marginBottom: 12 }}>
+        <Card className="vip-history-page">
+          <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} aria-label="刷新 VIP 历史" style={{ marginBottom: 12 }}>
             刷新
           </Button>
           <Table
@@ -61,7 +61,11 @@ export default function VipHistoryPage() {
               { title: "新等级", dataIndex: "newTier", render: vipTierLabel },
               { title: "当时建议", dataIndex: "suggestedTierAtChange", render: vipTierLabel },
               { title: "累计充值快照", dataIndex: "cumulativeDepositAtChange" },
-              { title: "原因", dataIndex: "reason" },
+              {
+                title: "原因",
+                dataIndex: "reason",
+                render: (value) => <span className="vip-wrap-text">{value}</span>,
+              },
               { title: "操作人", dataIndex: ["changedBy", "fullName"] },
             ]}
           />

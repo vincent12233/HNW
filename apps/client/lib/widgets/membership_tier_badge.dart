@@ -14,23 +14,29 @@ class MembershipTierBadge extends StatelessWidget {
       'PLATINUM' => (Icons.diamond_outlined, const Color(0xff91ece3)),
       _ => (Icons.help_outline, Colors.white70),
     };
-    return Wrap(
-      spacing: 5,
-      runSpacing: 6,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      children: [
-        Icon(icon, size: 20, color: color),
-        AppText(
-          ['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].contains(normalized)
-              ? normalized!
-              : '--',
-          style: TextStyle(
-            color: color,
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
+    final display =
+        ['STANDARD', 'SILVER', 'GOLD', 'PLATINUM'].contains(normalized)
+        ? normalized!
+        : '--';
+    return Semantics(
+      label: 'Membership tier $display',
+      excludeSemantics: true,
+      child: Wrap(
+        spacing: 5,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Icon(icon, size: 20, color: color),
+          AppText(
+            display,
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

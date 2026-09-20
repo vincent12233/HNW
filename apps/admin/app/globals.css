@@ -697,6 +697,10 @@ body {
 .ops-content .ant-table-cell{
   overflow-wrap:anywhere;
 }
+.ops-content .ant-table-thead > tr > th{
+  overflow-wrap:normal;
+  white-space:nowrap;
+}
 .ops-content .ant-table-cell .ops-money{
   overflow-wrap:normal;
 }
@@ -720,8 +724,41 @@ body {
   border-radius:8px;
   padding:12px 14px;
 }
+button.ops-stat-pill{
+  cursor:pointer;
+  width:100%;
+  text-align:left;
+  font:inherit;
+  color:inherit;
+}
 .ops-stat-pill .label{display:block;color:#8492a6;font-size:12px;margin-bottom:4px}
 .ops-stat-pill .value{font-size:22px;font-weight:700;color:#102033;letter-spacing:-0.02em}
+.ops-cell-clip{
+  display:block;
+  max-width:220px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.ops-directory-panel{
+  min-width:0;
+}
+.ops-directory-panel .ant-table-wrapper{
+  overflow-x:auto;
+}
+.ops-loaded-filter-caption{
+  margin:0 0 12px;
+  color:#5b6b7c;
+  font-size:12px;
+}
+.ops-drawer-section{
+  margin-top:16px;
+}
+.ops-drawer-section h3{
+  margin:0 0 8px;
+  font-size:14px;
+  font-weight:600;
+}
 
 /* Phase B.3: Admin KYC review layout and restrained motion */
 .kyc-review-workspace {

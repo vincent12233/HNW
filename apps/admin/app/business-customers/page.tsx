@@ -2,24 +2,21 @@
 
 import {
   HistoryOutlined,
+  ProfileOutlined,
   ReloadOutlined,
   SafetyCertificateOutlined,
   SearchOutlined,
-  WarningOutlined,
 } from "@ant-design/icons";
 
 import {
-  Alert,
   Button,
-  Card,
-  Col,
+  Descriptions,
   Input,
-  Modal,
-  Row,
+  Select,
   Space,
-  Statistic,
   Table,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
 
@@ -28,11 +25,29 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 
 import AdminShell from "@/components/AdminShell";
+import OpsDrawer from "@/components/OpsDrawer";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import ScopedEditButton from "@/components/ScopedEditButton";
 import { getBackendRole } from "@/lib/backend-role";
 import { api } from "@/lib/api";
+import {
+  DIRECTORY_SCOPE_COPY,
+  LOADED_FILTER_CAPTION,
+  accountStatusLabel,
+  filterLoadedRows,
+  maskOpsPhone,
+  useDebouncedValue,
+} from "@/lib/ops-directory";
+import { formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
+import { vipTierLabel } from "@/lib/vip";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type InviteCode = {
   id: string;
@@ -147,20 +162,8 @@ type Customer = {
   loginRisk?: LoginRisk | null;
 };
 
-function formatMoney(value?: string | number | null) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
-}
-
 function formatDate(value?: string | null) {
-  if (!value) {
-    return "-";
-  }
-
-  return new Date(value).toLocaleString("zh-CN");
+  return formatOpsDateTime(value);
 }
 
 function getDeviceLabel(userAgent?: string | null) {
@@ -233,6 +236,10 @@ export default function BusinessCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
 
   const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [tierFilter, setTierFilter] = useState("ALL");
+  const [detailOpen, setDetailOpen] = useState(false);
+  const debouncedKeyword = useDebouncedValue(keyword);
 
   const [loading, setLoading] = useState(false);
 
@@ -425,200 +432,175 @@ export default function BusinessCustomersPage() {
   }
 
   const filteredCustomers = useMemo(() => {
-    const key = keyword.trim().toLowerCase();
-
-    if (!key) {
-      return customers;
-    }
-
-    return customers.filter((customer) => {
-      const values = [
+    return filterLoadedRows(
+      customers.filter((customer) => {
+        if (statusFilter !== "ALL" && customer.status !== statusFilter) return false;
+        if (tierFilter !== "ALL" && (customer.clientTier || "STANDARD") !== tierFilter) {
+          return false;
+        }
+        return true;
+      }),
+      debouncedKeyword,
+      (customer) => [
         customer.fullName,
-
         customer.customerNo,
-
+        customer.id,
         customer.phone,
-
+        maskOpsPhone(customer.phone, ""),
         customer.account?.accountNumber,
-
         customer.usedInviteCode?.code,
-
+        customer.clientTier,
         customer.loginRisk?.riskLevel,
-      ];
+      ],
+    );
+  }, [customers, debouncedKeyword, statusFilter, tierFilter]);
+  const hasFilters =
+    keyword.trim() !== "" || statusFilter !== "ALL" || tierFilter !== "ALL";
 
-      return values.some((value) =>
-        String(value ?? "")
-          .toLowerCase()
-          .includes(key),
-      );
-    });
-  }, [customers, keyword]);
+  const role = getBackendRole();
+  const scopeCopy =
+    role === "SUPPORT"
+      ? DIRECTORY_SCOPE_COPY.supportCustomers
+      : DIRECTORY_SCOPE_COPY.businessCustomers;
 
   const columns: ColumnsType<Customer> = [
     {
-      title: "客户姓名",
-
-      dataIndex: "fullName",
-
-      width: 160,
-
-      fixed: "left",
-    },
-
-    {
       title: "客户编号",
-
       dataIndex: "customerNo",
-
       width: 140,
-
-      render: (value) => value || "-",
+      fixed: "left",
+      render: (value, record) => (
+        <span className="ops-id">{value || record.id}</span>
+      ),
     },
-
     {
-      title: "手机号",
-
-      dataIndex: "phone",
-
-      width: 140,
-
-      render: (value) => (value ? `+91 ${value}` : "-"),
+      title: "客户名称",
+      dataIndex: "fullName",
+      width: 180,
+      render: (value: string) => (
+        <span className="ops-cell-clip" title={value}>{value}</span>
+      ),
     },
-
+    {
+      title: "脱敏手机号",
+      dataIndex: "phone",
+      width: 140,
+      render: (value?: string | null) => maskOpsPhone(value),
+    },
+    {
+      title: "状态",
+      dataIndex: "status",
+      width: 120,
+      render: (value: string) => (
+        <OpsStatusTag code={value} label={accountStatusLabel(value)} />
+      ),
+    },
+    {
+      title: "VIP",
+      width: 150,
+      render: (_, record) => (
+        <Tag aria-label={`VIP ${vipTierLabel(record.clientTier)}`}>
+          {vipTierLabel(record.clientTier)}
+        </Tag>
+      ),
+    },
     {
       title: "交易账号",
-
       width: 170,
-
-      render: (_, record) => record.account?.accountNumber || "-",
+      render: (_, record) => (
+        <span className="ops-id">{record.account?.accountNumber || "—"}</span>
+      ),
     },
-
     {
       title: "现金余额",
-
       width: 150,
-
-      render: (_, record) => formatMoney(record.account?.cashBalance),
+      align: "right",
+      render: (_, record) => <OpsMoney value={record.account?.cashBalance} />,
     },
-
     {
-      title: "最近IP",
-
-      width: 160,
-
-      render: (_, record) => record.loginAudits?.[0]?.ipAddress || "-",
-    },
-
-    {
-      title: "登录设备",
-
+      title: "创建时间",
+      dataIndex: "createdAt",
       width: 180,
-
-      render: (_, record) => getDeviceLabel(record.loginAudits?.[0]?.userAgent),
+      render: (value: string) => formatOpsDateTime(value),
     },
-
-    {
-      title: "24小时失败",
-
-      width: 120,
-
-      render: (_, record) => (
-        <Tag
-          color={
-            (record.loginRisk?.failedLoginCount24h ?? 0) > 0
-              ? "orange"
-              : "green"
-          }
-        >
-          {record.loginRisk?.failedLoginCount24h ?? 0}
-        </Tag>
-      ),
-    },
-
     {
       title: "登录风险",
-
       width: 120,
-
       render: (_, record) => {
         const tag = riskTag(record.loginRisk?.riskLevel);
-
-        return <Tag color={tag.color}>{tag.text}</Tag>;
+        return (
+          <OpsStatusTag
+            code={tag.color === "red" ? "FAILED" : tag.color === "orange" ? "PENDING" : "ACTIVE"}
+            label={tag.text}
+          />
+        );
       },
     },
-
     {
       title: "共享IP",
-
       width: 120,
-
       render: (_, record) =>
-        !sharedIpReady ? <Tag>未获取</Tag> : customerHasSharedIp(record.id) ? (
-          <Tag color="red">共享IP</Tag>
+        !sharedIpReady ? (
+          <OpsStatusTag label="未获取" />
+        ) : customerHasSharedIp(record.id) ? (
+          <OpsStatusTag code="FAILED" label="共享IP" />
         ) : (
-          <Tag color="green">正常</Tag>
+          <OpsStatusTag code="ACTIVE" label="正常" />
         ),
     },
-
     {
       title: "共享设备",
-
       width: 130,
-
       render: (_, record) =>
-        !sharedDeviceReady ? <Tag>未获取</Tag> : customerHasSharedDevice(record.id) ? (
-          <Tag color="orange">共享设备</Tag>
+        !sharedDeviceReady ? (
+          <OpsStatusTag label="未获取" />
+        ) : customerHasSharedDevice(record.id) ? (
+          <OpsStatusTag code="PENDING" label="共享设备" />
         ) : (
-          <Tag color="green">正常</Tag>
+          <OpsStatusTag code="ACTIVE" label="正常" />
         ),
     },
-
-    {
-      title: "账户状态",
-
-      dataIndex: "status",
-
-      width: 110,
-
-      render: (value) => (
-        <Tag color={value === "ACTIVE" ? "green" : "red"}>
-          {value === "ACTIVE" ? "正常" : "停用"}
-        </Tag>
-      ),
-    },
-
     {
       title: "操作",
-
-      width: 260,
-
+      width: 280,
       fixed: "right",
-
       render: (_, record) => (
         <Space wrap>
-          {getBackendRole() === 'BUSINESS' && <ScopedEditButton name={record.fullName} kind="tier"
-            current={record.clientTier} endpoint={`/business/customers/${record.id}/tier`} onSaved={loadCustomers} />}
-          <ScopedEditButton name={record.fullName} current={record.status} kind="status"
-            endpoint={`/business/customers/${record.id}/status`} onSaved={loadCustomers} />
           <Button
             size="small"
-
-            icon={<HistoryOutlined />}
-
-            onClick={() => openLoginHistory(record)}
+            type="primary"
+            icon={<ProfileOutlined />}
+            aria-label={`查看客户 ${record.fullName} 详情`}
+            onClick={() => {
+              setSelectedCustomer(record);
+              setDetailOpen(true);
+            }}
           >
-            登录记录
+            详情
           </Button>
-
-          <Button
-            size="small"
-
-            icon={<SafetyCertificateOutlined />}
-
-            onClick={() => openLoginRisk(record)}
-          >
-            风险
-          </Button>
+          <ScopedEditButton
+            name={record.fullName}
+            current={record.status}
+            kind="status"
+            endpoint={`/business/customers/${record.id}/status`}
+            onSaved={loadCustomers}
+          />
+          <Tooltip title="登录记录">
+            <Button
+              size="small"
+              icon={<HistoryOutlined />}
+              aria-label={`查看客户 ${record.fullName} 登录记录`}
+              onClick={() => openLoginHistory(record)}
+            />
+          </Tooltip>
+          <Tooltip title="登录风险">
+            <Button
+              size="small"
+              icon={<SafetyCertificateOutlined />}
+              aria-label={`查看客户 ${record.fullName} 登录风险`}
+              onClick={() => openLoginRisk(record)}
+            />
+          </Tooltip>
         </Space>
       ),
     },
@@ -626,291 +608,270 @@ export default function BusinessCustomersPage() {
 
   return (
     <AdminShell>
-      <Space
-        orientation="vertical"
-        size="large"
-        style={{
-          width: "100%",
-        }}
-      >
-        <div>
-          <Title level={2}>我的客户</Title>
-
-          <Paragraph type="secondary">
-            查看客户资金、登录风险、共享 IP 和共享设备风险。
-          </Paragraph>
-        </div>
-
-        {error && <Alert type="error" showIcon title={error} />}
-
-        <Row gutter={[16, 16]}>
-          <Col xs={24} sm={8}>
-            <Card>
-              <Statistic
-                title="客户数量"
-
-                value={customers.length}
-
-                prefix={<SafetyCertificateOutlined />}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={8}>
-            <Card
-              hoverable
-              onClick={() => {
-                openShared("IP");
-              }}
-            >
-              <Statistic
-                title="共享IP风险客户"
-
-                value={
-                  !sharedIpReady ? "—" : new Set(
-                    sharedIpRisks.flatMap((item) =>
-                      item.customers.map((c) => c.id),
-                    ),
-                  ).size
-                }
-
-                prefix={<WarningOutlined />}
-              />
-            </Card>
-          </Col>
-
-          <Col xs={24} sm={8}>
-            <Card
-              hoverable
-              onClick={() => {
-                openShared("DEVICE");
-              }}
-            >
-              <Statistic
-                title="共享设备风险客户"
-
-                value={
-                  !sharedDeviceReady ? "—" : new Set(
-                    sharedDeviceRisks.flatMap((item) =>
-                      item.customers.map((c) => c.id),
-                    ),
-                  ).size
-                }
-
-                prefix={<WarningOutlined />}
-              />
-            </Card>
-          </Col>
-        </Row>
-
-        <Card>
-          <Space
-            wrap
-
-            style={{
-              width: "100%",
-
-              justifyContent: "space-between",
-
-              marginBottom: 16,
-            }}
-          >
-            <Input
-              allowClear
-
-              prefix={<SearchOutlined />}
-
-              placeholder="搜索姓名、客户编号、手机号、交易账号"
-
-              value={keyword}
-
-              onChange={(e) => setKeyword(e.target.value)}
-
-              style={{
-                width: 420,
-              }}
-            />
-
+      <div className="ops-directory-panel">
+        <OpsPageHeader
+          title="我的客户"
+          crumbs={[{ title: "我的客户" }, { title: "客户列表" }]}
+          description={scopeCopy}
+          extra={
             <Button
               icon={<ReloadOutlined />}
-
+              aria-label="刷新客户列表"
               loading={loading}
-
               onClick={loadCustomers}
             >
               刷新
             </Button>
-          </Space>
-
-          <Table<Customer>
-            rowKey="id"
-
-            columns={columns}
-
-            dataSource={filteredCustomers}
-
-            loading={loading}
-
-            scroll={{
-              x: 2200,
-            }}
-
-            pagination={{
-              pageSize: 20,
-
-              showSizeChanger: true,
-
-              showTotal: (total) => `共 ${total} 位客户`,
-            }}
+          }
+        />
+        {error ? <OpsErrorState title={error} onRetry={loadCustomers} /> : null}
+        <div className="ops-stat-strip">
+          <div className="ops-stat-pill">
+            <span className="label">客户数量</span>
+            <strong className="value">{customers.length}</strong>
+          </div>
+          <button
+            type="button"
+            className="ops-stat-pill"
+            onClick={() => openShared("IP")}
+            aria-label="查看共享 IP 风险"
+          >
+            <span className="label">共享IP风险客户</span>
+            <strong className="value">
+              {!sharedIpReady
+                ? "—"
+                : new Set(sharedIpRisks.flatMap((item) => item.customers.map((c) => c.id))).size}
+            </strong>
+          </button>
+          <button
+            type="button"
+            className="ops-stat-pill"
+            onClick={() => openShared("DEVICE")}
+            aria-label="查看共享设备风险"
+          >
+            <span className="label">共享设备风险客户</span>
+            <strong className="value">
+              {!sharedDeviceReady
+                ? "—"
+                : new Set(sharedDeviceRisks.flatMap((item) => item.customers.map((c) => c.id))).size}
+            </strong>
+          </button>
+        </div>
+        <OpsToolbar
+          extra={
+            hasFilters ? (
+              <Button
+                aria-label="清除筛选"
+                onClick={() => {
+                  setKeyword("");
+                  setStatusFilter("ALL");
+                  setTierFilter("ALL");
+                }}
+              >
+                清除筛选
+              </Button>
+            ) : null
+          }
+        >
+          <Input
+            allowClear
+            prefix={<SearchOutlined />}
+            placeholder="搜索已加载的姓名、编号或脱敏手机号"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            aria-label="搜索已加载客户"
+            style={{ width: 320, maxWidth: "100%" }}
           />
-        </Card>
-      </Space>
+          <Select
+            aria-label="按账户状态筛选已加载结果"
+            value={statusFilter}
+            style={{ width: 140 }}
+            onChange={setStatusFilter}
+            options={[
+              { value: "ALL", label: "全部状态" },
+              { value: "ACTIVE", label: "正常" },
+              { value: "SUSPENDED", label: "已暂停" },
+              { value: "DISABLED", label: "已停用" },
+            ]}
+          />
+          <Select
+            aria-label="按 VIP 资料筛选已加载结果"
+            value={tierFilter}
+            style={{ width: 160 }}
+            onChange={setTierFilter}
+            options={[
+              { value: "ALL", label: "全部 VIP" },
+              { value: "STANDARD", label: "标准 Standard" },
+              { value: "SILVER", label: "白银 Silver" },
+              { value: "GOLD", label: "黄金 Gold" },
+              { value: "PLATINUM", label: "铂金 Platinum" },
+            ]}
+          />
+        </OpsToolbar>
+        <p className="ops-loaded-filter-caption">
+          {LOADED_FILTER_CAPTION} {DIRECTORY_SCOPE_COPY.noKycOnList}
+        </p>
+        <Table<Customer>
+          rowKey="id"
+          className="ops-directory-table"
+          columns={columns}
+          dataSource={filteredCustomers}
+          loading={loading}
+          tableLayout="fixed"
+          scroll={{ x: 1980 }}
+          pagination={{
+            ...OPS_TABLE_PAGINATION,
+            showTotal: (total) => `共 ${total} 位客户`,
+          }}
+          locale={{
+            emptyText: (
+              <OpsEmpty
+                description={hasFilters ? "没有匹配的已加载结果" : "暂无客户记录"}
+                onRetry={hasFilters ? undefined : loadCustomers}
+              />
+            ),
+          }}
+        />
+      </div>
 
-      {/* 登录记录 */}
+      <OpsDrawer
+        title={selectedCustomer ? `${selectedCustomer.fullName} · 客户详情` : "客户详情"}
+        open={detailOpen}
+        onClose={() => setDetailOpen(false)}
+        width={480}
+      >
+        {selectedCustomer ? (
+          <Descriptions size="small" column={1} bordered>
+            <Descriptions.Item label="客户编号">
+              <span className="ops-id">{selectedCustomer.customerNo || selectedCustomer.id}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="客户名称">
+              <span className="ops-cell-clip" title={selectedCustomer.fullName}>
+                {selectedCustomer.fullName}
+              </span>
+            </Descriptions.Item>
+            <Descriptions.Item label="脱敏手机号">
+              {maskOpsPhone(selectedCustomer.phone)}
+            </Descriptions.Item>
+            <Descriptions.Item label="客户状态">
+              <OpsStatusTag
+                code={selectedCustomer.status}
+                label={accountStatusLabel(selectedCustomer.status)}
+              />
+            </Descriptions.Item>
+            <Descriptions.Item label="VIP">
+              <Tag aria-label={`VIP ${vipTierLabel(selectedCustomer.clientTier)}`}>
+                {vipTierLabel(selectedCustomer.clientTier)}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="交易账号">
+              <span className="ops-id">{selectedCustomer.account?.accountNumber || "—"}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="现金余额">
+              <OpsMoney value={selectedCustomer.account?.cashBalance} />
+            </Descriptions.Item>
+            <Descriptions.Item label="可用资金">
+              <OpsMoney value={selectedCustomer.account?.buyingPower} />
+            </Descriptions.Item>
+            <Descriptions.Item label="创建时间">
+              {formatOpsDateTime(selectedCustomer.createdAt)}
+            </Descriptions.Item>
+            <Descriptions.Item label="KYC 状态">
+              当前客户列表接口未返回 KYC，不在本页伪装审核入口。
+            </Descriptions.Item>
+          </Descriptions>
+        ) : null}
+      </OpsDrawer>
 
-      <Modal
+      <OpsModal
         title={
           selectedCustomer
             ? `${selectedCustomer.fullName} - 登录记录`
             : "登录记录"
         }
-
         open={historyOpen}
-
         footer={null}
-
         onCancel={() => { detailRequest.current++; setHistoryOpen(false); }}
-
-        width={1000}
+        width={920}
       >
-        {detailError && <Alert type="error" showIcon title={detailError}
-          action={<Button onClick={() => selectedCustomer && openLoginHistory(selectedCustomer)}>重试</Button>} />}
+        {detailError && <OpsErrorState title={detailError} onRetry={() => selectedCustomer && openLoginHistory(selectedCustomer)} />}
         <Table<LoginAudit>
           rowKey={(record) =>
             record.id ?? `${record.createdAt}-${record.ipAddress}`
           }
-
           columns={[
             {
               title: "时间",
-
               dataIndex: "createdAt",
-
               render: (value) => formatDate(value),
             },
-
             {
               title: "IP",
-
               dataIndex: "ipAddress",
             },
-
             {
               title: "设备",
-
               dataIndex: "userAgent",
-
               render: (value) => getDeviceLabel(value),
             },
-
             {
               title: "结果",
-
               dataIndex: "success",
-
               render: (value) => (
-                <Tag color={value ? "green" : "red"}>
-                  {value ? "成功" : "失败"}
-                </Tag>
+                <OpsStatusTag code={value ? "ACTIVE" : "FAILED"} label={value ? "成功" : "失败"} />
               ),
             },
           ]}
-
           dataSource={loginHistory}
-
           loading={historyLoading}
         />
-      </Modal>
+      </OpsModal>
 
-      {/* 风险详情 */}
-
-      <Modal
+      <OpsModal
         title={
           selectedCustomer
             ? `${selectedCustomer.fullName} - 登录风险`
             : "风险详情"
         }
-
         open={riskOpen}
-
         footer={null}
-
         onCancel={() => { detailRequest.current++; setRiskOpen(false); }}
-
         confirmLoading={riskLoading}
       >
         {riskLoading && <Text type="secondary">正在加载登录风险…</Text>}
-        {detailError && <Alert type="error" showIcon title={detailError}
-          action={<Button onClick={() => selectedCustomer && openLoginRisk(selectedCustomer)}>重试</Button>} />}
+        {detailError && <OpsErrorState title={detailError} onRetry={() => selectedCustomer && openLoginRisk(selectedCustomer)} />}
         {selectedRisk && (
-          <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-            <Space size="large" wrap>
-              <Card>
-                <Statistic
-                  title="24小时失败登录"
-                  value={selectedRisk.failedLoginCount24h}
-                />
-              </Card>
-
-              <Card>
-                <Statistic
-                  title="风险等级"
-                  value={riskTag(selectedRisk.riskLevel).text}
-                />
-              </Card>
-            </Space>
-
-            <Card title="最近失败登录">
-              {selectedRisk.lastFailedLogin ? (
-                <Space orientation="vertical">
-                  <Text>
-                    时间：
-                    {formatDate(selectedRisk.lastFailedLogin.createdAt)}
-                  </Text>
-
-                  <Text>
-                    IP：
-                    {selectedRisk.lastFailedLogin.ipAddress || "-"}
-                  </Text>
-
-                  <Text>
-                    设备：
-                    {getDeviceLabel(selectedRisk.lastFailedLogin.userAgent)}
-                  </Text>
-                </Space>
-              ) : (
-                <Text type="secondary">暂无失败记录</Text>
-              )}
-            </Card>
-          </Space>
+          <Descriptions size="small" column={1} bordered>
+            <Descriptions.Item label="24小时失败登录">
+              {selectedRisk.failedLoginCount24h}
+            </Descriptions.Item>
+            <Descriptions.Item label="风险等级">
+              <OpsStatusTag
+                code={riskTag(selectedRisk.riskLevel).color === "red" ? "FAILED" : "ACTIVE"}
+                label={riskTag(selectedRisk.riskLevel).text}
+              />
+            </Descriptions.Item>
+            <Descriptions.Item label="最近失败登录">
+              {selectedRisk.lastFailedLogin
+                ? `${formatDate(selectedRisk.lastFailedLogin.createdAt)} · ${selectedRisk.lastFailedLogin.ipAddress || "—"}`
+                : "暂无失败记录"}
+            </Descriptions.Item>
+          </Descriptions>
         )}
-      </Modal>
+      </OpsModal>
 
-      <Modal
+      <OpsModal
         title={sharedType === "IP" ? "共享 IP 风险" : "共享设备风险"}
         open={sharedOpen}
         footer={null}
-        width={1100}
+        width={920}
         onCancel={() => setSharedOpen(false)}
       >
         {!(sharedType === "IP" ? sharedIpReady : sharedDeviceReady) ?
-          <Alert type="warning" showIcon title="风险信息尚未获取，不能判断是否存在共享风险"
-            action={<Button loading={loading} onClick={loadCustomers}>重新加载</Button>} /> :
+          <OpsErrorState title="风险信息尚未获取，不能判断是否存在共享风险" onRetry={loadCustomers} /> :
         <Table<SharedIpRisk | SharedDeviceRisk>
           rowKey={sharedType === "IP" ? "ipAddress" : "userAgent"}
-
           dataSource={sharedType === "IP" ? sharedIpRisks : sharedDeviceRisks}
-
           columns={
             (sharedType === "IP"
               ? [
@@ -918,24 +879,18 @@ export default function BusinessCustomersPage() {
                     title: "IP地址",
                     dataIndex: "ipAddress",
                   },
-
                   {
                     title: "客户数量",
                     dataIndex: "customerCount",
                   },
-
                   {
                     title: "客户",
-
                     render: (_: unknown, record: SharedIpRisk | SharedDeviceRisk) => (
                       <Space orientation="vertical">
                         {record.customers.map((customer) => (
                           <div key={customer.id}>
                             <Tag color="red">{customer.fullName}</Tag>
-
-                            <Text type="secondary">
-                              {customer.phone || "-"}
-                            </Text>
+                            <Text type="secondary">{maskOpsPhone(customer.phone)}</Text>
                           </div>
                         ))}
                       </Space>
@@ -945,30 +900,21 @@ export default function BusinessCustomersPage() {
               : [
                   {
                     title: "设备",
-
                     dataIndex: "userAgent",
-
                     render: (value: string) => getDeviceLabel(value),
                   },
-
                   {
                     title: "客户数量",
-
                     dataIndex: "customerCount",
                   },
-
                   {
                     title: "客户",
-
                     render: (_: unknown, record: SharedIpRisk | SharedDeviceRisk) => (
                       <Space orientation="vertical">
                         {record.customers.map((customer) => (
                           <div key={customer.id}>
                             <Tag color="orange">{customer.fullName}</Tag>
-
-                            <Text type="secondary">
-                              {customer.phone || "-"}
-                            </Text>
+                            <Text type="secondary">{maskOpsPhone(customer.phone)}</Text>
                           </div>
                         ))}
                       </Space>
@@ -977,7 +923,7 @@ export default function BusinessCustomersPage() {
                 ]) as ColumnsType<SharedIpRisk | SharedDeviceRisk>
           }
         />}
-      </Modal>
+      </OpsModal>
     </AdminShell>
   );
 }

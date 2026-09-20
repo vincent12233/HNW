@@ -91,7 +91,20 @@ const OTC_ERROR_ZH: Record<string, string> = {
   'Approval request is no longer pending': '该审批申请已处理',
   'Requester cannot approve their own operation':
     '申请人不能批准自己发起的操作',
-  'Approval request has expired': '审批申请已过期',
+  "Approval request has expired": '审批申请已过期',
+  'VIP threshold cannot be negative': 'VIP 门槛不能为负数',
+  'VIP threshold is invalid': 'VIP 门槛无效',
+  'VIP threshold cannot have more than two decimal places':
+    'VIP 门槛最多保留两位小数',
+  'Active VIP thresholds must increase strictly with display order':
+    '已启用等级的非空门槛必须随排序严格递增',
+  'Unknown VIP tier': '未知 VIP 等级',
+  'VIP tier not found': '未找到 VIP 等级',
+  'Adjustment reason is required': '请填写调整原因',
+  'Adjustment reason is too long': '调整原因过长',
+  'Customer is outside the current VIP scope': '该客户不在当前 VIP 查看范围',
+  'Customer not assigned to this business user': '该客户未分配给当前业务员',
+  'VIP deposit thresholds are not configured': '累计充值门槛尚未配置',
 };
 
 const OTC_ERROR_ZH_PREFIX: Array<[string, string]> = [

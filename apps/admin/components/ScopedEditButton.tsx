@@ -12,13 +12,13 @@ export default function ScopedEditButton({ name, endpoint, kind, current, onSave
   const savingRef = useRef(false);
   const [form] = Form.useForm();
   const title = kind === "tier" ? "修改会员等级" : kind === "password" ? "重置登录密码" : "修改账户状态";
-  async function save(values: { status?: string; newPassword?: string; tier?: string }) {
+  async function save(values: { status?: string; newPassword?: string; tier?: string; reason?: string }) {
     if (savingRef.current) return;
     savingRef.current = true;
     setSaving(true);
     try {
       const payload = kind === "active" ? { isActive: values.status === "ACTIVE" }
-        : kind === "tier" ? { tier: values.tier }
+        : kind === "tier" ? { tier: values.tier, reason: values.reason }
         : kind === "password" ? { newPassword: values.newPassword }
         : { status: values.status };
       await api.patch(endpoint, payload);
@@ -40,12 +40,17 @@ export default function ScopedEditButton({ name, endpoint, kind, current, onSave
       closable={!saving} maskClosable={!saving} cancelButtonProps={{ disabled: saving }}>
       <p>{name}</p>
       <Form form={form} layout="vertical" onFinish={save}>
-        {kind === "tier" ? <Form.Item name="tier" label="会员等级" rules={[{ required: true }]}>
+        {kind === "tier" ? <>
+          <Form.Item name="tier" label="会员等级" rules={[{ required: true }]}>
           <Select disabled={saving} options={[
             { value: 'STANDARD', label: '标准 Standard' }, { value: 'SILVER', label: '白银 Silver' },
             { value: 'GOLD', label: '黄金 Gold' }, { value: 'PLATINUM', label: '铂金 Platinum' },
           ]} />
-        </Form.Item> : kind === "password" ? <Form.Item name="newPassword" label="新登录密码"
+        </Form.Item>
+        <Form.Item name="reason" label="调整原因" rules={[{ required: true, min: 4, message: "请填写至少 4 个字符的原因" }]}>
+          <Input.TextArea rows={3} disabled={saving} />
+        </Form.Item>
+        </> : kind === "password" ? <Form.Item name="newPassword" label="新登录密码"
           rules={[{ required: true }, { min: 12, max: 72, message: "密码长度为 12–72 位" }]}>
           <Input.Password autoComplete="new-password" disabled={saving} />
         </Form.Item> : <Form.Item name="status" label="账户状态" rules={[{ required: true }]}>

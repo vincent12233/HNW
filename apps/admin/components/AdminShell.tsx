@@ -25,6 +25,7 @@ import {
   TeamOutlined,
   TransactionOutlined,
   UsergroupAddOutlined,
+  CrownOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -78,6 +79,9 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/dashboard", icon: <DashboardOutlined />, label: "管理总览", badge: "total" },
     { key: "/business-users", icon: <UsergroupAddOutlined />, label: "员工与权限" },
     { key: "/customers", icon: <TeamOutlined />, label: "客户总览" },
+    { key: "/vip-settings", icon: <CrownOutlined />, label: "VIP 等级设置" },
+    { key: "/vip-clients", icon: <CrownOutlined />, label: "VIP 客户总览" },
+    { key: "/vip-history", icon: <AuditOutlined />, label: "VIP 等级变更历史" },
     { key: "/market", icon: <StockOutlined />, label: "市场运行" },
     { key: "/instruments", icon: <StockOutlined />, label: "股票资料库" },
     { key: "/watchlist", icon: <BarChartOutlined />, label: "涨停股上架" },
@@ -106,11 +110,13 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/team?view=orders", icon: <StockOutlined />, label: "客户订单" },
     { key: "/team?view=trades", icon: <TransactionOutlined />, label: "客户成交" },
     { key: "/team?view=kyc", icon: <IdcardOutlined />, label: "KYC 审核", badge: "kyc" },
+    { key: "/team-vip", icon: <CrownOutlined />, label: "团队 VIP" },
     { key: "/team?view=team", icon: <UsergroupAddOutlined />, label: "我的业务员" },
   ],
   BUSINESS: [
     { key: "/dashboard", icon: <DashboardOutlined />, label: "业务总览", badge: "total" },
     { key: "/business-customers", icon: <TeamOutlined />, label: "我的客户" },
+    { key: "/business-vip", icon: <CrownOutlined />, label: "我的客户 VIP" },
     { key: "/business-kyc", icon: <IdcardOutlined />, label: "KYC 审核", badge: "kyc" },
     { key: "/business-accounts", icon: <BankOutlined />, label: "客户账户" },
     { key: "/business-deposits", icon: <DollarOutlined />, label: "我的客户入金记录" },
@@ -158,7 +164,7 @@ const menus: Record<Role, MenuItemDef[]> = {
 /** Visual grouping only — keys must stay within the role allowlist above. */
 const menuGroups: Record<Role, MenuGroupDef[]> = {
   ADMIN: [
-    { title: "治理与人员", keys: ["/team", "/dashboard", "/business-users", "/customers", "/audit-logs", "/approvals"] },
+    { title: "治理与人员", keys: ["/team", "/dashboard", "/business-users", "/customers", "/vip-settings", "/vip-clients", "/vip-history", "/audit-logs", "/approvals"] },
     {
       title: "市场与产品",
       keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],
@@ -189,13 +195,14 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
         "/team?view=orders",
         "/team?view=trades",
         "/team?view=kyc",
+        "/team-vip",
       ],
     },
     { title: "团队", keys: ["/team?view=team"] },
   ],
   BUSINESS: [
     { title: "工作台", keys: ["/dashboard"] },
-    { title: "我的客户", keys: ["/business-customers", "/business-kyc", "/business-accounts"] },
+    { title: "我的客户", keys: ["/business-customers", "/business-vip", "/business-kyc", "/business-accounts"] },
     { title: "资金与贷款", keys: ["/business-deposits", "/business-withdrawals", "/loans"] },
     {
       title: "交易业务",

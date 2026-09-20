@@ -33,6 +33,13 @@ test('each staff role menu is an allowlist and does not include F&O, GTT, or bas
   assert.match(block, /\/business-kyc/);
   assert.match(block, /\/withdrawals/);
   assert.doesNotMatch(block, /\/fno|\/gtt|\/basket/);
+  assert.match(block, /\/vip-settings/);
+  assert.match(block, /\/team-vip/);
+  assert.match(block, /\/business-vip/);
+  const financeBlock = block.slice(block.indexOf('FINANCE:'), block.indexOf('SUPPORT:'));
+  assert.doesNotMatch(financeBlock, /\/vip-/);
+  const supportBlock = block.slice(block.indexOf('SUPPORT:'));
+  assert.doesNotMatch(supportBlock, /\/vip-/);
 });
 
 test('deployment role mapping currently isolates the five consoles', () => {

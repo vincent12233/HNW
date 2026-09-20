@@ -22,6 +22,7 @@ import {
   buildKycReviewBody,
   canSubmitKycReview,
   collectPreviewGaps,
+  describeKycPreviewFailure,
   partialPreviewMessage,
   releaseReviewLock,
   type KycDecision,
@@ -251,8 +252,9 @@ export default function TeamPage() {
       if (unavailable.length) setKycPreviewError(partialPreviewMessage(unavailable));
     } catch (failure: unknown) {
       if (generation !== previewGeneration.current) return;
-      const detail = getApiErrorMessage(failure, "");
-      setKycPreviewError(detail || KYC_REVIEW_COPY.previewError);
+      setKycPreviewError(
+        describeKycPreviewFailure(failure, getApiErrorMessage(failure, "")),
+      );
     } finally {
       if (generation === previewGeneration.current) setFileLoading(false);
     }

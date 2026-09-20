@@ -779,9 +779,20 @@ button.ops-stat-pill{
 .kyc-list-card {
   overflow: auto;
 }
-.kyc-resubmit-hint {
-  max-width: 220px;
+.kyc-resubmit-hint,
+.kyc-wrap-text {
   display: block;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.kyc-step h3,
+.kyc-preview-card h4 {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.kyc-step {
+  min-width: 0;
 }
 .kyc-meta-grid {
   display: grid;
@@ -795,7 +806,13 @@ button.ops-stat-pill{
 }
 .kyc-preview-card,
 .kyc-bank-card {
+  border: 1px solid #e5edf5;
   border-radius: 8px;
+  padding: 10px 12px;
+  background: #fff;
+}
+.kyc-preview-skeleton {
+  animation: kyc-fade-in 180ms ease-out;
 }
 .kyc-preview-frame {
   display: flex;
@@ -926,11 +943,13 @@ button.ops-stat-pill{
   .assignment-history,
   .kyc-preview-frame img,
   .kyc-preview-frame .ant-image,
+  .kyc-preview-skeleton,
   .kyc-review-modal-root .ant-modal,
   .kyc-confirm-modal-root .ant-modal,
   .kyc-review-workspace .ant-spin-dot,
   .kyc-review-modal-root *,
   .kyc-confirm-modal-root *,
+  .kyc-review-workspace .ops-status-tag,
   .vip-workspace *,
   .vip-summary-card,
   .vip-summary-skeleton,

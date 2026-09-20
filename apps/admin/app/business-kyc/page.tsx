@@ -14,6 +14,7 @@ import {
   buildKycReviewBody,
   canSubmitKycReview,
   collectPreviewGaps,
+  describeKycPreviewFailure,
   parseKycList,
   partialPreviewMessage,
   releaseReviewLock,
@@ -99,7 +100,9 @@ export default function BusinessKycPage() {
       if (missing.length) setPreviewError(partialPreviewMessage(missing));
     } catch (requestError: unknown) {
       if (generation !== previewGeneration.current) return;
-      setPreviewError(getApiErrorMessage(requestError, "") || KYC_REVIEW_COPY.previewError);
+      setPreviewError(
+        describeKycPreviewFailure(requestError, getApiErrorMessage(requestError, "")),
+      );
     } finally {
       if (generation === previewGeneration.current) setFileLoading(false);
     }
@@ -160,8 +163,8 @@ export default function BusinessKycPage() {
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
         <OpsPageHeader
-          eyebrow={KYC_REVIEW_COPY.eyebrow}
           title={KYC_REVIEW_COPY.title}
+          crumbs={[{ title: "我的客户" }, { title: KYC_REVIEW_COPY.title }]}
           description={KYC_REVIEW_COPY.description}
         />
         <KycReviewList

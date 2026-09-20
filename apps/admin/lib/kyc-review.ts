@@ -35,6 +35,9 @@ export type KycSubmissionView = {
   bankDetails?: KycBankDetails | null;
   ownerStaffId?: string;
   ownerStaffName?: string;
+  reviewedAt?: string | null;
+  reviewedByName?: string | null;
+  clientTier?: string | null;
 };
 
 export const KYC_REVIEW_COPY = {
@@ -47,7 +50,16 @@ export const KYC_REVIEW_COPY = {
   loading: "正在加载 KYC 列表",
   listError: "KYC 列表加载失败，请重试。",
   previewError: "审核资料加载失败，请重试。",
+  previewForbidden: "没有权限查看该证件预览。权限由服务端决定，本页不会绕过鉴权。",
+  previewLoading: "正在加载鉴权预览",
+  noReviewerOnList: "列表接口未返回审核人和审核时间，不在前端编造这两列。",
   filenameHint: "文件名提示",
+  stepProfile: "1. 个人资料",
+  stepDocuments: "2. PAN / Aadhaar",
+  stepSelfie: "3. 自拍",
+  stepSignature: "4. 签名",
+  stepBank: "5. 银行资料",
+  stepReview: "6. 提交和审核状态",
   rejectNoteRequired: "拒绝时请填写审核备注，客户将把它作为补件说明。",
   confirmApprove: "确认将该提交标记为已通过？结果只在服务器成功后生效，此时不会提前显示审核成功。",
   confirmReject: "确认将该提交标记为已拒绝？结果只在服务器成功后生效。填写的备注将作为补件说明，不会新增审核状态。",
@@ -224,6 +236,23 @@ export function kycWorkflowForRole(role: string): KycRoleWorkflow {
     };
   }
   return { role, page: null, listApi: null, reviewApi: null, fileApi: null };
+}
+
+export function kycHasReviewerFields(items: KycSubmissionView[]): boolean {
+  return items.some((item) => Boolean(item.reviewedAt || item.reviewedByName));
+}
+
+export function describeKycPreviewFailure(error: unknown, mappedMessage = ""): string {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  if (status === 403 || status === 401) return KYC_REVIEW_COPY.previewForbidden;
+  return mappedMessage || KYC_REVIEW_COPY.previewError;
+}
+
+export function kycConfirmSummary(submission: KycSubmissionView, decision: KycDecision): string {
+  const current = kycStatusPresentation(submission.status, submission.reviewNote);
+  return `客户 ${submission.fullName || submission.userId} · 当前状态 ${current.label} · 将提交为${
+    decision === "APPROVED" ? KYC_REVIEW_COPY.approvedLabel : KYC_REVIEW_COPY.rejectedLabel
+  }`;
 }
 
 export function collectPreviewGaps(input: {

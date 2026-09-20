@@ -14,16 +14,19 @@ import {
   WalletOutlined,
   WarningOutlined,
 } from "@ant-design/icons";
-import { Alert, Button, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
+import { Button, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
 import { isAxiosError } from "axios";
 import Link from "next/link";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import CurrentInviteCode from "@/components/CurrentInviteCode";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
+import { formatInr } from "@/lib/ops-format";
 
-const { Title, Paragraph, Text } = Typography;
+const { Paragraph, Text } = Typography;
 
 type CurrentUser = {
   id?: string;
@@ -70,11 +73,7 @@ type LoginRiskSummary = {
 };
 
 function formatMoney(value: number) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
+  return formatInr(value);
 }
 
 function MetricCard({
@@ -98,7 +97,7 @@ function MetricCard({
           style={{
             width: 42,
             height: 42,
-            borderRadius: 10,
+            borderRadius: 8,
             display: "inline-flex",
             alignItems: "center",
             justifyContent: "center",
@@ -226,16 +225,10 @@ export default function DashboardPage() {
   if (error) {
     return (
       <AdminShell>
-        <Alert
-          type="error"
-          showIcon
+        <OpsErrorState
           title="工作台数据暂时不可用"
           description={`${error}。请重试以获取完整数据。`}
-          action={
-            <Button icon={<ReloadOutlined />} onClick={() => setRefreshNonce((value) => value + 1)}>
-              重新加载
-            </Button>
-          }
+          onRetry={() => setRefreshNonce((value) => value + 1)}
         />
       </AdminShell>
     );
@@ -265,13 +258,16 @@ export default function DashboardPage() {
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div className="ops-hero">
-          <Space orientation="vertical" size={4}>
-            <Tag color={isFinance ? "gold" : isBusiness ? "green" : "blue"}>{heroTag}</Tag>
-            <Title level={2}>{heroTitle}</Title>
-            <Paragraph>{heroDesc}</Paragraph>
-          </Space>
-        </div>
+        <OpsPageHeader
+          eyebrow={heroTag}
+          title={heroTitle}
+          description={heroDesc}
+          extra={
+            <Button icon={<ReloadOutlined />} aria-label="刷新工作台" onClick={() => setRefreshNonce((value) => value + 1)}>
+              刷新
+            </Button>
+          }
+        />
 
         {isBusiness ? (
           <>

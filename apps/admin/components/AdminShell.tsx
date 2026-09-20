@@ -32,6 +32,7 @@ import {
   Alert,
   Avatar,
   Badge,
+  Breadcrumb,
   Button,
   Drawer,
   Layout,
@@ -40,6 +41,7 @@ import {
   Space,
   Spin,
   Tag,
+  Tooltip,
   Typography,
 } from "antd";
 import type { ItemType } from "antd/es/menu/interface";
@@ -50,6 +52,7 @@ import { api } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
 import { findNavigationItem } from "@/lib/admin-navigation";
 import { isAxiosError } from "axios";
+import OpsPermissionDenied from "@/components/OpsPermissionDenied";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
@@ -393,16 +396,15 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const meta = roleMeta[role];
   const selectedItem = findNavigationItem(flatItems, activeKey);
   const pageTitle = selectedItem?.label || "工作台";
+  const activeGroup = menuGroups[role].find((group) =>
+    group.keys.some((key) => key === selectedItem?.key),
+  );
   const allowed =
     pathname === "/" ||
     pathname === "/login" ||
     flatItems.some(
       (item) => pathname === item.key.split("?")[0] || pathname.startsWith(`${item.key.split("?")[0]}/`),
     );
-
-  useEffect(() => {
-    if (user && !allowed) router.replace(user.role === "MANAGER" ? "/team" : "/dashboard");
-  }, [allowed, router, user]);
 
   const logout = async () => {
     try {
@@ -552,17 +554,27 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
       <Layout className="ops-main-layout">
         <Header className="ops-header">
-          <Space size={12}>
-            <Button
-              type="text"
-              aria-label="切换导航"
-              aria-expanded={mobile ? drawerOpen : !collapsed}
-              className="ops-nav-toggle"
-              icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-              onClick={() => (mobile ? setDrawerOpen(true) : setCollapsed((value) => !value))}
-            />
+          <Space size={12} className="ops-header-start">
+            <Tooltip title={mobile ? (drawerOpen ? "关闭导航" : "打开导航") : collapsed ? "展开导航" : "收起导航"}>
+              <Button
+                type="text"
+                aria-label={mobile ? (drawerOpen ? "关闭导航" : "打开导航") : collapsed ? "展开导航" : "收起导航"}
+                aria-expanded={mobile ? drawerOpen : !collapsed}
+                className="ops-nav-toggle"
+                icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={() => (mobile ? setDrawerOpen(true) : setCollapsed((value) => !value))}
+              />
+            </Tooltip>
             <div className="ops-title">
-              <Text type="secondary">OPERATIONS WORKSPACE</Text>
+              <Breadcrumb
+                className="ops-header-crumbs"
+                aria-label="页面路径"
+                items={[
+                  { title: meta.product },
+                  ...(activeGroup ? [{ title: activeGroup.title }] : []),
+                  { title: pageTitle },
+                ]}
+              />
               <strong>{pageTitle}</strong>
             </div>
           </Space>
@@ -572,26 +584,31 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             </Tag>
             {!mobile && (
               <>
-                <Avatar className="ops-avatar">{(user.fullName || "管").charAt(0)}</Avatar>
+                <Avatar className="ops-avatar" aria-hidden>
+                  {(user.fullName || "管").charAt(0)}
+                </Avatar>
                 <div className="ops-user">
                   <strong>{user.fullName || meta.label}</strong>
                   <small>权限已隔离 · 安全登录</small>
                 </div>
               </>
             )}
-            <Button
-              type="text"
-              danger
-              aria-label="退出登录"
-              icon={<LogoutOutlined />}
-              onClick={logout}
-            >
-              {mobile ? null : "退出"}
-            </Button>
+            <Tooltip title="退出登录">
+              <Button
+                type="text"
+                danger
+                className="ops-danger-action"
+                aria-label="退出登录"
+                icon={<LogoutOutlined />}
+                onClick={logout}
+              >
+                {mobile ? null : "退出"}
+              </Button>
+            </Tooltip>
           </Space>
         </Header>
         <Content id="ops-main-content" tabIndex={-1} className="ops-content">
-          {verified && allowed ? children : null}
+          {verified && allowed ? children : verified ? <OpsPermissionDenied role={role} /> : null}
         </Content>
       </Layout>
     </Layout>

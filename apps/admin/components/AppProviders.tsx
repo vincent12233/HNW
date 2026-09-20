@@ -12,7 +12,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
         token: {
           colorPrimary: "#1677ff",
           colorInfo: "#1677ff",
-          borderRadius: 10,
+          borderRadius: 8,
           fontFamily:
             '"DM Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
           controlHeight: 36,
@@ -26,16 +26,22 @@ export default function AppProviders({ children }: { children: ReactNode }) {
           Menu: {
             darkItemBg: "transparent",
             darkSubMenuItemBg: "transparent",
-            itemBorderRadius: 10,
+            itemBorderRadius: 8,
           },
           Card: {
-            borderRadiusLG: 14,
+            borderRadiusLG: 8,
           },
           Table: {
-            headerBorderRadius: 10,
+            headerBorderRadius: 8,
           },
           Button: {
-            borderRadius: 10,
+            borderRadius: 8,
+          },
+          Drawer: {
+            paddingLG: 16,
+          },
+          Modal: {
+            borderRadiusLG: 8,
           },
         },
       }}

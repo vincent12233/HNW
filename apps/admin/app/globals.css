@@ -773,6 +773,11 @@ body {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .assignment-workspace *,
+  .assignment-tree,
+  .assignment-drawer,
+  .assignment-dialog,
+  .assignment-history,
   .kyc-preview-frame img,
   .kyc-preview-frame .ant-image,
   .kyc-review-modal-root .ant-modal,

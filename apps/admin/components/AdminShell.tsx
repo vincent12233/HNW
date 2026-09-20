@@ -26,6 +26,7 @@ import {
   TransactionOutlined,
   UsergroupAddOutlined,
   CrownOutlined,
+  SwapOutlined,
 } from "@ant-design/icons";
 import {
   Alert,
@@ -76,6 +77,7 @@ type MenuGroupDef = { title: string; keys: string[] };
 const menus: Record<Role, MenuItemDef[]> = {
   ADMIN: [
     { key: "/team", icon: <UsergroupAddOutlined />, label: "管理员管理" },
+    { key: "/team-assignments", icon: <SwapOutlined />, label: "团队归属管理" },
     { key: "/dashboard", icon: <DashboardOutlined />, label: "管理总览", badge: "total" },
     { key: "/business-users", icon: <UsergroupAddOutlined />, label: "员工与权限" },
     { key: "/customers", icon: <TeamOutlined />, label: "客户总览" },
@@ -164,7 +166,7 @@ const menus: Record<Role, MenuItemDef[]> = {
 /** Visual grouping only — keys must stay within the role allowlist above. */
 const menuGroups: Record<Role, MenuGroupDef[]> = {
   ADMIN: [
-    { title: "治理与人员", keys: ["/team", "/dashboard", "/business-users", "/customers", "/vip-settings", "/vip-clients", "/vip-history", "/audit-logs", "/approvals"] },
+    { title: "治理与人员", keys: ["/team", "/team-assignments", "/dashboard", "/business-users", "/customers", "/vip-settings", "/vip-clients", "/vip-history", "/audit-logs", "/approvals"] },
     {
       title: "市场与产品",
       keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],

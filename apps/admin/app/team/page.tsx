@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { Alert, Button, Form, Input, Modal, Popconfirm, Space, Table, Typography, message } from "antd";
-import { PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { Alert, Button, Drawer, Form, Input, Modal, Popconfirm, Space, Table, Typography, message } from "antd";
+import { PlusOutlined, ReloadOutlined, HistoryOutlined } from "@ant-design/icons";
 import AdminShell from "@/components/AdminShell";
 import KycReviewList from "@/components/KycReviewList";
 import KycReviewModal from "@/components/KycReviewModal";
@@ -22,7 +22,7 @@ import {
 } from "@/lib/kyc-review";
 import { loadTeamRecords } from "@/lib/team-records";
 
-type Staff = { id: string; fullName: string; role: string; status: string; businessProfile?: { employeeNo: string; isActive?: boolean }; _count?: { assignedCustomers: number; createdBusinessUsers: number } };
+type Staff = { id: string; fullName: string; role: string; status: string; businessProfile?: { employeeNo: string; isActive?: boolean }; vipClientCount?: number; _count?: { assignedCustomers: number; createdBusinessUsers: number } };
 const EMPTY_KYC_FILES = {
   front: null,
   back: null,
@@ -50,6 +50,9 @@ export default function TeamPage() {
   const previewGeneration=useRef(0);
   const reviewLock=useRef(false);
   const [reviewSaving,setReviewSaving]=useState(false);
+  const [historyOpen,setHistoryOpen]=useState(false);
+  const [historyLoading,setHistoryLoading]=useState(false);
+  const [historyRows,setHistoryRows]=useState<Array<{ id: string; businessName: string; previousManagerName: string | null; newManagerName: string | null; reason: string; createdAt: string; clientCountAtChange: number }>>([]);
   async function load() {
     setLoading(true); setError("");
     try {
@@ -167,6 +170,17 @@ export default function TeamPage() {
       setReviewSaving(false);
     }
   }
+  async function loadHistory() {
+    setHistoryOpen(true);
+    setHistoryLoading(true);
+    try {
+      const { data } = await api.get("/team/assignment-history");
+      setHistoryRows(data);
+    } catch {
+      setHistoryOpen(false);
+      message.error("归属历史加载失败");
+    } finally { setHistoryLoading(false); }
+  }
   async function create(values: {employeeNo:string;fullName:string;password:string}) {
     setSaving(true);
     try {await api.post("/team",values);setOpen(false);form.resetFields();message.success("账号创建成功");await load();}
@@ -192,6 +206,7 @@ export default function TeamPage() {
       {view === "kyc" && <Typography.Paragraph type="secondary">{KYC_REVIEW_COPY.description} 管理员通过所属业务员接口审核，不使用业务员待审接口。</Typography.Paragraph>}
       {view !== "team" && <Space wrap><Typography.Text>业务员</Typography.Text><select value={selectedId} onChange={e=>setSelectedId(e.target.value)} aria-label="按业务员筛选" style={{minWidth:220,padding:8,borderRadius:6,border:"1px solid #d9d9d9"}}><option value="">全部业务员</option>{rows.map(r=><option key={r.id} value={r.id}>{r.fullName}（{r.businessProfile?.employeeNo}）</option>)}</select><Button icon={<ReloadOutlined aria-hidden/>} aria-label="刷新客户业务数据" onClick={()=>setRefreshNonce(value=>value+1)} loading={loading}>刷新</Button><Typography.Text type="secondary">共 {records.length} 条 · 待处理 {records.filter(record=>record.status === 'PENDING').length} 条</Typography.Text></Space>}
       {view === "team" && <Space><Button icon={<ReloadOutlined/>} onClick={load} loading={loading}>刷新</Button>
+      {role === "MANAGER" ? <Button icon={<HistoryOutlined aria-hidden/>} aria-label="查看本团队归属历史" onClick={()=>void loadHistory()}>归属历史</Button> : null}
       <Button type="primary" icon={<PlusOutlined/>} disabled={!role} onClick={()=>setOpen(true)}>{role==="ADMIN"?"创建管理员":"创建业务员"}</Button></Space>}
       {view === "team" ? <Table<Staff> rowKey="id" loading={loading} dataSource={rows} scroll={{x:640}} columns={[
         {title:"员工编号",render:(_,r)=>r.businessProfile?.employeeNo||"-"},
@@ -208,6 +223,7 @@ export default function TeamPage() {
           <Button danger loading={deleting === row.id} disabled={!!deleting && deleting !== row.id}>删除</Button>
         </Popconfirm>},
         {title:role==="ADMIN"?"业务员数量":"客户数量",render:(_,r)=>role==="ADMIN"?r._count?.createdBusinessUsers:r._count?.assignedCustomers},
+        ...(role === "MANAGER" ? [{ title: "VIP 客户", render: (_: unknown, row: Staff) => row.vipClientCount ?? 0 }] : []),
       ]}/> : view === "kyc" ? <KycReviewList
         items={records as KycSubmissionView[]}
         loading={loading}
@@ -225,6 +241,16 @@ export default function TeamPage() {
         <Form.Item name="password" label="初始密码" rules={[{required:true},{min:12,max:72,message:"密码长度为 12–72 位"}]}><Input.Password autoComplete="new-password"/></Form.Item>
       </Form>
     </Modal>
+    <Drawer title="本团队归属历史" open={historyOpen} onClose={()=>setHistoryOpen(false)} width={520}>
+      <Table rowKey="id" loading={historyLoading} pagination={false} dataSource={historyRows} locale={{emptyText:"暂无与本团队有关的归属记录"}} columns={[
+        {title:"时间",dataIndex:"createdAt",render:(value:string)=>new Date(value).toLocaleString()},
+        {title:"业务员",dataIndex:"businessName"},
+        {title:"原管理员",dataIndex:"previousManagerName",render:(value:string|null)=>value||"未归属"},
+        {title:"新管理员",dataIndex:"newManagerName"},
+        {title:"客户数快照",dataIndex:"clientCountAtChange"},
+        {title:"原因",dataIndex:"reason"},
+      ]}/>
+    </Drawer>
     <KycReviewModal
       open={!!reviewing}
       submission={reviewing}

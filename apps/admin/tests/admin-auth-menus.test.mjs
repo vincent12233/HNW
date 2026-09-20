@@ -36,10 +36,16 @@ test('each staff role menu is an allowlist and does not include F&O, GTT, or bas
   assert.match(block, /\/vip-settings/);
   assert.match(block, /\/team-vip/);
   assert.match(block, /\/business-vip/);
+  assert.match(block, /\/team-assignments/);
+  const managerBlock = block.slice(block.indexOf('MANAGER:'), block.indexOf('BUSINESS:'));
+  assert.doesNotMatch(managerBlock, /\/team-assignments/);
+  assert.doesNotMatch(managerBlock, /Transfer/);
   const financeBlock = block.slice(block.indexOf('FINANCE:'), block.indexOf('SUPPORT:'));
   assert.doesNotMatch(financeBlock, /\/vip-/);
+  assert.doesNotMatch(financeBlock, /\/team-assignments/);
   const supportBlock = block.slice(block.indexOf('SUPPORT:'));
   assert.doesNotMatch(supportBlock, /\/vip-/);
+  assert.doesNotMatch(supportBlock, /\/team-assignments/);
 });
 
 test('deployment role mapping currently isolates the five consoles', () => {

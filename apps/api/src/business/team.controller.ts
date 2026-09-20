@@ -16,6 +16,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { Roles } from '../auth/roles.decorator';
 import { TeamService } from './team.service';
 import { BusinessService } from './business.service';
+import { BusinessAssignmentService } from './business-assignment.service';
 import { KycService } from '../kyc/kyc.service';
 import {
   CreateTeamStaffDto,
@@ -33,10 +34,26 @@ export class TeamController {
   constructor(
     private readonly team: TeamService,
     private readonly business: BusinessService,
+    private readonly assignments: BusinessAssignmentService,
     private readonly kyc: KycService,
   ) {}
   @Get() list(@Req() req: AuthenticatedRequest) {
     return this.team.list(req.user.userId);
+  }
+  @Get('business-users')
+  @Roles('MANAGER')
+  businessUsers(@Req() req: AuthenticatedRequest) {
+    return this.assignments.listManagerTeam(req.user.userId);
+  }
+  @Get('customers')
+  @Roles('MANAGER')
+  teamCustomers(@Req() req: AuthenticatedRequest) {
+    return this.assignments.listManagerCustomers(req.user.userId);
+  }
+  @Get('assignment-history')
+  @Roles('MANAGER')
+  assignmentHistory(@Req() req: AuthenticatedRequest) {
+    return this.assignments.historyForManager(req.user.userId);
   }
   @Post() create(
     @Req() req: AuthenticatedRequest,

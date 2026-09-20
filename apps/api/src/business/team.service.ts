@@ -25,7 +25,7 @@ export class TeamService {
   }
   async list(actorId: string) {
     const actor = await this.actor(actorId);
-    return this.prisma.user.findMany({
+    const rows = await this.prisma.user.findMany({
       where:
         actor.role === 'ADMIN'
           ? { role: 'MANAGER', deletedAt: null }
@@ -42,6 +42,61 @@ export class TeamService {
       },
       orderBy: { createdAt: 'desc' },
     });
+    const vipCounts = await this.vipClientCounts(
+      actor.role === 'ADMIN'
+        ? (
+            await this.prisma.user.findMany({
+              where: {
+                role: 'BUSINESS',
+                deletedAt: null,
+                businessCreatorId: { in: rows.map((row) => row.id) },
+              },
+              select: { id: true, businessCreatorId: true },
+            })
+          ).reduce(
+            (map, business) => {
+              if (!business.businessCreatorId) return map;
+              const list = map.get(business.businessCreatorId) ?? [];
+              list.push(business.id);
+              map.set(business.businessCreatorId, list);
+              return map;
+            },
+            new Map<string, string[]>(),
+          )
+        : new Map(rows.map((row) => [row.id, [row.id]])),
+    );
+    return rows.map((row) => ({
+      ...row,
+      vipClientCount: vipCounts.get(row.id) ?? 0,
+    }));
+  }
+
+  private async vipClientCounts(ownedBusinessIds: Map<string, string[]>) {
+    const result = new Map<string, number>();
+    const businessIds = [...ownedBusinessIds.values()].flat();
+    if (!businessIds.length) return result;
+    const vip = await this.prisma.user.groupBy({
+      by: ['assignedBusinessId'],
+      where: {
+        role: 'CLIENT',
+        deletedAt: null,
+        clientTier: { not: 'STANDARD' },
+        assignedBusinessId: { in: businessIds },
+      },
+      _count: { _all: true },
+    });
+    const vipByBusiness = new Map(
+      vip
+        .filter((row) => row.assignedBusinessId)
+        .map((row) => [row.assignedBusinessId as string, row._count._all]),
+    );
+    for (const [ownerId, ids] of ownedBusinessIds) {
+      result.set(
+        ownerId,
+        ids.reduce((sum, id) => sum + (vipByBusiness.get(id) ?? 0), 0),
+      );
+    }
+    return result;
   }
   async create(actorId: string, dto: CreateTeamStaffDto) {
     const actor = await this.actor(actorId);
@@ -116,26 +171,37 @@ export class TeamService {
             id: targetId,
             deletedAt: null,
             ...(actor.role === 'ADMIN'
-              ? { role: 'MANAGER' as const }
+              ? { role: { in: ['MANAGER' as const, 'BUSINESS' as const] } }
               : { role: 'BUSINESS' as const, businessCreatorId: actorId }),
           },
           select: { id: true, role: true },
         });
         if (!target || targetId === actorId)
           throw new NotFoundException('未找到可删除的团队账号');
-        const dependents = await tx.user.count({
+        const businessCount = await tx.user.count({
           where: {
             deletedAt: null,
-            OR: [
-              { businessCreatorId: targetId },
-              { assignedBusinessId: targetId },
-            ],
+            role: 'BUSINESS',
+            businessCreatorId: targetId,
           },
         });
-        if (dependents)
+        const clientCount = await tx.user.count({
+          where: {
+            deletedAt: null,
+            role: 'CLIENT',
+            assignedBusinessId: targetId,
+          },
+        });
+        if (target.role === 'MANAGER' && businessCount) {
           throw new ConflictException(
-            '该账号名下仍有业务员或客户，请先转移归属后再删除',
+            `该管理员名下仍有 ${businessCount} 名业务员，请先转移归属后再删除`,
           );
+        }
+        if (target.role === 'BUSINESS' && clientCount) {
+          throw new ConflictException(
+            `该业务员名下仍有 ${clientCount} 名客户，请先处理客户归属后再删除`,
+          );
+        }
         await tx.user.update({
           where: { id: targetId },
           data: {

@@ -234,6 +234,7 @@ export class AdminUsersService {
       },
       select: {
         id: true,
+        role: true,
         status: true,
       },
     });
@@ -241,6 +242,21 @@ export class AdminUsersService {
     if (!user) {
       throw new NotFoundException('User not found');
     }
+
+    const remainingBusinessCount = await this.prisma.user.count({
+      where: {
+        deletedAt: null,
+        role: 'BUSINESS',
+        businessCreatorId: userId,
+      },
+    });
+    const remainingClientCount = await this.prisma.user.count({
+      where: {
+        deletedAt: null,
+        role: 'CLIENT',
+        assignedBusinessId: userId,
+      },
+    });
 
     const updatedUser = await this.prisma.user.update({
       where: {
@@ -255,6 +271,7 @@ export class AdminUsersService {
         phone: true,
         role: true,
         status: true,
+        businessCreatorId: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -270,6 +287,9 @@ export class AdminUsersService {
         previousStatus: user.status,
         newStatus: updatedUser.status,
         targetPhone: updatedUser.phone,
+        remainingBusinessCount,
+        remainingClientCount,
+        relationsRetained: true,
       },
     });
 
@@ -277,6 +297,10 @@ export class AdminUsersService {
       message: 'User status updated successfully',
       previousStatus: user.status,
       user: updatedUser,
+      remainingBusinessCount,
+      remainingClientCount,
+      relationsRetained: true,
+      assignedBusinessIdUnchanged: true,
     };
   }
 

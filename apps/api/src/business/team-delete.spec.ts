@@ -42,19 +42,28 @@ describe('Team staff deletion', () => {
     expect(tx.inviteCode.updateMany).toHaveBeenCalled();
     expect(tx.auditLog.create).toHaveBeenCalled();
   });
-  it('restricts super administrators to manager accounts', async () => {
+  it('restricts super administrators to manager or business accounts', async () => {
     const { service, tx } = setup('ADMIN', { id: 'target', role: 'MANAGER' });
     await service.remove('actor', 'target');
-    expect(tx.user.findFirst.mock.calls[0][0].where.role).toBe('MANAGER');
+    expect(tx.user.findFirst.mock.calls[0][0].where.role).toEqual({
+      in: ['MANAGER', 'BUSINESS'],
+    });
   });
   it('rejects out-of-scope accounts without mutations', async () => {
     const { service, tx } = setup('MANAGER', null);
     await expect(service.remove('actor', 'target')).rejects.toThrow();
     expect(tx.user.update).not.toHaveBeenCalled();
   });
-  it('preserves accounts with assigned customers or staff', async () => {
+  it('preserves business accounts with assigned customers', async () => {
     const { service, tx } = setup('MANAGER', undefined, 1);
-    await expect(service.remove('actor', 'target')).rejects.toThrow('转移');
+    await expect(service.remove('actor', 'target')).rejects.toThrow('客户');
+    expect(tx.user.update).not.toHaveBeenCalled();
+  });
+  it('preserves manager accounts that still own business users', async () => {
+    const { service, tx } = setup('ADMIN', { id: 'target', role: 'MANAGER' }, 1);
+    await expect(service.remove('actor', 'target')).rejects.toThrow(
+      '1 名业务员',
+    );
     expect(tx.user.update).not.toHaveBeenCalled();
   });
 });

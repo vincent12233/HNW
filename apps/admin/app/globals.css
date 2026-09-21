@@ -780,7 +780,8 @@ button.ops-stat-pill{
   overflow: auto;
 }
 .kyc-resubmit-hint,
-.kyc-wrap-text {
+.kyc-wrap-text,
+.ops-wrap-text {
   display: block;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -949,6 +950,8 @@ button.ops-stat-pill{
   .kyc-review-workspace .ant-spin-dot,
   .kyc-review-modal-root *,
   .kyc-confirm-modal-root *,
+  .ops-workspace *,
+  .ops-workspace .ops-status-tag,
   .kyc-review-workspace .ops-status-tag,
   .vip-workspace *,
   .vip-summary-card,

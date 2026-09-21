@@ -5,6 +5,7 @@ import type { DrawerProps } from "antd";
 
 export default function OpsDrawer({
   width = 480,
+  size,
   destroyOnHidden = true,
   className,
   ...props
@@ -12,7 +13,7 @@ export default function OpsDrawer({
   return (
     <Drawer
       {...props}
-      width={width}
+      size={size ?? width}
       destroyOnHidden={destroyOnHidden}
       className={["ops-drawer", className].filter(Boolean).join(" ")}
     />

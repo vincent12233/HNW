@@ -535,7 +535,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
 
       <Drawer
         placement="left"
-        width={292}
+        size={292}
         open={mobile && drawerOpen}
         onClose={() => setDrawerOpen(false)}
         title={meta.product}

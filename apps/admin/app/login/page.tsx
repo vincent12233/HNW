@@ -3,8 +3,8 @@
 import { EyeInvisibleOutlined, EyeOutlined, IdcardOutlined, LockOutlined } from "@ant-design/icons";
 import { Alert, Button, Form, Input } from "antd";
 import { isAxiosError } from "axios";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 import { api } from "@/lib/api";
 import { backendRoleLabels, getBackendRole, type BackendRole } from "@/lib/backend-role";
@@ -26,6 +26,16 @@ const homeByRole: Record<string, string> = {
   BUSINESS: "/dashboard",
   SUPPORT: "/dashboard",
 };
+
+function SessionStatus() {
+  const params = useSearchParams();
+  if (params.get("session") !== "expired") return null;
+  return (
+    <div role="status">
+      <Alert type="warning" showIcon title="登录已失效，请使用员工编号和密码重新登录。地址参数 session=expired 仅用于提示，不会改写认证协议。" />
+    </div>
+  );
+}
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -91,6 +101,9 @@ export default function AdminLoginPage() {
             <Alert type="error" title={error} showIcon />
           </div>
         )}
+        <Suspense fallback={null}>
+          <SessionStatus />
+        </Suspense>
         <Form<Values> layout="vertical" onFinish={submit} size="large" disabled={submitting} requiredMark={false}>
           <Form.Item label="员工编号" name="employeeNo" rules={[{ required: true, whitespace: true, message: "请输入员工编号" }]}>
             <Input

@@ -37,7 +37,7 @@ api.interceptors.response.use(
   (error) => {
     if (typeof window !== 'undefined' && error?.response?.status === 401 && window.location.pathname !== '/login') {
       localStorage.removeItem('adminUser');
-      window.location.replace('/login');
+      window.location.replace('/login?session=expired');
     }
     return Promise.reject(error);
   },

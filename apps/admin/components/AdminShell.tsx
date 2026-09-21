@@ -52,13 +52,21 @@ import { api } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
 import { findNavigationItem } from "@/lib/admin-navigation";
 import { isAxiosError } from "axios";
+import OpsModal from "@/components/OpsModal";
 import OpsPermissionDenied from "@/components/OpsPermissionDenied";
 
 const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
 type Role = "ADMIN" | "MANAGER" | "BUSINESS" | "FINANCE" | "SUPPORT";
-type CurrentUser = { id?: string; fullName?: string; phone?: string; role?: Role };
+type CurrentUser = {
+  id?: string;
+  fullName?: string;
+  phone?: string;
+  role?: Role;
+  status?: string;
+  businessProfile?: { employeeNo?: string | null };
+};
 type PendingCounts = {
   kyc: number;
   deposits: number;
@@ -286,6 +294,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [sessionAttempt, setSessionAttempt] = useState(0);
   const [pending, setPending] = useState<PendingCounts>(emptyPending());
   const [pendingUnavailable, setPendingUnavailable] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     const sync = () => setMobile(window.innerWidth < 900);
@@ -337,7 +347,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         const status = isAxiosError(error) ? error.response?.status : undefined;
         if (status === 401 || status === 403) {
           localStorage.removeItem("adminUser");
-          router.replace("/login");
+          router.replace("/login?session=expired");
         } else {
           setSessionUnavailable(true);
         }
@@ -407,6 +417,8 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     );
 
   const logout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     try {
       await api.post("/auth/logout");
     } finally {
@@ -589,7 +601,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 </Avatar>
                 <div className="ops-user">
                   <strong>{user.fullName || meta.label}</strong>
-                  <small>权限已隔离 · 安全登录</small>
+                  <small>{user.businessProfile?.employeeNo || "Unavailable"} · 权限已隔离</small>
                 </div>
               </>
             )}
@@ -600,7 +612,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 className="ops-danger-action"
                 aria-label="退出登录"
                 icon={<LogoutOutlined />}
-                onClick={logout}
+                onClick={() => setLogoutOpen(true)}
               >
                 {mobile ? null : "退出"}
               </Button>
@@ -611,6 +623,17 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           {verified && allowed ? children : verified ? <OpsPermissionDenied role={role} /> : null}
         </Content>
       </Layout>
+      <OpsModal
+        title="确认退出登录？"
+        open={logoutOpen}
+        onCancel={() => (loggingOut ? undefined : setLogoutOpen(false))}
+        onOk={() => void logout()}
+        okText="退出"
+        okButtonProps={{ danger: true, disabled: loggingOut }}
+        confirmLoading={loggingOut}
+      >
+        <Text>退出后需要使用员工编号和密码重新登录。不会发送短信或邮箱验证码。</Text>
+      </OpsModal>
     </Layout>
   );
 }

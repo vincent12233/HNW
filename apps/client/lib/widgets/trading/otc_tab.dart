@@ -9,22 +9,31 @@ import '../../models/institutional_opportunity.dart';
 import '../../services/app_content_service.dart';
 import '../../services/otc_service.dart';
 import '../../utils/number_formatters.dart';
+import '../app_feedback.dart';
+import '../app_status_label.dart';
+import '../record_detail_sheet.dart';
 import '../responsive_empty_state.dart';
 import 'product_offer_card.dart';
 import 'trading_guide_card.dart';
 
 class OtcTab extends StatefulWidget {
-  const OtcTab({super.key});
+  const OtcTab({super.key, this.service});
+
+  final OtcService? service;
 
   @override
   State<OtcTab> createState() => _OtcTabState();
 }
 
 class _OtcTabState extends State<OtcTab> {
-  final OtcService service = OtcService();
+  late final OtcService service = widget.service ?? OtcService();
   List<InstitutionalStock> offers = const [];
   List<OtcOrderRecord> orders = const [];
   bool loading = true;
+  bool submitting = false;
+  String? error;
+  int _generation = 0;
+  Future<void>? _inFlight;
 
   @override
   void initState() {
@@ -40,21 +49,43 @@ class _OtcTabState extends State<OtcTab> {
 
   @override
   void dispose() {
+    _generation++;
     AppContentService.instance.removeListener(_onAppContentChanged);
     super.dispose();
   }
 
-  Future<void> _refresh() async {
+  Future<void> _refresh() {
+    final pending = _inFlight;
+    if (pending != null) return pending;
+    final request = ++_generation;
+    final future = _refreshOnce(request);
+    _inFlight = future;
+    return future.whenComplete(() {
+      if (identical(_inFlight, future)) _inFlight = null;
+    });
+  }
+
+  Future<void> _refreshOnce(int request) async {
+    if (mounted) {
+      setState(() {
+        loading = true;
+      });
+    }
     try {
       final result = await Future.wait([service.offers(), service.orders()]);
-      if (!mounted) return;
+      if (!mounted || request != _generation) return;
       setState(() {
         offers = result[0] as List<InstitutionalStock>;
         orders = result[1] as List<OtcOrderRecord>;
         loading = false;
+        error = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => loading = false);
+    } catch (err) {
+      if (!mounted || request != _generation) return;
+      setState(() {
+        loading = false;
+        error = err.toString();
+      });
     }
   }
 
@@ -65,7 +96,16 @@ class _OtcTabState extends State<OtcTab> {
     final guideTitle = content.title('trading', 'guide.otc');
     final guideBody = content.text('trading', 'guide.otc');
 
-    if (loading) return const Center(child: CircularProgressIndicator());
+    if (loading && offers.isEmpty && orders.isEmpty && error == null) {
+      return const AppLoadingView(message: 'Loading OTC orders');
+    }
+    if (error != null && offers.isEmpty && orders.isEmpty) {
+      return AppErrorView(
+        title: 'Unable to load OTC',
+        message: error,
+        onRetry: _refresh,
+      );
+    }
     if (items.isEmpty && orders.isEmpty) {
       return Column(
         children: [
@@ -181,13 +221,17 @@ class _OtcTabState extends State<OtcTab> {
             child: const AppText('Cancel'),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const AppText('Submit'),
+            onPressed: submitting
+                ? null
+                : () => Navigator.pop(dialogContext, true),
+            child: AppText(submitting ? 'Submitting...' : 'Submit'),
           ),
         ],
       ),
     );
     if (submitted != true) return;
+    if (submitting) return;
+    setState(() => submitting = true);
     try {
       await service.submit(item.id, int.tryParse(quantity.text) ?? 0, key.text);
       await _refresh();
@@ -203,47 +247,64 @@ class _OtcTabState extends State<OtcTab> {
           context,
         ).showSnackBar(SnackBar(content: AppText(error.message)));
       }
+    } finally {
+      if (mounted) setState(() => submitting = false);
     }
   }
 
   Widget _orderCard(OtcOrderRecord order) {
-    final color = order.status == 'APPROVED'
-        ? AppConfig.gainColor
-        : order.status == 'REJECTED'
-        ? AppConfig.lossColor
-        : Colors.orange.shade700;
-    final label = order.status == 'APPROVED'
-        ? 'Approved · In holdings'
-        : order.status == 'REJECTED'
-        ? 'Rejected'
-        : 'Pending review';
+    final label = displayStatusLabel(
+      order.status,
+      labels: const {
+        'PENDING': 'Pending review',
+        'APPROVED': 'Approved',
+        'REJECTED': 'Rejected',
+      },
+    );
     return Card(
       child: ListTile(
-        leading: Icon(Icons.schedule_rounded, color: color),
+        onTap: () => showRecordDetailSheet(
+          context,
+          title: '${order.symbol} OTC order',
+          status: AppLabeledStatus(
+            status: order.status,
+            labels: const {
+              'PENDING': 'Pending review',
+              'APPROVED': 'Approved',
+              'REJECTED': 'Rejected',
+            },
+          ),
+          rows: [
+            ('Order', order.orderNo.isEmpty ? 'Unavailable' : order.orderNo),
+            ('Quantity', '${order.quantity}'),
+            ('Discount settlement price', formatPrice(order.price)),
+            ('Status', label),
+            ('Submitted', formatAppDateTime(order.createdAt)),
+            (
+              'Review note',
+              order.reviewNote?.isNotEmpty == true
+                  ? order.reviewNote!
+                  : 'Unavailable',
+            ),
+          ],
+        ),
+        leading: const Icon(Icons.schedule_rounded),
         title: AppText(
           '${order.symbol} · ${order.quantity} shares',
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w700),
         ),
-        subtitle: AppText(
-          order.reviewNote?.isNotEmpty == true
-              ? order.reviewNote!
-              : order.orderNo,
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            AppText(label),
             AppText(
-              label,
-              style: TextStyle(color: color, fontWeight: FontWeight.w700),
-            ),
-            const AppText(
-              'Discount settlement price',
-              style: TextStyle(fontSize: 11, color: Colors.black54),
-            ),
-            Text(
-              formatPrice(order.price),
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+              order.reviewNote?.isNotEmpty == true
+                  ? order.reviewNote!
+                  : (order.orderNo.isEmpty ? 'Unavailable' : order.orderNo),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ],
         ),

@@ -49,19 +49,19 @@ class AppCard extends StatelessWidget {
 
     final content = Padding(padding: padding ?? AppSpacing.card, child: child);
 
-    final card = DecoratedBox(
-      decoration: decoration,
-      child: onTap == null
-          ? content
-          : Material(
-              color: Colors.transparent,
-              clipBehavior: clipBehavior,
-              child: InkWell(
+    final card = Material(
+      color: Colors.transparent,
+      clipBehavior: clipBehavior,
+      child: DecoratedBox(
+        decoration: decoration,
+        child: onTap == null
+            ? content
+            : InkWell(
                 onTap: onTap,
                 borderRadius: BorderRadius.circular(radius),
                 child: content,
               ),
-            ),
+      ),
     );
 
     if (margin == null) return card;

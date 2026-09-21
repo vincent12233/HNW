@@ -1,18 +1,28 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../app_config.dart';
 import '../l10n/app_language.dart';
 import '../models/deposit_request.dart';
 import '../services/app_content_service.dart';
 import '../services/trading_service.dart';
-import '../theme/app_motion.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/app_buttons.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_page_scaffold.dart';
+import '../widgets/app_status_label.dart';
+import '../widgets/record_detail_sheet.dart';
 import '../widgets/support_chat_launcher.dart';
+
+const _depositStatusLabels = {
+  'PENDING': 'Pending',
+  'APPROVED': 'Approved',
+  'REJECTED': 'Rejected',
+};
 
 class DepositPage extends StatefulWidget {
   const DepositPage({super.key, this.tradingService});
@@ -68,7 +78,6 @@ class _DepositPageState extends State<DepositPage> {
     if (mounted) {
       setState(() {
         _loading = true;
-        _error = null;
       });
     }
     try {
@@ -136,10 +145,12 @@ class _DepositPageState extends State<DepositPage> {
           '• Verify the beneficiary details with Online Customer Service before transferring.\n\n• Deposits are credited only after finance confirmation.\n\n• Keep your transfer receipt for settlement support.',
     );
 
-    return Scaffold(
+    return AppPageScaffold(
       appBar: AppBar(
         title: AppText(
           content.text('deposit', 'page_title', fallback: 'Deposit'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
         ),
         leading: const BackButton(),
       ),
@@ -147,143 +158,86 @@ class _DepositPageState extends State<DepositPage> {
         onRefresh: _loading ? () async {} : _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(12, 14, 12, 24),
+          padding: AppSpacing.page,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [AppConfig.primaryDarkColor, AppConfig.primaryColor],
-                ),
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: const [
-                  BoxShadow(
-                    color: Color(0x33165DFF),
-                    blurRadius: 16,
-                    offset: Offset(0, 7),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(heroTitle, style: AppTypography.titleLarge),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppText(
+                    instructions,
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                      height: 1.4,
+                    ),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
+                  AppPrimaryButton(label: ctaLabel, onPressed: _contact),
                 ],
               ),
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 22),
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 42,
-                        height: 42,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: .16),
-                          borderRadius: BorderRadius.circular(13),
-                        ),
-                        child: const Icon(
-                          Icons.account_balance_wallet_rounded,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
                       Expanded(
                         child: AppText(
-                          heroTitle,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
+                          content.text(
+                            'deposit',
+                            'history_section_title',
+                            fallback: 'DEPOSIT HISTORY',
+                          ),
+                          style: AppTypography.labelLarge.copyWith(
                             fontWeight: FontWeight.w800,
+                            letterSpacing: .5,
                           ),
                         ),
                       ),
+                      IconButton(
+                        tooltip: 'Refresh deposit history',
+                        onPressed: _loading ? null : () => unawaited(_load()),
+                        icon: const Icon(Icons.refresh_rounded),
+                      ),
                     ],
                   ),
-                  const SizedBox(height: 14),
-                  AppText(
-                    instructions,
-                    style: const TextStyle(
-                      height: 1.4,
-                      color: Color(0xDDE8F0FF),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    height: AppMotion.tapTarget,
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: AppConfig.primaryColor,
-                      ),
-                      onPressed: _contact,
-                      child: AppText(ctaLabel),
-                    ),
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(minHeight: 120),
+                    child: _historyBody(historyEmpty: historyEmpty),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 18),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(18, 16, 18, 18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppText(
-                            content.text(
-                              'deposit',
-                              'history_section_title',
-                              fallback: 'DEPOSIT HISTORY',
-                            ),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: .5,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          tooltip: 'Refresh deposit history',
-                          onPressed: _loading ? null : () => unawaited(_load()),
-                          icon: const Icon(Icons.refresh_rounded),
-                        ),
-                      ],
+            const SizedBox(height: AppSpacing.lg),
+            AppCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppText(
+                    content.text(
+                      'deposit',
+                      'terms_section_title',
+                      fallback: 'TERMS',
                     ),
-                    ConstrainedBox(
-                      constraints: const BoxConstraints(minHeight: 120),
-                      child: _historyBody(historyEmpty: historyEmpty),
+                    style: AppTypography.labelLarge.copyWith(
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: .8,
+                      color: AppColors.brandDark,
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(18),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      content.text(
-                        'deposit',
-                        'terms_section_title',
-                        fallback: 'TERMS',
-                      ),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: .8,
-                        color: AppConfig.primaryDarkColor,
-                      ),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  AppText(
+                    terms,
+                    style: AppTypography.bodyMedium.copyWith(
+                      height: 1.45,
+                      color: AppColors.textSecondary,
                     ),
-                    const SizedBox(height: 12),
-                    AppText(
-                      terms,
-                      style: const TextStyle(
-                        height: 1.45,
-                        color: Color(0xFF52627A),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -294,20 +248,22 @@ class _DepositPageState extends State<DepositPage> {
 
   Widget _historyBody({required String historyEmpty}) {
     if (_loading && _history.isEmpty && _error == null) {
-      return const Padding(
-        padding: EdgeInsets.all(24),
-        child: AppLoadingView(message: 'Loading deposit history'),
+      return const AppLoadingView(
+        compact: true,
+        message: 'Loading deposit history',
       );
     }
     if (_error != null && _history.isEmpty) {
       return AppErrorView(
+        compact: true,
         title: 'Unable to load deposit history',
         message: _error,
-        onRetry: _loading ? null : () => unawaited(_load()),
+        onRetry: () => unawaited(_load()),
       );
     }
     if (_history.isEmpty) {
       return AppEmptyState(
+        compact: true,
         title: historyEmpty,
         message:
             'Credited deposits appear here after finance confirms your payment.',
@@ -325,18 +281,53 @@ class _DepositPageState extends State<DepositPage> {
               style: const TextStyle(color: Color(0xFFB45309), height: 1.4),
             ),
           ),
-        ..._history.map(
-          (entry) => ListTile(
-            contentPadding: EdgeInsets.zero,
-            leading: Icon(
-              Icons.south_west_rounded,
-              color: AppConfig.primaryColor,
+        ..._history.map((entry) {
+          final status = displayStatusLabel(
+            entry.status,
+            labels: _depositStatusLabels,
+          );
+          return Material(
+            color: Colors.transparent,
+            child: ListTile(
+              contentPadding: EdgeInsets.zero,
+              onTap: () => unawaited(
+                showRecordDetailSheet(
+                  context,
+                  title: 'Deposit request',
+                  status: AppLabeledStatus(
+                    status: entry.status,
+                    labels: _depositStatusLabels,
+                  ),
+                  rows: [
+                    ('Amount', formatPrice(entry.amount)),
+                    ('Status', status),
+                    ('Requested', formatAppDateTime(entry.createdAt)),
+                    ('Payment method', entry.paymentMethod ?? 'Unavailable'),
+                    ('Reference', entry.referenceId ?? 'Unavailable'),
+                    ('Note', entry.note ?? 'Unavailable'),
+                  ],
+                ),
+              ),
+              leading: Icon(
+                Icons.south_west_rounded,
+                color: AppColors.brandPrimary,
+              ),
+              title: AppText(formatPrice(entry.amount)),
+              subtitle: AppText(
+                '${formatAppDateTime(entry.createdAt)} · $status',
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 96),
+                child: AppLabeledStatus(
+                  status: entry.status,
+                  labels: _depositStatusLabels,
+                ),
+              ),
             ),
-            title: AppText(formatPrice(entry.amount)),
-            subtitle: AppText('${entry.createdAt.toLocal()} · ${entry.status}'),
-            trailing: entry.note == null ? null : AppText(entry.note!),
-          ),
-        ),
+          );
+        }),
       ],
     );
   }

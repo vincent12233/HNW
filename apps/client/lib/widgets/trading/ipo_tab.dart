@@ -7,6 +7,7 @@ import '../../app_config.dart';
 import '../../models/ipo.dart';
 import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
+import '../app_feedback.dart';
 import 'product_offer_card.dart';
 import '../responsive_empty_state.dart';
 import 'trading_guide_card.dart';
@@ -17,11 +18,15 @@ class IpoTab extends StatefulWidget {
     required this.ipos,
     required this.applications,
     required this.onApply,
+    this.loadFailed = false,
+    this.onRetry,
   });
 
   final List<Ipo> ipos;
   final List<IpoApplication> applications;
   final ValueChanged<Ipo> onApply;
+  final bool loadFailed;
+  final Future<void> Function()? onRetry;
 
   @override
   State<IpoTab> createState() => _IpoTabState();
@@ -30,6 +35,7 @@ class IpoTab extends StatefulWidget {
 class _IpoTabState extends State<IpoTab> {
   // Default to Open so clients land on offerings they can apply to.
   int selectedSection = 1;
+  bool _applying = false;
 
   final List<String> sections = const ['Upcoming', 'Open', 'Closed', 'All'];
 
@@ -95,7 +101,17 @@ class _IpoTabState extends State<IpoTab> {
           ),
         ),
         const SizedBox(height: 12),
-        Expanded(child: _buildIpoList()),
+        Expanded(
+          child: widget.loadFailed && widget.ipos.isEmpty
+              ? AppErrorView(
+                  title: 'Unable to load IPOs',
+                  message: 'Check your network and try again.',
+                  onRetry: widget.onRetry == null
+                      ? null
+                      : () => widget.onRetry!(),
+                )
+              : _buildIpoList(),
+        ),
       ],
     );
   }
@@ -109,6 +125,13 @@ class _IpoTabState extends State<IpoTab> {
     }).toList();
 
     if (filtered.isEmpty) {
+      if (widget.loadFailed) {
+        return AppErrorView(
+          title: 'Unable to load IPOs',
+          message: 'Check your network and try again.',
+          onRetry: widget.onRetry == null ? null : () => widget.onRetry!(),
+        );
+      }
       final content = AppContentService.instance.current;
       final isOpen = selectedSection == 1;
       return ResponsiveEmptyState(
@@ -140,30 +163,33 @@ class _IpoTabState extends State<IpoTab> {
       );
     }
 
-    return ListView.separated(
-      padding: const EdgeInsets.all(16),
-      itemCount: filtered.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        final ipo = filtered[index];
+    return RefreshIndicator(
+      onRefresh: widget.onRetry ?? () async {},
+      child: ListView.separated(
+        padding: const EdgeInsets.all(16),
+        itemCount: filtered.length,
+        separatorBuilder: (_, _) => const SizedBox(height: 12),
+        itemBuilder: (context, index) {
+          final ipo = filtered[index];
 
-        final applicationCount = _applicationCount(ipo.id);
-        final reachedLimit = applicationCount >= 5;
+          final applicationCount = _applicationCount(ipo.id);
+          final reachedLimit = applicationCount >= 5;
 
-        return ProductOfferCard(
-          name: ipo.companyName,
-          symbol: ipo.symbol,
-          type: 'IPO',
-          status: ipo.statusLabel,
-          marketPrice: ipo.marketPrice,
-          offerPrice: ipo.subscriptionPrice,
-          offerLabel: 'Subscription Price',
-          actionLabel: reachedLimit ? 'Applied 5/5' : 'Trade Now',
-          onTrade: ipo.status == IpoStatus.open && !reachedLimit
-              ? () => _confirmApply(ipo)
-              : null,
-        );
-      },
+          return ProductOfferCard(
+            name: ipo.companyName,
+            symbol: ipo.symbol,
+            type: 'IPO',
+            status: ipo.statusLabel,
+            marketPrice: ipo.marketPrice,
+            offerPrice: ipo.subscriptionPrice,
+            offerLabel: 'Subscription Price',
+            actionLabel: reachedLimit ? 'Applied 5/5' : 'Apply',
+            onTrade: ipo.status == IpoStatus.open && !reachedLimit && !_applying
+                ? () => _confirmApply(ipo)
+                : null,
+          );
+        },
+      ),
     );
   }
 
@@ -239,6 +265,8 @@ class _IpoTabState extends State<IpoTab> {
       return;
     }
 
+    setState(() => _applying = true);
     widget.onApply(ipo);
+    if (mounted) setState(() => _applying = false);
   }
 }

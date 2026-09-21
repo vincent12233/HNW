@@ -117,35 +117,41 @@ class ProductOfferCard extends StatelessWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 7,
-                ),
-                decoration: BoxDecoration(
-                  color: (expected ?? 0) < 0
-                      ? const Color(0xFFFEE2E2)
-                      : const Color(0xFF10B981),
-                  borderRadius: BorderRadius.circular(5),
-                ),
-                child: AppText(
-                  expected == null ? '--' : '${expected.toStringAsFixed(2)}%',
-                  style: TextStyle(
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 7,
+                  ),
+                  decoration: BoxDecoration(
                     color: (expected ?? 0) < 0
-                        ? AppConfig.lossColor
-                        : Colors.white,
+                        ? const Color(0xFFFEE2E2)
+                        : const Color(0xFF10B981),
+                    borderRadius: BorderRadius.circular(5),
+                  ),
+                  child: AppText(
+                    expected == null ? '--' : '${expected.toStringAsFixed(2)}%',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: (expected ?? 0) < 0
+                          ? AppConfig.lossColor
+                          : Colors.white,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              const AppText(
-                'Expected\nreturn',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.black54,
-                  height: 1.1,
+              const Flexible(
+                child: AppText(
+                  'Expected\nreturn',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.black54,
+                    height: 1.1,
+                  ),
                 ),
               ),
             ],

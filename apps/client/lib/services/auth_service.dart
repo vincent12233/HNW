@@ -360,8 +360,13 @@ class AuthService {
       await LocalDataCache.saveJson(LocalDataCache.withdrawals, decoded);
 
       return _withdrawalsFromRows(decoded);
-    } catch (_) {
-      return _cachedWithdrawals();
+    } catch (error) {
+      final cached = await _cachedWithdrawals();
+      if (cached.isNotEmpty) return cached;
+      if (error is AuthException) rethrow;
+      throw const AuthException(
+        'Unable to load withdrawals. Check your network and try again.',
+      );
     }
   }
 

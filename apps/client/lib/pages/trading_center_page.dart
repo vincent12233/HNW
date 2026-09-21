@@ -50,6 +50,9 @@ class TradingCenterPage extends StatefulWidget {
     this.marketOpen,
     this.marketHours = '09:15 - 15:30 IST',
     this.quotesConnected,
+    this.iposFailed = false,
+    this.ipoApplicationsFailed = false,
+    this.onRetryIpos,
   });
 
   final List<StockQuote> stocks;
@@ -71,6 +74,9 @@ class TradingCenterPage extends StatefulWidget {
   final bool? marketOpen;
   final String marketHours;
   final bool? quotesConnected;
+  final bool iposFailed;
+  final bool ipoApplicationsFailed;
+  final Future<void> Function()? onRetryIpos;
 
   @override
   State<TradingCenterPage> createState() => _TradingCenterPageState();
@@ -890,6 +896,8 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         return PendingCenterTab(
           activeOrders: _openAndPendingOrders,
           ipoApplications: widget.ipoApplications,
+          applicationsFailed: widget.ipoApplicationsFailed,
+          onRetryApplications: widget.onRetryIpos,
           onCancel: _cancelStandardOrder,
         );
       case 4:
@@ -907,6 +915,8 @@ class _TradingCenterPageState extends State<TradingCenterPage>
           ipos: widget.ipos,
           applications: widget.ipoApplications,
           onApply: widget.onApplyIpo,
+          loadFailed: widget.iposFailed,
+          onRetry: widget.onRetryIpos,
         );
       case 7:
         return HistoryTab(

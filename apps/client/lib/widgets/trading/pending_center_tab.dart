@@ -8,6 +8,8 @@ import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
+import '../app_feedback.dart';
+import '../app_status_label.dart';
 import '../stock_logo.dart';
 import 'order_card.dart';
 
@@ -17,11 +19,15 @@ class PendingCenterTab extends StatefulWidget {
     required this.activeOrders,
     required this.ipoApplications,
     this.onCancel,
+    this.applicationsFailed = false,
+    this.onRetryApplications,
   });
 
   final List<TradingOrder> activeOrders;
   final List<IpoApplication> ipoApplications;
   final Future<String?> Function(TradingOrder order)? onCancel;
+  final bool applicationsFailed;
+  final Future<void> Function()? onRetryApplications;
 
   @override
   State<PendingCenterTab> createState() => _PendingCenterTabState();
@@ -113,14 +119,21 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
       padding: const EdgeInsets.all(16),
       itemCount: orders.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => OrderCard(
-        order: orders[index],
-        onCancel: widget.onCancel,
-      ),
+      itemBuilder: (context, index) =>
+          OrderCard(order: orders[index], onCancel: widget.onCancel),
     );
   }
 
   Widget _buildIpoApplications() {
+    if (widget.applicationsFailed && widget.ipoApplications.isEmpty) {
+      return AppErrorView(
+        title: 'Unable to load IPO applications',
+        message: 'Check your network and try again.',
+        onRetry: widget.onRetryApplications == null
+            ? null
+            : () => widget.onRetryApplications!(),
+      );
+    }
     if (widget.ipoApplications.isEmpty) {
       return Center(
         child: Padding(
@@ -159,13 +172,6 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
       itemBuilder: (context, index) {
         final application = widget.ipoApplications[index];
         final applicationNumber = _applicationNumberFor(application);
-        final statusColor = switch (application.status) {
-          IpoApplicationStatus.completed => AppColors.gain,
-          IpoApplicationStatus.notAllotted => AppColors.loss,
-          IpoApplicationStatus.cancelled => AppColors.neutral,
-          IpoApplicationStatus.allocated => AppColors.warning,
-          IpoApplicationStatus.applied => AppColors.brandPrimary,
-        };
 
         return Container(
           padding: AppSpacing.card,
@@ -187,6 +193,8 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                       children: [
                         AppText(
                           application.companyName,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -200,22 +208,16 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 5,
-                    ),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: AppText(
-                      application.statusLabel,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
+                  Flexible(
+                    child: AppLabeledStatus(
+                      status: application.status.name.toUpperCase(),
+                      labels: const {
+                        'APPLIED': 'Applied',
+                        'ALLOCATED': 'Allocated',
+                        'COMPLETED': 'Completed',
+                        'NOTALLOTTED': 'Not Allotted',
+                        'CANCELLED': 'Cancelled',
+                      },
                     ),
                   ),
                 ],
@@ -379,7 +381,9 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                       AppText(
                         needsFunds
                             ? 'Your IPO allotment is confirmed. Add the required funds to complete your subscription. No further action is needed after funds arrive.'
-                            : 'Your allocated shares have been added to your holdings.',
+                            : application.shouldMoveToHoldings
+                            ? 'Your allocated shares have been added to your holdings.'
+                            : 'Allocation is recorded. Holdings update after finance confirms payment.',
                       ),
                     ],
                   ),

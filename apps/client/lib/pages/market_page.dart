@@ -1,10 +1,9 @@
 import 'dart:async';
-import 'loan_page.dart';
-import 'dart:math' as math;
 import 'dart:convert';
+import 'dart:math' as math;
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -68,6 +67,8 @@ import 'legal_page.dart';
 import 'stock_detail_page.dart';
 import 'stock_search_page.dart';
 import 'deposit_page.dart';
+import 'loan_page.dart';
+import 'withdrawal_page.dart';
 import 'trading_center_page.dart';
 
 final marketSocket = MarketSocketService();
@@ -84,7 +85,6 @@ class MarketHomePage extends StatefulWidget {
 
 class _MarketHomePageState extends State<MarketHomePage>
     with WidgetsBindingObserver {
-  static const double _minimumWithdrawalAmount = 100;
   int selectedIndex = 0;
   String _portfolioPeriod = '1D';
   List<double> _portfolioSeries = const <double>[];
@@ -106,7 +106,8 @@ class _MarketHomePageState extends State<MarketHomePage>
   Future<void>? _accountRefreshInFlight;
   bool _ipoAllocationDialogOpen = false;
   final Set<String> _shownIpoAllotments = {};
-  bool _withdrawalSubmitting = false;
+  bool _iposFailed = false;
+  bool _ipoApplicationsFailed = false;
   bool marketConnected = false;
   bool? marketOpen;
   int unreadNotificationCount = 0;
@@ -815,16 +816,28 @@ class _MarketHomePageState extends State<MarketHomePage>
           ..addAll(remote);
       }),
       _loadDashboardSection(() async {
-        final remote = await ipoService.fetchOpenIpos();
-        ipos
-          ..clear()
-          ..addAll(remote);
+        try {
+          final remote = await ipoService.fetchOpenIpos();
+          ipos
+            ..clear()
+            ..addAll(remote);
+          _iposFailed = false;
+        } catch (_) {
+          _iposFailed = true;
+          rethrow;
+        }
       }),
       _loadDashboardSection(() async {
-        final remote = await ipoService.fetchMyApplications();
-        ipoApplications
-          ..clear()
-          ..addAll(remote);
+        try {
+          final remote = await ipoService.fetchMyApplications();
+          ipoApplications
+            ..clear()
+            ..addAll(remote);
+          _ipoApplicationsFailed = false;
+        } catch (_) {
+          _ipoApplicationsFailed = true;
+          rethrow;
+        }
       }),
       _loadDashboardSection(() async {
         final profile = await ClientAccountService().profile();
@@ -1127,6 +1140,36 @@ class _MarketHomePageState extends State<MarketHomePage>
           institutionalStocks: institutionalStocks,
           ipos: ipos,
           ipoApplications: ipoApplications,
+          iposFailed: _iposFailed,
+          ipoApplicationsFailed: _ipoApplicationsFailed,
+          onRetryIpos: () async {
+            await Future.wait([
+              _loadDashboardSection(() async {
+                try {
+                  final remote = await ipoService.fetchOpenIpos();
+                  ipos
+                    ..clear()
+                    ..addAll(remote);
+                  _iposFailed = false;
+                } catch (_) {
+                  _iposFailed = true;
+                  rethrow;
+                }
+              }),
+              _loadDashboardSection(() async {
+                try {
+                  final remote = await ipoService.fetchMyApplications();
+                  ipoApplications
+                    ..clear()
+                    ..addAll(remote);
+                  _ipoApplicationsFailed = false;
+                } catch (_) {
+                  _ipoApplicationsFailed = true;
+                  rethrow;
+                }
+              }),
+            ]);
+          },
           onTrade: _openStock,
           onApplyIpo: _applyIpo,
           onAlertsTap: _openNotifications,
@@ -1296,639 +1339,30 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Future<void> _openWithdrawalRequest() async {
-    if (_withdrawalSubmitting) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: AppText(
-            _appContent.text(
-              'home',
-              'withdraw.submitting',
-              fallback: 'A withdrawal request is being submitted',
-            ),
-          ),
-        ),
-      );
-      return;
-    }
-    try {
-      if (!await ClientAccountService().hasWithdrawalPin()) {
-        if (mounted) {
-          await Navigator.of(context).push(
-            MaterialPageRoute<void>(
-              builder: (_) => const AccountSecurityPage(withdrawalPin: true),
-            ),
-          );
-        }
-        return;
-      }
-    } catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: AppText(error.toString())));
-      }
-      return;
-    }
-    final latestWithdrawals = await AuthService().fetchWithdrawals();
-    withdrawalRequests
-      ..clear()
-      ..addAll(latestWithdrawals);
-    var availableWithdrawalBalance = availableBalance;
-    List<Map<String, dynamic>> bankAccounts;
-    try {
-      bankAccounts = await ClientAccountService().banks();
-    } on AuthException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: AppText(error.message)));
-      }
-      return;
-    }
     if (!mounted) return;
-    if (bankAccounts.isEmpty) {
-      await _openAccountSettings('banks');
-      return;
-    }
-    var selectedBank = bankAccounts.firstWhere(
-      (bank) => bank['isPrimary'] == true,
-      orElse: () => bankAccounts.first,
-    );
-    final initialBankNumber = selectedBank['accountNumber']?.toString() ?? '';
-    final initialIfsc = selectedBank['ifscCode']?.toString() ?? '';
-    if (initialBankNumber.trim().isEmpty || initialIfsc.trim().isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: AppText(
-              _appContent.text(
-                'home',
-                'withdraw.bank_incomplete',
-                fallback:
-                    'Complete your bank account details before withdrawing',
-              ),
-            ),
-          ),
-        );
-      }
-      await _openAccountSettings('banks');
-      return;
-    }
-    final amountController = TextEditingController();
-    final pinController = TextEditingController();
-
-    final submitted = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) {
-        String? errorText;
-
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            return AlertDialog(
-              titlePadding: const EdgeInsets.fromLTRB(24, 22, 24, 0),
-              contentPadding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-              actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-              title: Row(
-                children: [
-                  const Icon(
-                    Icons.account_balance_wallet_outlined,
-                    color: AppConfig.primaryColor,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: AppText(
-                      _appContent.text(
-                        'home',
-                        'withdraw.dialog_title',
-                        fallback: 'Withdrawal Request',
-                      ),
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      _appContent.text(
-                        'home',
-                        'withdraw.available_label',
-                        fallback: 'Available Funds',
-                      ),
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    AppText(
-                      formatPrice(availableWithdrawalBalance),
-                      style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppConfig.primaryColor,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    AppText(
-                      _appContent
-                          .text(
-                            'home',
-                            'withdraw.frozen_template',
-                            fallback: 'Total frozen: {amount}',
-                          )
-                          .replaceAll('{amount}', formatPrice(frozenBalance)),
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-
-                    const SizedBox(height: 20),
-
-                    TextField(
-                      controller: amountController,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d{0,13}([.]\d{0,2})?$'),
-                        ),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: _appContent.text(
-                          'home',
-                          'withdraw.amount_label',
-                          fallback: 'Withdrawal Amount',
-                        ),
-                        prefixText: '₹ ',
-                        border: const OutlineInputBorder(),
-                        errorText: errorText == null ? null : tr(errorText!),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    AppText(
-                      _appContent.text(
-                        'home',
-                        'withdraw.min_hint',
-                        fallback: 'Minimum withdrawal: ₹100',
-                      ),
-                      style: const TextStyle(
-                        color: Color(0xFF64748B),
-                        fontSize: 11,
-                      ),
-                    ),
-
-                    TextField(
-                      controller: pinController,
-                      obscureText: true,
-                      keyboardType: TextInputType.number,
-                      enableSuggestions: false,
-                      autocorrect: false,
-                      inputFormatters: [
-                        FilteringTextInputFormatter.digitsOnly,
-                        LengthLimitingTextInputFormatter(6),
-                      ],
-                      decoration: InputDecoration(
-                        labelText: _appContent.text(
-                          'home',
-                          'withdraw.pin_label',
-                          fallback: 'Withdrawal PIN',
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF5F7FB),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              const Icon(
-                                Icons.account_balance_outlined,
-                                size: 20,
-                                color: AppConfig.primaryColor,
-                              ),
-                              const SizedBox(width: 8),
-                              AppText(
-                                _appContent.text(
-                                  'home',
-                                  'withdraw.bank_section_title',
-                                  fallback: 'Withdrawal Bank Account',
-                                ),
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 14),
-                          DropdownButtonFormField<String>(
-                            initialValue: selectedBank['id']?.toString(),
-                            decoration: InputDecoration(
-                              labelText: _appContent.text(
-                                'home',
-                                'withdraw.bank_picker_label',
-                                fallback: 'Bank account',
-                              ),
-                            ),
-                            items: bankAccounts.map((bank) {
-                              final number =
-                                  bank['accountNumber']?.toString() ?? '';
-                              final suffix = number.length > 4
-                                  ? number.substring(number.length - 4)
-                                  : number;
-                              return DropdownMenuItem(
-                                value: bank['id']?.toString(),
-                                child: AppText(
-                                  '${bank['bankName']} ••••$suffix',
-                                ),
-                              );
-                            }).toList(),
-                            onChanged: (id) => setDialogState(() {
-                              selectedBank = bankAccounts.firstWhere(
-                                (bank) => bank['id']?.toString() == id,
-                              );
-                            }),
-                          ),
-                          const SizedBox(height: 12),
-                          _withdrawBankRow(
-                            _appContent.text(
-                              'home',
-                              'withdraw.holder_label',
-                              fallback: 'Account Holder',
-                            ),
-                            selectedBank['accountHolder']?.toString() ??
-                                accountName,
-                          ),
-                          const SizedBox(height: 10),
-                          _withdrawBankRow(
-                            _appContent.text(
-                              'home',
-                              'withdraw.account_label',
-                              fallback: 'Bank Account',
-                            ),
-                            selectedBank['accountNumber']?.toString() ?? '',
-                          ),
-                          const SizedBox(height: 10),
-                          _withdrawBankRow(
-                            _appContent.text(
-                              'home',
-                              'withdraw.status_label',
-                              fallback: 'Bank Status',
-                            ),
-                            selectedBank['status']?.toString() ?? 'Added',
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    AppText(
-                      _appContent.text(
-                        'home',
-                        'withdraw.notice',
-                        fallback:
-                            'Submit here in the app. Finance reviews your request. '
-                            'The amount is frozen right away. Approval deducts cash; '
-                            'rejection releases the freeze.',
-                      ),
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 12,
-                        height: 1.4,
-                      ),
-                    ),
-
-                    const SizedBox(height: 18),
-
-                    Row(
-                      children: [
-                        Expanded(
-                          child: AppText(
-                            _appContent.text(
-                              'home',
-                              'withdraw.records_title',
-                              fallback: 'Withdrawal Records',
-                            ),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () async {
-                            try {
-                              final latest = await AuthService()
-                                  .fetchWithdrawals();
-                              final snapshot = await tradingService
-                                  .fetchAccountSnapshot();
-                              if (!mounted) return;
-                              setState(() {
-                                withdrawalRequests
-                                  ..clear()
-                                  ..addAll(latest);
-                                if (snapshot != null) {
-                                  _applyAccountSnapshot(
-                                    snapshot,
-                                    positions: false,
-                                  );
-                                }
-                              });
-                              setDialogState(() {
-                                availableWithdrawalBalance = availableBalance;
-                              });
-                            } on AuthException catch (error) {
-                              if (!dialogContext.mounted) return;
-                              ScaffoldMessenger.of(
-                                dialogContext,
-                              ).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(dialogContext).showSnackBar(
-                                SnackBar(content: AppText(error.message)),
-                              );
-                            }
-                          },
-                          child: const AppText('Refresh'),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    if (withdrawalRequests.isEmpty)
-                      const AppText(
-                        'No withdrawal records yet.',
-                        style: TextStyle(color: Colors.black54),
-                      )
-                    else
-                      ...withdrawalRequests
-                          .take(5)
-                          .map((request) => _withdrawalRecordTile(request)),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(dialogContext, false);
-                  },
-                  child: AppText(
-                    _appContent.text(
-                      'home',
-                      'withdraw.cancel',
-                      fallback: 'Cancel',
-                    ),
-                  ),
-                ),
-                FilledButton(
-                  onPressed: () {
-                    final amount = double.tryParse(
-                      amountController.text.trim().replaceAll(',', ''),
-                    );
-
-                    if (amount == null || amount < _minimumWithdrawalAmount) {
-                      setDialogState(() {
-                        errorText = _appContent.text(
-                          'home',
-                          'withdraw.min_error',
-                          fallback: 'Minimum withdrawal amount is ₹100',
-                        );
-                      });
-                      return;
-                    }
-
-                    if (amount > availableWithdrawalBalance) {
-                      setDialogState(() {
-                        errorText = _appContent
-                            .text(
-                              'home',
-                              'withdraw.max_error_template',
-                              fallback: 'Maximum available: {amount}',
-                            )
-                            .replaceAll(
-                              '{amount}',
-                              formatPrice(availableWithdrawalBalance),
-                            );
-                      });
-                      return;
-                    }
-
-                    if ((selectedBank['accountNumber']?.toString().trim() ?? '')
-                            .isEmpty ||
-                        (selectedBank['ifscCode']?.toString().trim() ?? '')
-                            .isEmpty) {
-                      setDialogState(() {
-                        errorText = _appContent.text(
-                          'home',
-                          'withdraw.bank_error',
-                          fallback: 'Select a complete bank account',
-                        );
-                      });
-                      return;
-                    }
-
-                    if (!RegExp(r'^\d{6}$').hasMatch(pinController.text)) {
-                      setDialogState(
-                        () => errorText = _appContent.text(
-                          'home',
-                          'withdraw.pin_error',
-                          fallback: 'Enter a 6-digit PIN',
-                        ),
-                      );
-                      return;
-                    }
-                    Navigator.pop(dialogContext, true);
-                  },
-                  child: AppText(
-                    _appContent.text(
-                      'home',
-                      'withdraw.submit',
-                      fallback: 'Submit Request',
-                    ),
-                  ),
-                ),
-              ],
-            );
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => WithdrawalPage(
+          availableBalance: availableBalance,
+          frozenBalance: frozenBalance,
+          accountName: accountName,
+          onFundsUpdated: (request, snapshot) {
+            if (!mounted) return;
+            setState(() {
+              withdrawalRequests.removeWhere((item) => item.id == request.id);
+              withdrawalRequests.insert(0, request);
+              if (snapshot != null) {
+                _applyAccountSnapshot(snapshot, positions: false);
+              } else {
+                buyingPower = math
+                    .max(0, buyingPower - request.amount)
+                    .toDouble();
+                frozenBalance += request.amount;
+              }
+            });
           },
-        );
-      },
-    );
-
-    if (submitted != true || !mounted) {
-      amountController.dispose();
-      pinController.dispose();
-      return;
-    }
-
-    final amount =
-        double.tryParse(amountController.text.trim().replaceAll(',', '')) ?? 0;
-
-    amountController.dispose();
-    final withdrawalPin = pinController.text;
-    pinController.dispose();
-
-    if (amount < _minimumWithdrawalAmount ||
-        amount > availableWithdrawalBalance) {
-      return;
-    }
-
-    late final WithdrawalRequest request;
-    TradingAccountSnapshot? updatedSnapshot;
-
-    setState(() => _withdrawalSubmitting = true);
-    try {
-      request = await AuthService().submitWithdrawal(
-        withdrawalPin: withdrawalPin,
-        amount: amount,
-        bankName: selectedBank['bankName']?.toString() ?? '',
-        accountNumber: selectedBank['accountNumber']?.toString() ?? '',
-        ifscCode: selectedBank['ifscCode']?.toString() ?? '',
-        note: 'App withdrawal request',
-      );
-      try {
-        updatedSnapshot = await tradingService.fetchAccountSnapshot();
-      } catch (_) {
-        updatedSnapshot = null;
-      }
-    } on AuthException catch (error) {
-      if (!mounted) {
-        return;
-      }
-
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: AppText(error.message)));
-      return;
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-        ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(
-            content: AppText('Unable to submit withdrawal. Please try again.'),
-          ),
-        );
-      return;
-    } finally {
-      if (mounted) setState(() => _withdrawalSubmitting = false);
-    }
-
-    setState(() {
-      withdrawalRequests.insert(0, request);
-      final snapshot = updatedSnapshot;
-      if (snapshot != null) {
-        _applyAccountSnapshot(snapshot, positions: false);
-      } else {
-        buyingPower = math.max(0, buyingPower - amount).toDouble();
-        frozenBalance += amount;
-      }
-    });
-
-    if (!mounted) {
-      return;
-    }
-
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: AppText(
-          'Withdrawal request ${request.orderNo ?? request.id} submitted. '
-          'Funds are frozen while finance reviews it.',
         ),
       ),
-    );
-  }
-
-  Widget _withdrawalRecordTile(WithdrawalRequest request) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF9FAFB),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: AppText(
-                  request.orderNo ?? request.id,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              AppText(
-                request.statusLabel,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Row(
-            children: [
-              Expanded(child: AppText(formatPrice(request.amount))),
-              AppText(
-                '${request.createdAt.day.toString().padLeft(2, '0')}/'
-                '${request.createdAt.month.toString().padLeft(2, '0')}/'
-                '${request.createdAt.year}',
-                style: const TextStyle(color: Colors.black54, fontSize: 12),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          AppText(
-            request.fundsStatusLabel,
-            style: TextStyle(
-              color: request.status == WithdrawalStatus.rejected
-                  ? AppConfig.lossColor
-                  : request.status == WithdrawalStatus.approved ||
-                        request.status == WithdrawalStatus.completed
-                  ? AppConfig.gainColor
-                  : const Color(0xFFD97706),
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _withdrawBankRow(String label, String value) {
-    return Row(
-      children: [
-        Expanded(
-          child: AppText(
-            label,
-            style: const TextStyle(color: Colors.black54, fontSize: 12),
-          ),
-        ),
-        const SizedBox(width: 12),
-        AppText(
-          value,
-          textAlign: TextAlign.right,
-          style: const TextStyle(fontWeight: FontWeight.w600),
-        ),
-      ],
     );
   }
 

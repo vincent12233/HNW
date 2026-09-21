@@ -40,8 +40,13 @@ class IpoService {
       await LocalDataCache.saveJson(LocalDataCache.openIpos, data);
 
       return _iposFromRows(data);
-    } catch (_) {
-      return _cachedOpenIpos();
+    } catch (error) {
+      final cached = await _cachedOpenIpos();
+      if (cached.isNotEmpty) return cached;
+      if (error is IpoException) rethrow;
+      throw const IpoException(
+        'Unable to load IPOs. Check your network and try again.',
+      );
     }
   }
 
@@ -75,8 +80,13 @@ class IpoService {
       await LocalDataCache.saveJson(LocalDataCache.ipoApplications, data);
 
       return _applicationsFromRows(data);
-    } catch (_) {
-      return _cachedApplications();
+    } catch (error) {
+      final cached = await _cachedApplications();
+      if (cached.isNotEmpty) return cached;
+      if (error is IpoException) rethrow;
+      throw const IpoException(
+        'Unable to load applications. Check your network and try again.',
+      );
     }
   }
 

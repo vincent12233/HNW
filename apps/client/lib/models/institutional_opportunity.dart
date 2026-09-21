@@ -68,6 +68,7 @@ class OtcOrderRecord {
     required this.price,
     required this.status,
     this.reviewNote,
+    this.createdAt,
   });
   final String id;
   final String orderNo;
@@ -76,10 +77,11 @@ class OtcOrderRecord {
   final double price;
   final String status;
   final String? reviewNote;
+  final DateTime? createdAt;
 
   factory OtcOrderRecord.fromJson(Map<String, dynamic> json) {
     final instrument =
-        (json['instrument'] as Map?)?.cast<String, dynamic>() ?? const {};
+        (json['instrument'] as Map?)?.cast<String, dynamic>() ?? {};
     return OtcOrderRecord(
       id: json['id']?.toString() ?? '',
       orderNo: json['orderNo']?.toString() ?? '',
@@ -88,6 +90,7 @@ class OtcOrderRecord {
       price: double.tryParse(json['price']?.toString() ?? '') ?? 0,
       status: json['status']?.toString() ?? 'PENDING',
       reviewNote: json['reviewNote']?.toString(),
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
     );
   }
 }

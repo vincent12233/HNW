@@ -24,25 +24,33 @@ class AppPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final child = loading
-        ? SizedBox(
+    final labelWidget = Text(
+      label,
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+    );
+    final child = Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
+      children: [
+        if (loading) ...[
+          SizedBox(
             width: 20,
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
               color: AppColors.textInverse.withValues(alpha: 0.9),
             ),
-          )
-        : icon == null
-        ? Text(label)
-        : Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, size: 18),
-              const SizedBox(width: AppSpacing.sm),
-              Text(label),
-            ],
-          );
+          ),
+          const SizedBox(width: AppSpacing.sm),
+        ] else if (icon != null) ...[
+          Icon(icon, size: 18),
+          const SizedBox(width: AppSpacing.sm),
+        ],
+        if (expand) Flexible(child: labelWidget) else labelWidget,
+      ],
+    );
 
     final button = FilledButton(
       onPressed: loading ? null : onPressed,

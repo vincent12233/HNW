@@ -28,6 +28,13 @@ String formatNumber(num value) {
   return _integerFormatter.format(value);
 }
 
+/// Unified client date-time for funds and product records.
+String formatAppDateTime(DateTime? value) {
+  if (value == null) return 'Unavailable';
+  if (value.millisecondsSinceEpoch <= 0) return 'Unavailable';
+  return DateFormat('dd MMM yyyy, HH:mm').format(value.toLocal());
+}
+
 String formatVolume(num volume) {
   if (volume >= 10000000) {
     return '${(volume / 10000000).toStringAsFixed(2)} Cr';

@@ -123,7 +123,7 @@ void main() {
     await pumpDeposit(tester, service: service);
     await tester.pumpAndSettle();
     expect(find.text(formatPrice(1500)), findsOneWidget);
-    expect(find.textContaining('APPROVED'), findsOneWidget);
+    expect(find.textContaining('Approved'), findsWidgets);
     expect(find.text('No deposit records yet.'), findsNothing);
   });
 

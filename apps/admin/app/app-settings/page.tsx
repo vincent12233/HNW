@@ -4,10 +4,8 @@ import { ReloadOutlined, SaveOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
-  Card,
   Form,
   Input,
-  Modal,
   Select,
   Space,
   Switch,
@@ -16,11 +14,17 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
 import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { formatOpsDateTime } from "@/lib/ops-format";
+import { GOVERNANCE_COPY } from "@/lib/ops-governance";
 
 const { Text } = Typography;
 const { TextArea } = Input;
@@ -61,7 +65,9 @@ export default function AppSettingsAdminPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [pendingSave, setPendingSave] = useState<FormValues | null>(null);
   const [form] = Form.useForm<FormValues>();
+  const savingRef = useRef(false);
 
   async function load() {
     setLoading(true);
@@ -117,6 +123,31 @@ export default function AppSettingsAdminPage() {
     });
   }
 
+  async function persist(values: FormValues) {
+    if (savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await api.put(`/admin/app-settings/${values.platform}`, {
+        minVersion: values.minVersion.trim(),
+        latestVersion: values.latestVersion.trim(),
+        forceUpdate: Boolean(values.forceUpdate),
+        maintenanceMode: Boolean(values.maintenanceMode),
+        maintenanceMessage: values.maintenanceMessage?.trim() || null,
+        supportUrl: values.supportUrl?.trim() || null,
+        updateUrl: values.updateUrl?.trim() || null,
+      });
+      message.success("已保存");
+      setPendingSave(null);
+      await load();
+    } catch (e: unknown) {
+      message.error(getApiErrorMessage(e, "保存失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
   function confirmAndSave(values: FormValues) {
     const before = rows.find((r) => r.platform === values.platform);
     const turningOnForce =
@@ -124,71 +155,12 @@ export default function AppSettingsAdminPage() {
     const turningOnMaintenance =
       Boolean(values.maintenanceMode) && !(before?.maintenanceMode ?? false);
 
-    const run = async () => {
-      setSaving(true);
-      try {
-        await api.put(`/admin/app-settings/${values.platform}`, {
-          minVersion: values.minVersion.trim(),
-          latestVersion: values.latestVersion.trim(),
-          forceUpdate: Boolean(values.forceUpdate),
-          maintenanceMode: Boolean(values.maintenanceMode),
-          maintenanceMessage: values.maintenanceMessage?.trim() || null,
-          supportUrl: values.supportUrl?.trim() || null,
-          updateUrl: values.updateUrl?.trim() || null,
-        });
-        message.success("已保存");
-        await load();
-      } catch (e: unknown) {
-        message.error(getApiErrorMessage(e, "保存失败"));
-      } finally {
-        setSaving(false);
-      }
-    };
-
     if (turningOnForce || turningOnMaintenance) {
-      Modal.confirm({
-        title: "危险配置确认",
-        width: 560,
-        content: (
-          <Space orientation="vertical" size="small" style={{ width: "100%" }}>
-            <Text>
-              平台：<Text strong>{values.platform}</Text>
-            </Text>
-            {turningOnForce ? (
-              <Alert
-                type="error"
-                showIcon
-                title="即将开启 Force Update"
-                description={`低于 minVersion（${values.minVersion}）的客户端可能被强制更新。`}
-              />
-            ) : null}
-            {turningOnMaintenance ? (
-              <Alert
-                type="warning"
-                showIcon
-                title="即将开启 Maintenance Mode"
-                description="仅影响所选平台，不会一键打开全部平台。"
-              />
-            ) : null}
-            <Text type="secondary">
-              旧值：forceUpdate={String(before?.forceUpdate ?? false)} /
-              maintenance={String(before?.maintenanceMode ?? false)}
-            </Text>
-            <Text type="secondary">
-              新值：forceUpdate={String(Boolean(values.forceUpdate))} /
-              maintenance={String(Boolean(values.maintenanceMode))}
-            </Text>
-          </Space>
-        ),
-        okText: "确认保存",
-        okButtonProps: { danger: true },
-        cancelText: "取消",
-        onOk: () => run(),
-      });
+      setPendingSave(values);
       return;
     }
 
-    void run();
+    void persist(values);
   }
 
   const columns: ColumnsType<AppClientSetting> = [
@@ -198,14 +170,14 @@ export default function AppSettingsAdminPage() {
     {
       title: "强制更新",
       dataIndex: "forceUpdate",
-      width: 100,
-      render: (v: boolean) => (v ? "是" : "否"),
+      width: 120,
+      render: (v: boolean) => <OpsStatusTag code={v ? "LIVE" : "DRAFT"} label={v ? "是" : "否"} />,
     },
     {
       title: "维护模式",
       dataIndex: "maintenanceMode",
-      width: 100,
-      render: (v: boolean) => (v ? "开" : "关"),
+      width: 120,
+      render: (v: boolean) => <OpsStatusTag code={v ? "EXPIRED" : "LIVE"} label={v ? "开" : "关"} />,
     },
     {
       title: "更新链接",
@@ -216,17 +188,17 @@ export default function AppSettingsAdminPage() {
     {
       title: "更新时间",
       dataIndex: "updatedAt",
-      render: (v: string) => new Date(v).toLocaleString("zh-CN"),
+      render: (v: string) => formatOpsDateTime(v),
     },
   ];
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           eyebrow="APP MANAGEMENT"
           title="客户端设置"
-          description="按 ANDROID / IOS / WEB 分别配置版本门禁、维护开关与 updateUrl（商店/下载链接）。不含 API URL、行情源或 secrets。"
+          description={`按 ANDROID / IOS / WEB 分别配置版本门禁、维护开关与 updateUrl（商店/下载链接）。不含接口地址、行情源或密钥。${GOVERNANCE_COPY.noVip}`}
           extra={
             <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
               刷新
@@ -241,26 +213,21 @@ export default function AppSettingsAdminPage() {
           description="Force Update 与 Maintenance Mode 开启前会二次确认。开启 Force Update 前请配置有效 http(s) updateUrl，否则客户端会提供 Continue 以避免死锁。每次只保存所选平台。"
         />
 
-        {error ? (
-          <Alert
-            type="error"
-            showIcon
-            title={error}
-            action={<Button onClick={() => void load()}>重试</Button>}
-          />
-        ) : null}
+        {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
 
-        <Card title="当前配置" loading={loading}>
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={rows}
-            pagination={false}
-            locale={{ emptyText: "尚未配置任何平台" }}
-          />
-        </Card>
+        <Text strong>当前配置</Text>
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          loading={loading}
+          columns={columns}
+          dataSource={rows}
+          pagination={false}
+          scroll={{ x: 960 }}
+          locale={{ emptyText: <OpsEmpty description={loading ? "正在加载客户端设置" : "尚未配置任何平台"} onRetry={loading ? undefined : () => void load()} /> }}
+        />
 
-        <Card title="编辑平台设置">
+        <Text strong>编辑平台设置</Text>
           <Form
             form={form}
             layout="vertical"
@@ -345,12 +312,53 @@ export default function AppSettingsAdminPage() {
             <Form.Item name="supportUrl" label="支持链接">
               <Input placeholder="可选 HTTPS（客服/帮助，不作更新跳转）" />
             </Form.Item>
-            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving}>
+            <Button type="primary" htmlType="submit" icon={<SaveOutlined />} loading={saving} disabled={saving}>
               保存所选平台
             </Button>
           </Form>
-        </Card>
       </Space>
+      <OpsModal
+        title="危险配置确认"
+        open={!!pendingSave}
+        width={560}
+        onCancel={() => (saving ? undefined : setPendingSave(null))}
+        onOk={() => pendingSave && void persist(pendingSave)}
+        okText="确认保存"
+        okButtonProps={{ danger: true, disabled: saving }}
+        confirmLoading={saving}
+      >
+        {pendingSave ? (
+          <Space orientation="vertical" size="small" style={{ width: "100%" }}>
+            <Text>
+              平台：<Text strong>{pendingSave.platform}</Text>
+            </Text>
+            {pendingSave.forceUpdate && !rows.find((row) => row.platform === pendingSave.platform)?.forceUpdate ? (
+              <Alert
+                type="error"
+                showIcon
+                title="即将开启 Force Update"
+                description={`低于 minVersion（${pendingSave.minVersion}）的客户端可能被强制更新。`}
+              />
+            ) : null}
+            {pendingSave.maintenanceMode && !rows.find((row) => row.platform === pendingSave.platform)?.maintenanceMode ? (
+              <Alert
+                type="warning"
+                showIcon
+                title="即将开启 Maintenance Mode"
+                description="仅影响所选平台，不会一键打开全部平台。"
+              />
+            ) : null}
+            <Text type="secondary">
+              旧值：forceUpdate={String(rows.find((row) => row.platform === pendingSave.platform)?.forceUpdate ?? false)} /
+              maintenance={String(rows.find((row) => row.platform === pendingSave.platform)?.maintenanceMode ?? false)}
+            </Text>
+            <Text type="secondary">
+              新值：forceUpdate={String(Boolean(pendingSave.forceUpdate))} /
+              maintenance={String(Boolean(pendingSave.maintenanceMode))}
+            </Text>
+          </Space>
+        ) : null}
+      </OpsModal>
     </AdminShell>
   );
 }

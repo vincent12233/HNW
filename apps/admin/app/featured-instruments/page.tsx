@@ -4,14 +4,12 @@ import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Alert,
   Button,
-  Card,
   Input,
   InputNumber,
   Select,
   Space,
   Switch,
   Table,
-  Tag,
   Typography,
   message,
 } from "antd";
@@ -19,7 +17,11 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
 import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import { api, getApiErrorMessage } from "@/lib/api";
 
 const { Text } = Typography;
@@ -89,6 +91,7 @@ export default function FeaturedInstrumentsPage() {
     row: InstrumentRow,
     patch: Partial<Pick<InstrumentRow, "featuredHome" | "featuredMarkets" | "displayOrder">>,
   ) {
+    if (savingId) return;
     setSavingId(row.id);
     try {
       await api.patch(`/admin/market/instruments/${row.id}/placement`, patch);
@@ -116,9 +119,7 @@ export default function FeaturedInstrumentsPage() {
     {
       title: "上架",
       width: 90,
-      render: (_, row) => (
-        <Tag color={row.isActive ? "green" : "default"}>{row.isActive ? "Active" : "Off"}</Tag>
-      ),
+      render: (_, row) => <OpsStatusTag code={row.isActive ? "ACTIVE" : "INACTIVE"} />,
     },
     {
       title: "Home Featured",
@@ -172,7 +173,7 @@ export default function FeaturedInstrumentsPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           eyebrow="APP MANAGEMENT"
           title="精选标的"
@@ -182,6 +183,7 @@ export default function FeaturedInstrumentsPage() {
               icon={<ReloadOutlined />}
               loading={loading}
               onClick={() => void load(page, pageSize)}
+              aria-label="刷新精选标的"
             >
               刷新
             </Button>
@@ -195,101 +197,84 @@ export default function FeaturedInstrumentsPage() {
           description="本页不创建股票、不同步行情、不修改 isActive/tradability。股票库与行情仍走既有市场/资料库流程。"
         />
 
-        {error ? (
-          <Alert
-            type="error"
-            showIcon
-            title={error}
-            action={<Button onClick={() => void load(1, pageSize)}>重试</Button>}
-          />
-        ) : null}
+        {error ? <OpsErrorState title={error} onRetry={() => void load(1, pageSize)} /> : null}
 
-        <Card>
-          <div className="ops-toolbar" style={{ marginBottom: 16 }}>
-            <Space wrap>
-              <Input
-                allowClear
-                prefix={<SearchOutlined />}
-                placeholder="搜索 symbol / 公司 / ISIN"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onPressEnter={() => void load(1, pageSize)}
-                style={{ width: 280 }}
-                aria-label="搜索标的"
-              />
-              <Select
-                allowClear
-                placeholder="交易所"
-                style={{ width: 120 }}
-                value={exchange}
-                onChange={(v) => setExchange(v)}
-                options={[
-                  { value: "NSE", label: "NSE" },
-                  { value: "BSE", label: "BSE" },
-                ]}
-              />
-              <Select
-                allowClear
-                placeholder="Home Featured"
-                style={{ width: 160 }}
-                value={
-                  featuredHome === undefined ? undefined : featuredHome ? "yes" : "no"
-                }
-                onChange={(v) =>
-                  setFeaturedHome(v === undefined ? undefined : v === "yes")
-                }
-                options={[
-                  { value: "yes", label: "Home = On" },
-                  { value: "no", label: "Home = Off" },
-                ]}
-              />
-              <Select
-                allowClear
-                placeholder="Markets Featured"
-                style={{ width: 170 }}
-                value={
-                  featuredMarkets === undefined
-                    ? undefined
-                    : featuredMarkets
-                      ? "yes"
-                      : "no"
-                }
-                onChange={(v) =>
-                  setFeaturedMarkets(v === undefined ? undefined : v === "yes")
-                }
-                options={[
-                  { value: "yes", label: "Markets = On" },
-                  { value: "no", label: "Markets = Off" },
-                ]}
-              />
-              <Button
-                type="primary"
-                icon={<SearchOutlined />}
-                loading={loading}
-                onClick={() => void load(1, pageSize)}
-              >
-                查询
-              </Button>
-            </Space>
-          </div>
-
-          <Table
-            rowKey="id"
-            loading={loading}
-            columns={columns}
-            dataSource={rows}
-            pagination={{
-              current: page,
-              pageSize,
-              total,
-              showSizeChanger: true,
-              pageSizeOptions: [20, 50, 100],
-              showTotal: (t) => `共 ${t} 条`,
-              onChange: (p, ps) => void load(p, ps),
-            }}
-            scroll={{ x: 900 }}
+        <OpsToolbar
+          extra={
+            <Button
+              type="primary"
+              icon={<SearchOutlined />}
+              loading={loading}
+              onClick={() => void load(1, pageSize)}
+              aria-label="查询精选标的"
+            >
+              查询
+            </Button>
+          }
+        >
+          <Input
+            allowClear
+            prefix={<SearchOutlined aria-hidden />}
+            placeholder="搜索 symbol / 公司 / ISIN"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onPressEnter={() => void load(1, pageSize)}
+            style={{ width: 280, maxWidth: "100%" }}
+            aria-label="搜索标的"
           />
-        </Card>
+          <Select
+            allowClear
+            placeholder="交易所"
+            style={{ width: 120 }}
+            value={exchange}
+            onChange={(v) => setExchange(v)}
+            options={[
+              { value: "NSE", label: "NSE" },
+              { value: "BSE", label: "BSE" },
+            ]}
+          />
+          <Select
+            allowClear
+            placeholder="Home Featured"
+            style={{ width: 160 }}
+            value={featuredHome === undefined ? undefined : featuredHome ? "yes" : "no"}
+            onChange={(v) => setFeaturedHome(v === undefined ? undefined : v === "yes")}
+            options={[
+              { value: "yes", label: "Home = On" },
+              { value: "no", label: "Home = Off" },
+            ]}
+          />
+          <Select
+            allowClear
+            placeholder="Markets Featured"
+            style={{ width: 170 }}
+            value={featuredMarkets === undefined ? undefined : featuredMarkets ? "yes" : "no"}
+            onChange={(v) => setFeaturedMarkets(v === undefined ? undefined : v === "yes")}
+            options={[
+              { value: "yes", label: "Markets = On" },
+              { value: "no", label: "Markets = Off" },
+            ]}
+          />
+        </OpsToolbar>
+
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          loading={loading}
+          columns={columns}
+          dataSource={rows}
+          pagination={{
+            current: page,
+            pageSize,
+            total,
+            showSizeChanger: true,
+            pageSizeOptions: [20, 50, 100],
+            showTotal: (t) => `共 ${t} 条`,
+            onChange: (p, ps) => void load(p, ps),
+          }}
+          scroll={{ x: 900 }}
+          locale={{ emptyText: <OpsEmpty description={loading ? "正在加载精选标的" : "当前没有符合条件的标的。"} onRetry={loading ? undefined : () => void load(1, pageSize)} /> }}
+        />
       </Space>
     </AdminShell>
   );

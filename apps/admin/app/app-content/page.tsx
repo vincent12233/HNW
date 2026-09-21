@@ -372,6 +372,7 @@ export default function AppOpsContentPage() {
     values: Record<string, string>,
     fields: ReadonlyArray<{ key: string; locale?: string; title?: boolean }>,
   ) {
+    if (saving) return;
     setSaving(true);
     try {
       const payload = fields.flatMap((field) => {

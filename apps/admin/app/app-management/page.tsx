@@ -8,11 +8,12 @@ import {
   ShopOutlined,
   StarOutlined,
 } from "@ant-design/icons";
-import { Alert, Card, Col, Row, Space, Spin, Typography } from "antd";
+import { Card, Col, Row, Space, Spin, Typography } from "antd";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsErrorState from "@/components/OpsErrorState";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from "@/lib/api";
 
@@ -135,7 +136,7 @@ export default function AppManagementHubPage() {
           description="超级管理员维护客户端运营内容。仅展示文案与运营配置，不改变交易、KYC、资金或行情逻辑。入口仅 ADMIN 可见。"
         />
 
-        {error ? <Alert type="error" showIcon title={error} /> : null}
+        {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
 
         <Spin spinning={loading}>
           <div className="ops-stat-strip">

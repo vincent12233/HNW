@@ -1,14 +1,22 @@
 "use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Space, Table, Tag, Typography } from "antd";
+import { Button, Input, Space, Table, Tag, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsMoney from "@/components/OpsMoney";
 import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import ScopedEditButton from "@/components/ScopedEditButton";
-import { api, getApiErrorMessage } from '@/lib/api';
+import { api, getApiErrorMessage } from "@/lib/api";
+import { filterLoadedRows, maskBankAccount, maskOpsPhone } from "@/lib/ops-directory";
+import { formatOpsDateTime } from "@/lib/ops-format";
+import { GOVERNANCE_COPY } from "@/lib/ops-governance";
 
 const { Text } = Typography;
 
@@ -30,20 +38,13 @@ type Customer = {
   } | null;
 };
 
-function money(currency: string | undefined, value: string | number | undefined) {
-  return `${currency || "INR"} ${Number(value || 0).toLocaleString("en-IN", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
 export default function OperatorConsolePage() {
   const [rows, setRows] = useState<Customer[]>([]);
   const [keyword, setKeyword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -54,21 +55,23 @@ export default function OperatorConsolePage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
-  const filtered = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return rows;
-    return rows.filter((row) =>
-      [row.fullName, row.phone, row.customerNo, row.account?.accountNumber, row.usedInviteCode?.code].some((item) =>
-        String(item || "").toLowerCase().includes(value),
-      ),
-    );
-  }, [keyword, rows]);
+  const filtered = useMemo(
+    () =>
+      filterLoadedRows(rows, keyword, (row) => [
+        row.fullName,
+        row.phone,
+        row.customerNo,
+        row.account?.accountNumber,
+        row.usedInviteCode?.code,
+      ]),
+    [keyword, rows],
+  );
 
   const activeCount = useMemo(() => rows.filter((row) => row.status === "ACTIVE").length, [rows]);
 
@@ -79,8 +82,8 @@ export default function OperatorConsolePage() {
       fixed: "left",
       render: (_, row) => (
         <Space orientation="vertical" size={0}>
-          <Text strong>{row.fullName}</Text>
-          <Text type="secondary">{row.customerNo || "-"}</Text>
+          <Text strong className="ops-wrap-text">{row.fullName}</Text>
+          <Text type="secondary">{row.customerNo || "—"}</Text>
         </Space>
       ),
     },
@@ -88,44 +91,40 @@ export default function OperatorConsolePage() {
       title: "手机号",
       dataIndex: "phone",
       width: 140,
-      render: (value) => (value ? `+91 ${value}` : "-"),
+      render: (value?: string | null) => maskOpsPhone(value),
     },
     {
       title: "交易账号",
       width: 160,
-      render: (_, row) => row.account?.accountNumber || "-",
+      render: (_, row) => maskBankAccount(row.account?.accountNumber),
     },
     {
       title: "固定邀请码",
       width: 140,
-      render: (_, row) => row.usedInviteCode?.code || "-",
+      render: (_, row) => row.usedInviteCode?.code || "—",
     },
     {
       title: "现金余额",
       width: 150,
       align: "right",
-      render: (_, row) => money(row.account?.currency, row.account?.cashBalance),
+      render: (_, row) => <OpsMoney value={row.account?.cashBalance} />,
     },
     {
       title: "可用资金",
       width: 150,
       align: "right",
-      render: (_, row) => money(row.account?.currency, row.account?.buyingPower),
+      render: (_, row) => <OpsMoney value={row.account?.buyingPower} />,
     },
     {
       title: "状态",
-      width: 100,
-      render: (_, row) => (
-        <Tag color={row.status === "ACTIVE" ? "green" : "orange"}>
-          {row.status === "ACTIVE" ? "正常" : row.status}
-        </Tag>
-      ),
+      width: 110,
+      render: (_, row) => <OpsStatusTag code={row.status} />,
     },
     {
       title: "注册时间",
       dataIndex: "createdAt",
       width: 180,
-      render: (value) => new Date(value).toLocaleString("zh-CN"),
+      render: (value: string) => formatOpsDateTime(value),
     },
     {
       title: "操作",
@@ -145,13 +144,13 @@ export default function OperatorConsolePage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           eyebrow="SUPPORT SCOPE"
           title="固定邀请码客户"
-          description="仅显示使用超级管理员固定邀请码注册的客户。普通业务员邀请码客户不会出现在此页，权限范围保持隔离。"
+          description={`仅显示使用超级管理员固定邀请码注册的客户。普通业务员邀请码客户不会出现在此页，权限范围保持隔离。${GOVERNANCE_COPY.loadedFilter}`}
           extra={
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()} aria-label="刷新固定邀请码客户">
               刷新
             </Button>
           }
@@ -172,31 +171,30 @@ export default function OperatorConsolePage() {
           </div>
         </div>
 
-        {error && (
-          <Alert type="error" showIcon title={error} action={<Button onClick={() => void load()}>重试</Button>} />
-        )}
+        {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
 
-        <Card>
-          <div className="ops-toolbar">
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="姓名、手机号、客户号、账户号或邀请码"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              style={{ width: 360, maxWidth: "100%" }}
-            />
-            <Tag color="blue">专用运营员范围</Tag>
-          </div>
-          <Table
-            rowKey="id"
-            loading={loading}
-            dataSource={filtered}
-            columns={columns}
-            scroll={{ x: 1400 }}
-            pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 位客户` }}
+        <OpsToolbar>
+          <Input
+            allowClear
+            prefix={<SearchOutlined aria-hidden />}
+            placeholder="姓名、手机号、客户号、账户号或邀请码"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            aria-label="筛选已加载的固定邀请码客户"
+            style={{ width: 360, maxWidth: "100%" }}
           />
-        </Card>
+          <Tag color="blue">专用运营员范围</Tag>
+        </OpsToolbar>
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          loading={loading}
+          dataSource={filtered}
+          columns={columns}
+          scroll={{ x: 1400 }}
+          pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 位客户` }}
+          locale={{ emptyText: <OpsEmpty description={loading ? "正在加载客户" : "当前范围内没有客户。"} onRetry={loading ? undefined : () => void load()} /> }}
+        />
       </Space>
     </AdminShell>
   );

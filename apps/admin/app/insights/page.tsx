@@ -7,30 +7,21 @@ import {
   PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Switch,
-  Table,
-  Tag,
-  Typography,
-  message,
-} from "antd";
+import { Button, Form, Input, InputNumber, Select, Space, Switch, Table, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsDrawer from "@/components/OpsDrawer";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
 import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { formatOpsDateTime } from "@/lib/ops-format";
+import { GOVERNANCE_COPY } from "@/lib/ops-governance";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -67,9 +58,13 @@ export default function InsightsAdminPage() {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<InsightArticle | null>(null);
   const [editing, setEditing] = useState<InsightArticle | null>(null);
+  const [pendingPublish, setPendingPublish] = useState<InsightArticle | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<InsightArticle | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<FormValues>();
+  const savingRef = useRef(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -80,13 +75,14 @@ export default function InsightsAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   async function save(values: FormValues) {
+    if (savingRef.current) return;
     const payload = {
       slug: values.slug.trim(),
       locale: values.locale,
@@ -97,6 +93,8 @@ export default function InsightsAdminPage() {
       isPublished: Boolean(values.isPublished),
       sortOrder: Number(values.sortOrder ?? 0),
     };
+    savingRef.current = true;
+    setSaving(true);
     try {
       if (editing) {
         await api.put(`/admin/insights/${editing.id}`, payload);
@@ -109,10 +107,17 @@ export default function InsightsAdminPage() {
       await load();
     } catch (e: unknown) {
       message.error(getApiErrorMessage(e, "保存失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
-  async function setPublished(row: InsightArticle, isPublished: boolean) {
+  async function confirmPublish() {
+    const row = pendingPublish;
+    if (!row || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     try {
       await api.put(`/admin/insights/${row.id}`, {
         slug: row.slug,
@@ -122,34 +127,35 @@ export default function InsightsAdminPage() {
         body: row.body,
         imageUrl: row.imageUrl,
         sortOrder: row.sortOrder,
-        isPublished,
+        isPublished: !row.isPublished,
       });
-      message.success(isPublished ? "已发布" : "已下架");
+      message.success(row.isPublished ? "已下架" : "已发布");
+      setPendingPublish(null);
       await load();
     } catch (e: unknown) {
       message.error(getApiErrorMessage(e, "状态更新失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
-  function remove(row: InsightArticle) {
-    Modal.confirm({
-      title: row.isPublished ? "删除已发布文章？" : "删除文章？",
-      content: row.isPublished
-        ? `建议先下架。确认删除「${row.title}」(${row.slug}/${row.locale})？此操作不可恢复。`
-        : `确认删除「${row.title}」(${row.slug}/${row.locale})？`,
-      okText: "删除",
-      okButtonProps: { danger: true },
-      cancelText: "取消",
-      onOk: async () => {
-        try {
-          await api.delete(`/admin/insights/${row.id}`);
-          message.success("已删除");
-          await load();
-        } catch (e: unknown) {
-          message.error(getApiErrorMessage(e, "删除失败"));
-        }
-      },
-    });
+  async function confirmDelete() {
+    const row = pendingDelete;
+    if (!row || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await api.delete(`/admin/insights/${row.id}`);
+      message.success("已删除");
+      setPendingDelete(null);
+      await load();
+    } catch (e: unknown) {
+      message.error(getApiErrorMessage(e, "删除失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   const columns: ColumnsType<InsightArticle> = [
@@ -157,7 +163,7 @@ export default function InsightsAdminPage() {
       title: "标题",
       render: (_, row) => (
         <Space orientation="vertical" size={0}>
-          <Text strong>{row.title}</Text>
+          <Text strong className="ops-wrap-text">{row.title}</Text>
           <Text type="secondary">
             {row.slug} · {row.locale}
           </Text>
@@ -166,39 +172,31 @@ export default function InsightsAdminPage() {
     },
     {
       title: "状态",
-      width: 110,
-      render: (_, row) => (
-        <Tag color={row.isPublished ? "green" : "default"}>
-          {row.isPublished ? "已发布" : "草稿"}
-        </Tag>
-      ),
+      width: 120,
+      render: (_, row) => <OpsStatusTag code={row.isPublished ? "PUBLISHED" : "DRAFT"} />,
     },
     { title: "排序", dataIndex: "sortOrder", width: 80 },
     {
       title: "发布时间",
-      width: 170,
-      render: (_, row) =>
-        row.publishedAt ? new Date(row.publishedAt).toLocaleString("zh-CN") : "—",
+      width: 180,
+      render: (_, row) => formatOpsDateTime(row.publishedAt),
     },
     {
       title: "更新时间",
-      width: 170,
-      render: (_, row) => new Date(row.updatedAt).toLocaleString("zh-CN"),
+      width: 180,
+      render: (_, row) => formatOpsDateTime(row.updatedAt),
     },
     {
       title: "操作",
       width: 280,
       render: (_, row) => (
         <Space wrap>
-          <Button
-            icon={<EyeOutlined />}
-            onClick={() => setPreview(row)}
-            aria-label={`预览 ${row.title}`}
-          >
+          <Button icon={<EyeOutlined />} onClick={() => setPreview(row)} aria-label={`预览 ${row.title}`}>
             预览
           </Button>
           <Button
             icon={<EditOutlined />}
+            aria-label={`编辑 ${row.title}`}
             onClick={() => {
               setEditing(row);
               form.setFieldsValue({
@@ -216,10 +214,10 @@ export default function InsightsAdminPage() {
           >
             编辑
           </Button>
-          <Button onClick={() => void setPublished(row, !row.isPublished)}>
+          <Button aria-label={row.isPublished ? `下架 ${row.title}` : `发布 ${row.title}`} onClick={() => setPendingPublish(row)}>
             {row.isPublished ? "下架" : "发布"}
           </Button>
-          <Button danger icon={<DeleteOutlined />} onClick={() => remove(row)}>
+          <Button danger icon={<DeleteOutlined />} aria-label={`删除 ${row.title}`} onClick={() => setPendingDelete(row)}>
             删除
           </Button>
         </Space>
@@ -229,19 +227,20 @@ export default function InsightsAdminPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           eyebrow="APP MANAGEMENT"
           title="洞察文章"
           description={
             <>
               结构化 InsightArticle 管理。新文章请在此维护。旧 KV article.01–08 仅作兼容，见{" "}
-              <Link href="/app-content">文案配置 · Legacy Insights</Link>。
+              <Link href="/app-content">文案配置 · Legacy Insights</Link>
+              。{GOVERNANCE_COPY.noVip} 列表只展示服务端返回的标题、状态和时间。
             </>
           }
           extra={
             <Space>
-              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()} aria-label="刷新洞察文章">
                 刷新
               </Button>
               <Button
@@ -260,37 +259,31 @@ export default function InsightsAdminPage() {
           }
         />
 
-        {error ? (
-          <Alert
-            type="error"
-            showIcon
-            title={error}
-            action={<Button onClick={() => void load()}>重试</Button>}
-          />
-        ) : null}
+        {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
 
-        <Card>
-          <Table
-            rowKey="id"
-            loading={loading}
-            columns={columns}
-            dataSource={rows}
-            pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 篇` }}
-            locale={{ emptyText: "暂无文章" }}
-          />
-        </Card>
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          loading={loading}
+          columns={columns}
+          dataSource={rows}
+          scroll={{ x: 1200 }}
+          pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 篇` }}
+          locale={{ emptyText: <OpsEmpty description={loading ? "正在加载文章" : "当前没有洞察文章。"} onRetry={loading ? undefined : () => void load()} /> }}
+        />
       </Space>
 
-      <Modal
+      <OpsModal
         title={editing ? "编辑洞察文章" : "新建洞察文章"}
         open={open}
-        onCancel={() => setOpen(false)}
+        onCancel={() => (saving ? undefined : setOpen(false))}
         onOk={() => form.submit()}
         okText="保存"
+        confirmLoading={saving}
+        okButtonProps={{ disabled: saving }}
         width={760}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={(v) => void save(v)}>
+        <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>
           <Space wrap style={{ width: "100%" }}>
             <Form.Item name="slug" label="Slug" rules={[{ required: true }]} style={{ minWidth: 220 }}>
               <Input placeholder="account-and-kyc" disabled={Boolean(editing)} />
@@ -318,30 +311,49 @@ export default function InsightsAdminPage() {
             <Switch />
           </Form.Item>
         </Form>
-      </Modal>
+      </OpsModal>
 
-      <Drawer
-        title="内容预览"
-        open={Boolean(preview)}
-        onClose={() => setPreview(null)}
-        width={520}
+      <OpsModal
+        title={pendingPublish?.isPublished ? "确认下架文章？" : "确认发布文章？"}
+        open={!!pendingPublish}
+        onCancel={() => (saving ? undefined : setPendingPublish(null))}
+        onOk={() => void confirmPublish()}
+        okText="确认"
+        confirmLoading={saving}
+        okButtonProps={{ disabled: saving }}
       >
+        <Text>标题：{pendingPublish?.title}</Text>
+      </OpsModal>
+
+      <OpsModal
+        title={pendingDelete?.isPublished ? "删除已发布文章？" : "删除文章？"}
+        open={!!pendingDelete}
+        onCancel={() => (saving ? undefined : setPendingDelete(null))}
+        onOk={() => void confirmDelete()}
+        okText="删除"
+        okButtonProps={{ danger: true, disabled: saving }}
+        confirmLoading={saving}
+      >
+        <Text>
+          {pendingDelete?.isPublished
+            ? `建议先下架。确认删除「${pendingDelete.title}」？服务器成功后才会从列表移除。`
+            : `确认删除「${pendingDelete?.title}」？`}
+        </Text>
+      </OpsModal>
+
+      <OpsDrawer title="内容预览" open={Boolean(preview)} onClose={() => setPreview(null)} width={520}>
         {preview ? (
           <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-            <Tag color={preview.isPublished ? "green" : "default"}>
-              {preview.isPublished ? "已发布" : "草稿"}
-            </Tag>
+            <OpsStatusTag code={preview.isPublished ? "PUBLISHED" : "DRAFT"} />
             <Text type="secondary">
               {preview.slug} · {preview.locale}
             </Text>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {preview.title}
-            </Typography.Title>
-            {preview.summary ? <Paragraph type="secondary">{preview.summary}</Paragraph> : null}
-            <Paragraph style={{ whiteSpace: "pre-wrap" }}>{preview.body}</Paragraph>
+            <Text strong>{preview.title}</Text>
+            {preview.summary ? <Paragraph type="secondary" className="ops-wrap-text">{preview.summary}</Paragraph> : null}
+            <Paragraph className="ops-wrap-text" style={{ whiteSpace: "pre-wrap" }}>{preview.body}</Paragraph>
           </Space>
         ) : null}
-      </Drawer>
+      </OpsDrawer>
     </AdminShell>
   );
 }

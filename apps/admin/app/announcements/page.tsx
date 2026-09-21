@@ -7,31 +7,21 @@ import {
   PlusOutlined,
   ReloadOutlined,
 } from "@ant-design/icons";
-import {
-  Alert,
-  Button,
-  Card,
-  DatePicker,
-  Drawer,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
-  Select,
-  Space,
-  Switch,
-  Table,
-  Tag,
-  Typography,
-  message,
-} from "antd";
+import { Button, DatePicker, Form, Input, InputNumber, Select, Space, Switch, Table, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import dayjs, { type Dayjs } from "dayjs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsDrawer from "@/components/OpsDrawer";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
 import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { formatOpsDateTime } from "@/lib/ops-format";
+import { GOVERNANCE_COPY } from "@/lib/ops-governance";
 
 const { Text, Paragraph } = Typography;
 const { TextArea } = Input;
@@ -68,28 +58,15 @@ const TYPE_OPTIONS = [
   { value: "MARKET_NOTICE", label: "MARKET_NOTICE" },
 ];
 
-type DisplayStatus = "Draft" | "Scheduled" | "Live" | "Expired";
+type DisplayStatus = "DRAFT" | "SCHEDULED" | "LIVE" | "EXPIRED";
 
 function displayStatus(row: Announcement, now = Date.now()): DisplayStatus {
-  if (!row.isPublished) return "Draft";
+  if (!row.isPublished) return "DRAFT";
   const start = row.startsAt ? new Date(row.startsAt).getTime() : null;
   const end = row.endsAt ? new Date(row.endsAt).getTime() : null;
-  if (end != null && end < now) return "Expired";
-  if (start != null && start > now) return "Scheduled";
-  return "Live";
-}
-
-function statusColor(status: DisplayStatus) {
-  switch (status) {
-    case "Live":
-      return "green";
-    case "Scheduled":
-      return "blue";
-    case "Expired":
-      return "default";
-    default:
-      return "gold";
-  }
+  if (end != null && end < now) return "EXPIRED";
+  if (start != null && start > now) return "SCHEDULED";
+  return "LIVE";
 }
 
 export default function AnnouncementsAdminPage() {
@@ -99,9 +76,13 @@ export default function AnnouncementsAdminPage() {
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<Announcement | null>(null);
   const [editing, setEditing] = useState<Announcement | null>(null);
+  const [pendingPublish, setPendingPublish] = useState<Announcement | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<Announcement | null>(null);
+  const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<FormValues>();
+  const savingRef = useRef(false);
 
-  async function load() {
+  const load = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -112,13 +93,14 @@ export default function AnnouncementsAdminPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
     void load();
-  }, []);
+  }, [load]);
 
   async function save(values: FormValues) {
+    if (savingRef.current) return;
     const startsAt = values.range?.[0]?.toISOString() ?? null;
     const endsAt = values.range?.[1]?.toISOString() ?? null;
     if (startsAt && endsAt && new Date(endsAt) < new Date(startsAt)) {
@@ -136,6 +118,8 @@ export default function AnnouncementsAdminPage() {
       startsAt,
       endsAt,
     };
+    savingRef.current = true;
+    setSaving(true);
     try {
       if (editing) {
         await api.put(`/admin/announcements/${editing.id}`, payload);
@@ -148,10 +132,17 @@ export default function AnnouncementsAdminPage() {
       await load();
     } catch (e: unknown) {
       message.error(getApiErrorMessage(e, "保存失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
-  async function setPublished(row: Announcement, isPublished: boolean) {
+  async function confirmPublish() {
+    const row = pendingPublish;
+    if (!row || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
     try {
       await api.put(`/admin/announcements/${row.id}`, {
         locale: row.locale,
@@ -162,31 +153,35 @@ export default function AnnouncementsAdminPage() {
         sortOrder: row.sortOrder,
         startsAt: row.startsAt,
         endsAt: row.endsAt,
-        isPublished,
+        isPublished: !row.isPublished,
       });
-      message.success(isPublished ? "已发布" : "已下架");
+      message.success(row.isPublished ? "已下架" : "已发布");
+      setPendingPublish(null);
       await load();
     } catch (e: unknown) {
       message.error(getApiErrorMessage(e, "状态更新失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
     }
   }
 
-  function remove(row: Announcement) {
-    Modal.confirm({
-      title: "删除公告？",
-      content: `确认删除「${row.title}」？`,
-      okText: "删除",
-      okButtonProps: { danger: true },
-      onOk: async () => {
-        try {
-          await api.delete(`/admin/announcements/${row.id}`);
-          message.success("已删除");
-          await load();
-        } catch (e: unknown) {
-          message.error(getApiErrorMessage(e, "删除失败"));
-        }
-      },
-    });
+  async function confirmDelete() {
+    const row = pendingDelete;
+    if (!row || savingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    try {
+      await api.delete(`/admin/announcements/${row.id}`);
+      message.success("已删除");
+      setPendingDelete(null);
+      await load();
+    } catch (e: unknown) {
+      message.error(getApiErrorMessage(e, "删除失败"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
   }
 
   const columns: ColumnsType<Announcement> = [
@@ -194,7 +189,7 @@ export default function AnnouncementsAdminPage() {
       title: "标题",
       render: (_, row) => (
         <Space orientation="vertical" size={0}>
-          <Text strong>{row.title}</Text>
+          <Text strong className="ops-wrap-text">{row.title}</Text>
           <Text type="secondary">
             {row.locale} · {row.type}
           </Text>
@@ -203,39 +198,35 @@ export default function AnnouncementsAdminPage() {
     },
     {
       title: "状态",
-      width: 120,
-      render: (_, row) => {
-        const status = displayStatus(row);
-        return <Tag color={statusColor(status)}>{status}</Tag>;
-      },
+      width: 140,
+      render: (_, row) => <OpsStatusTag code={displayStatus(row)} />,
     },
     { title: "优先级", dataIndex: "priority", width: 90 },
     {
       title: "生效区间",
-      width: 220,
+      width: 280,
       render: (_, row) => (
         <Text type="secondary">
-          {row.startsAt ? new Date(row.startsAt).toLocaleString("zh-CN") : "—"}
-          {" → "}
-          {row.endsAt ? new Date(row.endsAt).toLocaleString("zh-CN") : "—"}
+          {formatOpsDateTime(row.startsAt)} → {formatOpsDateTime(row.endsAt)}
         </Text>
       ),
     },
     {
       title: "更新",
-      width: 170,
-      render: (_, row) => new Date(row.updatedAt).toLocaleString("zh-CN"),
+      width: 180,
+      render: (_, row) => formatOpsDateTime(row.updatedAt),
     },
     {
       title: "操作",
       width: 280,
       render: (_, row) => (
         <Space wrap>
-          <Button icon={<EyeOutlined />} onClick={() => setPreview(row)}>
+          <Button icon={<EyeOutlined />} aria-label={`预览 ${row.title}`} onClick={() => setPreview(row)}>
             预览
           </Button>
           <Button
             icon={<EditOutlined />}
+            aria-label={`编辑 ${row.title}`}
             onClick={() => {
               setEditing(row);
               form.setFieldsValue({
@@ -259,10 +250,10 @@ export default function AnnouncementsAdminPage() {
           >
             编辑
           </Button>
-          <Button onClick={() => void setPublished(row, !row.isPublished)}>
+          <Button aria-label={row.isPublished ? `下架 ${row.title}` : `发布 ${row.title}`} onClick={() => setPendingPublish(row)}>
             {row.isPublished ? "下架" : "发布"}
           </Button>
-          <Button danger icon={<DeleteOutlined />} onClick={() => remove(row)}>
+          <Button danger icon={<DeleteOutlined />} aria-label={`删除 ${row.title}`} onClick={() => setPendingDelete(row)}>
             删除
           </Button>
         </Space>
@@ -272,14 +263,14 @@ export default function AnnouncementsAdminPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           eyebrow="APP MANAGEMENT"
           title="平台公告"
-          description="结构化 Announcement。≠ Market News，≠ Home/Markets Banner。状态由发布开关与时间窗计算（Draft / Scheduled / Live / Expired）。"
+          description={`结构化 Announcement。≠ Market News，≠ Home/Markets Banner。状态由发布开关与时间窗计算（Draft / Scheduled / Live / Expired）。${GOVERNANCE_COPY.noVip} 列表只展示服务端返回的标题、状态和时间。`}
           extra={
             <Space>
-              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()} aria-label="刷新公告列表">
                 刷新
               </Button>
               <Button
@@ -304,37 +295,31 @@ export default function AnnouncementsAdminPage() {
           }
         />
 
-        {error ? (
-          <Alert
-            type="error"
-            showIcon
-            title={error}
-            action={<Button onClick={() => void load()}>重试</Button>}
-          />
-        ) : null}
+        {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
 
-        <Card>
-          <Table
-            rowKey="id"
-            loading={loading}
-            columns={columns}
-            dataSource={rows}
-            pagination={{ pageSize: 20, showTotal: (t) => `共 ${t} 条` }}
-            locale={{ emptyText: "暂无公告" }}
-          />
-        </Card>
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          loading={loading}
+          columns={columns}
+          dataSource={rows}
+          scroll={{ x: 1280 }}
+          pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 条` }}
+          locale={{ emptyText: <OpsEmpty description={loading ? "正在加载公告" : "当前没有公告。"} onRetry={loading ? undefined : () => void load()} /> }}
+        />
       </Space>
 
-      <Modal
+      <OpsModal
         title={editing ? "编辑公告" : "新建公告"}
         open={open}
-        onCancel={() => setOpen(false)}
+        onCancel={() => (saving ? undefined : setOpen(false))}
         onOk={() => form.submit()}
         okText="保存"
+        confirmLoading={saving}
+        okButtonProps={{ disabled: saving }}
         width={760}
-        destroyOnHidden
       >
-        <Form form={form} layout="vertical" onFinish={(v) => void save(v)}>
+        <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>
           <Space wrap style={{ width: "100%" }}>
             <Form.Item name="locale" label="Locale" rules={[{ required: true }]} style={{ minWidth: 120 }}>
               <Select options={[{ value: "en", label: "English" }, { value: "hi", label: "Hindi" }]} />
@@ -362,22 +347,42 @@ export default function AnnouncementsAdminPage() {
             <Switch />
           </Form.Item>
         </Form>
-      </Modal>
+      </OpsModal>
 
-      <Drawer title="公告预览" open={Boolean(preview)} onClose={() => setPreview(null)} width={480}>
+      <OpsModal
+        title={pendingPublish?.isPublished ? "确认下架公告？" : "确认发布公告？"}
+        open={!!pendingPublish}
+        onCancel={() => (saving ? undefined : setPendingPublish(null))}
+        onOk={() => void confirmPublish()}
+        okText="确认"
+        confirmLoading={saving}
+        okButtonProps={{ disabled: saving }}
+      >
+        <Text>标题：{pendingPublish?.title}</Text>
+      </OpsModal>
+
+      <OpsModal
+        title="删除公告？"
+        open={!!pendingDelete}
+        onCancel={() => (saving ? undefined : setPendingDelete(null))}
+        onOk={() => void confirmDelete()}
+        okText="删除"
+        okButtonProps={{ danger: true, disabled: saving }}
+        confirmLoading={saving}
+      >
+        <Text>确认删除「{pendingDelete?.title}」？服务器成功后才会从列表移除。</Text>
+      </OpsModal>
+
+      <OpsDrawer title="公告预览" open={Boolean(preview)} onClose={() => setPreview(null)} width={480}>
         {preview ? (
           <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
-            <Space>
-              <Tag color={statusColor(displayStatus(preview))}>{displayStatus(preview)}</Tag>
-              <Tag>{preview.type}</Tag>
-            </Space>
-            <Typography.Title level={4} style={{ margin: 0 }}>
-              {preview.title}
-            </Typography.Title>
-            <Paragraph style={{ whiteSpace: "pre-wrap" }}>{preview.body}</Paragraph>
+            <OpsStatusTag code={displayStatus(preview)} />
+            <Text type="secondary">{preview.type}</Text>
+            <Text strong>{preview.title}</Text>
+            <Paragraph className="ops-wrap-text" style={{ whiteSpace: "pre-wrap" }}>{preview.body}</Paragraph>
           </Space>
         ) : null}
-      </Drawer>
+      </OpsDrawer>
     </AdminShell>
   );
 }

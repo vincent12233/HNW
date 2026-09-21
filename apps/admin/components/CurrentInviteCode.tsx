@@ -1,8 +1,10 @@
 "use client";
 
 import { CopyOutlined, ReloadOutlined } from "@ant-design/icons";
-import { Alert, Button, Space, Tooltip, Typography, message } from "antd";
+import { Button, Space, Tooltip, Typography, message } from "antd";
 import { useCallback, useEffect, useRef, useState } from "react";
+
+import OpsErrorState from "@/components/OpsErrorState";
 import { api } from "@/lib/api";
 
 type Invite = { id: string; code: string; expiresAt: string | null };
@@ -79,7 +81,7 @@ export default function CurrentInviteCode() {
           />
         </Tooltip>
       </Space>
-      {error && <Alert type="error" title="邀请码加载失败，请刷新重试" />}
+      {error ? <OpsErrorState title="邀请码加载失败，请刷新重试" onRetry={() => void load()} /> : null}
       {!busy && !error && !code && (
         <Typography.Text type="secondary">
           请联系管理员补充邀请码池

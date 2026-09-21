@@ -33,7 +33,7 @@ void main() {
                 ),
               },
               stocks: const [],
-              onStockTap: (_) {},
+              onSell: (_, {required isBuy}) {},
             ),
           ),
         ),

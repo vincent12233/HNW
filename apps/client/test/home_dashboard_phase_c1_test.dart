@@ -34,6 +34,7 @@ HomeDashboard dashboard({
   double available = 82000.25,
   double frozen = 15000,
   double todayPnl = 2450.75,
+  double? unrealizedPnl,
   bool accountLoaded = true,
   bool accountFailed = false,
   bool accountRefreshing = false,
@@ -63,6 +64,7 @@ HomeDashboard dashboard({
     availableFunds: available,
     frozenFunds: frozen,
     todayPnl: todayPnl,
+    unrealizedPnl: unrealizedPnl,
     accountLoaded: accountLoaded,
     accountFailed: accountFailed,
     accountRefreshing: accountRefreshing,
@@ -466,5 +468,56 @@ void main() {
     expect(find.byType(AppFadeIn), findsOneWidget);
     await tester.pump(AppMotion.page);
     expect(retries, 0);
+  });
+
+  testWidgets('zero total assets and unrealized P&L stay visible as zero', (
+    tester,
+  ) async {
+    await pumpHome(
+      tester,
+      home: dashboard(
+        totalAssets: 0,
+        unrealizedPnl: 0,
+        available: 0,
+        frozen: 0,
+        todayPnl: 0,
+      ),
+    );
+    expect(find.text(formatPrice(0)), findsWidgets);
+    expect(find.text(formatSignedPrice(0)), findsWidgets);
+    expect(find.text('Unrealized P&L'), findsOneWidget);
+    expect(find.textContaining('******'), findsNothing);
+  });
+
+  testWidgets('hidden balances do not leak authoritative amounts', (
+    tester,
+  ) async {
+    await pumpHome(
+      tester,
+      home: dashboard(
+        hideBalances: true,
+        totalAssets: 888888,
+        unrealizedPnl: -12.5,
+        todayPnl: 9,
+      ),
+    );
+    expect(find.text(formatPrice(888888)), findsNothing);
+    expect(find.text(formatSignedPrice(-12.5)), findsNothing);
+    expect(find.text(formatSignedPrice(9)), findsNothing);
+    expect(find.text('******'), findsWidgets);
+  });
+
+  testWidgets('320 text scale 1.5 with unrealized metric does not overflow', (
+    tester,
+  ) async {
+    await pumpHome(
+      tester,
+      size: const Size(320, 568),
+      textScale: 1.5,
+      reduceMotion: true,
+      home: dashboard(totalAssets: 0, unrealizedPnl: 0, todayPnl: -1),
+    );
+    expect(tester.takeException(), isNull);
+    expect(find.text('Unrealized P&L'), findsOneWidget);
   });
 }

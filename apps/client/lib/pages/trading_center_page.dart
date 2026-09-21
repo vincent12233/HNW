@@ -882,7 +882,9 @@ class _TradingCenterPageState extends State<TradingCenterPage>
         return HoldingsTab(
           positions: _positions,
           stocks: widget.stocks,
-          onStockTap: widget.onTrade,
+          onSell: (stock, {required bool isBuy}) {
+            widget.onOpenOrderTicket?.call(stock, isBuy: isBuy);
+          },
         );
       case 3:
         return PendingCenterTab(

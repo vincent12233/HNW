@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import '../app_config.dart';
 import '../models/portfolio_position.dart';
 import '../models/account_transaction.dart';
+import '../models/deposit_request.dart';
 import '../models/trading_order.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
@@ -163,6 +164,48 @@ class TradingService {
         .map(
           (row) => AccountTransaction.fromJson(Map<String, dynamic>.from(row)),
         )
+        .toList();
+  }
+
+  Future<List<DepositRequest>> fetchMyDeposits() async {
+    final session = await _authService.restoreSession();
+    if (session == null || session.accessToken.isEmpty) {
+      throw const TradingException('Please sign in again');
+    }
+    final http.Response response;
+    try {
+      response = await http
+          .get(
+            Uri.parse('${AppConfig.apiBaseUrl}/deposit/me'),
+            headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          )
+          .timeout(const Duration(seconds: 6));
+    } catch (_) {
+      throw const TradingException(
+        'Unable to load deposit history. Check your network and try again.',
+      );
+    }
+    if (_sessionExpiry.isUnauthorized(response.statusCode)) {
+      await _sessionExpiry.expire();
+      throw const TradingException('Please sign in again');
+    }
+    dynamic decoded;
+    try {
+      decoded = response.body.isEmpty ? <dynamic>[] : jsonDecode(response.body);
+    } catch (_) {
+      throw const TradingException('Unable to load deposit history');
+    }
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw TradingException(
+        _apiMessage(decoded, 'Unable to load deposit history'),
+      );
+    }
+    if (decoded is! List) {
+      throw const TradingException('Unable to load deposit history');
+    }
+    return decoded
+        .whereType<Map>()
+        .map((row) => DepositRequest.fromJson(Map<String, dynamic>.from(row)))
         .toList();
   }
 
@@ -339,6 +382,8 @@ class TradingAccountSnapshot {
     required this.frozenBalance,
     required this.realizedProfitLoss,
     required this.positions,
+    this.totalAsset,
+    this.unrealizedPnl,
   });
 
   final double cashBalance;
@@ -350,10 +395,39 @@ class TradingAccountSnapshot {
   final double realizedProfitLoss;
   final List<PortfolioPosition> positions;
 
+  /// Authoritative `balances.totalAsset` from GET /account/portfolio.
+  /// Null means the field was missing or not a number; callers must fall back.
+  final double? totalAsset;
+
+  /// Authoritative `pnl.unrealizedPnl` from GET /account/portfolio.
+  /// Null means the field was missing or not a number; callers must fall back.
+  final double? unrealizedPnl;
+
+  double totalAssetOr(double fallback) => totalAsset ?? fallback;
+
+  double unrealizedPnlOr(double fallback) => unrealizedPnl ?? fallback;
+
   factory TradingAccountSnapshot.fromJson(Map<String, dynamic> json) {
     final balances = (json['balances'] as Map?)?.cast<String, dynamic>() ?? {};
-    final pnl = (json['pnl'] as Map?)?.cast<String, dynamic>() ?? {};
+    final pnlRaw = json['pnl'];
+    final pnl = pnlRaw is Map
+        ? Map<String, dynamic>.from(pnlRaw)
+        : const <String, dynamic>{};
     final positionRows = json['positions'];
+
+    final parsedPositions = <PortfolioPosition>[];
+    if (positionRows is List) {
+      for (final item in positionRows) {
+        if (item is! Map) continue;
+        try {
+          parsedPositions.add(
+            PortfolioPosition.fromApiJson(Map<String, dynamic>.from(item)),
+          );
+        } catch (_) {
+          // Skip a malformed row so a partial payload cannot crash the dashboard.
+        }
+      }
+    }
 
     return TradingAccountSnapshot(
       cashBalance: _doubleValue(balances['cashBalance']),
@@ -362,15 +436,9 @@ class TradingAccountSnapshot {
       ),
       frozenBalance: _doubleValue(balances['frozenBalance']),
       realizedProfitLoss: _doubleValue(pnl['realizedPnl']),
-      positions: positionRows is List
-          ? positionRows
-                .map(
-                  (item) => PortfolioPosition.fromApiJson(
-                    Map<String, dynamic>.from(item as Map),
-                  ),
-                )
-                .toList()
-          : <PortfolioPosition>[],
+      totalAsset: _optionalDouble(balances['totalAsset']),
+      unrealizedPnl: _optionalDouble(pnl['unrealizedPnl']),
+      positions: parsedPositions,
     );
   }
 }
@@ -425,9 +493,19 @@ String _apiMessage(dynamic decoded, String fallback) {
 }
 
 double _doubleValue(dynamic value) {
+  return _optionalDouble(value) ?? 0;
+}
+
+/// Preserves a legitimate `0`. Returns null for missing, blank, or unparsable values.
+double? _optionalDouble(dynamic value) {
+  if (value == null) return null;
   if (value is num) {
+    if (value.isNaN || value.isInfinite) return null;
     return value.toDouble();
   }
-
-  return double.tryParse(value?.toString() ?? '') ?? 0;
+  final raw = value.toString().trim();
+  if (raw.isEmpty) return null;
+  final parsed = double.tryParse(raw);
+  if (parsed == null || parsed.isNaN || parsed.isInfinite) return null;
+  return parsed;
 }

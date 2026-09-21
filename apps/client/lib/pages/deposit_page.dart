@@ -3,34 +3,46 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../app_config.dart';
 import '../l10n/app_language.dart';
-import '../models/account_transaction.dart';
+import '../models/deposit_request.dart';
 import '../services/app_content_service.dart';
 import '../services/trading_service.dart';
-import '../widgets/support_chat_launcher.dart';
+import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
+import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/app_page_scaffold.dart';
+import '../widgets/support_chat_launcher.dart';
 
 class DepositPage extends StatefulWidget {
-  const DepositPage({super.key});
+  const DepositPage({super.key, this.tradingService});
+
+  final TradingService? tradingService;
+
   @override
   State<DepositPage> createState() => _DepositPageState();
 }
 
 class _DepositPageState extends State<DepositPage> {
-  final _service = TradingService();
+  late final _service = widget.tradingService ?? TradingService();
   final _appContent = AppContentService.instance;
-  List<AccountTransaction> _history = const [];
+  List<DepositRequest> _history = const [];
   bool _loading = true;
+  String? _error;
+  int _generation = 0;
+  Future<void>? _inFlight;
 
   @override
   void initState() {
     super.initState();
     _appContent.addListener(_onContentChanged);
     unawaited(_appContent.load());
-    _load();
+    unawaited(_load());
   }
 
   @override
   void dispose() {
+    _generation++;
     _appContent.removeListener(_onContentChanged);
     super.dispose();
   }
@@ -39,18 +51,43 @@ class _DepositPageState extends State<DepositPage> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _load() async {
-    try {
-      final all = await _service.fetchTransactions();
-      if (!mounted) return;
+  Future<void> _load() {
+    final pending = _inFlight;
+    if (pending != null) return pending;
+    final request = ++_generation;
+    final future = _loadOnce(request);
+    _inFlight = future;
+    return future.whenComplete(() {
+      if (identical(_inFlight, future)) {
+        _inFlight = null;
+      }
+    });
+  }
+
+  Future<void> _loadOnce(int request) async {
+    if (mounted) {
       setState(() {
-        _history = all
-            .where((e) => e.type.toUpperCase().contains('DEPOSIT'))
-            .toList();
-        _loading = false;
+        _loading = true;
+        _error = null;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    }
+    try {
+      final rows = await _service.fetchMyDeposits();
+      if (!mounted || request != _generation) return;
+      setState(() {
+        _history = rows;
+        _loading = false;
+        _error = null;
+      });
+    } catch (error) {
+      if (!mounted || request != _generation) return;
+      setState(() {
+        _loading = false;
+        _error = clientErrorMessage(
+          error,
+          fallback: 'Unable to load deposit history. Please try again.',
+        );
+      });
     }
   }
 
@@ -65,7 +102,6 @@ class _DepositPageState extends State<DepositPage> {
         fallback: 'Hello, I would like to make a deposit.',
       ),
     );
-    // Same SaleSmartly panel as the side floating customer-service button.
     unawaited(showSupportChatPanel(context, initialMessage: message));
   }
 
@@ -108,8 +144,9 @@ class _DepositPageState extends State<DepositPage> {
         leading: const BackButton(),
       ),
       body: RefreshIndicator(
-        onRefresh: _load,
+        onRefresh: _loading ? () async {} : _load,
         child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(12, 14, 12, 24),
           children: [
             Container(
@@ -168,6 +205,7 @@ class _DepositPageState extends State<DepositPage> {
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,
+                    height: AppMotion.tapTarget,
                     child: FilledButton(
                       style: FilledButton.styleFrom(
                         backgroundColor: Colors.white,
@@ -188,80 +226,31 @@ class _DepositPageState extends State<DepositPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        AppText(
-                          content.text(
-                            'deposit',
-                            'history_section_title',
-                            fallback: 'DEPOSIT HISTORY',
-                          ),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: .5,
+                        Expanded(
+                          child: AppText(
+                            content.text(
+                              'deposit',
+                              'history_section_title',
+                              fallback: 'DEPOSIT HISTORY',
+                            ),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: .5,
+                            ),
                           ),
                         ),
                         IconButton(
-                          onPressed: _loading ? null : _load,
+                          tooltip: 'Refresh deposit history',
+                          onPressed: _loading ? null : () => unawaited(_load()),
                           icon: const Icon(Icons.refresh_rounded),
                         ),
                       ],
                     ),
-                    if (_loading)
-                      const Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(child: CircularProgressIndicator()),
-                      )
-                    else if (_history.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            AppText(historyEmpty),
-                            const SizedBox(height: 6),
-                            const AppText(
-                              'Credited deposits appear here after finance confirms your payment.',
-                              style: TextStyle(
-                                color: Color(0xFF64748B),
-                                height: 1.4,
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            TextButton.icon(
-                              onPressed: _contact,
-                              icon: const Icon(
-                                Icons.support_agent_rounded,
-                                size: 18,
-                              ),
-                              label: AppText(ctaLabel),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
-                      ..._history.map(
-                        (entry) => Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: Icon(
-                              entry.amount >= 0
-                                  ? Icons.arrow_downward_rounded
-                                  : Icons.arrow_upward_rounded,
-                              color: entry.amount >= 0
-                                  ? AppConfig.gainColor
-                                  : AppConfig.lossColor,
-                            ),
-                            title: AppText(formatPrice(entry.amount)),
-                            subtitle: AppText(
-                              '${entry.createdAt.toLocal()} · ${entry.status}',
-                            ),
-                            trailing: entry.note == null
-                                ? null
-                                : AppText(entry.note!),
-                          ),
-                        ),
-                      ),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(minHeight: 120),
+                      child: _historyBody(historyEmpty: historyEmpty),
+                    ),
                   ],
                 ),
               ),
@@ -300,6 +289,55 @@ class _DepositPageState extends State<DepositPage> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _historyBody({required String historyEmpty}) {
+    if (_loading && _history.isEmpty && _error == null) {
+      return const Padding(
+        padding: EdgeInsets.all(24),
+        child: AppLoadingView(message: 'Loading deposit history'),
+      );
+    }
+    if (_error != null && _history.isEmpty) {
+      return AppErrorView(
+        title: 'Unable to load deposit history',
+        message: _error,
+        onRetry: _loading ? null : () => unawaited(_load()),
+      );
+    }
+    if (_history.isEmpty) {
+      return AppEmptyState(
+        title: historyEmpty,
+        message:
+            'Credited deposits appear here after finance confirms your payment.',
+        icon: Icons.receipt_long_outlined,
+      );
+    }
+    return Column(
+      children: [
+        if (_loading) const LinearProgressIndicator(minHeight: 2),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: AppText(
+              _error!,
+              style: const TextStyle(color: Color(0xFFB45309), height: 1.4),
+            ),
+          ),
+        ..._history.map(
+          (entry) => ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: Icon(
+              Icons.south_west_rounded,
+              color: AppConfig.primaryColor,
+            ),
+            title: AppText(formatPrice(entry.amount)),
+            subtitle: AppText('${entry.createdAt.toLocal()} · ${entry.status}'),
+            trailing: entry.note == null ? null : AppText(entry.note!),
+          ),
+        ),
+      ],
     );
   }
 }

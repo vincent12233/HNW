@@ -192,9 +192,13 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('empty portfolio has no fake curve or allocation', (tester) async {
+  testWidgets('empty portfolio has no fake curve or allocation', (
+    tester,
+  ) async {
     setView(tester, const Size(390, 844));
-    await tester.pumpWidget(portfolioApp((_) async => portfolioFixture(empty: true)));
+    await tester.pumpWidget(
+      portfolioApp((_) async => portfolioFixture(empty: true)),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Total Portfolio Value'), findsOneWidget);
     expect(find.text('100%'), findsNothing);
@@ -203,7 +207,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('populated portfolio formats assets and signed P&L', (tester) async {
+  testWidgets('populated portfolio formats assets and signed P&L', (
+    tester,
+  ) async {
     setView(tester, const Size(390, 844));
     await tester.pumpWidget(portfolioApp((_) async => portfolioFixture()));
     await tester.pumpAndSettle();
@@ -236,7 +242,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Insufficient history'), findsOneWidget);
-    expect(find.textContaining('No curve until two snapshot points exist'), findsOneWidget);
+    expect(
+      find.textContaining('No curve until two snapshot points exist'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -281,7 +290,7 @@ void main() {
           body: HoldingsTab(
             positions: {'NSE:RELIANCE': equityHolding()},
             stocks: [liveQuote(fresh: false)],
-            onStockTap: (_) {},
+            onSell: (_, {required isBuy}) {},
           ),
         ),
       ),
@@ -328,7 +337,7 @@ void main() {
               ),
             },
             stocks: const [],
-            onStockTap: (_) {},
+            onSell: (_, {required isBuy}) {},
           ),
         ),
       ),
@@ -348,6 +357,7 @@ void main() {
   testWidgets('holding sell uses the existing D.1 callback', (tester) async {
     setView(tester, const Size(390, 844));
     final opened = <StockQuote>[];
+    final sides = <bool>[];
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.light(),
@@ -355,7 +365,10 @@ void main() {
           body: HoldingsTab(
             positions: {'NSE:RELIANCE': equityHolding()},
             stocks: [liveQuote()],
-            onStockTap: opened.add,
+            onSell: (quote, {required bool isBuy}) {
+              opened.add(quote);
+              sides.add(isBuy);
+            },
           ),
         ),
       ),
@@ -367,6 +380,7 @@ void main() {
     await tester.tap(find.text('Sell'));
     await tester.pumpAndSettle();
     expect(opened.single.symbol, 'RELIANCE');
+    expect(sides, [false]);
   });
 
   testWidgets('reduced motion 320 portfolio has no overflow', (tester) async {
@@ -393,7 +407,7 @@ void main() {
           body: HoldingsTab(
             positions: const {},
             stocks: const [],
-            onStockTap: (_) {},
+            onSell: (_, {required isBuy}) {},
           ),
         ),
       ),

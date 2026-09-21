@@ -77,6 +77,7 @@ class HomeDashboard extends StatefulWidget {
     this.announcement,
     this.companyCard,
     this.bottomPadding = AppSpacing.xxl,
+    this.unrealizedPnl,
   });
 
   final String accountName;
@@ -84,6 +85,7 @@ class HomeDashboard extends StatefulWidget {
   final double availableFunds;
   final double frozenFunds;
   final double todayPnl;
+  final double? unrealizedPnl;
   final bool accountLoaded;
   final bool accountFailed;
   final bool accountRefreshing;
@@ -230,6 +232,14 @@ class _HomeDashboardState extends State<HomeDashboard> {
                         ? AppColors.textPrimary
                         : AppUiGainLoss.color(widget.todayPnl),
                   ),
+                  if (widget.unrealizedPnl != null)
+                    AccountMetric(
+                      'Unrealized P&L',
+                      _money(widget.unrealizedPnl!, signed: true),
+                      color: widget.hideBalances || !widget.accountLoaded
+                          ? AppColors.textPrimary
+                          : AppUiGainLoss.color(widget.unrealizedPnl!),
+                    ),
                 ],
               ),
             ),

@@ -120,6 +120,8 @@ class _MarketHomePageState extends State<MarketHomePage>
   double buyingPower = 0;
   double frozenBalance = 0;
   double realizedProfitLoss = 0;
+  double? _authoritativeTotalAsset;
+  double? _authoritativeUnrealizedPnl;
 
   double get availableBalance => math
       .max(0, math.min(buyingPower, cashBalance - frozenBalance))
@@ -610,20 +612,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       setState(() {
         _accountSnapshotLoaded = true;
         _accountSnapshotFailed = false;
-        cashBalance = snapshot.cashBalance;
-        buyingPower = snapshot.buyingPower;
-        frozenBalance = snapshot.frozenBalance;
-        realizedProfitLoss = snapshot.realizedProfitLoss;
-        positions
-          ..clear()
-          ..addEntries(
-            snapshot.positions.map(
-              (position) => MapEntry(
-                _positionKey(position.exchange, position.symbol),
-                position,
-              ),
-            ),
-          );
+        _applyAccountSnapshot(snapshot);
       });
     } catch (_) {
       if (mounted) setState(() => _accountSnapshotFailed = true);
@@ -1655,9 +1644,10 @@ class _MarketHomePageState extends State<MarketHomePage>
                                   ..clear()
                                   ..addAll(latest);
                                 if (snapshot != null) {
-                                  cashBalance = snapshot.cashBalance;
-                                  buyingPower = snapshot.buyingPower;
-                                  frozenBalance = snapshot.frozenBalance;
+                                  _applyAccountSnapshot(
+                                    snapshot,
+                                    positions: false,
+                                  );
                                 }
                               });
                               setDialogState(() {
@@ -1843,9 +1833,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       withdrawalRequests.insert(0, request);
       final snapshot = updatedSnapshot;
       if (snapshot != null) {
-        cashBalance = snapshot.cashBalance;
-        buyingPower = snapshot.buyingPower;
-        frozenBalance = snapshot.frozenBalance;
+        _applyAccountSnapshot(snapshot, positions: false);
       } else {
         buyingPower = math.max(0, buyingPower - amount).toDouble();
         frozenBalance += amount;
@@ -1962,8 +1950,11 @@ class _MarketHomePageState extends State<MarketHomePage>
         stock?.price ?? position.averageCost,
       );
     }
-    final totalPortfolioValue = cashBalance + holdingsValue;
-    final todayPnl = positions.values.fold<double>(0, (total, position) {
+    final localTotalPortfolioValue = cashBalance + holdingsValue;
+    final localUnrealizedPnl = positions.values.fold<double>(0, (
+      total,
+      position,
+    ) {
       final stock = _stockForOrNull(
         position.symbol,
         exchange: position.exchange,
@@ -1971,6 +1962,10 @@ class _MarketHomePageState extends State<MarketHomePage>
       return total +
           position.unrealizedProfitLoss(stock?.price ?? position.averageCost);
     });
+    final totalPortfolioValue =
+        _authoritativeTotalAsset ?? localTotalPortfolioValue;
+    final todayPnl = localUnrealizedPnl;
+    final unrealizedPnl = _authoritativeUnrealizedPnl ?? localUnrealizedPnl;
     final vix =
         indexQuotes['INDIAVIX'] ??
         indexQuotes['INDIA VIX'] ??
@@ -1998,6 +1993,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           availableFunds: availableBalance,
           frozenFunds: frozenBalance,
           todayPnl: todayPnl,
+          unrealizedPnl: unrealizedPnl,
           accountLoaded: _accountSnapshotLoaded,
           accountFailed: _accountSnapshotFailed,
           accountRefreshing: _accountSnapshotRefreshing,
@@ -2293,20 +2289,7 @@ class _MarketHomePageState extends State<MarketHomePage>
 
       if (snapshot != null) {
         setState(() {
-          cashBalance = snapshot.cashBalance;
-          buyingPower = snapshot.buyingPower;
-          frozenBalance = snapshot.frozenBalance;
-          realizedProfitLoss = snapshot.realizedProfitLoss;
-          positions
-            ..clear()
-            ..addEntries(
-              snapshot.positions.map(
-                (position) => MapEntry(
-                  _positionKey(position.exchange, position.symbol),
-                  position,
-                ),
-              ),
-            );
+          _applyAccountSnapshot(snapshot);
           orders
             ..clear()
             ..addAll(updatedOrders);
@@ -2365,6 +2348,29 @@ class _MarketHomePageState extends State<MarketHomePage>
         setState(() => _portfolioHistoryLoading = false);
       }
     }
+  }
+
+  void _applyAccountSnapshot(
+    TradingAccountSnapshot snapshot, {
+    bool positions = true,
+  }) {
+    cashBalance = snapshot.cashBalance;
+    buyingPower = snapshot.buyingPower;
+    frozenBalance = snapshot.frozenBalance;
+    realizedProfitLoss = snapshot.realizedProfitLoss;
+    _authoritativeTotalAsset = snapshot.totalAsset;
+    _authoritativeUnrealizedPnl = snapshot.unrealizedPnl;
+    if (!positions) return;
+    this.positions
+      ..clear()
+      ..addEntries(
+        snapshot.positions.map(
+          (position) => MapEntry(
+            _positionKey(position.exchange, position.symbol),
+            position,
+          ),
+        ),
+      );
   }
 
   String _positionKey(String exchange, String symbol) =>
@@ -2430,372 +2436,380 @@ class _MarketHomePageState extends State<MarketHomePage>
     return AppFadeIn(
       switchKey: 'profile|$accountNumber|$kycStatus|${_profileData['status']}',
       child: ListView(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        AppSpacing.md + 2,
-        horizontalPadding,
-        AppSpacing.xxl,
-      ),
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: AppText(
-                _appContent.text(
-                  'home',
-                  'profile.page_title',
-                  fallback: 'Profile',
-                ),
-                style: AppTypography.titleLarge.copyWith(
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-            _notificationButton(),
-          ],
+        padding: EdgeInsets.fromLTRB(
+          horizontalPadding,
+          AppSpacing.md + 2,
+          horizontalPadding,
+          AppSpacing.xxl,
         ),
-        const SizedBox(height: AppSpacing.md + 2),
-        _profileHeader(),
-        const SizedBox(height: AppSpacing.xl - 2),
-        AppText(
-          _appContent.text(
-            'home',
-            'profile.section.overview',
-            fallback: 'Account Overview',
-          ),
-          style: AppUi.sectionTitle,
-        ),
-        const SizedBox(height: AppSpacing.md),
-        _accountDataStatus(),
-        AppCard(
-          child: AccountMetrics(
-            items: [
-              AccountMetric(
-                _appContent.text(
-                  'home',
-                  'profile.metric.available',
-                  fallback: 'Available Balance',
-                ),
-                _balanceText(availableBalance),
-              ),
-              AccountMetric(
-                _appContent.text(
-                  'home',
-                  'profile.metric.portfolio',
-                  fallback: 'Product Holdings',
-                ),
-                _balanceText(productValue),
-              ),
-              AccountMetric(
-                _appContent.text(
-                  'home',
-                  'profile.metric.returns',
-                  fallback: 'Total Returns',
-                ),
-                _balanceText(totalReturns, signed: true),
-                color: _amountsHidden || !_accountSnapshotLoaded
-                    ? AppColors.textPrimary
-                    : totalReturns >= 0
-                    ? AppColors.gain
-                    : AppColors.loss,
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: AppSpacing.xl - 2),
-        ProfileSection(
-          title: _appContent.text(
-            'home',
-            'profile.section.account',
-            fallback: 'Account',
-          ),
-          children: [
-            ProfileMenuRow(
-              icon: Icons.person_outline_rounded,
-              title: 'Personal Information',
-              subtitle: 'Account ID and full name',
-              onTap: _editProfile,
-              color: AppColors.brandPrimary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.verified_user_outlined,
-              title: 'KYC Verification',
-              subtitle: 'Identity documents and review status',
-              status: profileKycLabel(kycStatus),
-              onTap: () => _openAccountSettings('kyc'),
-              color: AppColors.gain,
-            ),
-            ProfileMenuRow(
-              icon: Icons.account_balance_outlined,
-              title: 'Bank Accounts',
-              subtitle: 'Linked bank account for withdrawals',
-              onTap: () => _openAccountSettings('banks'),
-              color: AppColors.warning,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl - 2),
-        ProfileSection(
-          title: _appContent.text(
-            'home',
-            'profile.section.funds',
-            fallback: 'Funds',
-          ),
-          children: [
-            ProfileMenuRow(
-              icon: Icons.request_quote_outlined,
-              title: 'Loan Applications',
-              subtitle: 'Application status',
-              color: AppColors.gain,
-              onTap: () => Navigator.of(
-                context,
-              ).push(MaterialPageRoute<void>(builder: (_) => const LoanPage())),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl - 2),
-        ProfileSection(
-          title: _appContent.text(
-            'home',
-            'profile.section.security',
-            fallback: 'Security',
-          ),
-          children: [
-            ProfileMenuRow(
-              icon: Icons.password_outlined,
-              title: 'Change Password',
-              subtitle: 'Update your account password',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const AccountSecurityPage(),
-                ),
-              ),
-              color: AppColors.brandPrimary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.security_outlined,
-              title: 'Two-Factor Authentication',
-              subtitle: 'Authenticator and recovery codes',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const TwoFactorPage()),
-              ),
-              color: AppColors.info,
-            ),
-            ProfileMenuRow(
-              icon: Icons.pin_outlined,
-              title: 'Transaction PIN',
-              subtitle: 'Set or change your withdrawal password',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) =>
-                      const AccountSecurityPage(withdrawalPin: true),
-                ),
-              ),
-              color: AppColors.warning,
-            ),
-            if (_biometricCapability != null)
-              ProfileMenuRow(
-                icon: _biometricCapability == DeviceBiometric.face
-                    ? Icons.face_retouching_natural_outlined
-                    : Icons.fingerprint,
-                title: 'Biometric quick login',
-                subtitle: _biometricCapability == DeviceBiometric.face
-                    ? 'Face ID'
-                    : 'Fingerprint',
-                color: AppColors.info,
-                trailing: Switch.adaptive(
-                  value: _biometricEnabled,
-                  onChanged: _biometricBusy ? null : _setBiometricQuickLogin,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl - 2),
-        ProfileSection(
-          title: _appContent.text(
-            'home',
-            'profile.section.preferences',
-            fallback: 'Preferences',
-          ),
-          children: [
-            ProfileMenuRow(
-              icon: Icons.notifications_none_rounded,
-              title: 'Alert Preferences',
-              subtitle: 'Choose which account updates you receive',
-              onTap: () => _openAccountSettings('preferences'),
-              color: AppColors.brandPrimary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.contrast,
-              title: 'Appearance',
-              subtitle: 'Light or high contrast display',
-              status: AppearanceSettings.instance.value == 'highContrast'
-                  ? 'High contrast'
-                  : 'Light',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const AppearancePage()),
-              ),
-              color: AppColors.textSecondary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.language_rounded,
-              title: 'Language',
-              subtitle: 'Choose your preferred language',
-              status: AppLanguage.instance.code == 'hi' ? 'हिन्दी' : 'English',
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(builder: (_) => const LanguagePage()),
-              ),
-              color: AppColors.warning,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl - 2),
-        ProfileSection(
-          title: _appContent.text(
-            'home',
-            'profile.section.support',
-            fallback: 'Support & Education',
-          ),
-          children: [
-            ProfileMenuRow(
-              icon: Icons.help_outline,
-              title: _appContent.text(
-                'home',
-                'profile.tile.help.title',
-                fallback: 'Help & Support',
-              ),
-              subtitle: _appContent.text(
-                'home',
-                'profile.tile.help.subtitle',
-                fallback: 'FAQs, contact support and raise a ticket',
-              ),
-              onTap: () => unawaited(
-                showSupportChatPanel(
-                  context,
-                  initialMessage: _appContent.text(
-                    'support',
-                    'chat_preset.help',
-                    fallback: 'Hello, I need help with my account.',
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: AppText(
+                  _appContent.text(
+                    'home',
+                    'profile.page_title',
+                    fallback: 'Profile',
+                  ),
+                  style: AppTypography.titleLarge.copyWith(
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-              color: AppColors.brandPrimary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.menu_book_outlined,
-              title: _appContent.text(
-                'home',
-                'profile.tile.insights.title',
-                fallback: 'Wealth Insights',
-              ),
-              subtitle: _appContent.text(
-                'home',
-                'profile.tile.insights.subtitle',
-                fallback: 'Knowledge for informed investment decisions',
-              ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const WealthInsightsPage(),
-                ),
-              ),
-              color: AppColors.gain,
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.xl - 2),
-        ProfileSection(
-          title: _appContent.text(
-            'home',
-            'profile.section.legal',
-            fallback: 'Legal',
+              _notificationButton(),
+            ],
           ),
-          children: [
-            ProfileMenuRow(
-              icon: Icons.info_outline_rounded,
-              title: _appContent.text(
-                'home',
-                'profile.tile.about.title',
-                fallback: 'About Us',
-              ),
-              subtitle: _appContent.text(
-                'home',
-                'profile.tile.about.subtitle',
-                fallback: 'About our app, terms and policies',
-              ),
-              onTap: _openAbout,
-              color: AppColors.brandPrimary,
+          const SizedBox(height: AppSpacing.md + 2),
+          _profileHeader(),
+          const SizedBox(height: AppSpacing.xl - 2),
+          AppText(
+            _appContent.text(
+              'home',
+              'profile.section.overview',
+              fallback: 'Account Overview',
             ),
-            ProfileMenuRow(
-              icon: Icons.description_outlined,
-              title: _appContent.text(
-                'home',
-                'profile.tile.terms.title',
-                fallback: 'Terms & Conditions',
-              ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const LegalPage(title: 'Terms'),
+            style: AppUi.sectionTitle,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          _accountDataStatus(),
+          AppCard(
+            child: AccountMetrics(
+              items: [
+                AccountMetric(
+                  _appContent.text(
+                    'home',
+                    'profile.metric.available',
+                    fallback: 'Available Balance',
+                  ),
+                  _balanceText(availableBalance),
                 ),
-              ),
-              color: AppColors.textSecondary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.privacy_tip_outlined,
-              title: _appContent.text(
-                'home',
-                'profile.tile.privacy.title',
-                fallback: 'Privacy Policy',
-              ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const LegalPage(title: 'Privacy'),
+                AccountMetric(
+                  _appContent.text(
+                    'home',
+                    'profile.metric.portfolio',
+                    fallback: 'Product Holdings',
+                  ),
+                  _balanceText(productValue),
                 ),
-              ),
-              color: AppColors.textSecondary,
-            ),
-            ProfileMenuRow(
-              icon: Icons.warning_amber_rounded,
-              title: _appContent.text(
-                'home',
-                'profile.tile.risk.title',
-                fallback: 'Risk Disclosure',
-              ),
-              onTap: () => Navigator.of(context).push(
-                MaterialPageRoute<void>(
-                  builder: (_) => const LegalPage(title: 'Risk Disclosure'),
+                AccountMetric(
+                  _appContent.text(
+                    'home',
+                    'profile.metric.returns',
+                    fallback: 'Total Returns',
+                  ),
+                  _balanceText(totalReturns, signed: true),
+                  color: _amountsHidden || !_accountSnapshotLoaded
+                      ? AppColors.textPrimary
+                      : totalReturns >= 0
+                      ? AppColors.gain
+                      : AppColors.loss,
                 ),
-              ),
-              color: AppColors.warning,
+              ],
             ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md + 2),
-        AppCard(
-          padding: EdgeInsets.zero,
-          child: ProfileMenuRow(
-            icon: Icons.logout_rounded,
+          ),
+          const SizedBox(height: AppSpacing.xl - 2),
+          ProfileSection(
             title: _appContent.text(
               'home',
-              'profile.logout_label',
-              fallback: 'Logout',
+              'profile.section.account',
+              fallback: 'Account',
             ),
-            subtitle: _appContent.text(
-              'home',
-              'profile.logout_subtitle',
-              fallback: 'Securely logout from your account',
-            ),
-            onTap: _confirmSignOut,
-            destructive: true,
+            children: [
+              ProfileMenuRow(
+                icon: Icons.person_outline_rounded,
+                title: 'Personal Information',
+                subtitle: 'Account ID and full name',
+                onTap: _editProfile,
+                color: AppColors.brandPrimary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.verified_user_outlined,
+                title: 'KYC Verification',
+                subtitle: 'Identity documents and review status',
+                status: profileKycLabel(kycStatus),
+                onTap: () => _openAccountSettings('kyc'),
+                color: AppColors.gain,
+              ),
+              ProfileMenuRow(
+                icon: Icons.account_balance_outlined,
+                title: 'Bank Accounts',
+                subtitle: 'Linked bank account for withdrawals',
+                onTap: () => _openAccountSettings('banks'),
+                color: AppColors.warning,
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: AppSpacing.md + 2),
-        AppText(
-          AppConfig.appName,
-          textAlign: TextAlign.center,
-          style: AppTypography.caption.copyWith(color: AppColors.textTertiary),
-        ),
-      ],
-    ),
+          const SizedBox(height: AppSpacing.xl - 2),
+          ProfileSection(
+            title: _appContent.text(
+              'home',
+              'profile.section.funds',
+              fallback: 'Funds',
+            ),
+            children: [
+              ProfileMenuRow(
+                icon: Icons.request_quote_outlined,
+                title: 'Loan Applications',
+                subtitle: 'Application status',
+                color: AppColors.gain,
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const LoanPage()),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl - 2),
+          ProfileSection(
+            title: _appContent.text(
+              'home',
+              'profile.section.security',
+              fallback: 'Security',
+            ),
+            children: [
+              ProfileMenuRow(
+                icon: Icons.password_outlined,
+                title: 'Change Password',
+                subtitle: 'Update your account password',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AccountSecurityPage(),
+                  ),
+                ),
+                color: AppColors.brandPrimary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.security_outlined,
+                title: 'Two-Factor Authentication',
+                subtitle: 'Authenticator and recovery codes',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const TwoFactorPage(),
+                  ),
+                ),
+                color: AppColors.info,
+              ),
+              ProfileMenuRow(
+                icon: Icons.pin_outlined,
+                title: 'Transaction PIN',
+                subtitle: 'Set or change your withdrawal password',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        const AccountSecurityPage(withdrawalPin: true),
+                  ),
+                ),
+                color: AppColors.warning,
+              ),
+              if (_biometricCapability != null)
+                ProfileMenuRow(
+                  icon: _biometricCapability == DeviceBiometric.face
+                      ? Icons.face_retouching_natural_outlined
+                      : Icons.fingerprint,
+                  title: 'Biometric quick login',
+                  subtitle: _biometricCapability == DeviceBiometric.face
+                      ? 'Face ID'
+                      : 'Fingerprint',
+                  color: AppColors.info,
+                  trailing: Switch.adaptive(
+                    value: _biometricEnabled,
+                    onChanged: _biometricBusy ? null : _setBiometricQuickLogin,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl - 2),
+          ProfileSection(
+            title: _appContent.text(
+              'home',
+              'profile.section.preferences',
+              fallback: 'Preferences',
+            ),
+            children: [
+              ProfileMenuRow(
+                icon: Icons.notifications_none_rounded,
+                title: 'Alert Preferences',
+                subtitle: 'Choose which account updates you receive',
+                onTap: () => _openAccountSettings('preferences'),
+                color: AppColors.brandPrimary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.contrast,
+                title: 'Appearance',
+                subtitle: 'Light or high contrast display',
+                status: AppearanceSettings.instance.value == 'highContrast'
+                    ? 'High contrast'
+                    : 'Light',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const AppearancePage(),
+                  ),
+                ),
+                color: AppColors.textSecondary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.language_rounded,
+                title: 'Language',
+                subtitle: 'Choose your preferred language',
+                status: AppLanguage.instance.code == 'hi'
+                    ? 'हिन्दी'
+                    : 'English',
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(builder: (_) => const LanguagePage()),
+                ),
+                color: AppColors.warning,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl - 2),
+          ProfileSection(
+            title: _appContent.text(
+              'home',
+              'profile.section.support',
+              fallback: 'Support & Education',
+            ),
+            children: [
+              ProfileMenuRow(
+                icon: Icons.help_outline,
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.help.title',
+                  fallback: 'Help & Support',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.help.subtitle',
+                  fallback: 'FAQs, contact support and raise a ticket',
+                ),
+                onTap: () => unawaited(
+                  showSupportChatPanel(
+                    context,
+                    initialMessage: _appContent.text(
+                      'support',
+                      'chat_preset.help',
+                      fallback: 'Hello, I need help with my account.',
+                    ),
+                  ),
+                ),
+                color: AppColors.brandPrimary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.menu_book_outlined,
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.insights.title',
+                  fallback: 'Wealth Insights',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.insights.subtitle',
+                  fallback: 'Knowledge for informed investment decisions',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const WealthInsightsPage(),
+                  ),
+                ),
+                color: AppColors.gain,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.xl - 2),
+          ProfileSection(
+            title: _appContent.text(
+              'home',
+              'profile.section.legal',
+              fallback: 'Legal',
+            ),
+            children: [
+              ProfileMenuRow(
+                icon: Icons.info_outline_rounded,
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.about.title',
+                  fallback: 'About Us',
+                ),
+                subtitle: _appContent.text(
+                  'home',
+                  'profile.tile.about.subtitle',
+                  fallback: 'About our app, terms and policies',
+                ),
+                onTap: _openAbout,
+                color: AppColors.brandPrimary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.description_outlined,
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.terms.title',
+                  fallback: 'Terms & Conditions',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LegalPage(title: 'Terms'),
+                  ),
+                ),
+                color: AppColors.textSecondary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.privacy_tip_outlined,
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.privacy.title',
+                  fallback: 'Privacy Policy',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LegalPage(title: 'Privacy'),
+                  ),
+                ),
+                color: AppColors.textSecondary,
+              ),
+              ProfileMenuRow(
+                icon: Icons.warning_amber_rounded,
+                title: _appContent.text(
+                  'home',
+                  'profile.tile.risk.title',
+                  fallback: 'Risk Disclosure',
+                ),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const LegalPage(title: 'Risk Disclosure'),
+                  ),
+                ),
+                color: AppColors.warning,
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.md + 2),
+          AppCard(
+            padding: EdgeInsets.zero,
+            child: ProfileMenuRow(
+              icon: Icons.logout_rounded,
+              title: _appContent.text(
+                'home',
+                'profile.logout_label',
+                fallback: 'Logout',
+              ),
+              subtitle: _appContent.text(
+                'home',
+                'profile.logout_subtitle',
+                fallback: 'Securely logout from your account',
+              ),
+              onTap: _confirmSignOut,
+              destructive: true,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.md + 2),
+          AppText(
+            AppConfig.appName,
+            textAlign: TextAlign.center,
+            style: AppTypography.caption.copyWith(
+              color: AppColors.textTertiary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 

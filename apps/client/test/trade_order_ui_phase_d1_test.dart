@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:india_trading_app/models/account_transaction.dart';
+import 'package:india_trading_app/models/portfolio_position.dart';
 import 'package:india_trading_app/models/stock_quote.dart';
 import 'package:india_trading_app/models/trading_order.dart';
 import 'package:india_trading_app/pages/stock_detail_page.dart';
@@ -12,6 +13,7 @@ import 'package:india_trading_app/services/trading_service.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/utils/number_formatters.dart';
 import 'package:india_trading_app/widgets/markets/browse_only_banner.dart';
+import 'package:india_trading_app/widgets/trading/holdings_tab.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 StockQuote equity({
@@ -144,11 +146,39 @@ class EmptyTradingService extends TradingService {
   Future<List<AccountTransaction>> fetchTransactions() async => [];
 }
 
+class HoldingSnapshotService extends EmptyTradingService {
+  @override
+  Future<TradingAccountSnapshot?> fetchAccountSnapshot({
+    bool allowCached = true,
+  }) async => TradingAccountSnapshot.fromJson({
+    'balances': {
+      'cashBalance': 250000,
+      'buyingPower': 250000,
+      'frozenBalance': 0,
+      'totalAsset': '267472.00',
+    },
+    'pnl': {'realizedPnl': 80, 'unrealizedPnl': '672.00'},
+    'positions': [
+      {
+        'exchange': 'NSE',
+        'symbol': 'RELIANCE',
+        'name': 'Reliance Industries Limited Test Name',
+        'category': 'EQUITY',
+        'quantity': 12,
+        'availableQuantity': 12,
+        'averagePrice': '1400',
+      },
+    ],
+  });
+}
+
 Future<void> pumpTrade(
   WidgetTester tester, {
   Size size = const Size(390, 844),
   List<StockQuote> stocks = const [],
   List<TradingOrder> orders = const [],
+  Map<String, PortfolioPosition> positions = const {},
+  TradingService? tradingService,
   void Function(StockQuote stock, {required bool isBuy})? onOpen,
 }) async {
   SharedPreferences.setMockInitialValues({});
@@ -157,9 +187,9 @@ Future<void> pumpTrade(
   await tester.pumpWidget(
     host(
       TradingCenterPage(
-        tradingService: EmptyTradingService(),
+        tradingService: tradingService ?? EmptyTradingService(),
         stocks: stocks,
-        positions: const {},
+        positions: positions,
         orders: orders,
         institutionalStocks: const [],
         ipos: const [],
@@ -616,4 +646,85 @@ void main() {
     expect(find.text('Open RELIANCE'), findsOneWidget);
     await disposeTree(tester);
   });
+
+  testWidgets('holding detail Sell opens the ticket as sell', (tester) async {
+    final sides = <bool>[];
+    await pumpTrade(
+      tester,
+      stocks: [equity()],
+      tradingService: HoldingSnapshotService(),
+      onOpen: (stock, {required bool isBuy}) => sides.add(isBuy),
+    );
+    final shortcutRow = find.byWidgetPredicate(
+      (widget) =>
+          widget is ListView && widget.scrollDirection == Axis.horizontal,
+    );
+    final positionsChip = find.widgetWithText(ChoiceChip, 'Positions');
+    await tester.dragUntilVisible(
+      positionsChip.first,
+      shortcutRow.first,
+      const Offset(-60, 0),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(positionsChip.first);
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.byType(HoldingsTab), findsOneWidget);
+    await tester.tap(find.text('RELIANCE'));
+    await pumpFrames(tester);
+    expect(find.text('Sell'), findsWidgets);
+    await tester.tap(find.widgetWithText(FilledButton, 'Sell'));
+    await pumpFrames(tester);
+    expect(sides, [false]);
+    await disposeTree(tester);
+  });
+
+  testWidgets('generic Buy picker still defaults to buy', (tester) async {
+    final sides = <bool>[];
+    await pumpTrade(
+      tester,
+      stocks: [equity()],
+      onOpen: (stock, {required bool isBuy}) => sides.add(isBuy),
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'Buy'));
+    await pumpFrames(tester);
+    await tester.tap(find.text('RELIANCE'));
+    await pumpFrames(tester);
+    expect(sides, [true]);
+    await disposeTree(tester);
+  });
+
+  testWidgets(
+    'initial sell ticket confirms Sell without placing until confirm',
+    (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      FlutterSecureStorage.setMockInitialValues({});
+      setView(tester, const Size(390, 844));
+      final placed = <TradingOrder>[];
+      await tester.pumpWidget(
+        host(
+          StockDetailPage(
+            stock: equity(),
+            initialIsBuy: false,
+            marketOpen: true,
+            tradingService: EmptyTradingService(),
+            onOrderPlaced: (order) async {
+              placed.add(order);
+              return null;
+            },
+          ),
+        ),
+      );
+      await pumpFrames(tester);
+      await reveal(tester, find.text('Place Order'));
+      expect(find.byTooltip('Sell'), findsOneWidget);
+      await tester.enterText(find.widgetWithText(TextField, 'Quantity'), '1');
+      await openConfirm(tester, buy: false);
+      expect(placed, isEmpty);
+      expect(find.text('Confirm Sell'), findsOneWidget);
+      await tester.tap(find.text('Buy'));
+      await pumpFrames(tester);
+      expect(placed, isEmpty);
+      await disposeTree(tester);
+    },
+  );
 }

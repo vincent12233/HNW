@@ -1,16 +1,25 @@
 "use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, DatePicker, Input, InputNumber, Modal, Space, Table, Tag, Typography, message } from "antd";
+import { Button, DatePicker, Input, InputNumber, Modal, Space, Table, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import { api } from "@/lib/api";
 import { getBackendRole } from "@/lib/backend-role";
+import { FUNDING_COPY } from "@/lib/ops-funding";
+import { filterLoadedRows, maskOpsPhone } from "@/lib/ops-directory";
+import { formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type LoanRecord = {
   id: string;
@@ -29,22 +38,16 @@ type LoanRecord = {
   };
 };
 
-function formatMoney(value?: string | number | null) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value ?? 0));
-}
-
 function statusTag(status: string) {
-  const map: Record<string, { color: string; label: string }> = {
-    PENDING: { color: "orange", label: "待审核" },
-    APPROVED: { color: "blue", label: "已批准" },
-    REJECTED: { color: "red", label: "已拒绝" },
-    DISBURSED: { color: "blue", label: "已到账" },
-    PARTIAL_REPAID: { color: "purple", label: "部分还款" },
-    REPAID: { color: "green", label: "已结清" },
-    OVERDUE: { color: "red", label: "已逾期" },
+  const labels: Record<string, string> = {
+    PENDING: "待审核",
+    APPROVED: "已批准",
+    DISBURSED: "已到账",
+    PARTIAL_REPAID: "部分还款",
+    REPAID: "已结清",
+    OVERDUE: "已逾期",
   };
-  const config = map[status] ?? { color: "default", label: status };
-  return <Tag color={config.color}>{config.label}</Tag>;
+  return <OpsStatusTag code={status} label={labels[status]} />;
 }
 
 export default function LoansPage() {
@@ -170,22 +173,30 @@ export default function LoansPage() {
     return () => { loadGeneration.current += 1; };
   }, []);
 
-  const filtered = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return items;
-    return items.filter((item) => [item.orderNo, item.account.accountNumber, item.account.user.customerNo, item.account.user.fullName, item.account.user.phone, item.status, item.note].some((field) => String(field ?? "").toLowerCase().includes(value)));
-  }, [items, keyword]);
+  const filtered = useMemo(
+    () =>
+      filterLoadedRows(items, keyword, (item) => [
+        item.orderNo,
+        item.account.accountNumber,
+        item.account.user.customerNo,
+        item.account.user.fullName,
+        maskOpsPhone(item.account.user.phone, ""),
+        item.status,
+        item.note,
+      ]),
+    [items, keyword],
+  );
 
   const columns: ColumnsType<LoanRecord> = [
     { title: "订单号", dataIndex: "orderNo", width: 180, fixed: "left", render: (value) => <Text copyable>{value}</Text> },
-    { title: "客户", key: "customer", width: 250, render: (_, record) => <Space orientation="vertical" size={0}><Text strong>{record.account.user.fullName}</Text><Text type="secondary">{record.account.user.customerNo || "-"} / +91 {record.account.user.phone || "-"}</Text></Space> },
-    { title: "交易账号", key: "account", width: 160, render: (_, record) => record.account.accountNumber },
-    { title: "申请金额", dataIndex: "requestedAmount", width: 140, align: "right", render: (value) => Number(value) > 0 ? formatMoney(value) : "由财务决定" },
-    { title: "批准金额", dataIndex: "approvedAmount", width: 140, align: "right", render: formatMoney },
-    { title: "未还金额", dataIndex: "outstandingAmount", width: 140, align: "right", render: (value) => <Text type={Number(value) > 0 ? "danger" : undefined}>{formatMoney(value)}</Text> },
+    { title: "客户", key: "customer", width: 250, render: (_, record) => <Space orientation="vertical" size={0}><span className="ops-wrap-text">{record.account.user.fullName}</span><Text type="secondary">{record.account.user.customerNo || "—"} · {maskOpsPhone(record.account.user.phone)}</Text></Space> },
+    { title: "交易账号", key: "account", width: 160, render: (_, record) => <span className="ops-id">{record.account.accountNumber}</span> },
+    { title: "申请金额", dataIndex: "requestedAmount", width: 140, align: "right", render: (value) => Number(value) > 0 ? <OpsMoney value={value} /> : "由财务决定" },
+    { title: "批准金额", dataIndex: "approvedAmount", width: 140, align: "right", render: (value) => <OpsMoney value={value} /> },
+    { title: "未还金额", dataIndex: "outstandingAmount", width: 140, align: "right", render: (value) => <Text type={Number(value) > 0 ? "danger" : undefined}><OpsMoney value={value} /></Text> },
     { title: "状态", dataIndex: "status", width: 120, render: statusTag },
-    { title: "到期日", dataIndex: "dueDate", width: 150, render: (value) => value ? new Date(value).toLocaleDateString("zh-CN") : "-" },
-    { title: "备注", dataIndex: "note", width: 220, render: (value) => value || "-" },
+    { title: "到期日", dataIndex: "dueDate", width: 150, render: (value) => value ? formatOpsDateTime(value) : "—" },
+    { title: "备注", dataIndex: "note", width: 220, render: (value) => <span className="ops-wrap-text">{value || "—"}</span> },
     {
       title: "操作",
       key: "actions",
@@ -193,10 +204,35 @@ export default function LoansPage() {
       fixed: "right",
       render: (_, record) => (
         <Space>
-          <Button size="small" type="primary" disabled={record.status !== "PENDING"} onClick={() => approve(record)}>通过</Button>
-          <Button size="small" danger disabled={record.status !== "PENDING"} onClick={async () => { await api.patch(`/loans/${record.id}/reject`, { note: "后台拒绝" }); message.success("贷款已拒绝"); await loadItems(); }}>拒绝</Button>
+          <Button size="small" type="primary" disabled={record.status !== "PENDING"} aria-label="通过贷款" onClick={() => approve(record)}>通过</Button>
+          <Button size="small" danger disabled={record.status !== "PENDING"} aria-label="拒绝贷款" onClick={() => {
+            Modal.confirm({
+              title: "确认拒绝该贷款申请？",
+              content: `${record.account.user.fullName} · 当前待审核。结果只在服务器成功后更新。`,
+              okText: "提交到服务器",
+              okButtonProps: { danger: true },
+              cancelText: "返回",
+              async onOk() {
+                await api.patch(`/loans/${record.id}/reject`, { note: "后台拒绝" });
+                message.success("贷款已拒绝");
+                await loadItems();
+              },
+            });
+          }}>拒绝</Button>
           <Button size="small" disabled={!["DISBURSED", "PARTIAL_REPAID", "OVERDUE"].includes(record.status)} onClick={() => repay(record)}>还款</Button>
-          <Button size="small" disabled={!["DISBURSED", "PARTIAL_REPAID"].includes(record.status)} onClick={async () => { await api.patch(`/loans/${record.id}/overdue`); message.success("已标记逾期"); await loadItems(); }}>逾期</Button>
+          <Button size="small" disabled={!["DISBURSED", "PARTIAL_REPAID"].includes(record.status)} aria-label="标记贷款逾期" onClick={() => {
+            Modal.confirm({
+              title: "确认标记逾期？",
+              content: "逾期只更新当前贷款状态，不新增审批层级。结果只在服务器成功后刷新。",
+              okText: "提交到服务器",
+              cancelText: "返回",
+              async onOk() {
+                await api.patch(`/loans/${record.id}/overdue`);
+                message.success("已标记逾期");
+                await loadItems();
+              },
+            });
+          }}>逾期</Button>
         </Space>
       ),
     },
@@ -204,20 +240,25 @@ export default function LoansPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>贷款管理</Title>
-          <Paragraph type="secondary">客户提交申请无需填写金额。财务决定批准金额，审核通过后自动上分。</Paragraph>
-        </div>
-        {error && <Alert type="error" title={error} showIcon />}
-        <Card>
-          <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input allowClear prefix={<SearchOutlined />} placeholder="搜索订单号、客户编号、手机号或交易账号" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 420 }} />
-            <Button icon={<ReloadOutlined />} onClick={loadItems} loading={loading}>刷新</Button>
-            {canManage && <Button type="primary" disabled={creating} onClick={createLoan}>创建贷款</Button>}
-          </Space>
-          <Table<LoanRecord> rowKey="id" columns={canManage ? columns : columns.filter((column) => column.key !== 'actions')} dataSource={filtered} loading={loading} locale={{ emptyText: error ? "贷款记录未能加载，请刷新重试" : "暂无贷款记录" }} scroll={{ x: 1720 }} pagination={{ pageSize: 15, showTotal: (total) => `共 ${total} 条贷款记录` }} />
-        </Card>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title={FUNDING_COPY.loansTitle}
+          crumbs={[{ title: "资金" }, { title: FUNDING_COPY.loansTitle }]}
+          description={`客户提交申请无需填写金额。财务决定批准金额，审核通过后自动上分。${FUNDING_COPY.noVipPriority}`}
+        />
+        {error ? <OpsErrorState title={error} onRetry={loadItems} /> : null}
+        <OpsToolbar
+          extra={
+            <Space wrap>
+              <Button icon={<ReloadOutlined />} onClick={loadItems} loading={loading} aria-label="刷新贷款列表">刷新</Button>
+              {canManage && <Button type="primary" disabled={creating} onClick={createLoan} aria-label="创建贷款">创建贷款</Button>}
+            </Space>
+          }
+        >
+          <Input allowClear prefix={<SearchOutlined aria-hidden />} placeholder="搜索已加载的订单号、客户或交易账号" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载的贷款记录" style={{ width: 420, maxWidth: "100%" }} />
+        </OpsToolbar>
+        <Text type="secondary">{FUNDING_COPY.loadedFilter}</Text>
+        <Table<LoanRecord> rowKey="id" className="ops-directory-table" columns={canManage ? columns : columns.filter((column) => column.key !== 'actions')} dataSource={filtered} loading={loading} locale={{ emptyText: <OpsEmpty description={error ? "贷款记录未能加载，请刷新重试" : "暂无贷款记录"} onRetry={loadItems} /> }} scroll={{ x: 1720 }} pagination={OPS_TABLE_PAGINATION} />
       </Space>
     </AdminShell>
   );

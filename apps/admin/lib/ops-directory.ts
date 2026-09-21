@@ -35,6 +35,39 @@ export function useDebouncedValue<T>(value: T, delayMs = 300) {
   return debounced;
 }
 
+export function maskBankAccount(value?: string | null, empty = "—") {
+  if (!value) return empty;
+  const compact = value.replace(/\s/g, "");
+  if (compact.length < 4) return "••••";
+  return `••••${compact.slice(-4)}`;
+}
+
+export function maskIfsc(value?: string | null, empty = "—") {
+  if (!value) return empty;
+  if (value.length < 4) return "••••";
+  return `${value.slice(0, 4)}••••`;
+}
+
+export function maskUpi(value?: string | null, empty = "—") {
+  if (!value) return empty;
+  const [name, provider] = value.split("@");
+  const maskedName = !name || name.length <= 2 ? "••" : `••${name.slice(-2)}`;
+  return provider ? `${maskedName}@${provider}` : maskedName;
+}
+
+export function maskedPayoutLabel(record: {
+  upiId?: string | null;
+  bankName?: string | null;
+  accountNumber?: string | null;
+  ifscCode?: string | null;
+}) {
+  if (record.upiId) return `UPI：${maskUpi(record.upiId)}`;
+  const parts = [record.bankName, maskBankAccount(record.accountNumber, ""), maskIfsc(record.ifscCode, "")].filter(
+    (part) => part && part !== "—",
+  );
+  return parts.length ? parts.join(" / ") : "—";
+}
+
 export const LOADED_FILTER_CAPTION =
   "以下筛选只作用于已经加载的结果，不是新的服务端查询。";
 

@@ -18,6 +18,28 @@ String maskAccountPhone(String phone) {
   return '+91 ******$suffix';
 }
 
+String displayOrUnavailable(dynamic value) {
+  final text = value?.toString().trim() ?? '';
+  if (text.isEmpty || text == '--') return 'Unavailable';
+  return text;
+}
+
+String maskBankAccountNumber(String number, {required bool revealed}) {
+  final trimmed = number.trim();
+  if (trimmed.isEmpty) return 'Unavailable';
+  if (revealed) return trimmed;
+  if (trimmed.length <= 4) return '•••• $trimmed';
+  return '•••• ${trimmed.substring(trimmed.length - 4)}';
+}
+
+String maskIfscCode(String ifsc, {required bool revealed}) {
+  final trimmed = ifsc.trim().toUpperCase();
+  if (trimmed.isEmpty) return 'Unavailable';
+  if (revealed) return trimmed;
+  if (trimmed.length <= 4) return '••••';
+  return '${trimmed.substring(0, 4)}••••';
+}
+
 String profileKycLabel(String status) {
   switch (status.trim().toUpperCase()) {
     case 'APPROVED':

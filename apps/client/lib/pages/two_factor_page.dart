@@ -9,6 +9,8 @@ import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
+import '../widgets/app_buttons.dart';
+import '../widgets/app_feedback.dart';
 
 class TwoFactorPage extends StatefulWidget {
   const TwoFactorPage({super.key, this.accountService});
@@ -25,6 +27,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
   bool _hidePassword = true;
   String? _secret, _error;
   List<String>? _recovery;
+  int _loadGeneration = 0;
   @override
   void initState() {
     super.initState();
@@ -33,23 +36,29 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
 
   @override
   void dispose() {
+    _loadGeneration++;
     _password.dispose();
     _code.dispose();
     super.dispose();
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     setState(() {
       _busy = true;
       _error = null;
     });
     try {
       final status = await _service.twoFactorStatus();
-      if (mounted) setState(() => _enabled = status['enabled'] == true);
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() => _enabled = status['enabled'] == true);
     } catch (error) {
-      if (mounted) setState(() => _error = clientErrorMessage(error));
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() => _error = clientErrorMessage(error));
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted && generation == _loadGeneration) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -117,29 +126,30 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
         title: const AppText('Two-Factor Authentication'),
         automaticallyImplyLeading: _recovery == null,
       ),
-      body: Center(
+      body: _busy && _enabled == null && _error == null
+          ? const AppLoadingView(message: 'Loading authenticator settings')
+          : !_busy && _enabled == null
+          ? AppErrorView(
+              title: 'Unable to load authenticator settings',
+              message: _error,
+              onRetry: _load,
+            )
+          : Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: AppSpacing.page,
             children: [
               if (_busy) const LinearProgressIndicator(),
               if (_error != null)
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
                   child: AppText(
                     _error!,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.error,
                     ),
                   ),
-                ),
-              if (!_busy && _enabled == null)
-                AppEmptyState(
-                  title: 'Unable to load authenticator settings',
-                  message: _error,
-                  onRetry: _load,
-                  icon: Icons.cloud_off_outlined,
                 ),
               if (_recovery != null) ...[
                 const Icon(
@@ -191,6 +201,10 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                         tooltip: _hidePassword ? tr('Show') : tr('Hide'),
                         onPressed: () =>
                             setState(() => _hidePassword = !_hidePassword),
+                        constraints: const BoxConstraints(
+                          minWidth: AppMotion.tapTarget,
+                          minHeight: AppMotion.tapTarget,
+                        ),
                         icon: Icon(
                           _hidePassword
                               ? Icons.visibility
@@ -238,19 +252,15 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                     ),
                   ),
                 ],
-                const SizedBox(height: 24),
-                SizedBox(
-                  height: AppMotion.tapTarget,
-                  child: FilledButton(
+                const SizedBox(height: AppSpacing.xxl),
+                AppPrimaryButton(
+                  label: _enabled!
+                      ? 'Disable'
+                      : _secret == null
+                      ? 'Set up authenticator'
+                      : 'Confirm and enable',
+                  loading: _busy,
                   onPressed: _busy ? null : _submit,
-                  child: AppText(
-                    _enabled!
-                        ? 'Disable'
-                        : _secret == null
-                        ? 'Set up authenticator'
-                        : 'Confirm and enable',
-                  ),
-                ),
                 ),
               ],
             ],

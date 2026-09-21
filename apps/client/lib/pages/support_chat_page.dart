@@ -9,6 +9,7 @@ import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/auth_service.dart';
 import '../services/salesmartly_service.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../widgets/scrolling_notice_text.dart';
 import '../widgets/support_ui_metrics.dart';
@@ -149,17 +150,8 @@ class _SupportChatPageState extends State<SupportChatPage>
     final showNotice = _noticeVisible && hours.trim().isNotEmpty;
 
     return Material(
-      color: const Color(0xFFF4F7FC),
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0xFFE8F1FF), Color(0xFFF7F9FC), Color(0xFFFCFDFE)],
-            stops: [0, 0.4, 1],
-          ),
-        ),
-        child: FadeTransition(
+      color: AppColors.background,
+      child: FadeTransition(
           opacity: CurvedAnimation(parent: _intro, curve: Curves.easeOut),
           child: LayoutBuilder(
             builder: (context, constraints) {
@@ -273,7 +265,6 @@ class _SupportChatPageState extends State<SupportChatPage>
               return SizedBox.expand(child: Column(children: columnChildren));
             },
           ),
-        ),
       ),
     );
   }
@@ -289,17 +280,8 @@ class _SupportChatPageState extends State<SupportChatPage>
       child: Container(
         padding: EdgeInsets.all(m.headerPadding * 0.75),
         decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [AppConfig.primaryDarkColor, AppConfig.primaryColor],
-          ),
+          color: AppColors.brandDark,
           borderRadius: BorderRadius.circular(m.panelRadius * 0.85),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x28165DFF),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-          ],
         ),
         child: Row(
           children: [
@@ -457,6 +439,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                   height: 28 * m.scale,
                 ),
                 onPressed: () => setState(() => _noticeVisible = false),
+                tooltip: 'Dismiss hours notice',
                 icon: Icon(
                   Icons.close_rounded,
                   size: 14 * m.scale,

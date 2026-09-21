@@ -6,7 +6,10 @@ import '../services/client_account_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_expiry_service.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
 import '../utils/client_error_message.dart';
+import '../widgets/app_buttons.dart';
+import '../widgets/app_feedback.dart';
 
 class AccountSecurityPage extends StatefulWidget {
   const AccountSecurityPage({
@@ -28,46 +31,49 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
   final _confirm = TextEditingController();
   late final _service = widget.accountService ?? ClientAccountService();
   final _visible = <TextEditingController>{};
-  bool _loading = true;
+  late bool _loading = widget.withdrawalPin;
   bool _saving = false;
   bool _configured = false;
   bool _loadFailed = false;
   String? _error;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.withdrawalPin) {
+      _load();
+    }
   }
 
   Future<void> _load() async {
+    if (!widget.withdrawalPin) return;
+    final generation = ++_loadGeneration;
     setState(() {
       _loading = true;
       _loadFailed = false;
       _error = null;
     });
     try {
-      final configured =
-          widget.withdrawalPin && await _service.hasWithdrawalPin();
-      if (mounted) {
-        setState(() {
-          _configured = configured;
-          _loading = false;
-        });
-      }
+      final configured = await _service.hasWithdrawalPin();
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _configured = configured;
+        _loading = false;
+      });
     } catch (error) {
-      if (mounted) {
-        setState(() {
-          _error = clientErrorMessage(error);
-          _loadFailed = true;
-          _loading = false;
-        });
-      }
+      if (!mounted || generation != _loadGeneration) return;
+      setState(() {
+        _error = clientErrorMessage(error);
+        _loadFailed = true;
+        _loading = false;
+      });
     }
   }
 
   @override
   void dispose() {
+    _loadGeneration++;
     for (final controller in [_password, _currentPin, _next, _confirm]) {
       controller.dispose();
     }
@@ -98,7 +104,6 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
         }
       } else {
         await _service.changePassword(_password.text, _next.text);
-        await AuthService().clearSession();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -106,6 +111,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
             ),
           );
         }
+        await AuthService().clearSession();
         await SessionExpiryService().expire();
       }
     } catch (error) {
@@ -121,7 +127,7 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
     bool pin = false,
     bool confirmation = false,
   }) => Padding(
-    padding: const EdgeInsets.only(bottom: 18),
+    padding: const EdgeInsets.only(bottom: AppSpacing.lg),
     child: TextFormField(
       controller: controller,
       obscureText: !_visible.contains(controller),
@@ -187,80 +193,72 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
   );
 
   @override
-  Widget build(BuildContext context) => PopScope(
-    canPop: !_saving,
-    child: AppPageScaffold(
-      appBar: AppBar(
-        title: AppText(
-          widget.withdrawalPin ? 'Withdrawal PIN' : 'Change Password',
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.viewInsetsOf(context).bottom;
+    return PopScope(
+      canPop: !_saving,
+      child: AppPageScaffold(
+        appBar: AppBar(
+          title: AppText(
+            widget.withdrawalPin ? 'Withdrawal PIN' : 'Change Password',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
         ),
-      ),
-      body: _loading
-          ? const Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 12),
-                  AppText('Loading security settings'),
-                ],
-              ),
-            )
-          : _loadFailed
-          ? AppEmptyState(
-              title: 'Unable to load security settings',
-              message: _error,
-              onRetry: _load,
-              icon: Icons.cloud_off_outlined,
-            )
-          : Form(
-              key: _form,
-              child: ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  _field(_password, 'Current login password'),
-                  if (widget.withdrawalPin && _configured)
-                    _field(_currentPin, 'Current withdrawal PIN', pin: true),
-                  _field(
-                    _next,
-                    widget.withdrawalPin
-                        ? 'New withdrawal PIN'
-                        : 'New login password',
-                    pin: widget.withdrawalPin,
+        body: _loading
+            ? const AppLoadingView(message: 'Loading security settings')
+            : _loadFailed
+            ? AppErrorView(
+                title: 'Unable to load security settings',
+                message: _error,
+                onRetry: _load,
+              )
+            : Form(
+                key: _form,
+                child: ListView(
+                  padding: AppSpacing.page.add(
+                    EdgeInsets.only(bottom: bottomInset),
                   ),
-                  _field(
-                    _confirm,
-                    widget.withdrawalPin
-                        ? 'Confirm withdrawal PIN'
-                        : 'Confirm new password',
-                    pin: widget.withdrawalPin,
-                    confirmation: true,
-                  ),
-                  if (_error != null)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 16),
-                      child: AppText(
-                        _error!,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  children: [
+                    _field(_password, 'Current login password'),
+                    if (widget.withdrawalPin && _configured)
+                      _field(_currentPin, 'Current withdrawal PIN', pin: true),
+                    _field(
+                      _next,
+                      widget.withdrawalPin
+                          ? 'New withdrawal PIN'
+                          : 'New login password',
+                      pin: widget.withdrawalPin,
+                    ),
+                    _field(
+                      _confirm,
+                      widget.withdrawalPin
+                          ? 'Confirm withdrawal PIN'
+                          : 'Confirm new password',
+                      pin: widget.withdrawalPin,
+                      confirmation: true,
+                    ),
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                        child: AppText(
+                          _error!,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
                         ),
                       ),
+                    AppPrimaryButton(
+                      label: 'Save changes',
+                      loading: _saving,
+                      onPressed: _saving ? null : _save,
                     ),
-                  SizedBox(
-                    height: AppMotion.tapTarget,
-                    child: FilledButton(
-                    onPressed: _saving ? null : _save,
-                    child: _saving
-                        ? const SizedBox.square(
-                            dimension: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const AppText('Save changes'),
-                  ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-    ),
-  );
+      ),
+    );
+  }
 }

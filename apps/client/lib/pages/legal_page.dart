@@ -4,6 +4,7 @@ import '../services/app_content_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import '../widgets/app_feedback.dart';
 import 'package:flutter/material.dart';
 
 class LegalPage extends StatefulWidget {
@@ -68,7 +69,11 @@ class _LegalPageState extends State<LegalPage> {
 
     return AppPageScaffold(
       appBar: AppBar(
-        title: AppText(heading),
+        title: AppText(
+          heading,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
           IconButton(
             tooltip: tr('Refresh'),
@@ -78,7 +83,7 @@ class _LegalPageState extends State<LegalPage> {
         ],
       ),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingView(message: 'Loading document')
           : Align(
               alignment: Alignment.topCenter,
               child: ConstrainedBox(

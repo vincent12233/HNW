@@ -6,6 +6,10 @@ import '../app_config.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../utils/number_formatters.dart';
+import '../widgets/app_card.dart';
+import '../widgets/app_feedback.dart';
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key, this.accountService});
@@ -23,6 +27,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   bool loading = true;
   bool markingAll = false;
   String? errorMessage;
+  int _loadGeneration = 0;
 
   bool get hasUnread => items.any((item) => item['readAt'] == null);
   int get unreadCount => items.where((item) => item['readAt'] == null).length;
@@ -33,8 +38,15 @@ class _NotificationsPageState extends State<NotificationsPage> {
     load();
   }
 
+  @override
+  void dispose() {
+    _loadGeneration++;
+    super.dispose();
+  }
+
   Future<void> load() async {
     if (!mounted || _fetching || markingAll || markingRead.isNotEmpty) return;
+    final generation = ++_loadGeneration;
     _fetching = true;
     if (mounted) {
       setState(() {
@@ -44,14 +56,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
     }
     try {
       final result = await service.notifications();
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() => items = result);
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() => errorMessage = 'Unable to load notifications');
     } finally {
       _fetching = false;
-      if (mounted) setState(() => loading = false);
+      if (mounted && generation == _loadGeneration) {
+        setState(() => loading = false);
+      }
     }
   }
 
@@ -118,6 +132,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
         if (hasUnread)
           IconButton(
             tooltip: 'Mark all as read',
+            constraints: const BoxConstraints(
+              minWidth: AppMotion.tapTarget,
+              minHeight: AppMotion.tapTarget,
+            ),
             onPressed: markingAll || loading || markingRead.isNotEmpty
                 ? null
                 : markAllRead,
@@ -130,6 +148,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
           ),
         IconButton(
           tooltip: 'Refresh',
+          constraints: const BoxConstraints(
+            minWidth: AppMotion.tapTarget,
+            minHeight: AppMotion.tapTarget,
+          ),
           onPressed: loading || markingAll || markingRead.isNotEmpty
               ? null
               : load,
@@ -140,21 +162,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
     body: AppStatusSwitch(
       switchKey: '$loading|$errorMessage|${items.length}',
       child: loading && items.isEmpty
-        ? const Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: AppSpacing.md),
-                AppText('Loading notifications'),
-              ],
-            ),
-          )
+        ? const AppLoadingView(message: 'Loading notifications')
         : errorMessage != null && items.isEmpty
-        ? AppEmptyState(
+        ? AppErrorView(
             title: 'Unable to load notifications',
             message: 'The server did not return notifications. You can retry.',
-            icon: Icons.cloud_off_outlined,
             onRetry: load,
           )
         : items.isEmpty
@@ -166,33 +178,29 @@ class _NotificationsPageState extends State<NotificationsPage> {
         : RefreshIndicator(
             onRefresh: load,
             child: ListView.builder(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+              padding: AppSpacing.page,
               physics: const AlwaysScrollableScrollPhysics(),
               itemCount: items.length + 1,
               itemBuilder: (_, index) {
                 if (index == 0) {
                   return Padding(
-                    padding: const EdgeInsets.fromLTRB(2, 0, 2, 10),
+                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: Row(
                       children: [
                         const Expanded(
                           child: AppText(
                             'Recent updates',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
+                            style: AppTypography.titleMedium,
                           ),
                         ),
                         AppText(
                           unreadCount == 0
                               ? 'All caught up'
                               : '$unreadCount unread',
-                          style: TextStyle(
+                          style: AppTypography.caption.copyWith(
                             color: unreadCount == 0
                                 ? AppConfig.textSecondaryColor
                                 : AppConfig.primaryColor,
-                            fontSize: 12,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
@@ -205,73 +213,84 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 final type = item['type']?.toString();
                 final paymentRequired = type == 'IPO_PAYMENT_REQUIRED';
                 final settled = type == 'IPO_ALLOTMENT_SETTLED';
-                final outcomeColor = paymentRequired
-                    ? const Color(0xFFB45309)
-                    : settled
-                    ? const Color(0xFF047857)
-                    : null;
                 final id = item['id']?.toString() ?? '';
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  elevation: 0,
-                  color: paymentRequired
-                      ? const Color(0xFFFFFBEB)
-                      : settled
-                      ? const Color(0xFFECFDF5)
-                      : unread
-                      ? const Color(0xFFF1F6FF)
-                      : Colors.white,
-                  child: ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 14,
-                      vertical: 6,
-                    ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                  child: AppCard(
+                    backgroundColor: paymentRequired
+                        ? const Color(0xFFFFFBEB)
+                        : settled
+                        ? const Color(0xFFECFDF5)
+                        : unread
+                        ? const Color(0xFFF1F6FF)
+                        : Colors.white,
                     onTap: unread ? () => markRead(item) : null,
-                    leading: CircleAvatar(
-                      radius: 20,
-                      backgroundColor:
-                          outcomeColor?.withValues(alpha: 0.12) ??
-                          (unread
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        CircleAvatar(
+                          radius: 20,
+                          backgroundColor: paymentRequired
+                              ? const Color(0xFFB45309).withValues(alpha: 0.12)
+                              : settled
+                              ? const Color(0xFF047857).withValues(alpha: 0.12)
+                              : unread
                               ? const Color(0xFFDDEAFF)
-                              : const Color(0xFFF1F5F9)),
-                      child: Icon(
-                        _icon(item['type']?.toString()),
-                        size: 20,
-                        color:
-                            outcomeColor ??
-                            (unread
+                              : const Color(0xFFF1F5F9),
+                          child: Icon(
+                            _icon(item['type']?.toString()),
+                            size: 20,
+                            color: paymentRequired
+                                ? const Color(0xFFB45309)
+                                : settled
+                                ? const Color(0xFF047857)
+                                : unread
                                 ? AppConfig.primaryColor
-                                : AppConfig.textSecondaryColor),
-                      ),
-                    ),
-                    title: AppText(
-                      item['title']?.toString() ?? '',
-                      style: TextStyle(
-                        fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
-                      ),
-                    ),
-                    subtitle: AppText(
-                      _subtitle(item),
-                      maxLines: paymentRequired || settled ? null : 3,
-                      overflow: paymentRequired || settled
-                          ? TextOverflow.visible
-                          : TextOverflow.ellipsis,
-                    ),
-                    trailing: markingRead.contains(id)
-                        ? const SizedBox.square(
+                                : AppConfig.textSecondaryColor,
+                          ),
+                        ),
+                        const SizedBox(width: AppSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                item['title']?.toString() ?? '',
+                                style: TextStyle(
+                                  fontWeight: unread
+                                      ? FontWeight.w700
+                                      : FontWeight.w500,
+                                ),
+                              ),
+                              AppText(
+                                _subtitle(item),
+                                maxLines: paymentRequired || settled ? null : 3,
+                                overflow: paymentRequired || settled
+                                    ? TextOverflow.visible
+                                    : TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (markingRead.contains(id))
+                          const SizedBox.square(
                             dimension: 16,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : unread
-                        ? Container(
-                            width: 9,
-                            height: 9,
-                            decoration: const BoxDecoration(
-                              color: AppConfig.primaryColor,
-                              shape: BoxShape.circle,
+                        else if (unread)
+                          Semantics(
+                            label: 'Unread',
+                            child: Container(
+                              width: 9,
+                              height: 9,
+                              decoration: const BoxDecoration(
+                                color: AppConfig.primaryColor,
+                                shape: BoxShape.circle,
+                              ),
                             ),
-                          )
-                        : null,
+                          ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -301,11 +320,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
     if (rawDate == null || rawDate.isEmpty) return body;
     final date = DateTime.tryParse(rawDate)?.toLocal();
     if (date == null) return body;
-    final ist = date.toUtc().add(const Duration(hours: 5, minutes: 30));
-    String two(int number) => number.toString().padLeft(2, '0');
-    final stamp =
-        '${two(ist.day)}/${two(ist.month)}/${ist.year} '
-        '${two(ist.hour)}:${two(ist.minute)} IST';
+    final stamp = formatAppDateTime(date);
     return body.isEmpty ? stamp : '$body\n$stamp';
   }
 }

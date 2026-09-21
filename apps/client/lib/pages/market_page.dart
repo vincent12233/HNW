@@ -2113,7 +2113,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 subtitle: _appContent.text(
                   'home',
                   'profile.tile.help.subtitle',
-                  fallback: 'FAQs, contact support and raise a ticket',
+                  fallback: 'FAQs and contact support',
                 ),
                 onTap: () => unawaited(
                   showSupportChatPanel(

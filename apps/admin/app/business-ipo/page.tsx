@@ -6,16 +6,12 @@ import {
   SendOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
   Button,
-  Card,
   Input,
   InputNumber,
   Modal,
-  Popconfirm,
   Space,
   Table,
-  Tag,
   Typography,
   message,
 } from "antd";
@@ -23,9 +19,19 @@ import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api, getApiErrorMessage, mapApiErrorText } from '@/lib/api';
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
+import { api, getApiErrorMessage, mapApiErrorText } from "@/lib/api";
+import { filterLoadedRows, maskOpsPhone } from "@/lib/ops-directory";
+import { formatInr, formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
+import { PRODUCT_COPY, ipoApplicationStatusLabel } from "@/lib/ops-product";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type IpoApplication = {
   draftQuantity?: number | null;
@@ -61,16 +67,8 @@ type IpoApplication = {
   debt?: { amount: string; paidAmount: string; status: string } | null;
 };
 
-function formatMoney(value?: string | number | null) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value ?? 0));
-}
-
 function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString("zh-CN") : "-";
+  return formatOpsDateTime(value);
 }
 
 export default function BusinessIpoPage() {
@@ -80,6 +78,7 @@ export default function BusinessIpoPage() {
   const [error, setError] = useState("");
   const [selected, setSelected] = useState<React.Key[]>([]);
   const [publishing, setPublishing] = useState(false);
+  const [publishingIds, setPublishingIds] = useState<string[] | null>(null);
   const canPublish = (row: IpoApplication) =>
     row.status === "PENDING" &&
     !row.publishedAt &&
@@ -152,7 +151,7 @@ export default function BusinessIpoPage() {
             {record.ipo.symbol} / {record.ipo.companyName}
           </Text>
           <Text type="secondary">
-            客户现金：{formatMoney(record.account.cashBalance)}
+            客户现金：{formatInr(record.account.cashBalance)}
             。保存分配不扣款，公布后才执行扣款、欠款及持仓处理。
           </Text>
           <Text type="secondary">
@@ -181,7 +180,7 @@ export default function BusinessIpoPage() {
             }}
           />
           <Text>
-            结算价（申购价）：{formatMoney(record.ipo.issuePrice)}
+            结算价（申购价）：{formatInr(record.ipo.issuePrice)}
           </Text>
           <Text type="secondary">
             分配结算固定使用超管申购价；不可超过剩余可分配股数（已扣除其他未公布草稿）。
@@ -236,26 +235,20 @@ export default function BusinessIpoPage() {
     loadItems();
   }, []);
 
-  const filtered = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return items;
-    return items.filter((item) =>
-      [
+  const filtered = useMemo(
+    () =>
+      filterLoadedRows(items, keyword, (item) => [
         item.ipo.symbol,
         item.ipo.companyName,
         item.account.accountNumber,
         item.account.user.customerNo,
         item.account.user.fullName,
-        item.account.user.phone,
+        maskOpsPhone(item.account.user.phone, ""),
         item.status,
         item.paymentStatus,
-      ].some((field) =>
-        String(field ?? "")
-          .toLowerCase()
-          .includes(value),
-      ),
-    );
-  }, [items, keyword]);
+      ]),
+    [items, keyword],
+  );
 
   const columns: ColumnsType<IpoApplication> = [
     {
@@ -265,10 +258,9 @@ export default function BusinessIpoPage() {
       fixed: "left",
       render: (_, record) => (
         <Space orientation="vertical" size={0}>
-          <Text strong>{record.account.user.fullName || "未命名客户"}</Text>
+          <span className="ops-wrap-text">{record.account.user.fullName || "未命名客户"}</span>
           <Text type="secondary">
-            {record.account.user.customerNo || "-"} / +91{" "}
-            {record.account.user.phone || "-"}
+            {record.account.user.customerNo || "—"} · {maskOpsPhone(record.account.user.phone)}
           </Text>
         </Space>
       ),
@@ -277,7 +269,7 @@ export default function BusinessIpoPage() {
       title: "交易账号",
       key: "account",
       width: 160,
-      render: (_, record) => record.account.accountNumber,
+      render: (_, record) => <span className="ops-id">{record.account.accountNumber}</span>,
     },
     {
       title: "IPO",
@@ -295,25 +287,13 @@ export default function BusinessIpoPage() {
       key: "issuePrice",
       width: 120,
       align: "right",
-      render: (_, record) => formatMoney(record.ipo.issuePrice),
+      render: (_, record) => <OpsMoney value={record.ipo.issuePrice} />,
     },
     {
       title: "申请状态",
       width: 120,
       render: (_, row) => (
-        <Tag color={row.status === "PENDING" ? "orange" : "blue"}>
-          {row.status === "PENDING"
-            ? row.draftQuantity
-              ? "待公布分配"
-              : "待分配"
-            : (
-                {
-                  ALLOTTED: "已公布分配",
-                  APPROVED: "已通过",
-                  REJECTED: "已拒绝",
-                } as Record<string, string>
-              )[row.status] || "未知状态"}
-        </Tag>
+        <OpsStatusTag code={row.status} label={ipoApplicationStatusLabel(row.status, row.draftQuantity)} />
       ),
     },
     {
@@ -321,17 +301,20 @@ export default function BusinessIpoPage() {
       dataIndex: "paymentStatus",
       width: 120,
       render: (value, row) => (
-        <Tag color={value === "PAID" ? "green" : "orange"}>
-          {row.status === "PENDING"
-            ? "未扣款"
-            : (
-                {
-                  PAID: "已付款",
-                  PENDING: "待补款",
-                  FAILED: "付款失败",
-                } as Record<string, string>
-              )[value] || "未知状态"}
-        </Tag>
+        <OpsStatusTag
+          code={value}
+          label={
+            row.status === "PENDING"
+              ? "未扣款"
+              : value === "PAID"
+                ? "已付款"
+                : value === "PENDING"
+                  ? "待补款"
+                  : value === "FAILED"
+                    ? "付款失败"
+                    : undefined
+          }
+        />
       ),
     },
     {
@@ -347,10 +330,8 @@ export default function BusinessIpoPage() {
       width: 120,
       render: (_, row) =>
         row.draftPrice || row.allocatedPrice
-          ? formatMoney(
-              row.status === "PENDING" ? row.draftPrice : row.allocatedPrice,
-            )
-          : "-",
+          ? <OpsMoney value={row.status === "PENDING" ? row.draftPrice : row.allocatedPrice} />
+          : "—",
     },
     {
       title: "欠款",
@@ -359,10 +340,8 @@ export default function BusinessIpoPage() {
       align: "right",
       render: (_, record) =>
         record.debt
-          ? formatMoney(
-              Number(record.debt.amount) - Number(record.debt.paidAmount),
-            )
-          : "-",
+          ? <OpsMoney value={Number(record.debt.amount) - Number(record.debt.paidAmount)} />
+          : "—",
     },
     {
       title: "申请时间",
@@ -384,22 +363,16 @@ export default function BusinessIpoPage() {
           >
             {record.draftQuantity ? "修改分配" : "分配"}
           </Button>
-          <Popconfirm
-            title="确认公布分配结果并执行扣款？"
-            okText="公布并结算"
-            cancelText="取消"
-            onConfirm={() => publish([record.id])}
+          <Button
+            type="primary"
+            size="small"
+            icon={<SendOutlined />}
             disabled={publishing || !canPublish(record)}
+            aria-label={`公布 ${record.ipo.symbol} 分配`}
+            onClick={() => setPublishingIds([record.id])}
           >
-            <Button
-              type="primary"
-              size="small"
-              icon={<SendOutlined />}
-              disabled={publishing || !canPublish(record)}
-            >
-              公布分配
-            </Button>
-          </Popconfirm>
+            公布分配
+          </Button>
         </Space>
       ),
     },
@@ -407,57 +380,44 @@ export default function BusinessIpoPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>IPO 分配</Title>
-          <Paragraph type="secondary">
-            先保存分配，再单个或批量公布。公布后自动扣款，不足部分生成欠款，补足后转入持仓。
-          </Paragraph>
-        </div>
-        {error && <Alert type="error" title={error} showIcon />}
-        <Card>
-          <Space
-            wrap
-            style={{
-              width: "100%",
-              justifyContent: "space-between",
-              marginBottom: 16,
-            }}
-          >
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索客户、手机号、交易账号或 IPO"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              style={{ width: 420 }}
-            />
-            <Button
-              icon={<ReloadOutlined />}
-              onClick={loadItems}
-              loading={loading}
-            >
-              刷新
-            </Button>
-            <Popconfirm
-              title={`公布所选 ${selected.length} 条分配结果并执行扣款？`}
-              okText="批量公布并结算"
-              cancelText="取消"
-              onConfirm={() => publish(selected.map(String))}
-              disabled={!selected.length || publishing}
-            >
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title={PRODUCT_COPY.ipoAppsTitle}
+          crumbs={[{ title: "产品" }, { title: PRODUCT_COPY.ipoAppsTitle }]}
+          description={`先保存分配，再单个或批量公布。公布后自动扣款，不足部分生成欠款，补足后转入持仓。结果只在服务器成功后刷新。${PRODUCT_COPY.noVip}`}
+        />
+        {error ? <OpsErrorState title={error} onRetry={loadItems} /> : null}
+        <OpsToolbar
+          extra={
+            <Space wrap>
+              <Button icon={<ReloadOutlined />} onClick={loadItems} loading={loading} aria-label="刷新 IPO 申请">刷新</Button>
               <Button
                 type="primary"
                 icon={<SendOutlined />}
                 loading={publishing}
                 disabled={!selected.length}
+                aria-label="批量公布分配"
+                onClick={() => setPublishingIds(selected.map(String))}
               >
                 批量公布（{selected.length}）
               </Button>
-            </Popconfirm>
-          </Space>
+            </Space>
+          }
+        >
+          <Input
+            allowClear
+            prefix={<SearchOutlined aria-hidden />}
+            placeholder="搜索已加载的客户、交易账号或 IPO"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            aria-label="搜索已加载的 IPO 申请"
+            style={{ width: 420, maxWidth: "100%" }}
+          />
+        </OpsToolbar>
+        <Text type="secondary">{PRODUCT_COPY.loadedFilter}</Text>
           <Table<IpoApplication>
             rowKey="id"
+            className="ops-directory-table"
             columns={columns}
             dataSource={filtered}
             loading={loading}
@@ -469,13 +429,26 @@ export default function BusinessIpoPage() {
               }),
             }}
             scroll={{ x: 1760 }}
-            pagination={{
-              pageSize: 15,
-              showTotal: (total) => `共 ${total} 条 IPO 申请`,
-            }}
+            pagination={OPS_TABLE_PAGINATION}
+            locale={{ emptyText: <OpsEmpty description={loading ? "正在加载 IPO 申请" : "当前没有 IPO 申请。"} onRetry={loading ? undefined : loadItems} /> }}
           />
-        </Card>
       </Space>
+      <OpsModal
+        title="确认公布分配并扣款"
+        open={!!publishingIds}
+        confirmLoading={publishing}
+        onCancel={() => { if (!publishing) setPublishingIds(null); }}
+        onOk={async () => {
+          if (!publishingIds) return;
+          await publish(publishingIds);
+          setPublishingIds(null);
+        }}
+        okText="提交到服务器"
+        cancelText="返回"
+        zIndex={2100}
+      >
+        <Text>将公布 {publishingIds?.length ?? 0} 条分配结果。未扣款前状态保持当前值，失败记录不会从列表删除。</Text>
+      </OpsModal>
     </AdminShell>
   );
 }

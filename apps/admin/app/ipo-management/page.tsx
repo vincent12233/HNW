@@ -1,27 +1,34 @@
 "use client";
 
-import { EditOutlined, PlusOutlined, ReloadOutlined } from "@ant-design/icons";
+import { EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import {
   Button,
-  Card,
   DatePicker,
   Form,
   Input,
   InputNumber,
-  Modal,
   Select,
   Space,
   Table,
-  Tag,
   Typography,
   message,
 } from "antd";
 import dayjs from "dayjs";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { filterLoadedRows } from "@/lib/ops-directory";
+import { formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
+import { PRODUCT_COPY, ipoCatalogStatusLabel } from "@/lib/ops-product";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type Instrument = {
   id: string;
@@ -69,14 +76,19 @@ export default function IpoManagementPage() {
   const [items, setItems] = useState<Ipo[]>([]);
   const [instruments, setInstruments] = useState<Instrument[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [keyword, setKeyword] = useState("");
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Ipo | null>(null);
+  const [confirming, setConfirming] = useState<{ record: Ipo; status: Ipo["status"] } | null>(null);
+  const [savingStatus, setSavingStatus] = useState(false);
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
 
   async function load() {
     setLoading(true);
+    setError("");
     try {
       const [ipoResponse, instrumentResponse] = await Promise.all([
         api.get<{ data: Ipo[] }>("/admin/ipo"),
@@ -86,6 +98,8 @@ export default function IpoManagementPage() {
       ]);
       setItems(ipoResponse.data.data ?? []);
       setInstruments(instrumentResponse.data.data ?? []);
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "IPO 列表加载失败"));
     } finally {
       setLoading(false);
     }
@@ -152,6 +166,8 @@ export default function IpoManagementPage() {
   }
 
   async function setStatus(record: Ipo, status: Ipo["status"]) {
+    if (savingStatus) return;
+    setSavingStatus(true);
     try {
       await api.patch(`/admin/ipo/${record.id}/status`, { status });
       message.success(
@@ -161,47 +177,54 @@ export default function IpoManagementPage() {
             ? "IPO 已下架"
             : "状态已更新",
       );
+      setConfirming(null);
       await load();
     } catch (error) {
       message.error(getApiErrorMessage(error, "状态更新失败，请稍后重试"));
+    } finally {
+      setSavingStatus(false);
     }
   }
 
+  const filtered = useMemo(
+    () =>
+      filterLoadedRows(items, keyword, (item) => [
+        item.symbol,
+        item.companyName,
+        item.exchange,
+        item.status,
+      ]),
+    [items, keyword],
+  );
+
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>IPO 上架管理</Title>
-          <Paragraph type="secondary">
-            超级管理员只负责将产品上架到
-            APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO
-            已上市。申购价由超管编辑并用于结算；草稿或尚无申购时可改申购价与认购期间；上市后实时行情仅用于展示价差。
-          </Paragraph>
-        </div>
-        <Card>
-          <Space
-            style={{
-              width: "100%",
-              justifyContent: "space-between",
-              marginBottom: 16,
-            }}
-          >
-            <Button icon={<ReloadOutlined />} onClick={load} loading={loading}>
-              刷新
-            </Button>
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={() => setOpen(true)}
-            >
-              创建 IPO
-            </Button>
-          </Space>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title={PRODUCT_COPY.ipoTitle}
+          crumbs={[{ title: "产品" }, { title: PRODUCT_COPY.ipoTitle }]}
+          description={`超级管理员只负责将产品上架到 APP。客户申请的审核、分配和公布由业务员后台处理；上架不代表 IPO 已上市。${PRODUCT_COPY.listedNotSettled} ${PRODUCT_COPY.noVip}`}
+        />
+        {error ? <OpsErrorState title={error} onRetry={load} /> : null}
+        <OpsToolbar
+          extra={
+            <Space wrap>
+              <Button icon={<ReloadOutlined />} onClick={load} loading={loading} aria-label="刷新 IPO 列表">刷新</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={() => setOpen(true)} aria-label="创建 IPO">创建 IPO</Button>
+            </Space>
+          }
+        >
+          <Input allowClear prefix={<SearchOutlined aria-hidden />} placeholder="搜索已加载的代码、公司或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载的 IPO" style={{ width: 360, maxWidth: "100%" }} />
+        </OpsToolbar>
+        <Text type="secondary">{PRODUCT_COPY.loadedFilter}</Text>
           <Table<Ipo>
             rowKey="id"
+            className="ops-directory-table"
             loading={loading}
-            dataSource={items}
+            dataSource={filtered}
             scroll={{ x: 1280 }}
+            pagination={OPS_TABLE_PAGINATION}
+            locale={{ emptyText: <OpsEmpty description={loading ? "正在加载 IPO" : "当前没有 IPO 记录。"} onRetry={loading ? undefined : load} /> }}
             columns={[
               {
                 title: "IPO",
@@ -209,16 +232,17 @@ export default function IpoManagementPage() {
                 render: (_, r) => (
                   <Space orientation="vertical" size={0}>
                     <Text strong>{r.symbol}</Text>
-                    <Text type="secondary">{r.companyName}</Text>
+                    <Text type="secondary" className="ops-wrap-text">{r.companyName}</Text>
                   </Space>
                 ),
               },
-              { title: "申购价", dataIndex: "issuePrice", width: 110 },
+              { title: "申购价", dataIndex: "issuePrice", width: 110, align: "right", render: (v) => <OpsMoney value={v} /> },
               {
                 title: "展示行情",
                 dataIndex: "marketPrice",
                 width: 110,
-                render: (v: string | undefined, r) => v ?? r.issuePrice,
+                align: "right",
+                render: (v: string | undefined, r) => <OpsMoney value={v ?? r.issuePrice} />,
               },
               { title: "每手", dataIndex: "lotSize", width: 90 },
               { title: "发行总量", dataIndex: "totalShares", width: 100 },
@@ -241,33 +265,16 @@ export default function IpoManagementPage() {
               {
                 title: "状态",
                 dataIndex: "status",
-                width: 130,
-                render: (v) => (
-                  <Tag
-                    color={
-                      v === "PUBLISHED" || v === "OPEN" || v === "LISTED"
-                        ? "green"
-                        : v === "DRAFT"
-                          ? "gold"
-                          : "default"
-                    }
-                  >
-                    {{
-                      PUBLISHED: "已上架（APP 可认购）",
-                      OPEN: "已上架（旧数据）",
-                      DRAFT: "草稿",
-                      CLOSED: "已下架",
-                      LISTED: "已上市（展示实时行情，仍按申购价结算）",
-                      ALLOTMENT_DONE: "分配已完成",
-                    }[v as Ipo["status"]] ?? v}
-                  </Tag>
+                width: 180,
+                render: (v: string) => (
+                  <OpsStatusTag code={v === "OPEN" ? "OPEN_IPO" : v} label={ipoCatalogStatusLabel(v)} />
                 ),
               },
               {
                 title: "申购期间",
                 width: 310,
                 render: (_, r) =>
-                  `${new Date(r.openDate).toLocaleString()} — ${new Date(r.closeDate).toLocaleString()}`,
+                  `${formatOpsDateTime(r.openDate)} — ${formatOpsDateTime(r.closeDate)}`,
               },
               {
                 title: "操作",
@@ -279,6 +286,7 @@ export default function IpoManagementPage() {
                       size="small"
                       icon={<EditOutlined />}
                       disabled={!canEditPricing(r)}
+                      aria-label={`编辑 ${r.symbol} 申购价`}
                       onClick={() => openEdit(r)}
                     >
                       编辑申购价
@@ -292,7 +300,8 @@ export default function IpoManagementPage() {
                         r.status === "LISTED" ||
                         r.status === "ALLOTMENT_DONE"
                       }
-                      onClick={() => setStatus(r, "PUBLISHED")}
+                      aria-label={`上架 ${r.symbol}`}
+                      onClick={() => setConfirming({ record: r, status: "PUBLISHED" })}
                     >
                       上架到 APP
                     </Button>
@@ -300,7 +309,8 @@ export default function IpoManagementPage() {
                       size="small"
                       danger
                       disabled={r.status !== "PUBLISHED" && r.status !== "OPEN"}
-                      onClick={() => setStatus(r, "CLOSED")}
+                      aria-label={`下架 ${r.symbol}`}
+                      onClick={() => setConfirming({ record: r, status: "CLOSED" })}
                     >
                       下架
                     </Button>
@@ -309,13 +319,13 @@ export default function IpoManagementPage() {
               },
             ]}
           />
-        </Card>
-        <Modal
+        <OpsModal
           title="创建并上架到 APP"
           open={open}
           onCancel={() => setOpen(false)}
           onOk={create}
           okText="创建并上架到 APP"
+          zIndex={2100}
         >
           <Form form={form} layout="vertical">
             <Form.Item
@@ -368,8 +378,8 @@ export default function IpoManagementPage() {
               <DatePicker.RangePicker showTime style={{ width: "100%" }} />
             </Form.Item>
           </Form>
-        </Modal>
-        <Modal
+        </OpsModal>
+        <OpsModal
           title={
             editing ? `编辑申购价 · ${editing.symbol}` : "编辑申购价"
           }
@@ -381,10 +391,11 @@ export default function IpoManagementPage() {
           }}
           onOk={saveEdit}
           okText="保存"
+          zIndex={2100}
         >
-          <Paragraph type="secondary" style={{ marginTop: 0 }}>
+          <Text type="secondary" style={{ display: "block", marginBottom: 12 }}>
             仅草稿或尚无申购时可修改。分配与入账始终按存储的申购价结算。
-          </Paragraph>
+          </Text>
           <Form form={editForm} layout="vertical">
             <Form.Item
               name="issuePrice"
@@ -401,7 +412,25 @@ export default function IpoManagementPage() {
               <DatePicker.RangePicker showTime style={{ width: "100%" }} />
             </Form.Item>
           </Form>
-        </Modal>
+        </OpsModal>
+        <OpsModal
+          title={confirming?.status === "CLOSED" ? "确认下架 IPO" : "确认上架到 APP"}
+          open={!!confirming}
+          confirmLoading={savingStatus}
+          onCancel={() => { if (!savingStatus) setConfirming(null); }}
+          onOk={() => confirming && setStatus(confirming.record, confirming.status)}
+          okText="提交到服务器"
+          cancelText="返回"
+          okButtonProps={{ danger: confirming?.status === "CLOSED" }}
+          zIndex={2100}
+        >
+          {confirming ? (
+            <Space orientation="vertical">
+              <Text>{confirming.record.symbol} · {confirming.record.companyName} · 当前 {ipoCatalogStatusLabel(confirming.record.status)}</Text>
+              <Text type="secondary">{confirming.status === "PUBLISHED" ? "上架不代表上市或已成交。" : "下架后客户无法继续认购。"} {PRODUCT_COPY.listedNotSettled}</Text>
+            </Space>
+          ) : null}
+        </OpsModal>
       </Space>
     </AdminShell>
   );

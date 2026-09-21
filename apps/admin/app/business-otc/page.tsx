@@ -7,23 +7,30 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
   Button,
-  Card,
   Input,
-  Popconfirm,
   Space,
   Table,
-  Tag,
   Typography,
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { filterLoadedRows } from "@/lib/ops-directory";
+import { formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
+import { PRODUCT_COPY } from "@/lib/ops-product";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
+
 type OtcOrder = {
   id: string;
   orderNo: string;
@@ -38,10 +45,6 @@ type OtcOrder = {
     user: { fullName: string; phone?: string };
   };
 };
-const money = (value: string | number) =>
-  new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(
-    Number(value),
-  );
 
 export default function BusinessOtcPage() {
   const [items, setItems] = useState<OtcOrder[]>([]);
@@ -49,6 +52,7 @@ export default function BusinessOtcPage() {
   const [error, setError] = useState("");
   const [reviewing, setReviewing] = useState<string | null>(null);
   const [keyword, setKeyword] = useState("");
+  const [confirming, setConfirming] = useState<{ order: OtcOrder; decision: "approve" | "reject" } | null>(null);
 
   async function load() {
     setLoading(true);
@@ -66,24 +70,18 @@ export default function BusinessOtcPage() {
     void load();
   }, []);
 
-  const filtered = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return items;
-    return items.filter((item) =>
-      [
+  const filtered = useMemo(
+    () =>
+      filterLoadedRows(items, keyword, (item) => [
         item.orderNo,
         item.instrument.symbol,
         item.instrument.name,
         item.account.accountNumber,
         item.account.user.fullName,
         item.status,
-      ].some((field) =>
-        String(field ?? "")
-          .toLowerCase()
-          .includes(value),
-      ),
-    );
-  }, [items, keyword]);
+      ]),
+    [items, keyword],
+  );
 
   async function review(id: string, decision: "approve" | "reject") {
     if (reviewing) return;
@@ -98,6 +96,7 @@ export default function BusinessOtcPage() {
           ? "审核通过，已完成结算并转入持仓"
           : "订单已拒绝",
       );
+      setConfirming(null);
       await load();
     } catch (error) {
       message.error(
@@ -120,8 +119,8 @@ export default function BusinessOtcPage() {
       width: 190,
       render: (_, r) => (
         <Space orientation="vertical" size={0}>
-          <Text strong>{r.account.user.fullName}</Text>
-          <Text type="secondary">{r.account.accountNumber}</Text>
+          <span className="ops-wrap-text">{r.account.user.fullName}</span>
+          <Text type="secondary" className="ops-id">{r.account.accountNumber}</Text>
         </Space>
       ),
     },
@@ -131,7 +130,7 @@ export default function BusinessOtcPage() {
       render: (_, r) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{r.instrument.symbol}</Text>
-          <Text type="secondary">{r.instrument.name}</Text>
+          <Text type="secondary" className="ops-wrap-text">{r.instrument.name}</Text>
         </Space>
       ),
     },
@@ -141,27 +140,26 @@ export default function BusinessOtcPage() {
       dataIndex: "price",
       align: "right",
       width: 140,
-      render: money,
+      render: (value) => <OpsMoney value={value} />,
     },
     {
       title: "订单金额",
       dataIndex: "amount",
       align: "right",
       width: 150,
-      render: money,
+      render: (value) => <OpsMoney value={value} />,
     },
     {
       title: "状态",
       dataIndex: "status",
       width: 120,
-      render: (v: OtcOrder["status"]) => (
-        <Tag
-          color={v === "APPROVED" ? "green" : v === "REJECTED" ? "red" : "gold"}
-        >
-          {{ PENDING: "待审核", APPROVED: "已通过", REJECTED: "已拒绝" }[v] ??
-            "未知状态"}
-        </Tag>
-      ),
+      render: (v: OtcOrder["status"]) => <OpsStatusTag code={v} />,
+    },
+    {
+      title: "申请时间",
+      dataIndex: "createdAt",
+      width: 180,
+      render: (value: string) => formatOpsDateTime(value),
     },
     {
       title: "操作",
@@ -169,87 +167,85 @@ export default function BusinessOtcPage() {
       width: 190,
       render: (_, r) => (
         <Space>
-          <Popconfirm
-            title="确认通过此订单？"
-            description="通过后将结算资金并转入客户持仓。"
-            okText="确认通过"
-            cancelText="取消"
-            onConfirm={() => review(r.id, "approve")}
+          <Button
+            type="primary"
+            size="small"
+            icon={<CheckOutlined />}
             disabled={!!reviewing}
+            loading={reviewing === r.id}
+            aria-label={`通过 ${r.orderNo}`}
+            onClick={() => setConfirming({ order: r, decision: "approve" })}
           >
-            <Button
-              type="primary"
-              size="small"
-              icon={<CheckOutlined />}
-              disabled={!!reviewing}
-              loading={reviewing === r.id}
-            >
-              通过
-            </Button>
-          </Popconfirm>
-          <Popconfirm
-            title="确认拒绝此订单？"
-            okText="确认拒绝"
-            cancelText="取消"
-            onConfirm={() => review(r.id, "reject")}
+            通过
+          </Button>
+          <Button
+            danger
+            size="small"
+            icon={<CloseOutlined />}
             disabled={!!reviewing}
+            aria-label={`拒绝 ${r.orderNo}`}
+            onClick={() => setConfirming({ order: r, decision: "reject" })}
           >
-            <Button
-              danger
-              size="small"
-              icon={<CloseOutlined />}
-              disabled={!!reviewing}
-            >
-              拒绝
-            </Button>
-          </Popconfirm>
+            拒绝
+          </Button>
         </Space>
       ),
     },
   ];
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>OTC 订单审核</Title>
-          <Paragraph type="secondary">
-            仅展示当前账号权限范围内的 OTC
-            待审核订单。审核通过后自动结算资金并转入客户持仓。
-          </Paragraph>
-        </div>
-        {error && <Alert type="error" title={error} showIcon />}
-        <Card>
-          <Space
-            wrap
-            style={{
-              width: "100%",
-              justifyContent: "space-between",
-              marginBottom: 16,
-            }}
-          >
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索订单号、客户、账户或股票"
-              value={keyword}
-              onChange={(event) => setKeyword(event.target.value)}
-              style={{ width: 360 }}
-            />
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={load}>
-              刷新
-            </Button>
-          </Space>
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={filtered}
-            loading={loading}
-            locale={{ emptyText: "暂无待审核的 OTC 订单" }}
-            pagination={{ showTotal: (total) => `共 ${total} 条订单` }}
-            scroll={{ x: 1250 }}
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title={PRODUCT_COPY.otcTitle}
+          crumbs={[{ title: "产品" }, { title: PRODUCT_COPY.otcTitle }]}
+          description={`仅展示当前账号权限范围内的 OTC 待审核订单。审核通过后自动结算资金并转入客户持仓。结果只在服务器成功后刷新。${PRODUCT_COPY.noVip}`}
+        />
+        {error ? <OpsErrorState title={error} onRetry={load} /> : null}
+        <OpsToolbar extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={load} aria-label="刷新 OTC 订单">刷新</Button>}>
+          <Input
+            allowClear
+            prefix={<SearchOutlined aria-hidden />}
+            placeholder="搜索已加载的订单号、客户、账户或股票"
+            value={keyword}
+            onChange={(event) => setKeyword(event.target.value)}
+            aria-label="搜索已加载的 OTC 订单"
+            style={{ width: 360, maxWidth: "100%" }}
           />
-        </Card>
+        </OpsToolbar>
+        <Text type="secondary">{PRODUCT_COPY.loadedFilter}</Text>
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          columns={columns}
+          dataSource={filtered}
+          loading={loading}
+          locale={{ emptyText: <OpsEmpty description={loading ? "正在加载 OTC 订单" : "暂无待审核的 OTC 订单"} onRetry={loading ? undefined : load} /> }}
+          pagination={OPS_TABLE_PAGINATION}
+          scroll={{ x: 1250 }}
+        />
       </Space>
+      <OpsModal
+        title={confirming?.decision === "reject" ? "确认拒绝 OTC 订单" : "确认通过 OTC 订单"}
+        open={!!confirming}
+        confirmLoading={!!reviewing}
+        onCancel={() => { if (!reviewing) setConfirming(null); }}
+        onOk={() => confirming && review(confirming.order.id, confirming.decision)}
+        okText="提交到服务器"
+        cancelText="返回"
+        okButtonProps={{ danger: confirming?.decision === "reject" }}
+        zIndex={2100}
+      >
+        {confirming ? (
+          <Space orientation="vertical">
+            <Text>{confirming.order.orderNo} · {confirming.order.account.user.fullName} · <OpsMoney value={confirming.order.amount} /></Text>
+            <Text type="secondary">
+              {confirming.decision === "approve"
+                ? "通过后将结算资金并转入客户持仓。未成功前状态保持待审核。"
+                : "拒绝不会从列表删除失败记录。"}
+            </Text>
+          </Space>
+        ) : null}
+      </OpsModal>
     </AdminShell>
   );
 }

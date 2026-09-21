@@ -20,7 +20,6 @@ import {
   Switch,
   Table,
   Tabs,
-  Tag,
   Typography,
   message,
 } from "antd";
@@ -28,9 +27,18 @@ import type { ColumnsType, TablePaginationConfig } from "antd/es/table";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsDrawer from "@/components/OpsDrawer";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import { api } from "@/lib/api";
+import { formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
+import { PRODUCT_COPY } from "@/lib/ops-product";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type InstrumentMasterRecord = {
   id: string;
@@ -80,16 +88,8 @@ function apiError(error: unknown, fallback: string) {
 }
 
 function formatPrice(value?: string | number | null) {
-  if (value === null || value === undefined || Number(value) <= 0) return "-";
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency",
-    currency: "INR",
-    maximumFractionDigits: 2,
-  }).format(Number(value));
-}
-
-function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString("zh-CN") : "-";
+  if (value === null || value === undefined || Number(value) <= 0) return "—";
+  return <OpsMoney value={value} />;
 }
 
 export default function InstrumentLibraryPage() {
@@ -107,6 +107,7 @@ export default function InstrumentLibraryPage() {
   const [syncing, setSyncing] = useState(false);
   const [enablingAll, setEnablingAll] = useState(false);
   const [error, setError] = useState("");
+  const [detail, setDetail] = useState<InstrumentMasterRecord | null>(null);
   const [selectedRowKeys, setSelectedRowKeys] = useState<React.Key[]>([]);
   const filtersRef = useRef({ search, active, exchange, page, pageSize });
   useEffect(() => {
@@ -241,7 +242,7 @@ export default function InstrumentLibraryPage() {
           </span>
           <Space orientation="vertical" size={0}>
             <Text strong>{record.symbol}</Text>
-            <Text type="secondary">{record.exchange}</Text>
+            <Text type="secondary" className="ops-wrap-text">{record.name}</Text>
           </Space>
         </Space>
       ),
@@ -250,19 +251,19 @@ export default function InstrumentLibraryPage() {
       title: "公司名称",
       dataIndex: "name",
       width: 280,
-      ellipsis: true,
+      render: (value) => <span className="ops-wrap-text">{value}</span>,
     },
     {
       title: "ISIN",
       dataIndex: "isin",
       width: 170,
-      render: (value) => value || "-",
+      render: (value) => value || "—",
     },
     {
       title: "分类",
       dataIndex: "category",
       width: 110,
-      render: (value) => <Tag>{value || "EQUITY"}</Tag>,
+      render: (value) => <OpsStatusTag code={value || "EQUITY"} label={value || "EQUITY"} />,
     },
     {
       title: "每手",
@@ -279,7 +280,7 @@ export default function InstrumentLibraryPage() {
     {
       title: "行情时间",
       width: 180,
-      render: (_, record) => formatDate(record.quote?.asOf),
+      render: (_, record) => formatOpsDateTime(record.quote?.asOf),
     },
     {
       title: "App 状态",
@@ -290,6 +291,7 @@ export default function InstrumentLibraryPage() {
           checked={value}
           checkedChildren="启用"
           unCheckedChildren="停用"
+          aria-label={`${record.symbol} ${value ? "已启用" : "已停用"}`}
           onChange={(checked) => void setStatus(record, checked)}
         />
       ),
@@ -298,7 +300,7 @@ export default function InstrumentLibraryPage() {
       title: "资料更新",
       dataIndex: "updatedAt",
       width: 180,
-      render: formatDate,
+      render: (value: string) => formatOpsDateTime(value),
     },
   ];
 
@@ -310,15 +312,14 @@ export default function InstrumentLibraryPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>股票资料库 · NSE / BSE</Title>
-          <Paragraph type="secondary">
-            NSE 与 BSE 独立统计、独立同步、独立启用。新上市股票自动入库，默认停用；启用后进入行情轮询并展示在客户 App。
-          </Paragraph>
-        </div>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title={PRODUCT_COPY.instrumentsTitle}
+          crumbs={[{ title: "产品" }, { title: PRODUCT_COPY.instrumentsTitle }]}
+          description={`NSE 与 BSE 独立统计、独立同步、独立启用。新上市股票自动入库，默认停用；启用后进入行情轮询并展示在客户 App。${PRODUCT_COPY.catalogNotTraded} ${PRODUCT_COPY.noVip}`}
+        />
 
-        {error && <Alert type="error" showIcon title={error} />}
+        {error ? <OpsErrorState title={error} onRetry={() => void loadRecords(page, pageSize)} /> : null}
 
         <Tabs activeKey={exchange} onChange={(key) => { requestVersion.current++; setRecords([]); setStatistics(undefined); setSelectedRowKeys([]); setSearch(""); setActive(undefined); setPage(1); setExchange(key as "NSE" | "BSE"); }} items={[{ key: "NSE", label: "NSE 股票库" }, { key: "BSE", label: "BSE 股票库" }]} />
         <Alert type="info" showIcon title={exchange === "NSE" ? "自动同步已开启 · 每天 06:00（印度时间）" : autoSync?.bse ? "自动同步已开启 · 每天 06:15（印度时间）" : "BSE 股票库已预留 · 接入数据源后自动开启每日同步"} />
@@ -329,54 +330,55 @@ export default function InstrumentLibraryPage() {
           <Card size="small"><Statistic title="已有行情总数" value={statistics?.quoted ?? "—"} suffix="只" /></Card>
         </Space>
 
-        <Card>
-          <Space wrap style={{ width: "100%", justifyContent: "space-between" }}>
+        <OpsToolbar
+          extra={
             <Space wrap>
+            <Popconfirm title={`启用 ${exchange} 股票库中的全部股票？`} description={`仅启用 ${exchange} 全库股票，不受分页或搜索限制，不影响另一交易所。`} onConfirm={enableAll} okText="全部启用" cancelText="返回" disabled={enablingAll || syncing}>
+              <Button icon={<CheckOutlined />} loading={enablingAll} disabled={syncing} aria-label={`全部启用 ${exchange} 股票`}>全部启用股票</Button>
+            </Popconfirm>
+            <Popconfirm
+              title={`同步 ${exchange} 股票库？`}
+              description="已有股票只更新基础资料，不会改变当前启用/停用状态。新发现股票默认停用。同步不是交易。"
+              okText="开始同步"
+              cancelText="返回"
+              onConfirm={() => void syncExchange(exchange)}
+            >
+              <Button type="primary" icon={<CloudSyncOutlined />} loading={syncing} disabled={exchange === "BSE" && !autoSync?.bse} aria-label={`立即同步 ${exchange}`}>
+                立即同步 {exchange}
+              </Button>
+            </Popconfirm>
+            </Space>
+          }
+        >
               <Input
                 allowClear
-                prefix={<SearchOutlined />}
+                prefix={<SearchOutlined aria-hidden />}
                 placeholder="搜索代码、公司名称或 ISIN"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 onPressEnter={() => void loadRecords(1, pageSize)}
-                style={{ width: 330 }}
+                aria-label="搜索股票资料库"
+                style={{ width: 330, maxWidth: "100%" }}
               />
               <Select
                 allowClear
                 placeholder="App 状态"
                 value={active}
                 onChange={(value) => setActive(value)}
+                aria-label="按启用状态筛选"
                 style={{ width: 140 }}
                 options={[
                   { value: true, label: "已启用" },
                   { value: false, label: "已停用" },
                 ]}
               />
-              <Button type="primary" icon={<SearchOutlined />} onClick={() => void loadRecords(1, pageSize)}>
+              <Button type="primary" icon={<SearchOutlined />} onClick={() => void loadRecords(1, pageSize)} aria-label="查询股票">
                 查询
               </Button>
-              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void loadRecords(page, pageSize)}>
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void loadRecords(page, pageSize)} aria-label="刷新股票列表">
                 刷新
               </Button>
-            </Space>
-
-            <Space>
-            <Popconfirm title={`启用 ${exchange} 股票库中的全部股票？`} description={`仅启用 ${exchange} 全库股票，不受分页或搜索限制，不影响另一交易所。`} onConfirm={enableAll} okText="全部启用" cancelText="取消" disabled={enablingAll || syncing}>
-              <Button icon={<CheckOutlined />} loading={enablingAll} disabled={syncing}>全部启用股票</Button>
-            </Popconfirm>
-            <Popconfirm
-              title={`同步 ${exchange} 股票库？`}
-              description="已有股票只更新基础资料，不会改变当前启用/停用状态。新发现股票默认停用。"
-              okText="开始同步"
-              cancelText="取消"
-              onConfirm={() => void syncExchange(exchange)}
-            >
-              <Button type="primary" icon={<CloudSyncOutlined />} loading={syncing} disabled={exchange === "BSE" && !autoSync?.bse}>
-                立即同步 {exchange}
-              </Button>
-            </Popconfirm>
-            </Space>
-          </Space>
+        </OpsToolbar>
 
           {selectedRowKeys.length > 0 && (
             <Alert
@@ -399,26 +401,47 @@ export default function InstrumentLibraryPage() {
 
           <Table<InstrumentMasterRecord>
             rowKey="id"
+            className="ops-directory-table"
             columns={columns}
             dataSource={records}
             loading={loading}
+            onRow={(record) => ({
+              onClick: () => setDetail(record),
+            })}
             rowSelection={{
               selectedRowKeys,
               onChange: setSelectedRowKeys,
             }}
             scroll={{ x: 1450 }}
             style={{ marginTop: 16 }}
+            locale={{ emptyText: <OpsEmpty description={error ? "股票库未能加载，请刷新重试" : "当前没有股票资料。"} onRetry={() => void loadRecords(page, pageSize)} /> }}
             pagination={{
               current: page,
               pageSize,
               total,
               showSizeChanger: true,
-              pageSizeOptions: [20, 50, 100, 200],
+              pageSizeOptions: OPS_TABLE_PAGINATION.pageSizeOptions,
               showTotal: (count) => `共 ${count} 只股票`,
             }}
             onChange={handleTableChange}
           />
-        </Card>
+        <OpsDrawer
+          title={detail ? `${detail.exchange}:${detail.symbol}` : "股票详情"}
+          open={!!detail}
+          onClose={() => setDetail(null)}
+        >
+          {detail ? (
+            <Space orientation="vertical" size="middle">
+              <Text className="ops-wrap-text">{detail.name}</Text>
+              <Text>ISIN {detail.isin || "—"}</Text>
+              <Text>分类 {detail.category || "EQUITY"}</Text>
+              <Text>每手 {detail.lotSize}</Text>
+              <Text>最新价 {detail.quote?.lastPrice != null && Number(detail.quote.lastPrice) > 0 ? undefined : "—"}{detail.quote?.lastPrice != null && Number(detail.quote.lastPrice) > 0 ? <OpsMoney value={detail.quote.lastPrice} /> : null}</Text>
+              <OpsStatusTag code={detail.isActive ? "ACTIVE" : "INACTIVE"} label={detail.isActive ? "已启用" : "已停用"} />
+              <Text type="secondary">{PRODUCT_COPY.catalogNotTraded}</Text>
+            </Space>
+          ) : null}
+        </OpsDrawer>
       </Space>
     </AdminShell>
   );

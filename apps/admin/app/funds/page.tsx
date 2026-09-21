@@ -1,14 +1,24 @@
 ﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Typography, message } from "antd";
+import { Button, Form, Input, InputNumber, Select, Space, Table, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsModal from "@/components/OpsModal";
+import OpsMoney from "@/components/OpsMoney";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
+import OpsToolbar from "@/components/OpsToolbar";
 import { api } from "@/lib/api";
+import { filterLoadedRows } from "@/lib/ops-directory";
+import { OPS_TABLE_PAGINATION } from "@/lib/ops-format";
+import { PRODUCT_COPY } from "@/lib/ops-product";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type FundProduct = {
   id: string;
@@ -22,23 +32,24 @@ type FundProduct = {
   manager?: string | null;
 };
 
-function money(value: number | string) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value));
-}
-
 export default function FundsPage() {
   const [items, setItems] = useState<FundProduct[]>([]);
   const [keyword, setKeyword] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<FundProduct | null>(null);
+  const [deleting, setDeleting] = useState<FundProduct | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [form] = Form.useForm();
 
   async function loadItems() {
     setLoading(true);
+    setError("");
     try {
       const response = await api.get<FundProduct[]>("/admin-products/funds");
       setItems(Array.isArray(response.data) ? response.data : []);
+    } catch {
+      setError("基金产品加载失败");
     } finally {
       setLoading(false);
     }
@@ -48,15 +59,10 @@ export default function FundsPage() {
     loadItems();
   }, []);
 
-  const filtered = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return items;
-    return items.filter((item) =>
-      [item.code, item.name, item.type, item.status, item.manager || ""].some((field) =>
-        field.toLowerCase().includes(value),
-      ),
-    );
-  }, [items, keyword]);
+  const filtered = useMemo(
+    () => filterLoadedRows(items, keyword, (item) => [item.code, item.name, item.type, item.status, item.manager]),
+    [items, keyword],
+  );
 
   function openCreate() {
     setEditing(null);
@@ -101,21 +107,22 @@ export default function FundsPage() {
 
   const columns: ColumnsType<FundProduct> = [
     { title: "基金代码", dataIndex: "code", width: 150, fixed: "left", render: (value) => <Text copyable>{value}</Text> },
-    { title: "基金名称", dataIndex: "name", width: 260 },
+    { title: "基金名称", dataIndex: "name", width: 260, render: (value) => <span className="ops-wrap-text">{value}</span> },
     { title: "类型", dataIndex: "type", width: 110 },
     { title: "净值", dataIndex: "nav", width: 100, align: "right", render: (value) => Number(value).toFixed(4) },
-    { title: "最低申购", dataIndex: "minSubscribe", width: 150, align: "right", render: money },
-    { title: "风险", dataIndex: "risk", width: 90, render: (value) => <Tag color={value === "高" ? "red" : value === "中" ? "gold" : "green"}>{value}</Tag> },
-    { title: "状态", dataIndex: "status", width: 120, render: (value) => <Tag color={value === "开放申购" ? "green" : "default"}>{value}</Tag> },
-    { title: "管理人", dataIndex: "manager", width: 180, render: (value) => value || "-" },
+    { title: "最低申购", dataIndex: "minSubscribe", width: 150, align: "right", render: (value) => <OpsMoney value={value} /> },
+    { title: "风险", dataIndex: "risk", width: 90, render: (value: string) => <OpsStatusTag code={value === "高" ? "OVERDUE" : value === "中" ? "PENDING" : "APPROVED"} label={value} /> },
+    { title: "状态", dataIndex: "status", width: 120, render: (value: string) => <OpsStatusTag code={value === "开放申购" ? "ACTIVE" : "PAUSED"} label={value} /> },
+    { title: "管理人", dataIndex: "manager", width: 180, render: (value) => value || "—" },
     {
       title: "操作",
       width: 220,
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
+          <Button size="small" icon={<EditOutlined />} aria-label={`编辑 ${record.code}`} onClick={() => openEdit(record)}>编辑</Button>
           <Button
             size="small"
+            aria-label={record.status === "开放申购" ? `暂停 ${record.code}` : `开放 ${record.code}`}
             onClick={async () => {
               await api.patch(`/admin-products/funds/${record.id}/status`, {
                 status: record.status === "开放申购" ? "暂停申购" : "开放申购",
@@ -125,9 +132,7 @@ export default function FundsPage() {
           >
             {record.status === "开放申购" ? "暂停" : "开放"}
           </Button>
-          <Popconfirm title="确认删除这个基金产品？" okText="删除" cancelText="取消" onConfirm={() => deleteFund(record)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
-          </Popconfirm>
+          <Button size="small" danger icon={<DeleteOutlined />} aria-label={`删除 ${record.code}`} onClick={() => setDeleting(record)} />
         </Space>
       ),
     },
@@ -135,20 +140,20 @@ export default function FundsPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>基金后台</Title>
-          <Paragraph type="secondary">仅后台管理基金产品、净值、风险等级和申购状态，不在客户 App 单独展示。</Paragraph>
-        </div>
-        <Card>
-          <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input prefix={<SearchOutlined />} allowClear placeholder="搜索基金代码、名称、类型或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 380 }} />
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增基金</Button>
-          </Space>
-          <Table rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1380 }} />
-        </Card>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title={PRODUCT_COPY.fundsTitle}
+          crumbs={[{ title: "产品" }, { title: PRODUCT_COPY.fundsTitle }]}
+          description={`仅后台管理基金产品、净值、风险等级和申购状态，不在客户 App 单独展示。${PRODUCT_COPY.catalogNotTraded} ${PRODUCT_COPY.noVip}`}
+        />
+        {error ? <OpsErrorState title={error} onRetry={loadItems} /> : null}
+        <OpsToolbar extra={<Button type="primary" icon={<PlusOutlined />} onClick={openCreate} aria-label="新增基金">新增基金</Button>}>
+          <Input prefix={<SearchOutlined aria-hidden />} allowClear placeholder="搜索已加载的基金代码、名称、类型或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载的基金产品" style={{ width: 380, maxWidth: "100%" }} />
+        </OpsToolbar>
+        <Text type="secondary">{PRODUCT_COPY.loadedFilter}</Text>
+        <Table rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1380 }} pagination={OPS_TABLE_PAGINATION} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载基金产品" : "当前没有基金产品。"} onRetry={loading ? undefined : loadItems} /> }} />
       </Space>
-      <Modal title={editing ? "编辑基金产品" : "新增基金产品"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitFund)} okText="保存" cancelText="取消">
+      <OpsModal title={editing ? "编辑基金产品" : "新增基金产品"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitFund)} okText="保存" cancelText="返回" zIndex={2100}>
         <Form form={form} layout="vertical">
           <Form.Item name="code" label="基金代码" rules={[{ required: true, message: "请输入基金代码" }]}><Input /></Form.Item>
           <Form.Item name="name" label="基金名称" rules={[{ required: true, message: "请输入基金名称" }]}><Input /></Form.Item>
@@ -158,7 +163,19 @@ export default function FundsPage() {
           <Form.Item name="risk" label="风险等级" initialValue="中"><Select options={[{ value: "低" }, { value: "中" }, { value: "高" }]} /></Form.Item>
           <Form.Item name="manager" label="管理人"><Input /></Form.Item>
         </Form>
-      </Modal>
+      </OpsModal>
+      <OpsModal
+        title="确认删除基金产品"
+        open={!!deleting}
+        onCancel={() => setDeleting(null)}
+        onOk={() => deleting && deleteFund(deleting).then(() => setDeleting(null))}
+        okText="提交到服务器"
+        cancelText="返回"
+        okButtonProps={{ danger: true }}
+        zIndex={2100}
+      >
+        <Text>删除 {deleting?.code} {deleting?.name}。目录删除不是交易或结算。</Text>
+      </OpsModal>
     </AdminShell>
   );
 }

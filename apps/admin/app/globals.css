@@ -718,6 +718,42 @@ body {
   gap:12px;
   margin-bottom:16px;
 }
+.ops-health-panel{
+  border:1px solid #e5edf5;
+  border-radius:8px;
+  padding:14px 16px;
+  background:#fff;
+}
+.ops-health-head{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  align-items:flex-start;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.ops-health-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+}
+.ops-health-card{
+  border:1px solid #e8edf5;
+  border-radius:8px;
+  padding:12px;
+  min-height:124px;
+}
+.ops-system-state{
+  max-width:720px;
+  margin:48px auto;
+  padding:0 16px;
+}
+@media (max-width:1279px){
+  .ops-health-grid{grid-template-columns:repeat(2,minmax(0,1fr));}
+}
+@media (max-width:767px){
+  .ops-health-grid{grid-template-columns:1fr;}
+}
 .ops-stat-pill{
   background:#fff;
   border:1px solid #e5edf5;
@@ -952,6 +988,9 @@ button.ops-stat-pill{
   .kyc-confirm-modal-root *,
   .ops-workspace *,
   .ops-workspace .ops-status-tag,
+  .ops-health-panel *,
+  .ops-health-card,
+  .ops-system-state *,
   .kyc-review-workspace .ops-status-tag,
   .vip-workspace *,
   .vip-summary-card,

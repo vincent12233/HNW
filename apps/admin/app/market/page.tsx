@@ -9,7 +9,6 @@ import {
   ThunderboltOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
   Button,
   Card,
   Form,
@@ -27,9 +26,13 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsHealthPanel from "@/components/OpsHealthPanel";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from '@/lib/api';
+import { GOVERNANCE_COPY } from "@/lib/ops-governance";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type Instrument = {
   id: string;
@@ -293,15 +296,15 @@ export default function MarketAdminPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>股票管理</Title>
-          <Paragraph type="secondary">
-            管理客户 App 可交易股票、指数和行情价格。新增股票后，启用状态下会进入客户行情和交易列表。
-          </Paragraph>
-        </div>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="市场运行"
+          crumbs={[{ title: "产品与行情" }, { title: "市场运行" }]}
+          description={`管理客户 App 可交易股票、指数和行情价格。${GOVERNANCE_COPY.healthHonest} 本页健康状态不改变交易可用性。`}
+        />
+        <OpsHealthPanel />
 
-        {error && <Alert type="error" title={error} showIcon />}
+        {error ? <OpsErrorState title={error} onRetry={() => void loadItems()} /> : null}
 
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>

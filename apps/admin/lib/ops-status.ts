@@ -57,6 +57,13 @@ const STATUS_MAP: Record<string, Omit<OpsStatusSpec, "code">> = {
   DEFAULTED: { label: "已逾期", tone: "error" },
   ENABLED: { label: "已启用", tone: "success" },
   DISABLED_INSTRUMENT: { label: "已停用", tone: "default" },
+  HEALTHY: { label: "Healthy", tone: "success" },
+  DEGRADED: { label: "Degraded", tone: "warning" },
+  UNAVAILABLE: { label: "Unavailable", tone: "error" },
+  UNKNOWN: { label: "Unknown", tone: "default" },
+  LIVE: { label: "Live", tone: "success" },
+  SCHEDULED: { label: "Scheduled", tone: "info" },
+  EXPIRED: { label: "Expired", tone: "default" },
 };
 
 export function opsStatusOf(code?: string | null): OpsStatusSpec {

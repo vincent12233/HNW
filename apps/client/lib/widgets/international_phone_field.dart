@@ -7,6 +7,13 @@ import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/auth_layout.dart';
 
+const _emojiFontFallback = <String>[
+  'Apple Color Emoji',
+  'Segoe UI Emoji',
+  'Noto Color Emoji',
+  'Twemoji Mozilla',
+];
+
 String? internationalPhone(String value, String countryCode) {
   try {
     if (!RegExp(r'^[+\d\s().-]+$').hasMatch(value.trim())) return null;
@@ -23,6 +30,68 @@ String? internationalPhone(String value, String countryCode) {
   } catch (_) {
     return null;
   }
+}
+
+String countrySelectorLabel(Country country) {
+  return '${country.name} flag, country code +${country.phoneCode}';
+}
+
+class CountryFlagGlyph extends StatelessWidget {
+  const CountryFlagGlyph({super.key, required this.country, this.size = 22});
+
+  final Country country;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: countrySelectorLabel(country),
+      image: true,
+      child: ExcludeSemantics(
+        child: SizedBox(
+          width: size,
+          height: size,
+          child: Center(
+            child: Text(
+              country.flagEmoji,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: size * 0.86,
+                height: 1,
+                leadingDistribution: TextLeadingDistribution.even,
+                fontFamilyFallback: _emojiFontFallback,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+void showAuthCountryPicker({
+  required BuildContext context,
+  required ValueChanged<Country> onSelect,
+}) {
+  showCountryPicker(
+    context: context,
+    showPhoneCode: true,
+    favorite: const ['IN'],
+    customFlagBuilder: (country) => CountryFlagGlyph(country: country),
+    countryListTheme: CountryListThemeData(
+      backgroundColor: AuthLayout.pageBackground,
+      flagSize: 22,
+      borderRadius: AppRadius.sheetTop(),
+      textStyle: const TextStyle(
+        fontSize: 14,
+        letterSpacing: 0,
+        color: AppColors.textPrimary,
+      ),
+      searchTextStyle: const TextStyle(fontSize: 14, letterSpacing: 0),
+      emojiFontFamilyFallback: _emojiFontFallback,
+    ),
+    onSelect: onSelect,
+  );
 }
 
 class InternationalPhoneField extends StatelessWidget {
@@ -52,27 +121,39 @@ class InternationalPhoneField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final codeLabel = '+${country.phoneCode}';
-    final countryLabel = 'Country code $codeLabel';
+    final selectorLabel = countrySelectorLabel(country);
     final prefix = lockCountry
         ? Semantics(
-            label: countryLabel,
+            label: selectorLabel,
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Center(
-                child: Text(
-                  codeLabel,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                    color: AppColors.textPrimary,
+                child: MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.noScaling),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CountryFlagGlyph(country: country),
+                      const SizedBox(width: 6),
+                      Text(
+                        codeLabel,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
             ),
           )
         : Tooltip(
-            message: countryLabel,
+            message: selectorLabel,
             child: TextButton(
               style: TextButton.styleFrom(
                 visualDensity: VisualDensity.compact,
@@ -82,38 +163,34 @@ class InternationalPhoneField extends StatelessWidget {
               ),
               onPressed: !enabled
                   ? null
-                  : () => showCountryPicker(
+                  : () => showAuthCountryPicker(
                       context: context,
-                      showPhoneCode: true,
-                      favorite: const ['IN'],
                       onSelect: onCountryChanged,
                     ),
               child: MediaQuery(
-                data: MediaQuery.of(context).copyWith(
-                  textScaler: TextScaler.noScaling,
-                ),
+                data: MediaQuery.of(
+                  context,
+                ).copyWith(textScaler: TextScaler.noScaling),
                 child: FittedBox(
                   fit: BoxFit.scaleDown,
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AppText(
-                        country.flagEmoji,
-                        style: const TextStyle(fontSize: 18),
-                      ),
-                      const SizedBox(width: 4),
-                      AppText(
+                      CountryFlagGlyph(country: country),
+                      const SizedBox(width: 6),
+                      Text(
                         codeLabel,
                         style: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       Icon(
                         Icons.keyboard_arrow_down,
                         size: 16,
-                        semanticLabel: countryLabel,
+                        semanticLabel: selectorLabel,
                       ),
                     ],
                   ),
@@ -136,8 +213,8 @@ class InternationalPhoneField extends StatelessWidget {
         errorText: errorText,
         errorMaxLines: 4,
         prefixIconConstraints: const BoxConstraints(
-          minWidth: 64,
-          maxWidth: 140,
+          minWidth: 72,
+          maxWidth: 148,
           minHeight: AuthLayout.inputHeight,
         ),
         prefixIcon: prefix,

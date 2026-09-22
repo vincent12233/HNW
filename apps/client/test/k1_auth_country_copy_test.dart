@@ -125,9 +125,9 @@ void main() {
     expect(find.text('+91'), findsOneWidget);
     expect(phoneField(tester).country.countryCode, 'IN');
     expect(phoneField(tester).lockCountry, isFalse);
-    expect(find.byTooltip('Country code +91'), findsOneWidget);
+    expect(find.byTooltip('India flag, country code +91'), findsOneWidget);
     expect(find.byIcon(Icons.keyboard_arrow_down), findsOneWidget);
-    await tester.tap(find.byTooltip('Country code +91'));
+    await tester.tap(find.byTooltip('India flag, country code +91'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(TextField), findsNWidgets(3));
@@ -424,7 +424,7 @@ void main() {
     await tester.pump();
     await tester.enterText(find.byType(TextField).at(0), '9876543210');
     await tester.enterText(find.byType(TextField).at(1), 'password1');
-    await tester.tap(find.byTooltip('Country code +91'));
+    await tester.tap(find.byTooltip('India flag, country code +91'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 400));
     await captureCurrent(tester, 'login-country-picker-390x844');

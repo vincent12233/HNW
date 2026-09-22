@@ -1,5 +1,5 @@
 import 'dotenv/config';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { randomUUID } from 'crypto';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
@@ -9,6 +9,7 @@ import { isLocalDevelopmentOrigin } from './common/local-development-origin';
 
 type RateEntry = { count: number; resetAt: number };
 const rateEntries = new Map<string, RateEntry>();
+const httpLogger = new Logger('HttpAudit');
 
 function isLoopbackOrPrivateHostname(hostname: string) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
@@ -136,9 +137,8 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
   const startedAt = Date.now();
   const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
   res.setHeader('x-request-id', requestId);
-  res.on('finish', () =>
-    console.log(
-      JSON.stringify({
+  res.on('finish', () => {
+    const payload = JSON.stringify({
         level:
           res.statusCode >= 500
             ? 'error'
@@ -154,9 +154,11 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
         ip: req.ip,
         userAgent: req.header('user-agent')?.slice(0, 200),
         timestamp: new Date().toISOString(),
-      }),
-    ),
-  );
+      });
+    if (res.statusCode >= 500) httpLogger.error(payload);
+    else if (res.statusCode >= 400) httpLogger.warn(payload);
+    else httpLogger.log(payload);
+  });
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('x-frame-options', 'DENY');
   res.setHeader('referrer-policy', 'no-referrer');

@@ -37,19 +37,24 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : typeof extractedMessage === 'string'
               ? extractedMessage
               : 'Request failed';
-    this.logger.error(
-      JSON.stringify({
-        level: 'error',
-        event: 'unhandled_exception',
-        requestId,
-        method: request.method,
-        path: request.path,
-        statusCode: status,
-        error: exception instanceof Error ? exception.name : 'UnknownError',
-        stack: exception instanceof Error ? exception.stack : undefined,
-        timestamp: new Date().toISOString(),
-      }),
-    );
+    const auditEntry = JSON.stringify({
+      level: status >= 500 ? 'error' : 'warn',
+      event: 'unhandled_exception',
+      requestId,
+      method: request.method,
+      path: request.path,
+      statusCode: status,
+      error: exception instanceof Error ? exception.name : 'UnknownError',
+      ...(status >= 500 && exception instanceof Error
+        ? { stack: exception.stack }
+        : {}),
+      timestamp: new Date().toISOString(),
+    });
+    if (status >= 500) {
+      this.logger.error(auditEntry);
+    } else {
+      this.logger.warn(auditEntry);
+    }
     const authentication =
       status === Number(HttpStatus.UNAUTHORIZED) &&
       raw &&

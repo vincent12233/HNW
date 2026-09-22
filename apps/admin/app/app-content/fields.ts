@@ -269,6 +269,8 @@ export const tradingFields: FieldDef[] = [
   { key: "portfolio.detail.day_pnl", label: "持仓详情 · 当日盈亏", rows: 1 },
   { key: "portfolio.detail.valuation_cost", label: "持仓详情 · 成本估值说明", rows: 2 },
   { key: "portfolio.detail.valuation_market", label: "持仓详情 · 市场估值说明", rows: 2 },
+  { key: "state.data_unavailable", label: "交易数据不可用提示", rows: 2 },
+  { key: "orders.clear_filters", label: "订单筛选 · 清除筛选", rows: 1 },
   { key: "holdings.empty_title", label: "Positions 空状态标题", rows: 2 },
   { key: "holdings.empty_subtitle", label: "Positions 空状态说明", rows: 2 },
   {

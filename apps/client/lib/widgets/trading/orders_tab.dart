@@ -2,6 +2,7 @@ import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../../models/trading_order.dart';
+import '../../services/app_content_service.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_spacing.dart';
@@ -36,6 +37,22 @@ class _OrdersTabState extends State<OrdersTab> {
   String side = 'ALL';
   var _refreshing = false;
 
+  @override
+  void initState() {
+    super.initState();
+    AppContentService.instance.addListener(_onContentChanged);
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onContentChanged);
+    super.dispose();
+  }
+
   List<TradingOrder> get _filtered {
     final needle = query.toLowerCase();
     final rows = widget.orders.where((order) {
@@ -50,8 +67,7 @@ class _OrdersTabState extends State<OrdersTab> {
           (side == 'SELL' && !order.isBuy);
       final matchesStatus = switch (status) {
         'ALL' => true,
-        'OPEN_PENDING' =>
-          order.status == 'OPEN' || order.status == 'PENDING',
+        'OPEN_PENDING' => order.status == 'OPEN' || order.status == 'PENDING',
         _ => order.status == status,
       };
       return matchesQuery && matchesSide && matchesStatus;
@@ -124,7 +140,9 @@ class _OrdersTabState extends State<OrdersTab> {
               ),
               IconButton(
                 tooltip: 'Refresh orders',
-                onPressed: widget.onRefresh == null || _refreshing ? null : _refresh,
+                onPressed: widget.onRefresh == null || _refreshing
+                    ? null
+                    : _refresh,
                 icon: _refreshing
                     ? const SizedBox(
                         width: 18,
@@ -151,11 +169,7 @@ class _OrdersTabState extends State<OrdersTab> {
         ),
         const SizedBox(height: AppSpacing.xs),
         _chipRow(
-          const [
-            ('ALL', 'All sides'),
-            ('BUY', 'BUY'),
-            ('SELL', 'SELL'),
-          ],
+          const [('ALL', 'All sides'), ('BUY', 'BUY'), ('SELL', 'SELL')],
           side,
           (value) => setState(() => side = value),
           group: 'side',
@@ -169,7 +183,13 @@ class _OrdersTabState extends State<OrdersTab> {
                 status = 'ALL';
                 side = 'ALL';
               }),
-              child: const AppText('Clear filters'),
+              child: AppText(
+                AppContentService.instance.current.text(
+                  'trading',
+                  'orders.clear_filters',
+                  fallback: 'Clear filters',
+                ),
+              ),
             ),
           ),
         Expanded(

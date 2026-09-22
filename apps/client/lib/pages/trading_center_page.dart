@@ -840,8 +840,14 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     }
     if ((missingOrders && _ordersFailed) ||
         (missingAccount && _accountFailed)) {
-      return const Center(
-        child: AppText('Trading data is temporarily unavailable.'),
+      return Center(
+        child: AppText(
+          AppContentService.instance.current.text(
+            'trading',
+            'state.data_unavailable',
+            fallback: 'Trading data is temporarily unavailable.',
+          ),
+        ),
       );
     }
     switch (selectedTab) {

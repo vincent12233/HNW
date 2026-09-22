@@ -1785,6 +1785,20 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'en',
     sortOrder: 605,
   },
+  {
+    module: AppContentModule.TRADING,
+    key: 'state.data_unavailable',
+    body: 'Trading data is temporarily unavailable.',
+    locale: 'en',
+    sortOrder: 606,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'orders.clear_filters',
+    body: 'Clear filters',
+    locale: 'en',
+    sortOrder: 607,
+  },
 
   {
     module: AppContentModule.TRADING,

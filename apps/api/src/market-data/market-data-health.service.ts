@@ -63,10 +63,9 @@ export class MarketDataHealthService {
       (this.config.get<string>('MARKET_DATA_STREAMING_ENABLED') ?? 'false')
         .trim()
         .toLowerCase() === 'true';
-    const configuredProvider =
-      (this.config.get<string>('MARKET_DATA_PROVIDER') ?? 'YAHOO')
-        .trim()
-        .toUpperCase() || 'YAHOO';
+    const configuredProvider = (
+      this.config.get<string>('MARKET_DATA_PROVIDER') ?? 'YAHOO'
+    ).trim().toUpperCase();
 
     return {
       healthy: !stale,

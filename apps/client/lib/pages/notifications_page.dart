@@ -303,7 +303,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           if (markingRead.contains(id))
                             const SizedBox.square(
                               dimension: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                semanticsLabel: 'Marking notification as read',
+                              ),
                             )
                           else if (unread)
                             Semantics(

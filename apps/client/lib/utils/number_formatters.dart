@@ -11,8 +11,30 @@ String formatPrice(num value) {
   return '₹${_priceFormatter.format(value)}';
 }
 
+/// Formats a JSON/API money field without turning unknown values into ₹0.00.
+///
+/// Only [formatPrice] is used after a finite number is parsed. Null, missing,
+/// blank, non-numeric, NaN, and Infinity become `Unavailable`. A real `0` or
+/// `"0.00"` stays `₹0.00`. Both reconciliation total and category rows share
+/// this helper; do not use it where a typed `num` is already guaranteed.
 String formatPriceValue(dynamic value) {
-  return formatPrice(num.tryParse(value?.toString() ?? '') ?? 0);
+  final parsed = parseFinitePrice(value);
+  if (parsed == null) return 'Unavailable';
+  return formatPrice(parsed);
+}
+
+/// Returns a finite number, including `0`. Null means the value is unknown.
+num? parseFinitePrice(dynamic value) {
+  if (value == null) return null;
+  if (value is num) {
+    if (value.isNaN || value.isInfinite) return null;
+    return value;
+  }
+  final text = value.toString().trim();
+  if (text.isEmpty) return null;
+  final parsed = num.tryParse(text);
+  if (parsed == null || parsed.isNaN || parsed.isInfinite) return null;
+  return parsed;
 }
 
 String formatSignedPrice(num value) {

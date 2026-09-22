@@ -211,20 +211,23 @@ class ProfileIdentityHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppSpacing.sm + 2),
-                    Wrap(
-                      spacing: AppSpacing.sm + 2,
-                      runSpacing: AppSpacing.sm,
-                      children: [
-                        _pill(
-                          icon: kycStatus == 'APPROVED'
-                              ? Icons.badge_outlined
-                              : Icons.info_outline,
-                          iconColor: kycStatus == 'APPROVED'
-                              ? AppColors.gain
-                              : mutedInverse,
-                          label: 'KYC $kycLabel',
-                        ),
-                      ],
+                    SizedBox(
+                      width: double.infinity,
+                      child: Wrap(
+                        spacing: AppSpacing.sm + 2,
+                        runSpacing: AppSpacing.sm,
+                        children: [
+                          _pill(
+                            icon: kycStatus == 'APPROVED'
+                                ? Icons.badge_outlined
+                                : Icons.info_outline,
+                            iconColor: kycStatus == 'APPROVED'
+                                ? AppColors.gain
+                                : mutedInverse,
+                            label: 'KYC $kycLabel',
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -317,19 +320,21 @@ class ProfileIdentityHeader extends StatelessWidget {
   }
 
   Widget _statusLine(IconData icon, String text, Color color) {
-    return Wrap(
-      spacing: AppSpacing.xs + 1,
-      runSpacing: AppSpacing.xxs,
-      crossAxisAlignment: WrapCrossAlignment.center,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Icon(icon, size: 18, color: color),
-        AppText(
-          text,
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          style: AppTypography.caption.copyWith(
-            color: color,
-            fontWeight: FontWeight.w600,
+        const SizedBox(width: AppSpacing.xs + 1),
+        Expanded(
+          child: AppText(
+            text,
+            maxLines: 2,
+            softWrap: true,
+            overflow: TextOverflow.clip,
+            style: AppTypography.caption.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ],
@@ -354,16 +359,24 @@ class ProfileIdentityHeader extends StatelessWidget {
         ),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: iconColor, size: 12),
+          Padding(
+            padding: const EdgeInsets.only(top: 1),
+            child: Icon(icon, color: iconColor, size: 12),
+          ),
           const SizedBox(width: AppSpacing.xxs + 2),
-          AppText(
-            label,
-            style: AppTypography.caption.copyWith(
-              color: AppColors.textInverse,
-              fontSize: 9,
-              fontWeight: FontWeight.w700,
+          Expanded(
+            child: AppText(
+              label,
+              maxLines: 2,
+              softWrap: true,
+              overflow: TextOverflow.clip,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textInverse,
+                fontSize: 9,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
         ],

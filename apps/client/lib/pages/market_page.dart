@@ -1,9 +1,8 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
-import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -974,6 +973,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       color: AppColors.navSelected,
                     ),
                     label: tr('Home'),
+                    tooltip: tr('Home'),
                   ),
                   NavigationDestination(
                     icon: const Icon(Icons.bar_chart_outlined),
@@ -982,6 +982,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       color: AppColors.navSelected,
                     ),
                     label: tr('Markets'),
+                    tooltip: tr('Markets'),
                   ),
                   NavigationDestination(
                     icon: const Icon(Icons.swap_horiz_rounded),
@@ -990,6 +991,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       color: AppColors.navSelected,
                     ),
                     label: tr('Trade'),
+                    tooltip: tr('Trade'),
                   ),
                   NavigationDestination(
                     icon: const Icon(Icons.pie_chart_outline),
@@ -998,6 +1000,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       color: AppColors.navSelected,
                     ),
                     label: tr('Portfolio'),
+                    tooltip: tr('Portfolio'),
                   ),
                   NavigationDestination(
                     icon: const Icon(Icons.person_outline),
@@ -1006,6 +1009,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                       color: AppColors.navSelected,
                     ),
                     label: tr('Profile'),
+                    tooltip: tr('Profile'),
                   ),
                 ],
               ),
@@ -1017,6 +1021,8 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   void _onDestinationSelected(int index) {
+    if (index == selectedIndex) return;
+    HapticFeedback.selectionClick();
     setState(() {
       selectedIndex = index;
     });

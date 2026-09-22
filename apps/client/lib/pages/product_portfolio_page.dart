@@ -224,7 +224,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   ),
                   child: Column(
                     children: [
-                      CircularProgressIndicator(),
+                      CircularProgressIndicator(
+                        semanticsLabel: 'Loading portfolio',
+                      ),
                       SizedBox(height: AppSpacing.md),
                       AppText('Loading portfolio'),
                     ],
@@ -397,6 +399,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                           child: CircularProgressIndicator(
                             color: AppColors.textInverse,
                             strokeWidth: 2,
+                            semanticsLabel: 'Loading performance',
                           ),
                         )
                       : !hasHistory

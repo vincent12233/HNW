@@ -142,7 +142,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
             icon: markingAll
                 ? const SizedBox.square(
                     dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Marking notifications as read',
+                    ),
                   )
                 : const Icon(Icons.done_all_rounded),
           ),
@@ -162,155 +165,165 @@ class _NotificationsPageState extends State<NotificationsPage> {
     body: AppStatusSwitch(
       switchKey: '$loading|$errorMessage|${items.length}',
       child: loading && items.isEmpty
-        ? const AppLoadingView(message: 'Loading notifications')
-        : errorMessage != null && items.isEmpty
-        ? AppErrorView(
-            title: 'Unable to load notifications',
-            message: 'The server did not return notifications. You can retry.',
-            onRetry: load,
-          )
-        : items.isEmpty
-        ? const AppEmptyState(
-            title: 'No notifications yet',
-            message: 'Account and order updates will appear here when the server sends them.',
-            icon: Icons.notifications_none,
-          )
-        : RefreshIndicator(
-            onRefresh: load,
-            child: ListView.builder(
-              padding: AppSpacing.page,
-              physics: const AlwaysScrollableScrollPhysics(),
-              itemCount: items.length + 1,
-              itemBuilder: (_, index) {
-                if (index == 0) {
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        if (loading) const LinearProgressIndicator(),
-                        if (errorMessage != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                            child: AppErrorView(
-                              title: errorMessage!,
-                              onRetry: load,
-                              compact: true,
-                            ),
-                          ),
-                        Row(
-                          children: [
-                            const Expanded(
-                              child: AppText(
-                                'Recent updates',
-                                style: AppTypography.titleMedium,
+          ? const AppLoadingView(message: 'Loading notifications')
+          : errorMessage != null && items.isEmpty
+          ? AppErrorView(
+              title: 'Unable to load notifications',
+              message:
+                  'The server did not return notifications. You can retry.',
+              onRetry: load,
+            )
+          : items.isEmpty
+          ? const AppEmptyState(
+              title: 'No notifications yet',
+              message:
+                  'Account and order updates will appear here when the server sends them.',
+              icon: Icons.notifications_none,
+            )
+          : RefreshIndicator(
+              onRefresh: load,
+              child: ListView.builder(
+                padding: AppSpacing.page,
+                physics: const AlwaysScrollableScrollPhysics(),
+                itemCount: items.length + 1,
+                itemBuilder: (_, index) {
+                  if (index == 0) {
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (loading) const LinearProgressIndicator(),
+                          if (errorMessage != null)
+                            Padding(
+                              padding: const EdgeInsets.only(
+                                bottom: AppSpacing.md,
+                              ),
+                              child: AppErrorView(
+                                title: errorMessage!,
+                                onRetry: load,
+                                compact: true,
                               ),
                             ),
-                            AppText(
-                              unreadCount == 0
-                                  ? 'All caught up'
-                                  : '$unreadCount unread',
-                              style: AppTypography.caption.copyWith(
-                                color: unreadCount == 0
-                                    ? AppConfig.textSecondaryColor
-                                    : AppConfig.primaryColor,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                final item = items[index - 1];
-                final unread = item['readAt'] == null;
-                final type = item['type']?.toString();
-                final paymentRequired = type == 'IPO_PAYMENT_REQUIRED';
-                final settled = type == 'IPO_ALLOTMENT_SETTLED';
-                final id = item['id']?.toString() ?? '';
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                  child: AppCard(
-                    backgroundColor: paymentRequired
-                        ? const Color(0xFFFFFBEB)
-                        : settled
-                        ? const Color(0xFFECFDF5)
-                        : unread
-                        ? const Color(0xFFF1F6FF)
-                        : Colors.white,
-                    onTap: unread ? () => markRead(item) : null,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: paymentRequired
-                              ? const Color(0xFFB45309).withValues(alpha: 0.12)
-                              : settled
-                              ? const Color(0xFF047857).withValues(alpha: 0.12)
-                              : unread
-                              ? const Color(0xFFDDEAFF)
-                              : const Color(0xFFF1F5F9),
-                          child: Icon(
-                            _icon(item['type']?.toString()),
-                            size: 20,
-                            color: paymentRequired
-                                ? const Color(0xFFB45309)
-                                : settled
-                                ? const Color(0xFF047857)
-                                : unread
-                                ? AppConfig.primaryColor
-                                : AppConfig.textSecondaryColor,
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.md),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          Row(
                             children: [
-                              AppText(
-                                item['title']?.toString() ?? '',
-                                style: TextStyle(
-                                  fontWeight: unread
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
+                              const Expanded(
+                                child: AppText(
+                                  'Recent updates',
+                                  style: AppTypography.titleMedium,
                                 ),
                               ),
                               AppText(
-                                _subtitle(item),
-                                maxLines: paymentRequired || settled ? null : 3,
-                                overflow: paymentRequired || settled
-                                    ? TextOverflow.visible
-                                    : TextOverflow.ellipsis,
+                                unreadCount == 0
+                                    ? 'All caught up'
+                                    : '$unreadCount unread',
+                                style: AppTypography.caption.copyWith(
+                                  color: unreadCount == 0
+                                      ? AppConfig.textSecondaryColor
+                                      : AppConfig.primaryColor,
+                                  fontWeight: FontWeight.w700,
+                                ),
                               ),
                             ],
                           ),
-                        ),
-                        if (markingRead.contains(id))
-                          const SizedBox.square(
-                            dimension: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        else if (unread)
-                          Semantics(
-                            label: 'Unread',
-                            child: Container(
-                              width: 9,
-                              height: 9,
-                              decoration: const BoxDecoration(
-                                color: AppConfig.primaryColor,
-                                shape: BoxShape.circle,
-                              ),
+                        ],
+                      ),
+                    );
+                  }
+                  final item = items[index - 1];
+                  final unread = item['readAt'] == null;
+                  final type = item['type']?.toString();
+                  final paymentRequired = type == 'IPO_PAYMENT_REQUIRED';
+                  final settled = type == 'IPO_ALLOTMENT_SETTLED';
+                  final id = item['id']?.toString() ?? '';
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: AppCard(
+                      backgroundColor: paymentRequired
+                          ? const Color(0xFFFFFBEB)
+                          : settled
+                          ? const Color(0xFFECFDF5)
+                          : unread
+                          ? const Color(0xFFF1F6FF)
+                          : Colors.white,
+                      onTap: unread ? () => markRead(item) : null,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          CircleAvatar(
+                            radius: 20,
+                            backgroundColor: paymentRequired
+                                ? const Color(
+                                    0xFFB45309,
+                                  ).withValues(alpha: 0.12)
+                                : settled
+                                ? const Color(
+                                    0xFF047857,
+                                  ).withValues(alpha: 0.12)
+                                : unread
+                                ? const Color(0xFFDDEAFF)
+                                : const Color(0xFFF1F5F9),
+                            child: Icon(
+                              _icon(item['type']?.toString()),
+                              size: 20,
+                              color: paymentRequired
+                                  ? const Color(0xFFB45309)
+                                  : settled
+                                  ? const Color(0xFF047857)
+                                  : unread
+                                  ? AppConfig.primaryColor
+                                  : AppConfig.textSecondaryColor,
                             ),
                           ),
-                      ],
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppText(
+                                  item['title']?.toString() ?? '',
+                                  style: TextStyle(
+                                    fontWeight: unread
+                                        ? FontWeight.w700
+                                        : FontWeight.w500,
+                                  ),
+                                ),
+                                AppText(
+                                  _subtitle(item),
+                                  maxLines: paymentRequired || settled
+                                      ? null
+                                      : 3,
+                                  overflow: paymentRequired || settled
+                                      ? TextOverflow.visible
+                                      : TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (markingRead.contains(id))
+                            const SizedBox.square(
+                              dimension: 16,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          else if (unread)
+                            Semantics(
+                              label: 'Unread',
+                              child: Container(
+                                width: 9,
+                                height: 9,
+                                decoration: const BoxDecoration(
+                                  color: AppConfig.primaryColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
     ),
   );
 

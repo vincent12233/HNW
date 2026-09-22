@@ -1813,6 +1813,9 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'en',
     sortOrder: 609,
   },
+  { module: AppContentModule.TRADING, key: 'action.buy', body: 'Buy', locale: 'en', sortOrder: 610 },
+  { module: AppContentModule.TRADING, key: 'action.sell', body: 'Sell', locale: 'en', sortOrder: 611 },
+  { module: AppContentModule.TRADING, key: 'action.retry', body: 'Retry', locale: 'en', sortOrder: 612 },
 
   {
     module: AppContentModule.TRADING,

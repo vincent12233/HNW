@@ -538,7 +538,13 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                             backgroundColor: AppColors.buy,
                             foregroundColor: AppColors.textInverse,
                           ),
-                          child: const AppText('Buy'),
+                          child: AppText(
+                            AppContentService.instance.current.text(
+                              'trading',
+                              'action.buy',
+                              fallback: 'Buy',
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -552,7 +558,13 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                             backgroundColor: AppColors.sell,
                             foregroundColor: AppColors.textInverse,
                           ),
-                          child: const AppText('Sell'),
+                          child: AppText(
+                            AppContentService.instance.current.text(
+                              'trading',
+                              'action.sell',
+                              fallback: 'Sell',
+                            ),
+                          ),
                         ),
                       ),
                     ),
@@ -579,7 +591,13 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                       onPressed: _transactionsLoading
                           ? null
                           : () => _refreshTradingData(),
-                      child: const AppText('Retry'),
+                      child: AppText(
+                        AppContentService.instance.current.text(
+                          'trading',
+                          'action.retry',
+                          fallback: 'Retry',
+                        ),
+                      ),
                     ),
                   ],
                 ),

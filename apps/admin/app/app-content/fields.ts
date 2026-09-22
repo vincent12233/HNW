@@ -273,6 +273,9 @@ export const tradingFields: FieldDef[] = [
   { key: "orders.clear_filters", label: "订单筛选 · 清除筛选", rows: 1 },
   { key: "orders.empty_title", label: "订单空状态标题", rows: 2 },
   { key: "orders.empty_message", label: "订单空状态说明", rows: 3 },
+  { key: "action.buy", label: "交易操作 · 买入", rows: 1 },
+  { key: "action.sell", label: "交易操作 · 卖出", rows: 1 },
+  { key: "action.retry", label: "交易操作 · 重试", rows: 1 },
   { key: "holdings.empty_title", label: "Positions 空状态标题", rows: 2 },
   { key: "holdings.empty_subtitle", label: "Positions 空状态说明", rows: 2 },
   {

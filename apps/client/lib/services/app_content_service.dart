@@ -209,8 +209,7 @@ class AppContentService extends ChangeNotifier {
     if (!force &&
         _loadedAt != null &&
         _loadedLocale == locale &&
-        DateTime.now().difference(_loadedAt!) < const Duration(minutes: 5) &&
-        _bundle.hasContent) {
+        DateTime.now().difference(_loadedAt!) < const Duration(minutes: 5)) {
       return _bundle;
     }
     if (!force) {

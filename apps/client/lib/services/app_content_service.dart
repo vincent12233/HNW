@@ -239,12 +239,12 @@ class AppContentService extends ChangeNotifier {
           .timeout(const Duration(seconds: 12));
       if (generation != _fetchGeneration) return _bundle;
       if (response.statusCode < 200 || response.statusCode >= 300) {
-        _lastFetchFailed = true;
+        _markFetchFailed();
         return _bundle;
       }
       final decoded = jsonDecode(response.body);
       if (decoded is! Map) {
-        _lastFetchFailed = true;
+        _markFetchFailed();
         return _bundle;
       }
       _bundle = AppContentBundle.fromJson(Map<String, dynamic>.from(decoded));
@@ -254,8 +254,14 @@ class AppContentService extends ChangeNotifier {
       notifyListeners();
       return _bundle;
     } catch (_) {
-      if (generation == _fetchGeneration) _lastFetchFailed = true;
+      if (generation == _fetchGeneration) _markFetchFailed();
       return _bundle;
     }
+  }
+
+  void _markFetchFailed() {
+    if (_lastFetchFailed) return;
+    _lastFetchFailed = true;
+    notifyListeners();
   }
 }

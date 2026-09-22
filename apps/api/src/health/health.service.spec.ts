@@ -16,6 +16,7 @@ describe('HealthService trading readiness', () => {
     streamingEnabled?: boolean;
     streamingConnected?: boolean;
     lastQuoteAt?: Date | null;
+    apifyToken?: string;
   }) {
     const dbOk = options?.dbOk ?? true;
     const prisma = {
@@ -51,7 +52,7 @@ describe('HealthService trading readiness', () => {
     };
     const marketDataHealth = {
       getStatus: jest.fn().mockReturnValue({
-        configuredProvider: 'YAHOO',
+        configuredProvider: 'APIFY',
         providerConfigured: options?.providerConfigured ?? true,
         staleAfterMs: 60000,
         lastQuoteAt: options?.lastQuoteAt ?? null,
@@ -255,9 +256,9 @@ describe('HealthService IST session integration', () => {
         if (key === 'MARKET_OPEN_TIME_IST') return '09:15';
         if (key === 'MARKET_CLOSE_TIME_IST') return '15:30';
         if (key === 'MARKET_DATA_STALE_AFTER_MS') return '60000';
-        if (key === 'MARKET_DATA_PROVIDER') return 'YAHOO';
-        if (key === 'MARKET_DATA_PROVIDER_TOKEN') return 'live-token-value-not-for-clients';
-        if (key === 'MARKET_DATA_PROVIDER_ID') return 'actor-id';
+        if (key === 'MARKET_DATA_PROVIDER') return 'APIFY';
+        if (key === 'APIFY_TOKEN') return 'live-token-value-not-for-clients';
+        if (key === 'APIFY_ACTOR_ID') return 'actor-id';
         if (key === 'MARKET_DATA_STREAMING_ENABLED') return 'false';
         return undefined;
       }),
@@ -298,13 +299,13 @@ describe('HealthService IST session integration', () => {
     expect(weekend.body.reason).toBe('MARKET_CLOSED');
   });
 
-  it('fails open-market readiness when the provider is missing', async () => {
+  it('fails open-market readiness when APIFY credentials are missing', async () => {
     const config = {
       get: jest.fn((key: string) => {
         if (key === 'MARKET_OPEN_TIME_IST') return '09:15';
         if (key === 'MARKET_CLOSE_TIME_IST') return '15:30';
         if (key === 'MARKET_DATA_STALE_AFTER_MS') return '60000';
-        if (key === 'MARKET_DATA_PROVIDER') return '';
+        if (key === 'MARKET_DATA_PROVIDER') return 'APIFY';
         if (key === 'MARKET_DATA_STREAMING_ENABLED') return 'false';
         return undefined;
       }),

@@ -6,7 +6,6 @@ import { loadStandardQuoteEvidence } from '../health/standard-quote-evidence';
 @Injectable()
 export class MarketDataHealthService {
   private lastQuoteAt: Date | null = null;
-  private lastSuccessfulIngestionAt: Date | null = null;
   private lastSource: string | null = null;
   private streamingProvider = 'NONE';
   private streamingConnected = false;
@@ -24,7 +23,6 @@ export class MarketDataHealthService {
       this.lastQuoteAt = at;
       this.lastSource = source;
     }
-    this.lastSuccessfulIngestionAt = new Date();
   }
 
   setStreamingStatus(
@@ -63,22 +61,15 @@ export class MarketDataHealthService {
       (this.config.get<string>('MARKET_DATA_STREAMING_ENABLED') ?? 'false')
         .trim()
         .toLowerCase() === 'true';
-    const configuredProvider = (
-      this.config.get<string>('MARKET_DATA_PROVIDER') ?? 'YAHOO'
-    ).trim().toUpperCase();
 
     return {
       healthy: !stale,
       stale,
       lastQuoteAt: this.lastQuoteAt,
       lastTickAt: this.lastQuoteAt,
-      lastSuccessfulIngestionAt: this.lastSuccessfulIngestionAt,
       lastSource: this.lastSource,
       ageMs,
-      quoteAge: ageMs,
       staleAfterMs,
-      configuredProvider,
-      providerConfigured: configuredProvider === 'YAHOO',
       streaming: {
         enabled: streamingEnabled,
         provider: this.streamingProvider,
@@ -116,6 +107,14 @@ export class MarketDataHealthService {
         quotedStandardInstrumentCount: null,
       };
     }
+  }
+
+  private hasConfiguredSecret(value: string | undefined) {
+    const trimmed = value?.trim() ?? '';
+    return (
+      trimmed.length > 0 &&
+      !/replace|change-me|your-token|example|placeholder/i.test(trimmed)
+    );
   }
 
   private positiveInteger(value: string | undefined, fallback: number) {

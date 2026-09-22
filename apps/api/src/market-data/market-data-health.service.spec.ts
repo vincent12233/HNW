@@ -5,7 +5,7 @@ describe('MarketDataHealthService', () => {
     get: jest.fn((key: string) => {
       if (key === 'MARKET_DATA_STALE_AFTER_MS') return '60000';
       if (key === 'MARKET_DATA_STREAMING_ENABLED') return 'false';
-      if (key === 'MARKET_DATA_PROVIDER') return 'YAHOO';
+      if (key === 'MARKET_DATA_PROVIDER') return 'APIFY';
       return undefined;
     }),
   } as any;

@@ -80,8 +80,6 @@ export class MarketDataHealthService {
       staleAfterMs,
       configuredProvider,
       providerConfigured: configuredProvider === 'YAHOO',
-      streamingEnabled,
-      streamingProvider: this.streamingProvider,
       streaming: {
         enabled: streamingEnabled,
         provider: this.streamingProvider,

@@ -196,11 +196,19 @@ class _OrdersTabState extends State<OrdersTab> {
           child: AppStatusSwitch(
             switchKey: '$status|$side|$query|${filtered.length}',
             child: filtered.isEmpty
-                ? const AppEmptyState(
+                ? AppEmptyState(
                     icon: Icons.filter_alt_outlined,
-                    title: 'No matching orders',
-                    message:
-                        'Nothing in the currently loaded orders matches these filters.',
+                    title: AppContentService.instance.current.text(
+                      'trading',
+                      'orders.empty_title',
+                      fallback: 'No matching orders',
+                    ),
+                    message: AppContentService.instance.current.text(
+                      'trading',
+                      'orders.empty_message',
+                      fallback:
+                          'Nothing in the currently loaded orders matches these filters.',
+                    ),
                   )
                 : RefreshIndicator(
                     onRefresh: widget.onRefresh == null

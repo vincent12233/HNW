@@ -1799,6 +1799,20 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'en',
     sortOrder: 607,
   },
+  {
+    module: AppContentModule.TRADING,
+    key: 'orders.empty_title',
+    body: 'No matching orders',
+    locale: 'en',
+    sortOrder: 608,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'orders.empty_message',
+    body: 'Nothing in the currently loaded orders matches these filters.',
+    locale: 'en',
+    sortOrder: 609,
+  },
 
   {
     module: AppContentModule.TRADING,

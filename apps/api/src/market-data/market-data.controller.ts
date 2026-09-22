@@ -92,11 +92,8 @@ export class MarketDataController {
   }
 
   @Get('health')
-  async getHealth() {
-    return {
-      ...this.marketDataHealth.getStatus(),
-      ...(await this.marketDataHealth.getPersistedDiagnostics()),
-    };
+  getHealth() {
+    return this.marketDataHealth.getStatus();
   }
 
   @Patch('quote')

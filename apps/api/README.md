@@ -53,7 +53,7 @@ PRIVATE_OBJECT_ROOT=/var/lib/hnw/private-objects
 PORT=3000
 ```
 
-生产启动：`npm run start:prod`（`NODE_ENV=production node dist/main.js`）。健康分层：`/health/live` 只表示进程存活；`/health/ready` 只表示 API/PostgreSQL 可接受普通请求；`/health/trading-ready` 才是普通股票行情执行门禁；`/market-data/health` 用于诊断。这些接口只返回状态，不暴露密钥或业务数据。**不能仅以 `/health/ready = 200` 判定行情已可交易。**
+生产启动：`npm run start:prod`（`NODE_ENV=production node dist/main.js`）。`/health` 与 `/health/ready` 只返回基础状态，不暴露业务数据。
 
 `create-*-user` 脚本在 `NODE_ENV=production` 下会拒绝执行；本地脚本与 seed 一样，再次 upsert **不会覆盖**已有密码哈希。
 

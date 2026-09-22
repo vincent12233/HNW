@@ -111,7 +111,11 @@ class _AnimatedAuthBrandHeaderState extends State<AnimatedAuthBrandHeader>
     super.didChangeDependencies();
     if (_motionConfigured) return;
     _motionConfigured = true;
-    if (!AppMotion.reduce(context)) _controller.repeat(reverse: true);
+    if (!AppMotion.reduce(context)) {
+      // A finite entrance pulse keeps pumpAndSettle and reduced-motion users
+      // deterministic while still giving the auth screen a live first frame.
+      _controller.forward();
+    }
   }
 
   @override
@@ -124,7 +128,8 @@ class _AnimatedAuthBrandHeaderState extends State<AnimatedAuthBrandHeader>
   Widget build(BuildContext context) => AnimatedBuilder(
     animation: _controller,
     builder: (context, child) {
-      final pulse = Curves.easeInOut.transform(_controller.value);
+      final progress = Curves.easeInOut.transform(_controller.value);
+      final pulse = 1 - (2 * progress - 1).abs();
       return DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: AppRadius.borderSm,

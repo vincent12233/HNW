@@ -13,6 +13,7 @@ import 'package:india_trading_app/pages/register_page.dart';
 import 'package:india_trading_app/theme/app_motion.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/theme/auth_layout.dart';
+import 'package:india_trading_app/widgets/onboarding_widgets.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Widget host(
@@ -75,6 +76,8 @@ void main() {
   testWidgets('register entrance keeps every required field', (tester) async {
     setView(tester, const Size(390, 844));
     await tester.pumpWidget(host(const RegisterPage()));
+    expect(find.byType(AnimatedAuthBrandHeader), findsOneWidget);
+    await tester.pumpAndSettle();
     await tester.pump(AppMotion.entranceRegister);
     expect(find.text('Create Account'), findsOneWidget);
     expect(find.text('Password'), findsOneWidget);
@@ -221,47 +224,50 @@ void main() {
     );
   });
 
-  testWidgets('register shows success then opens KYC after the server accepts', (
-    tester,
-  ) async {
-    setView(tester, const Size(390, 2000));
-    await http.runWithClient(
-      () async {
-        await tester.pumpWidget(
-          host(const RegisterPage(), size: const Size(390, 2000)),
-        );
-        await tester.enterText(find.byType(TextField).at(0), '9876543210');
-        await tester.enterText(find.byType(TextField).at(1), 'password1');
-        await tester.enterText(find.byType(TextField).at(2), 'password1');
-        await tester.enterText(find.byType(TextField).at(3), 'invite99');
-        await tester.ensureVisible(find.byType(Checkbox));
-        await tester.tap(find.byType(Checkbox));
-        await tester.pump();
-        await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign Up'));
-        await tester.tap(find.widgetWithText(FilledButton, 'Sign Up'));
-        await tester.pump();
-        await tester.pump();
-        expect(find.byKey(const ValueKey('auth-success')), findsOneWidget);
-        expect(find.byType(KycUploadPage), findsNothing);
-        await tester.pump(AppMotion.success);
-        await tester.pump();
-        expect(find.byType(KycUploadPage), findsOneWidget);
-        await disposeTree(tester);
-      },
-      () {
-        return MockClient(
-          (_) async => http.Response(
-            jsonEncode({
-              'message': 'Registration successful',
-              'kycToken': 'kyc-token',
-              'user': {'id': 'u1', 'status': 'SUSPENDED'},
-            }),
-            201,
-          ),
-        );
-      },
-    );
-  });
+  testWidgets(
+    'register shows success then opens KYC after the server accepts',
+    (tester) async {
+      setView(tester, const Size(390, 2000));
+      await http.runWithClient(
+        () async {
+          await tester.pumpWidget(
+            host(const RegisterPage(), size: const Size(390, 2000)),
+          );
+          await tester.enterText(find.byType(TextField).at(0), '9876543210');
+          await tester.enterText(find.byType(TextField).at(1), 'password1');
+          await tester.enterText(find.byType(TextField).at(2), 'password1');
+          await tester.enterText(find.byType(TextField).at(3), 'invite99');
+          await tester.ensureVisible(find.byType(Checkbox));
+          await tester.tap(find.byType(Checkbox));
+          await tester.pump();
+          await tester.ensureVisible(
+            find.widgetWithText(FilledButton, 'Sign Up'),
+          );
+          await tester.tap(find.widgetWithText(FilledButton, 'Sign Up'));
+          await tester.pump();
+          await tester.pump();
+          expect(find.byKey(const ValueKey('auth-success')), findsOneWidget);
+          expect(find.byType(KycUploadPage), findsNothing);
+          await tester.pump(AppMotion.success);
+          await tester.pump();
+          expect(find.byType(KycUploadPage), findsOneWidget);
+          await disposeTree(tester);
+        },
+        () {
+          return MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'message': 'Registration successful',
+                'kycToken': 'kyc-token',
+                'user': {'id': 'u1', 'status': 'SUSPENDED'},
+              }),
+              201,
+            ),
+          );
+        },
+      );
+    },
+  );
 
   testWidgets('TOTP field appears only after the current 2FA response', (
     tester,

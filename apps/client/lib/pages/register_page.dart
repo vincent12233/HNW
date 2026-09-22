@@ -199,7 +199,7 @@ class _RegisterPageState extends State<RegisterPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AnimatedAuthBrandHeader(),
+            AuthBrandHeader(),
             SizedBox(height: 32),
             Text('Continue to identity verification', style: AuthLayout.title),
             SizedBox(height: 8),
@@ -240,6 +240,8 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              const AnimatedAuthBrandHeader(showSlogan: false),
+              const SizedBox(height: 20),
               AppEntrance(
                 delay: Duration.zero,
                 offsetY: 10,

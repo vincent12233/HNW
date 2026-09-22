@@ -925,7 +925,10 @@ class _MarketHomePageState extends State<MarketHomePage>
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1040),
-                child: _selectedBody(),
+                child: AppFadeIn(
+                  switchKey: selectedIndex,
+                  child: _selectedBody(),
+                ),
               ),
             ),
           ),

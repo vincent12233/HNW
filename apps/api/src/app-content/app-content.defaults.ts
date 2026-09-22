@@ -1792,6 +1792,7 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'en',
     sortOrder: 606,
   },
+  { module: AppContentModule.TRADING, key: 'state.loading', body: 'Loading trading data', locale: 'en', sortOrder: 606.5 },
   {
     module: AppContentModule.TRADING,
     key: 'orders.clear_filters',

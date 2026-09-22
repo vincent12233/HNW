@@ -854,7 +854,13 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     final missingOrders = _orders.isEmpty && [0, 4, 7].contains(selectedTab);
     final missingAccount = _positions.isEmpty && [0, 2].contains(selectedTab);
     if ((missingOrders || missingAccount) && _transactionsLoading) {
-      return const AppLoadingView(message: 'Loading trading data');
+      return AppLoadingView(
+        message: AppContentService.instance.current.text(
+          'trading',
+          'state.loading',
+          fallback: 'Loading trading data',
+        ),
+      );
     }
     if ((missingOrders && _ordersFailed) ||
         (missingAccount && _accountFailed)) {

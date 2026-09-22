@@ -547,7 +547,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       {!mobile && (
         <Sider width={264} collapsedWidth={78} collapsed={collapsed} trigger={null} className="ops-sider">
           {brand}
-          <nav className="ops-navigation" aria-label="后台导航">{menu}</nav>
+          <nav id="ops-desktop-navigation" className="ops-navigation" aria-label="后台导航">{menu}</nav>
         </Sider>
       )}
 
@@ -566,7 +566,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       >
         <div className="ops-mobile-nav">
           {brand}
-          <nav className="ops-navigation" aria-label="后台导航">{menu}</nav>
+          <nav id="ops-mobile-navigation" className="ops-navigation" aria-label="后台导航">{menu}</nav>
         </div>
       </Drawer>
 
@@ -578,6 +578,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 type="text"
                 aria-label={mobile ? (drawerOpen ? "关闭导航" : "打开导航") : collapsed ? "展开导航" : "收起导航"}
                 aria-expanded={mobile ? drawerOpen : !collapsed}
+                aria-controls={mobile ? "ops-mobile-navigation" : "ops-desktop-navigation"}
                 className="ops-nav-toggle"
                 icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
                 onClick={() => (mobile ? setDrawerOpen(true) : setCollapsed((value) => !value))}
@@ -596,7 +597,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
               <strong>{pageTitle}</strong>
             </div>
           </Space>
-          <Space size={mobile ? 8 : 14}>
+          <Space size={mobile ? 8 : 14} className="ops-header-actions">
             <Tag color={meta.color} className="ops-role-tag">
               {meta.label}
             </Tag>

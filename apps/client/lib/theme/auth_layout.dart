@@ -45,12 +45,13 @@ abstract final class AuthLayout {
   }
 
   static EdgeInsets pageInsets(BuildContext context) {
-    final width = MediaQuery.sizeOf(context).width;
+    final size = MediaQuery.sizeOf(context);
+    final compactHeight = size.height < 640;
     return EdgeInsets.fromLTRB(
-      horizontalPadding(width),
-      pagePaddingTop,
-      horizontalPadding(width),
-      pagePaddingBottom,
+      horizontalPadding(size.width),
+      compactHeight ? 12 : pagePaddingTop,
+      horizontalPadding(size.width),
+      compactHeight ? 16 : pagePaddingBottom,
     );
   }
 

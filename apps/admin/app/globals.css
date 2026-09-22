@@ -74,6 +74,10 @@ body {
   scrollbar-color: #6484a6 transparent;
 }
 
+.ops-nav-drawer .ant-drawer-content-wrapper {
+  max-width: calc(100vw - 24px) !important;
+}
+
 .ops-brand {
   height: 78px;
   flex: 0 0 78px;
@@ -254,6 +258,23 @@ body {
 
 .ops-content .ant-table-wrapper {
   overflow: auto;
+  overscroll-behavior-inline: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable both-edges;
+}
+
+.ops-header-start {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ops-title {
+  min-width: 0;
+}
+
+.ops-header-actions {
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .ops-boot {
@@ -300,6 +321,13 @@ body {
   .ops-header {
     padding: 0 10px !important;
     height: 56px !important;
+    gap: 8px;
+  }
+  .ops-header-start.ant-space {
+    gap: 8px !important;
+  }
+  .ops-header-actions.ant-space {
+    gap: 6px !important;
   }
   .ops-content {
     padding: 12px !important;
@@ -322,11 +350,24 @@ body {
   .ops-header .ant-tag {
     margin-inline-end: 0;
   }
+  .ops-nav-toggle,
+  .ops-danger-action {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
   .ops-title strong {
-    max-width: 135px;
+    max-width: min(135px, calc(100vw - 180px));
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 360px) {
+  .ops-pending-warn {
+    right: 12px;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    max-width: calc(100vw - 24px);
   }
 }
 

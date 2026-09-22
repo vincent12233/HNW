@@ -4,11 +4,14 @@ import {
   ExceptionFilter,
   HttpException,
   HttpStatus,
+  Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const context = host.switchToHttp();
     const response = context.getResponse<Response>();
@@ -34,7 +37,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : typeof extractedMessage === 'string'
               ? extractedMessage
               : 'Request failed';
-    console.error(
+    this.logger.error(
       JSON.stringify({
         level: 'error',
         event: 'unhandled_exception',

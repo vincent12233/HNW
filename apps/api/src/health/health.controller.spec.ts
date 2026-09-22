@@ -79,7 +79,7 @@ describe('health probe HTTP contracts', () => {
         tradingReady: false,
         marketOpen: true,
         reason: 'MARKET_DATA_STALE',
-        configuredProvider: 'APIFY',
+        configuredProvider: 'YAHOO',
         providerConfigured: true,
       },
     });
@@ -89,7 +89,7 @@ describe('health probe HTTP contracts', () => {
       .expect(503);
 
     expect(response.body.reason).toBe('MARKET_DATA_STALE');
-    expect(JSON.stringify(response.body)).not.toContain('APIFY_TOKEN');
+    expect(JSON.stringify(response.body)).not.toContain('MARKET_DATA_PROVIDER_TOKEN');
     expect(probeDatabase).not.toHaveBeenCalled();
   });
 });

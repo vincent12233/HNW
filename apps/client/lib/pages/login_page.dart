@@ -261,7 +261,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
               AppEntrance(
                 delay: const Duration(milliseconds: 80),
                 offsetY: 8,
-                child: const AuthBrandHeader(),
+                child: const AnimatedAuthBrandHeader(),
               ),
               const SizedBox(height: AuthLayout.sectionGap),
               AppEntrance(

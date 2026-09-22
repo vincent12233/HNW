@@ -199,7 +199,7 @@ class _RegisterPageState extends State<RegisterPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AuthBrandHeader(),
+            AnimatedAuthBrandHeader(),
             SizedBox(height: 32),
             Text('Continue to identity verification', style: AuthLayout.title),
             SizedBox(height: 8),

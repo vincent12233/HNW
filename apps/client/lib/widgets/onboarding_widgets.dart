@@ -80,6 +80,74 @@ class AuthBrandHeader extends StatelessWidget {
   );
 }
 
+/// A small, low-distraction motion cue that gives auth screens a live brand
+/// presence without competing with the form or moving its layout.
+class AnimatedAuthBrandHeader extends StatefulWidget {
+  const AnimatedAuthBrandHeader({super.key, this.showSlogan = true});
+
+  final bool showSlogan;
+
+  @override
+  State<AnimatedAuthBrandHeader> createState() =>
+      _AnimatedAuthBrandHeaderState();
+}
+
+class _AnimatedAuthBrandHeaderState extends State<AnimatedAuthBrandHeader>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  bool _motionConfigured = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2600),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_motionConfigured) return;
+    _motionConfigured = true;
+    if (!AppMotion.reduce(context)) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _controller,
+    builder: (context, child) {
+      final pulse = Curves.easeInOut.transform(_controller.value);
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: AppRadius.borderSm,
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.brandPrimary.withValues(
+                alpha: 0.08 + pulse * 0.1,
+              ),
+              blurRadius: 18 + pulse * 8,
+              spreadRadius: pulse * 1.5,
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+          child: child,
+        ),
+      );
+    },
+    child: AuthBrandHeader(showSlogan: widget.showSlogan),
+  );
+}
+
 class FinvestWordmark extends StatelessWidget {
   const FinvestWordmark({super.key});
 

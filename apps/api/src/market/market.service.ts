@@ -4,11 +4,6 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  isSpecialProductCategory,
-  isStandardMarketInstrument,
-  ordinaryMarketCategoryWhere,
-} from '../common/instrument-category';
 import { Exchange, InstrumentType, Prisma } from '../generated/prisma/client';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
@@ -29,12 +24,13 @@ export class MarketService {
     const search = query.search?.trim();
     const featuredFilter =
       query.featuredHome !== undefined || query.featuredMarkets !== undefined;
-    const take = featuredFilter ? (query.limit ?? 40) : query.limit;
+    const take = featuredFilter
+      ? (query.limit ?? 40)
+      : query.limit;
 
     const instruments = await this.prisma.instrument.findMany({
       where: {
         isActive: true,
-        AND: [ordinaryMarketCategoryWhere()],
         ...(query.exchange ? { exchange: query.exchange } : {}),
         ...(query.type ? { type: query.type } : {}),
         ...(query.featuredHome !== undefined
@@ -73,13 +69,9 @@ export class MarketService {
       ...(take ? { take } : {}),
     });
 
-    const ordinary = instruments.filter((instrument) =>
-      isStandardMarketInstrument(instrument),
-    );
-
     return {
-      total: ordinary.length,
-      data: ordinary.map((instrument) => ({
+      total: instruments.length,
+      data: instruments.map((instrument) => ({
         id: instrument.id,
         exchange: instrument.exchange,
         symbol: instrument.symbol,
@@ -582,11 +574,7 @@ export class MarketService {
       },
     });
 
-    if (
-      !instrument ||
-      !instrument.isActive ||
-      isSpecialProductCategory(instrument.category)
-    ) {
+    if (!instrument || !instrument.isActive) {
       throw new NotFoundException('Instrument not found');
     }
 
@@ -616,11 +604,7 @@ export class MarketService {
       },
     });
 
-    if (
-      !instrument ||
-      !instrument.isActive ||
-      isSpecialProductCategory(instrument.category)
-    ) {
+    if (!instrument || !instrument.isActive) {
       throw new NotFoundException('Instrument not found');
     }
 

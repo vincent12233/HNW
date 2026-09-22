@@ -4,12 +4,6 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { randomUUID } from 'crypto';
-import {
-  isSpecialProductCategory,
-  ordinaryMarketCategoryWhere,
-  SPECIAL_PRODUCT_CATEGORIES,
-} from '../common/instrument-category';
-import { Prisma } from '../generated/prisma/client';
 import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -32,15 +26,6 @@ export class WatchlistService {
         AND i."isActive" = true
         AND i."type" = ${InstrumentType.EQUITY}::"InstrumentType"
         AND i."exchange" IN (${Exchange.NSE}::"Exchange", ${Exchange.BSE}::"Exchange")
-        AND (
-          i."category" IS NULL
-          OR BTRIM(i."category") = ''
-          OR UPPER(BTRIM(i."category")) NOT IN (${Prisma.join(
-            SPECIAL_PRODUCT_CATEGORIES.map(
-              (category) => Prisma.sql`${category}`,
-            ),
-          )})
-        )
       ORDER BY w."createdAt" DESC
     `;
   }
@@ -57,12 +42,11 @@ export class WatchlistService {
         exchange,
         type: InstrumentType.EQUITY,
         isActive: true,
-        AND: [ordinaryMarketCategoryWhere()],
       },
-      select: { id: true, symbol: true, exchange: true, category: true },
+      select: { id: true, symbol: true, exchange: true },
     });
 
-    if (!instrument || isSpecialProductCategory(instrument.category)) {
+    if (!instrument) {
       throw new NotFoundException('Stock not found');
     }
 

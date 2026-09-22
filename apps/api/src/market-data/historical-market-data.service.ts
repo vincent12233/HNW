@@ -4,7 +4,6 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { ordinaryMarketCategoryWhere } from '../common/instrument-category';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketHistoryResult } from './providers/market-data-provider.interface';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
@@ -43,7 +42,6 @@ export class HistoricalMarketDataService {
         isActive: true,
         exchange: normalizedExchange ?? { in: ['NSE', 'BSE'] },
         type: 'EQUITY',
-        AND: [ordinaryMarketCategoryWhere()],
       },
       select: { symbol: true, exchange: true },
       orderBy: { exchange: 'desc' },

@@ -6,7 +6,6 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma } from '../generated/prisma/client';
-import { isSpecialProductCategory } from '../common/instrument-category';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -85,12 +84,6 @@ export class OrderPreparationService {
 
     if (!instrument || !instrument.isActive) {
       throw new NotFoundException('Tradable instrument not found');
-    }
-
-    if (isSpecialProductCategory(instrument.category)) {
-      throw new BadRequestException(
-        'Instrument is not available for standard market trading',
-      );
     }
 
     if (!instrument.quote) {

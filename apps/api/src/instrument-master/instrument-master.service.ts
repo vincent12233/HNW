@@ -2,7 +2,6 @@ import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
-import { isSpecialProductCategory } from '../common/instrument-category';
 import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -14,12 +13,23 @@ type NseEquityRow = {
   lotSize: number;
 };
 
+/** Product categories that must survive equity-master metadata sync. */
+const PROTECTED_INSTRUMENT_CATEGORIES = new Set([
+  'INST',
+  'INSTITUTIONAL',
+  'LIMIT_UP',
+  'OTC',
+  'BLOCK',
+  'BLOCK_TRADE',
+  'IPO',
+]);
+
 /** Keep Inst/OTC/IPO (and aliases) on update; default new/ordinary rows to EQUITY. */
 export function categoryForEquityMasterUpdate(
   existingCategory: string | null | undefined,
 ): string {
   const raw = (existingCategory ?? '').trim();
-  if (isSpecialProductCategory(raw)) {
+  if (PROTECTED_INSTRUMENT_CATEGORIES.has(raw.toUpperCase())) {
     return raw;
   }
   return 'EQUITY';

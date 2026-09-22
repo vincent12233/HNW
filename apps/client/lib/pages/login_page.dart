@@ -9,7 +9,6 @@ import '../models/auth_session.dart';
 import '../services/auth_service.dart';
 import '../services/device_biometrics.dart';
 import '../services/market_socket_service.dart';
-import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/auth_layout.dart';
 import '../utils/client_error_message.dart';
@@ -428,38 +427,17 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                       succeeded: succeeded,
                       onPressed: _submit,
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Flexible(
-                          child: AppText(
-                            "Don't have an account?",
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 13,
-                              letterSpacing: 0,
-                              color: AppColors.textSecondary,
+                    AuthTextActionRow(
+                      prompt: "Don't have an account?",
+                      actionLabel: 'Create Account',
+                      onPressed: busy || succeeded
+                          ? null
+                          : () => Navigator.push(
+                              context,
+                              AuthSlidePageRoute<void>(
+                                builder: (_) => const RegisterPage(),
+                              ),
                             ),
-                          ),
-                        ),
-                        Flexible(
-                          child: TextButton(
-                            onPressed: busy || succeeded
-                                ? null
-                                : () => Navigator.push(
-                                    context,
-                                    AuthSlidePageRoute<void>(
-                                      builder: (_) => const RegisterPage(),
-                                    ),
-                                  ),
-                            child: const AppText(
-                              'Create Account',
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(fontSize: 13, letterSpacing: 0),
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                     if (biometric != null)
                       OutlinedButton.icon(

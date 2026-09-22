@@ -215,12 +215,14 @@ class InternationalPhoneField extends StatelessWidget {
         prefixIconConstraints: const BoxConstraints(
           minWidth: 72,
           maxWidth: 148,
-          minHeight: AuthLayout.inputHeight,
         ),
         prefixIcon: prefix,
         filled: true,
         fillColor: AuthLayout.pageBackground,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 16),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 16,
+        ),
         border: OutlineInputBorder(borderRadius: AppRadius.borderSm),
         enabledBorder: OutlineInputBorder(
           borderRadius: AppRadius.borderSm,
@@ -228,7 +230,10 @@ class InternationalPhoneField extends StatelessWidget {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: AppRadius.borderSm,
-          borderSide: const BorderSide(color: AppColors.brandPrimary, width: 1.5),
+          borderSide: const BorderSide(
+            color: AppColors.brandPrimary,
+            width: 1.5,
+          ),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: AppRadius.borderSm,

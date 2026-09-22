@@ -60,4 +60,28 @@ void main() {
     expect(bundle.insightArticles().single.title, 'Account and KYC');
     expect(bundle.hasContent, isTrue);
   });
+
+  test(
+    'keeps malformed legal content visible as a readable fallback block',
+    () {
+      final bundle = AppContentBundle.fromJson({
+        'legal': {
+          'terms.document': {
+            'title': 'Terms of Service',
+            'body': 'Legacy terms text that is still readable',
+            'locale': 'en',
+          },
+        },
+      });
+
+      final document = bundle.termsDocument();
+      expect(document.effective, isEmpty);
+      expect(document.title, 'Terms of Service');
+      expect(document.sections.single.heading, 'Terms of Service');
+      expect(
+        document.sections.single.body,
+        'Legacy terms text that is still readable',
+      );
+    },
+  );
 }

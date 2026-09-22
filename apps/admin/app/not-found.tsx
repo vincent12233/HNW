@@ -11,7 +11,7 @@ export default function NotFoundPage() {
       <Result
         status="404"
         title="页面不存在"
-        subTitle="当前地址没有对应的后台页面。权限和菜单范围没有因此扩大。"
+        subTitle="页面可能已移动，或地址输入有误。请检查地址，或返回工作台从菜单重新打开。"
         extra={
           <Space wrap>
             <Button type="primary" aria-label="返回登录入口" onClick={() => router.replace("/login")}>

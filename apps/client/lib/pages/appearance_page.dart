@@ -4,6 +4,7 @@ import '../l10n/app_language.dart';
 import '../services/client_account_service.dart';
 import '../theme/appearance_settings.dart';
 import '../theme/app_motion.dart';
+import '../widgets/app_feedback.dart';
 import '../utils/client_error_message.dart';
 
 class AppearancePage extends StatefulWidget {
@@ -16,6 +17,7 @@ class _AppearancePageState extends State<AppearancePage> {
   bool _busy = false;
   String? _error;
   Future<void> _select(String value) async {
+    if (_busy || value == AppearanceSettings.instance.value) return;
     setState(() {
       _busy = true;
       _error = null;
@@ -42,6 +44,7 @@ class _AppearancePageState extends State<AppearancePage> {
         }.entries)
           ListTile(
             title: AppText(option.value),
+            selected: AppearanceSettings.instance.value == option.key,
             enabled: !_busy,
             onTap: () => _select(option.key),
             minTileHeight: AppMotion.tapTarget,
@@ -50,7 +53,10 @@ class _AppearancePageState extends State<AppearancePage> {
                 : null,
           ),
         if (_error != null)
-          Padding(padding: const EdgeInsets.all(16), child: AppText(_error!)),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: AppErrorView(title: _error!, compact: true),
+          ),
       ],
     ),
   );

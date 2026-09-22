@@ -157,6 +157,7 @@ class _MarketsPageState extends State<MarketsPage> {
   void initState() {
     super.initState();
     _marketSocket.addQuoteListener(_handleRealtimeQuote);
+    AppContentService.instance.addListener(_onContentChanged);
     _loadWatchlist();
     unawaited(_loadIndexHistory());
     unawaited(_loadFeaturedStockHistory());
@@ -275,8 +276,13 @@ class _MarketsPageState extends State<MarketsPage> {
 
   @override
   void dispose() {
+    AppContentService.instance.removeListener(_onContentChanged);
     _marketSocket.removeQuoteListener(_handleRealtimeQuote);
     super.dispose();
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() {});
   }
 
   void _handleRealtimeQuote(Map<String, dynamic> data) {
@@ -340,7 +346,10 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Future<void> _refreshAll() async {
     _failedLogoUrls.clear();
-    await widget.onRefresh();
+    await Future.wait([
+      widget.onRefresh(),
+      AppContentService.instance.load(force: true),
+    ]);
     await _loadWatchlist();
     await _loadIndexHistory();
     await _loadFeaturedStockHistory();

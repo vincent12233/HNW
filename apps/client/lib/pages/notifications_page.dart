@@ -131,7 +131,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
       actions: [
         if (hasUnread)
           IconButton(
-            tooltip: 'Mark all as read',
+            tooltip: tr('Mark all as read'),
             constraints: const BoxConstraints(
               minWidth: AppMotion.tapTarget,
               minHeight: AppMotion.tapTarget,
@@ -147,7 +147,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 : const Icon(Icons.done_all_rounded),
           ),
         IconButton(
-          tooltip: 'Refresh',
+          tooltip: tr('Refresh'),
           constraints: const BoxConstraints(
             minWidth: AppMotion.tapTarget,
             minHeight: AppMotion.tapTarget,
@@ -185,24 +185,39 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 if (index == 0) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Expanded(
-                          child: AppText(
-                            'Recent updates',
-                            style: AppTypography.titleMedium,
+                        if (loading) const LinearProgressIndicator(),
+                        if (errorMessage != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: AppSpacing.md),
+                            child: AppErrorView(
+                              title: errorMessage!,
+                              onRetry: load,
+                              compact: true,
+                            ),
                           ),
-                        ),
-                        AppText(
-                          unreadCount == 0
-                              ? 'All caught up'
-                              : '$unreadCount unread',
-                          style: AppTypography.caption.copyWith(
-                            color: unreadCount == 0
-                                ? AppConfig.textSecondaryColor
-                                : AppConfig.primaryColor,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        Row(
+                          children: [
+                            const Expanded(
+                              child: AppText(
+                                'Recent updates',
+                                style: AppTypography.titleMedium,
+                              ),
+                            ),
+                            AppText(
+                              unreadCount == 0
+                                  ? 'All caught up'
+                                  : '$unreadCount unread',
+                              style: AppTypography.caption.copyWith(
+                                color: unreadCount == 0
+                                    ? AppConfig.textSecondaryColor
+                                    : AppConfig.primaryColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),

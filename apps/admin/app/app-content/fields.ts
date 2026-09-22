@@ -81,6 +81,7 @@ export const homeProfileFields: FieldDef[] = [
   },
   { key: "profile.tile.about.title", label: "About 入口标题", rows: 1 },
   { key: "profile.tile.about.subtitle", label: "About 入口副标题", rows: 2 },
+  { key: "profile.tile.risk.title", label: "风险披露入口标题", rows: 1 },
   { key: "profile.tile.terms.title", label: "服务条款入口标题", rows: 1 },
   { key: "profile.tile.privacy.title", label: "隐私政策入口标题", rows: 1 },
   { key: "profile.logout_label", label: "退出登录标题", rows: 1 },

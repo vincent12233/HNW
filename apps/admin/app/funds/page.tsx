@@ -3,7 +3,7 @@
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
 import { Button, Form, Input, InputNumber, Select, Space, Table, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsEmpty from "@/components/OpsEmpty";
@@ -13,7 +13,7 @@ import OpsMoney from "@/components/OpsMoney";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import OpsStatusTag from "@/components/OpsStatusTag";
 import OpsToolbar from "@/components/OpsToolbar";
-import { api } from "@/lib/api";
+import { api, getApiErrorMessage } from "@/lib/api";
 import { filterLoadedRows } from "@/lib/ops-directory";
 import { OPS_TABLE_PAGINATION } from "@/lib/ops-format";
 import { PRODUCT_COPY } from "@/lib/ops-product";
@@ -41,6 +41,10 @@ export default function FundsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
+  const actionLock = useRef(false);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   async function loadItems() {
     setLoading(true);
@@ -78,31 +82,61 @@ export default function FundsPage() {
   }
 
   async function submitFund() {
-    const values = form.getFieldsValue();
-    const payload = {
-      ...values,
-      nav: Number(values.nav).toFixed(4),
-      minSubscribe: Number(values.minSubscribe).toFixed(2),
-    };
+    if (saveLock.current) return;
+    saveLock.current = true;
+    setSaving(true);
+    try {
+      const values = form.getFieldsValue();
+      const payload = {
+        ...values,
+        nav: Number(values.nav).toFixed(4),
+        minSubscribe: Number(values.minSubscribe).toFixed(2),
+      };
 
-    if (editing) {
-      await api.patch(`/admin-products/funds/${editing.id}`, payload);
-      message.success("基金产品已更新");
-    } else {
-      await api.post("/admin-products/funds", payload);
-      message.success("基金产品已新增");
+      if (editing) {
+        await api.patch(`/admin-products/funds/${editing.id}`, payload);
+        message.success("基金产品已更新");
+      } else {
+        await api.post("/admin-products/funds", payload);
+        message.success("基金产品已新增");
+      }
+
+      setOpen(false);
+      setEditing(null);
+      form.resetFields();
+      await loadItems();
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "基金产品保存失败，请重试"));
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
     }
+  }
 
-    setOpen(false);
-    setEditing(null);
-    form.resetFields();
-    await loadItems();
+  async function runRowAction(record: FundProduct, action: () => Promise<unknown>, success: string) {
+    if (actionLock.current) return false;
+    actionLock.current = true;
+    setActionId(record.id);
+    try {
+      await action();
+      message.success(success);
+      await loadItems();
+      return true;
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "操作失败，请重试"));
+      return false;
+    } finally {
+      actionLock.current = false;
+      setActionId(null);
+    }
   }
 
   async function deleteFund(record: FundProduct) {
-    await api.delete(`/admin-products/funds/${record.id}`);
-    await loadItems();
-    message.success("基金产品已删除");
+    return runRowAction(record, () => api.delete(`/admin-products/funds/${record.id}`), "基金产品已删除");
+  }
+
+  async function changeStatus(record: FundProduct, status: string) {
+    await runRowAction(record, () => api.patch(`/admin-products/funds/${record.id}/status`, { status }), "状态已更新");
   }
 
   const columns: ColumnsType<FundProduct> = [
@@ -119,20 +153,17 @@ export default function FundsPage() {
       width: 220,
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} aria-label={`编辑 ${record.code}`} onClick={() => openEdit(record)}>编辑</Button>
+          <Button size="small" disabled={actionId !== null} icon={<EditOutlined />} aria-label={`编辑 ${record.code}`} onClick={() => openEdit(record)}>编辑</Button>
           <Button
             size="small"
             aria-label={record.status === "开放申购" ? `暂停 ${record.code}` : `开放 ${record.code}`}
-            onClick={async () => {
-              await api.patch(`/admin-products/funds/${record.id}/status`, {
-                status: record.status === "开放申购" ? "暂停申购" : "开放申购",
-              });
-              await loadItems();
-            }}
+            loading={actionId === record.id}
+            disabled={actionId !== null}
+            onClick={() => void changeStatus(record, record.status === "开放申购" ? "暂停申购" : "开放申购")}
           >
             {record.status === "开放申购" ? "暂停" : "开放"}
           </Button>
-          <Button size="small" danger icon={<DeleteOutlined />} aria-label={`删除 ${record.code}`} onClick={() => setDeleting(record)} />
+          <Button size="small" disabled={actionId !== null} danger icon={<DeleteOutlined />} aria-label={`删除 ${record.code}`} onClick={() => setDeleting(record)} />
         </Space>
       ),
     },
@@ -151,10 +182,10 @@ export default function FundsPage() {
           <Input prefix={<SearchOutlined aria-hidden />} allowClear placeholder="搜索已加载的基金代码、名称、类型或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载的基金产品" style={{ width: 380, maxWidth: "100%" }} />
         </OpsToolbar>
         <Text type="secondary">{PRODUCT_COPY.loadedFilter}</Text>
-        <Table rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1380 }} pagination={OPS_TABLE_PAGINATION} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载基金产品" : "当前没有基金产品。"} onRetry={loading ? undefined : loadItems} /> }} />
+        <Table rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1380 }} pagination={OPS_TABLE_PAGINATION} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载基金产品" : keyword.trim() ? "没有匹配的结果，请调整或清空搜索条件。" : "当前没有基金产品。"} extra={!loading && keyword.trim() ? <Button onClick={() => setKeyword("")}>清空搜索</Button> : undefined} onRetry={loading || keyword.trim() ? undefined : loadItems} /> }} />
       </Space>
-      <OpsModal title={editing ? "编辑基金产品" : "新增基金产品"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitFund)} okText="保存" cancelText="返回" zIndex={2100}>
-        <Form form={form} layout="vertical">
+      <OpsModal title={editing ? "编辑基金产品" : "新增基金产品"} open={open} confirmLoading={saving} cancelButtonProps={{ disabled: saving }} closable={!saving} keyboard={!saving} onCancel={() => { if (saveLock.current) return; setOpen(false); setEditing(null); }} onOk={() => form.submit()} okText="保存" cancelText="返回" zIndex={2100}>
+        <Form form={form} layout="vertical" disabled={saving} onFinish={submitFund}>
           <Form.Item name="code" label="基金代码" rules={[{ required: true, message: "请输入基金代码" }]}><Input /></Form.Item>
           <Form.Item name="name" label="基金名称" rules={[{ required: true, message: "请输入基金名称" }]}><Input /></Form.Item>
           <Form.Item name="type" label="类型" initialValue="股票型"><Select options={[{ value: "股票型" }, { value: "债券型" }, { value: "混合型" }, { value: "货币型" }]} /></Form.Item>
@@ -167,9 +198,13 @@ export default function FundsPage() {
       <OpsModal
         title="确认删除基金产品"
         open={!!deleting}
-        onCancel={() => setDeleting(null)}
-        onOk={() => deleting && deleteFund(deleting).then(() => setDeleting(null))}
-        okText="提交到服务器"
+        confirmLoading={actionId !== null}
+        cancelButtonProps={{ disabled: actionId !== null }}
+        closable={actionId === null}
+        keyboard={actionId === null}
+        onCancel={() => { if (!actionLock.current) setDeleting(null); }}
+        onOk={() => deleting && deleteFund(deleting).then((deleted) => { if (deleted) setDeleting(null); })}
+        okText="确认删除"
         cancelText="返回"
         okButtonProps={{ danger: true }}
         zIndex={2100}

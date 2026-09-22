@@ -63,17 +63,22 @@ export default function InsightsAdminPage() {
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<FormValues>();
   const savingRef = useRef(false);
+  const loadGeneration = useRef(0);
 
   const load = useCallback(async () => {
+    const generation = ++loadGeneration.current;
     setLoading(true);
     setError("");
     try {
       const { data } = await api.get<InsightArticle[]>("/admin/insights");
+      if (generation !== loadGeneration.current) return;
       setRows(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
-      setError(getApiErrorMessage(e, "洞察文章加载失败"));
+      if (generation === loadGeneration.current) {
+        setError(getApiErrorMessage(e, "洞察文章加载失败"));
+      }
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }, []);
 
@@ -280,13 +285,16 @@ export default function InsightsAdminPage() {
         onOk={() => form.submit()}
         okText="保存"
         confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
         okButtonProps={{ disabled: saving }}
         width={760}
       >
-        <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>
+        <Form form={form} layout="vertical" disabled={saving} onFinish={(values) => void save(values)}>
           <Space wrap style={{ width: "100%" }}>
             <Form.Item name="slug" label="Slug" rules={[{ required: true }]} style={{ minWidth: 220 }}>
-              <Input placeholder="account-and-kyc" disabled={Boolean(editing)} />
+              <Input placeholder="account-and-kyc" disabled={saving || Boolean(editing)} />
             </Form.Item>
             <Form.Item name="locale" label="Locale" rules={[{ required: true }]} style={{ minWidth: 120 }}>
               <Select options={[{ value: "en", label: "English" }, { value: "hi", label: "Hindi" }]} />
@@ -320,6 +328,9 @@ export default function InsightsAdminPage() {
         onOk={() => void confirmPublish()}
         okText="确认"
         confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
         okButtonProps={{ disabled: saving }}
       >
         <Text>标题：{pendingPublish?.title}</Text>
@@ -333,6 +344,9 @@ export default function InsightsAdminPage() {
         okText="删除"
         okButtonProps={{ danger: true, disabled: saving }}
         confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
       >
         <Text>
           {pendingDelete?.isPublished

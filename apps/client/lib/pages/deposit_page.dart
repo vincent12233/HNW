@@ -100,6 +100,13 @@ class _DepositPageState extends State<DepositPage> {
     }
   }
 
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      _appContent.load(force: true),
+      _load(),
+    ]);
+  }
+
   void _contact() {
     final content = _appContent.current;
     final message = content.text(
@@ -155,7 +162,7 @@ class _DepositPageState extends State<DepositPage> {
         leading: const BackButton(),
       ),
       body: RefreshIndicator(
-        onRefresh: _loading ? () async {} : _load,
+        onRefresh: _loading ? () async {} : _refreshAll,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: AppSpacing.page,
@@ -200,7 +207,7 @@ class _DepositPageState extends State<DepositPage> {
                       ),
                       IconButton(
                         tooltip: 'Refresh deposit history',
-                        onPressed: _loading ? null : () => unawaited(_load()),
+                        onPressed: _loading ? null : () => unawaited(_refreshAll()),
                         icon: const Icon(Icons.refresh_rounded),
                       ),
                     ],

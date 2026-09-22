@@ -288,7 +288,17 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
               LengthLimitingTextInputFormatter(11),
             ]
           : null,
-      textInputAction: TextInputAction.next,
+      textInputAction: controller == _bank
+          ? TextInputAction.done
+          : TextInputAction.next,
+      onFieldSubmitted: (_) {
+        if (controller == _bank) {
+          FocusScope.of(context).unfocus();
+          _save();
+        } else {
+          FocusScope.of(context).nextFocus();
+        }
+      },
       style: const TextStyle(height: 1.2, letterSpacing: 0),
       decoration: onboardingInput(
         label,

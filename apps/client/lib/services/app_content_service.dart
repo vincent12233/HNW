@@ -195,7 +195,9 @@ class AppContentService extends ChangeNotifier {
 
   AppContentBundle _bundle = AppContentBundle.empty;
   DateTime? _loadedAt;
+  String? _loadedLocale;
   Future<AppContentBundle>? _inFlight;
+  String? _inFlightLocale;
   int _fetchGeneration = 0;
   bool _lastFetchFailed = false;
 
@@ -203,30 +205,33 @@ class AppContentService extends ChangeNotifier {
   bool get lastFetchFailed => _lastFetchFailed;
 
   Future<AppContentBundle> load({bool force = false}) async {
+    final locale = AppLanguage.instance.code == 'hi' ? 'hi' : 'en';
     if (!force &&
         _loadedAt != null &&
+        _loadedLocale == locale &&
         DateTime.now().difference(_loadedAt!) < const Duration(minutes: 5) &&
         _bundle.hasContent) {
       return _bundle;
     }
     if (!force) {
       final existing = _inFlight;
-      if (existing != null) return existing;
+      if (existing != null && _inFlightLocale == locale) return existing;
     }
 
-    final future = _fetch();
+    final future = _fetch(locale);
     _inFlight = future;
+    _inFlightLocale = locale;
     try {
       return await future;
     } finally {
       if (identical(_inFlight, future)) {
         _inFlight = null;
+        _inFlightLocale = null;
       }
     }
   }
 
-  Future<AppContentBundle> _fetch() async {
-    final locale = AppLanguage.instance.code == 'hi' ? 'hi' : 'en';
+  Future<AppContentBundle> _fetch(String locale) async {
     final generation = ++_fetchGeneration;
     try {
       final response = await http
@@ -244,6 +249,7 @@ class AppContentService extends ChangeNotifier {
       }
       _bundle = AppContentBundle.fromJson(Map<String, dynamic>.from(decoded));
       _loadedAt = DateTime.now();
+      _loadedLocale = locale;
       _lastFetchFailed = false;
       notifyListeners();
       return _bundle;

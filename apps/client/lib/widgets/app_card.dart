@@ -52,7 +52,8 @@ class AppCard extends StatelessWidget {
     final card = Material(
       color: Colors.transparent,
       clipBehavior: clipBehavior,
-      child: DecoratedBox(
+      borderRadius: BorderRadius.circular(radius),
+      child: Ink(
         decoration: decoration,
         child: onTap == null
             ? content

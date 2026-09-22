@@ -52,7 +52,18 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   @override
   void initState() {
     super.initState();
+    AppContentService.instance.addListener(_onContentChanged);
     _load();
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onContentChanged);
+    super.dispose();
   }
 
   Future<void> _load([String? period]) async {
@@ -77,6 +88,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     } finally {
       if (mounted && request == _request) setState(() => _loading = false);
     }
+  }
+
+  Future<void> _refreshAll() async {
+    await Future.wait([
+      AppContentService.instance.load(force: true),
+      _load(),
+    ]);
   }
 
   double _number(dynamic value) =>
@@ -155,7 +173,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 760),
         child: RefreshIndicator(
-      onRefresh: _load,
+          onRefresh: _refreshAll,
       child: ListView(
         key: const Key('portfolio-list'),
         physics: const AlwaysScrollableScrollPhysics(),

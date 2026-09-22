@@ -132,7 +132,11 @@ class _LoanPageState extends State<LoanPage> {
             if (error != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                child: AppText(error!),
+                child: AppErrorView(
+                  title: error!,
+                  onRetry: load,
+                  compact: true,
+                ),
               ),
             AppPrimaryButton(
               label: 'Apply for a Loan',

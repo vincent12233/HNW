@@ -15,6 +15,7 @@ Future<void> showStandardOrderDetails(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     backgroundColor: Colors.transparent,
     builder: (_) =>
         _StandardOrderDetailsSheet(order: order, onCancel: onCancel),

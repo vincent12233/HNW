@@ -152,7 +152,7 @@ Live multi-role browser exercise not run in this environment.
 | App Settings safe fail | safeDefaults + gate tests | COMPLETE (unit) |
 | updateUrl / force Continue | Flutter + API unit tests | COMPLETE (unit) |
 | Featured Home/Markets | Public filters + client sections hide when empty | COMPLETE (code/unit) |
-| Legal | Privacy/Terms; Risk Disclosure deferred | PARTIAL — **REQUIRES_COMPLIANCE_REVIEW** |
+| Legal | Privacy/Terms/Risk Disclosure; English/Hindi editor | IMPLEMENTED — **REQUIRES_COMPLIANCE_REVIEW** |
 | Live Admin→DB→App loop | Not exercised against running stack | **GAP** (follow-up) |
 | Android device E2E | Cloud Linux — no device; owner deferred for review | **DEFERRED** — required before production |
 
@@ -184,7 +184,7 @@ Live multi-role browser exercise not run in this environment.
 
 ### Follow-ups / reviews
 
-3. Risk Disclosure — **REQUIRES_COMPLIANCE_REVIEW** (not implemented; do not invent legal conclusion).  
+3. Risk Disclosure — Admin and App surfaces are implemented; **REQUIRES_COMPLIANCE_REVIEW** before release.
 4. Live multi-role Admin RBAC browser pass.  
 5. Live CMS Admin→Flutter end-to-end against applied DB.  
 6. Apply pending additive migrations in controlled environments (not production from this agent).  

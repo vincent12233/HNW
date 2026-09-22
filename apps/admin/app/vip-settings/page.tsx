@@ -1,9 +1,10 @@
 "use client";
 
-import { Button, Card, Input, InputNumber, Modal, Space, Switch, Table, Typography } from "antd";
+import { Button, Card, Input, InputNumber, Space, Switch, Table, Typography, message } from "antd";
 import { ReloadOutlined, SaveOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
+import OpsModal from "@/components/OpsModal";
 import OpsEmpty from "@/components/OpsEmpty";
 import OpsErrorState from "@/components/OpsErrorState";
 import OpsPageHeader from "@/components/OpsPageHeader";
@@ -40,8 +41,13 @@ export default function VipSettingsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const savingRef = useRef(false);
+  const loadingRef = useRef(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   const load = useCallback(async () => {
+    if (loadingRef.current) return;
+    loadingRef.current = true;
     setLoading(true);
     setError("");
     try {
@@ -50,6 +56,7 @@ export default function VipSettingsPage() {
     } catch (err) {
       setError(getApiErrorMessage(err, "VIP 等级配置加载失败，请重试。"));
     } finally {
+      loadingRef.current = false;
       setLoading(false);
     }
   }, []);
@@ -77,41 +84,48 @@ export default function VipSettingsPage() {
     return "";
   }
 
-  async function save() {
-    if (savingRef.current) return;
-    const message = validateLocal(rows);
-    if (message) {
-      setError(message);
+  function save() {
+    if (savingRef.current || loadingRef.current || rows.length === 0) return;
+    const validationError = validateLocal(rows);
+    if (validationError) {
+      setSaveError(validationError);
       return;
     }
-    Modal.confirm({
-      title: "确认保存 VIP 等级设置？",
-      content: "保存后只更新建议等级计算，不会自动修改任何客户的当前等级，也不会改变交易或资金规则。",
-      okText: "确认保存",
-      cancelText: "取消",
-      onOk: async () => {
-        savingRef.current = true;
-        setSaving(true);
-        setError("");
-        try {
-          for (const row of rows) {
-            await api.patch(`/admin/vip-tiers/${row.tierCode}`, {
-              displayName: row.displayName,
-              description: row.description,
-              minimumCumulativeDeposit: parseAmount(row.minimumCumulativeDeposit),
-              displayOrder: row.displayOrder,
-              isActive: row.isActive,
-            });
-          }
-          await load();
-        } catch (err) {
-          setError(getApiErrorMessage(err, "保存失败，请检查门槛后重试。"));
-        } finally {
-          savingRef.current = false;
-          setSaving(false);
-        }
-      },
-    });
+    setSaveError("");
+    setConfirmOpen(true);
+  }
+
+  async function confirmSave() {
+    if (savingRef.current || loadingRef.current) return;
+    savingRef.current = true;
+    setSaving(true);
+    setSaveError("");
+    let completed = 0;
+    try {
+      for (const row of rows) {
+        await api.patch(`/admin/vip-tiers/${row.tierCode}`, {
+          displayName: row.displayName,
+          description: row.description,
+          minimumCumulativeDeposit: parseAmount(row.minimumCumulativeDeposit),
+          displayOrder: row.displayOrder,
+          isActive: row.isActive,
+        });
+        completed += 1;
+      }
+      message.success("VIP 等级设置已保存");
+      setConfirmOpen(false);
+      await load();
+    } catch (err) {
+      setSaveError(`${getApiErrorMessage(err, "保存失败，请检查后重试。")} 已确认保存 ${completed}/${rows.length} 条配置，其余结果可能未确认；输入已保留，可重试保存。`);
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  }
+
+  function refresh() {
+    if (savingRef.current || confirmOpen) return;
+    void load();
   }
 
   return (
@@ -122,18 +136,18 @@ export default function VipSettingsPage() {
           crumbs={[{ title: "治理与人员" }, { title: "VIP 等级设置" }]}
           description="仅超级管理员可配置累计充值门槛。门槛留空表示该等级未配置；全部留空时系统不会生成建议等级。VIP 只作为普通等级字段，不影响交易、资金、产品、费用、KYC 或风控。"
           extra={
-            <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} aria-label="刷新 VIP 等级设置">
+            <Button icon={<ReloadOutlined />} onClick={refresh} disabled={saving || confirmOpen} loading={loading} aria-label="刷新 VIP 等级设置">
               刷新
             </Button>
           }
         />
         {error ? (
-          <OpsErrorState title={error} onRetry={() => void load()} />
+          <OpsErrorState title={error} onRetry={saving || confirmOpen || loading ? undefined : refresh} />
         ) : null}
+        {saveError && !confirmOpen ? <OpsErrorState title={saveError} /> : null}
         <Card>
-          <Space style={{ marginBottom: 12 }}>
-            <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} aria-label="刷新 VIP 等级设置">刷新</Button>
-            <Button type="primary" icon={<SaveOutlined />} onClick={() => void save()} loading={saving} aria-label="保存 VIP 等级设置">保存设置</Button>
+          <Space wrap style={{ marginBottom: 12 }}>
+            <Button type="primary" icon={<SaveOutlined />} onClick={save} disabled={loading || confirmOpen || rows.length === 0} loading={saving} aria-label="保存 VIP 等级设置">保存设置</Button>
             <Button href="/audit-logs">查看配置审计</Button>
           </Space>
           <Table
@@ -155,7 +169,7 @@ export default function VipSettingsPage() {
                 render: (_, row) => (
                   <Input
                     value={row.displayName}
-                    disabled={saving}
+                    disabled={saving || loading || confirmOpen}
                     onChange={(event) =>
                       setRows((current) =>
                         current.map((item) =>
@@ -174,7 +188,7 @@ export default function VipSettingsPage() {
                 render: (_, row) => (
                   <Input
                     value={row.description}
-                    disabled={saving}
+                    disabled={saving || loading || confirmOpen}
                     onChange={(event) =>
                       setRows((current) =>
                         current.map((item) =>
@@ -194,7 +208,7 @@ export default function VipSettingsPage() {
                   <Input
                     placeholder="未配置"
                     value={row.minimumCumulativeDeposit ?? ""}
-                    disabled={saving}
+                    disabled={saving || loading || confirmOpen}
                     onChange={(event) =>
                       setRows((current) =>
                         current.map((item) =>
@@ -219,7 +233,7 @@ export default function VipSettingsPage() {
                     min={1}
                     max={40}
                     value={row.displayOrder}
-                    disabled={saving}
+                    disabled={saving || loading || confirmOpen}
                     onChange={(value) =>
                       setRows((current) =>
                         current.map((item) =>
@@ -238,7 +252,7 @@ export default function VipSettingsPage() {
                 render: (_, row) => (
                   <Switch
                     checked={row.isActive}
-                    disabled={saving}
+                    disabled={saving || loading || confirmOpen}
                     onChange={(checked) =>
                       setRows((current) =>
                         current.map((item) =>
@@ -254,6 +268,21 @@ export default function VipSettingsPage() {
           <Text type="secondary">未配置时不会产生建议等级。请勿用 0 表示未配置；0 会被视为真实门槛。</Text>
         </Card>
       </Space>
+      <OpsModal
+        title="确认保存 VIP 等级设置？"
+        open={confirmOpen}
+        onOk={() => void confirmSave()}
+        onCancel={() => { if (!savingRef.current) setConfirmOpen(false); }}
+        confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
+        okText="确认保存"
+        cancelText="取消"
+      >
+        <Text>保存后只更新建议等级计算，不会自动修改任何客户的当前等级，也不会改变交易或资金规则。</Text>
+        {saveError ? <OpsErrorState title={saveError} /> : null}
+      </OpsModal>
     </AdminShell>
   );
 }

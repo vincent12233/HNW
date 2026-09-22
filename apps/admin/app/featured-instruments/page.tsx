@@ -14,7 +14,7 @@ import {
   message,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsEmpty from "@/components/OpsEmpty";
@@ -57,7 +57,11 @@ export default function FeaturedInstrumentsPage() {
   const [error, setError] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
 
+  const loadGeneration = useRef(0);
+  const saveLock = useRef(false);
+
   async function load(nextPage = page, nextPageSize = pageSize) {
+    const generation = ++loadGeneration.current;
     setLoading(true);
     setError("");
     try {
@@ -71,14 +75,17 @@ export default function FeaturedInstrumentsPage() {
           pageSize: nextPageSize,
         },
       });
+      if (generation !== loadGeneration.current) return;
       setRows(Array.isArray(data?.data) ? data.data : []);
       setTotal(data?.total ?? 0);
       setPage(data?.page ?? nextPage);
       setPageSize(data?.pageSize ?? nextPageSize);
     } catch (e: unknown) {
-      setError(getApiErrorMessage(e, "精选标的加载失败"));
+      if (generation === loadGeneration.current) {
+        setError(getApiErrorMessage(e, "精选标的加载失败"));
+      }
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }
 
@@ -91,7 +98,8 @@ export default function FeaturedInstrumentsPage() {
     row: InstrumentRow,
     patch: Partial<Pick<InstrumentRow, "featuredHome" | "featuredMarkets" | "displayOrder">>,
   ) {
-    if (savingId) return;
+    if (saveLock.current) return;
+    saveLock.current = true;
     setSavingId(row.id);
     try {
       await api.patch(`/admin/market/instruments/${row.id}/placement`, patch);
@@ -100,8 +108,22 @@ export default function FeaturedInstrumentsPage() {
     } catch (e: unknown) {
       message.error(getApiErrorMessage(e, "更新失败"));
     } finally {
+      saveLock.current = false;
       setSavingId(null);
     }
+  }
+
+  function saveDisplayOrder(row: InstrumentRow, raw: string) {
+    if (!raw.trim()) {
+      message.warning("排序不能为空，请输入 0 到 1000000 的整数。");
+      return;
+    }
+    const next = Number(raw);
+    if (!Number.isInteger(next) || next < 0 || next > 1_000_000) {
+      message.warning("排序必须是 0 到 1000000 的整数。");
+      return;
+    }
+    if (next !== row.displayOrder) void patchPlacement(row, { displayOrder: next });
   }
 
   const columns: ColumnsType<InstrumentRow> = [
@@ -126,6 +148,8 @@ export default function FeaturedInstrumentsPage() {
       width: 130,
       render: (_, row) => (
         <Switch
+          aria-label={`${row.symbol} 首页精选`}
+          disabled={savingId !== null}
           checked={row.featuredHome}
           loading={savingId === row.id}
           onChange={(checked) => void patchPlacement(row, { featuredHome: checked })}
@@ -139,6 +163,8 @@ export default function FeaturedInstrumentsPage() {
       width: 150,
       render: (_, row) => (
         <Switch
+          aria-label={`${row.symbol} 行情页精选`}
+          disabled={savingId !== null}
           checked={row.featuredMarkets}
           loading={savingId === row.id}
           onChange={(checked) => void patchPlacement(row, { featuredMarkets: checked })}
@@ -153,18 +179,13 @@ export default function FeaturedInstrumentsPage() {
       render: (_, row) => (
         <InputNumber
           min={0}
+          max={1_000_000}
+          changeOnBlur={false}
           value={row.displayOrder}
-          disabled={savingId === row.id}
-          onBlur={(e) => {
-            const next = Number(e.target.value);
-            if (!Number.isFinite(next) || next === row.displayOrder) return;
-            void patchPlacement(row, { displayOrder: next });
-          }}
-          onPressEnter={(e) => {
-            const next = Number((e.target as HTMLInputElement).value);
-            if (!Number.isFinite(next) || next === row.displayOrder) return;
-            void patchPlacement(row, { displayOrder: next });
-          }}
+          aria-label={`${row.symbol} 展示排序`}
+          disabled={savingId !== null}
+          onBlur={(e) => saveDisplayOrder(row, e.target.value)}
+          onPressEnter={(e) => saveDisplayOrder(row, (e.target as HTMLInputElement).value)}
           style={{ width: 100 }}
         />
       ),

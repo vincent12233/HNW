@@ -14,6 +14,7 @@ Future<void> showRecordDetailSheet(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     showDragHandle: true,
     shape: RoundedRectangleBorder(borderRadius: AppRadius.sheetTop()),
     builder: (sheetContext) {

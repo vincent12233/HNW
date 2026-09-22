@@ -321,6 +321,13 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     return ListView(
       padding: AppSpacing.page,
       children: [
+        if (loading) const LinearProgressIndicator(),
+        if (error != null)
+          AppErrorView(
+            title: error!,
+            onRetry: loading || _deletingBank ? null : load,
+            compact: true,
+          ),
         const AppText(
           'Saved bank details are used for withdrawals after finance review. This is not a completed bank verification.',
           style: AppTypography.caption,
@@ -340,7 +347,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         AppPrimaryButton(
           label: 'Add bank account',
           icon: Icons.add,
-          onPressed: _deletingBank ? null : _addBank,
+          onPressed: _deletingBank || loading ? null : _addBank,
         ),
       ],
     );
@@ -405,7 +412,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     minHeight: AppMotion.tapTarget,
                   ),
                   icon: const Icon(Icons.delete_outline_rounded),
-                  onPressed: _deletingBank ? null : () => _deleteBank(bank),
+                  onPressed: _deletingBank || loading || error != null || id.isEmpty
+                      ? null
+                      : () => _deleteBank(bank),
                 ),
               ],
             ),
@@ -417,7 +426,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
 
   Future<void> _deleteBank(Map<String, dynamic> bank) async {
     final id = bank['id']?.toString() ?? '';
-    if (id.isEmpty || _deletingBank) return;
+    if (id.isEmpty || _deletingBank || loading || error != null) return;
     setState(() => _deletingBank = true);
     try {
       final confirmed = await showDialog<bool>(
@@ -483,6 +492,12 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         for (final entry in labels.entries)
           SwitchListTile(
             title: AppText(entry.value),
+            secondary: _savingPreferences.contains(entry.key)
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : null,
             value: preferences[entry.key] == true,
             onChanged: _savingPreferences.contains(entry.key)
                 ? null

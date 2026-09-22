@@ -71,7 +71,7 @@ Support: FAB / Help / Deposit CTA → `showSupportChatPanel` → `SupportChatPag
 | SUPPORT | SupportChatPage | FAB / Help / Deposit | Live | SaleSmartly JSSDK/native | Script URL in CMS; Nest support console separate | External SS + CMS | Dual-stack vs Nest `/support/*` | Keep SaleSmartly; document dual-stack | Keep | P1 |
 | CONTENT | WealthInsightsPage | Profile Wealth Insights | Live | INSIGHTS CMS | App-content Insights | CMS + hardcoded fallbacks | Hardcoded article fallbacks | Prefer CMS; trim hardcode later | Improve | P2 |
 | CONTENT | WealthInsightArticlePage | From insights list | Live | CMS | Insights | CMS | None | Keep | Keep | P3 |
-| LEGAL | LegalPage | Terms / Privacy / About | Live | LEGAL CMS | App-content Legal | CMS + large EN fallbacks | HI legal missing; About entity fields often empty | CMS HI + fill About; polish UI | Improve | P1 |
+| LEGAL | LegalPage | Terms / Privacy / About | Live | LEGAL CMS | App-content Legal | CMS + local safety fallbacks | EN/HI editors are available; approved translations and entity fields still require operator input | Populate approved locale content; polish UI | Improve | P1 |
 
 ---
 
@@ -126,11 +126,11 @@ Support: FAB / Help / Deposit CTA → `showSupportChatPanel` → `SupportChatPag
 | Deposit self-serve | Intentionally API-rejected |
 
 ### L. Hardcoded operational content (CMS candidates)
-- Legal Privacy/Terms large EN fallbacks
+- Legal Privacy/Terms local safety fallbacks (used only when CMS content is unavailable)
 - Wealth Insights 8 bilingual fallback articles
 - Home banner / section copy (partially CMS with fallbacks)
 - Deposit instructions / terms (CMS with fallbacks)
-- About legal entity fields often empty in CMS
+- About legal entity fields require operator-provided values
 
 ---
 

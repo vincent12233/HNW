@@ -248,6 +248,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
 
   Future<void> _performTradingRefresh() async {
     if (!mounted) return;
+    await AppContentService.instance.load(force: true);
     setState(() => _transactionsLoading = true);
     final previousById = <String, TradingOrder>{
       for (final order in _orders)

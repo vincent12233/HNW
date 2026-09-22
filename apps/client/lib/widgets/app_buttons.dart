@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -24,10 +25,8 @@ class AppPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelWidget = Text(
+    final labelWidget = AppText(
       label,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
       textAlign: TextAlign.center,
     );
     final child = Row(
@@ -48,7 +47,7 @@ class AppPrimaryButton extends StatelessWidget {
           Icon(icon, size: 18),
           const SizedBox(width: AppSpacing.sm),
         ],
-        if (expand) Flexible(child: labelWidget) else labelWidget,
+        Flexible(child: labelWidget),
       ],
     );
 
@@ -80,11 +79,14 @@ class AppSecondaryButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = icon == null
-        ? OutlinedButton(onPressed: onPressed, child: Text(label))
+        ? OutlinedButton(
+            onPressed: onPressed,
+            child: AppText(label, textAlign: TextAlign.center),
+          )
         : OutlinedButton.icon(
             onPressed: onPressed,
             icon: Icon(icon, size: 18),
-            label: Text(label),
+            label: AppText(label, textAlign: TextAlign.center),
           );
 
     if (!expand) return button;
@@ -112,7 +114,7 @@ class AppTertiaryButton extends StatelessWidget {
       style: TextButton.styleFrom(
         foregroundColor: destructive ? AppColors.loss : AppColors.brandPrimary,
       ),
-      child: Text(label),
+      child: AppText(label, textAlign: TextAlign.center),
     );
   }
 }
@@ -143,7 +145,7 @@ class AppBuyButton extends StatelessWidget {
               color: Colors.white,
             ),
           )
-        : Text(label);
+        : AppText(label, textAlign: TextAlign.center);
 
     final button = FilledButton(
       onPressed: loading ? null : onPressed,
@@ -191,7 +193,7 @@ class AppSellButton extends StatelessWidget {
               color: Colors.white,
             ),
           )
-        : Text(label);
+        : AppText(label, textAlign: TextAlign.center);
 
     final button = FilledButton(
       onPressed: loading ? null : onPressed,

@@ -81,17 +81,22 @@ export default function AnnouncementsAdminPage() {
   const [saving, setSaving] = useState(false);
   const [form] = Form.useForm<FormValues>();
   const savingRef = useRef(false);
+  const loadGeneration = useRef(0);
 
   const load = useCallback(async () => {
+    const generation = ++loadGeneration.current;
     setLoading(true);
     setError("");
     try {
       const { data } = await api.get<Announcement[]>("/admin/announcements");
+      if (generation !== loadGeneration.current) return;
       setRows(Array.isArray(data) ? data : []);
     } catch (e: unknown) {
-      setError(getApiErrorMessage(e, "公告加载失败"));
+      if (generation === loadGeneration.current) {
+        setError(getApiErrorMessage(e, "公告加载失败"));
+      }
     } finally {
-      setLoading(false);
+      if (generation === loadGeneration.current) setLoading(false);
     }
   }, []);
 
@@ -316,10 +321,13 @@ export default function AnnouncementsAdminPage() {
         onOk={() => form.submit()}
         okText="保存"
         confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
         okButtonProps={{ disabled: saving }}
         width={760}
       >
-        <Form form={form} layout="vertical" onFinish={(values) => void save(values)}>
+        <Form form={form} layout="vertical" disabled={saving} onFinish={(values) => void save(values)}>
           <Space wrap style={{ width: "100%" }}>
             <Form.Item name="locale" label="Locale" rules={[{ required: true }]} style={{ minWidth: 120 }}>
               <Select options={[{ value: "en", label: "English" }, { value: "hi", label: "Hindi" }]} />
@@ -356,6 +364,9 @@ export default function AnnouncementsAdminPage() {
         onOk={() => void confirmPublish()}
         okText="确认"
         confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
         okButtonProps={{ disabled: saving }}
       >
         <Text>标题：{pendingPublish?.title}</Text>
@@ -369,6 +380,9 @@ export default function AnnouncementsAdminPage() {
         okText="删除"
         okButtonProps={{ danger: true, disabled: saving }}
         confirmLoading={saving}
+        cancelButtonProps={{ disabled: saving }}
+        closable={!saving}
+        keyboard={!saving}
       >
         <Text>确认删除「{pendingDelete?.title}」？服务器成功后才会从列表移除。</Text>
       </OpsModal>

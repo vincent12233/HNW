@@ -26,6 +26,7 @@ Future<void> showHoldingDetails(
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
+    useSafeArea: true,
     showDragHandle: true,
     builder: (sheetContext) {
       final frozen = holdingFrozenQuantity(position);

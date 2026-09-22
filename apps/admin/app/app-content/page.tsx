@@ -19,6 +19,7 @@ import {
   Divider,
   Form,
   Input,
+  Modal,
   Select,
   Space,
   Tabs,
@@ -26,7 +27,7 @@ import {
   message,
 } from "antd";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
@@ -214,6 +215,7 @@ export default function AppOpsContentPage() {
   const [entries, setEntries] = useState<ContentEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const savingRef = useRef(false);
   const [error, setError] = useState("");
   const [homeForm] = Form.useForm();
   const [depositForm] = Form.useForm();
@@ -224,6 +226,8 @@ export default function AppOpsContentPage() {
   const [insightsForm] = Form.useForm();
   const [opsLocale, setOpsLocale] = useState<"en" | "hi">("en");
   const [insightsLocale, setInsightsLocale] = useState<"en" | "hi">("en");
+  const [aboutLocale, setAboutLocale] = useState<"en" | "hi">("en");
+  const [legalLocale, setLegalLocale] = useState<"en" | "hi">("en");
   const [legalPreview, setLegalPreview] = useState<{
     title: string;
     body: string;
@@ -243,28 +247,31 @@ export default function AppOpsContentPage() {
         Object.fromEntries(
           aboutFields.map((field) => [
             field.key,
-            entryValue(nextEntries, "ABOUT", field.key),
+            entryValue(nextEntries, "ABOUT", field.key, aboutLocale),
           ]),
         ),
       );
       legalForm.setFieldsValue({
-        "privacy.document": entryValue(nextEntries, "LEGAL", "privacy.document"),
-        "terms.document": entryValue(nextEntries, "LEGAL", "terms.document"),
-        "risk.document": entryValue(nextEntries, "LEGAL", "risk.document"),
+        "privacy.document": entryValue(nextEntries, "LEGAL", "privacy.document", legalLocale),
+        "terms.document": entryValue(nextEntries, "LEGAL", "terms.document", legalLocale),
+        "risk.document": entryValue(nextEntries, "LEGAL", "risk.document", legalLocale),
         "privacy.document__title": entryTitle(
           nextEntries,
           "LEGAL",
           "privacy.document",
+          legalLocale,
         ),
         "terms.document__title": entryTitle(
           nextEntries,
           "LEGAL",
           "terms.document",
+          legalLocale,
         ),
         "risk.document__title": entryTitle(
           nextEntries,
           "LEGAL",
           "risk.document",
+          legalLocale,
         ),
       });
       applyInsightsForm(nextEntries, insightsLocale);
@@ -359,20 +366,78 @@ export default function AppOpsContentPage() {
     if (!entries.length) return;
     applyOpsForms(entries, opsLocale);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opsLocale, entries]);
+  }, [opsLocale]);
 
   useEffect(() => {
     if (!entries.length) return;
     applyInsightsForm(entries, insightsLocale);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [insightsLocale, entries]);
+  }, [insightsLocale]);
+
+  useEffect(() => {
+    if (!entries.length) return;
+    aboutForm.setFieldsValue(Object.fromEntries(aboutFields.map((field) => [field.key, entryValue(entries, "ABOUT", field.key, aboutLocale)])));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [aboutLocale]);
+
+  useEffect(() => {
+    if (!entries.length) return;
+    legalForm.setFieldsValue({
+      "privacy.document": entryValue(entries, "LEGAL", "privacy.document", legalLocale),
+      "terms.document": entryValue(entries, "LEGAL", "terms.document", legalLocale),
+      "risk.document": entryValue(entries, "LEGAL", "risk.document", legalLocale),
+      "privacy.document__title": entryTitle(entries, "LEGAL", "privacy.document", legalLocale),
+      "terms.document__title": entryTitle(entries, "LEGAL", "terms.document", legalLocale),
+      "risk.document__title": entryTitle(entries, "LEGAL", "risk.document", legalLocale),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [legalLocale]);
+
+  function changeDocumentLanguage(module: "ABOUT" | "LEGAL", next: "en" | "hi") {
+    if (savingRef.current || loading) return;
+    const form = module === "ABOUT" ? aboutForm : legalForm;
+    const currentLocale = module === "ABOUT" ? aboutLocale : legalLocale;
+    if (next === currentLocale) return;
+    const values = form.getFieldsValue(true) as Record<string, string>;
+    const dirty = Object.entries(values).some(([key, value]) => {
+      const isTitle = key.endsWith("__title");
+      const contentKey = isTitle ? key.slice(0, -7) : key;
+      const saved = isTitle ? entryTitle(entries, module, contentKey, currentLocale) : entryValue(entries, module, contentKey, currentLocale);
+      return (value ?? "") !== saved;
+    });
+    const change = () => {
+      setLegalPreview(null);
+      if (module === "ABOUT") setAboutLocale(next);
+      else setLegalLocale(next);
+    };
+    if (!dirty) { change(); return; }
+    Modal.confirm({
+      title: "切换语言并放弃未保存修改？",
+      content: "当前语言的修改尚未保存。取消后可先保存，再切换语言。",
+      okText: "放弃修改并切换",
+      cancelText: "继续编辑",
+      onOk: change,
+    });
+  }
+
+  function confirmDiscard(action: () => void, title: string) {
+    if (savingRef.current || loading) return;
+    Modal.confirm({
+      title,
+      content: "此操作会重新填充表单。请先保存需要保留的修改。",
+      okText: "继续并重新加载",
+      cancelText: "继续编辑",
+      onOk: action,
+    });
+  }
 
   async function saveModule(
     module: ContentEntry["module"],
     values: Record<string, string>,
     fields: ReadonlyArray<{ key: string; locale?: string; title?: boolean }>,
   ) {
-    if (saving) return;
+    if (savingRef.current) return;
+    savingRef.current = true;
     setSaving(true);
     try {
       const payload = fields.flatMap((field) => {
@@ -390,12 +455,19 @@ export default function AppOpsContentPage() {
           },
         ];
       });
-      await api.post("/admin/app-content/bulk", { entries: payload });
-      message.success("配置已保存，客户端下次刷新后生效");
-      await loadAll();
+      const { data: savedEntries } = await api.post<ContentEntry[]>("/admin/app-content/bulk", { entries: payload });
+      setEntries((current) => {
+        const updated = new Map(current.map((entry) => [`${entry.module}:${entry.locale}:${entry.key}`, entry]));
+        for (const entry of savedEntries) {
+          updated.set(`${entry.module}:${entry.locale}:${entry.key}`, entry);
+        }
+        return [...updated.values()];
+      });
+      message.success("当前模块已保存，其他模块未保存的修改已保留。请在 App 刷新验证。");
     } catch (requestError: unknown) {
-      message.error(apiError(requestError, "保存失败"));
+      message.error(`${apiError(requestError, "保存失败")} 当前输入已保留；批量保存可能部分成功，请重试当前模块。`);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }
@@ -417,7 +489,7 @@ export default function AppOpsContentPage() {
             </>
           }
           extra={
-            <Space>
+            <Space wrap>
               <Text type="secondary">编辑语言</Text>
               <Select
                 value={opsLocale}
@@ -426,10 +498,11 @@ export default function AppOpsContentPage() {
                   { value: "en", label: "English" },
                   { value: "hi", label: "Hindi" },
                 ]}
-                onChange={(value) => setOpsLocale(value)}
+                disabled={loading || saving}
+                onChange={(value) => confirmDiscard(() => setOpsLocale(value), "切换运营文案语言？")}
                 aria-label="运营文案语言"
               />
-              <Button icon={<ReloadOutlined />} loading={loading} onClick={loadAll}>
+              <Button icon={<ReloadOutlined />} loading={loading} disabled={saving} onClick={() => confirmDiscard(() => void loadAll(), "刷新全部文案？")}>
                 刷新
               </Button>
             </Space>
@@ -439,6 +512,12 @@ export default function AppOpsContentPage() {
         {error && <Alert type="error" title={error} showIcon />}
 
         <Card loading={loading}>
+          <Alert
+            type="info"
+            showIcon
+            title="本页管理运营文案，不是全部 App 界面编辑器"
+            description="仅配置下方已列出的字段；页面布局、品牌样式及部分按钮和表单文案仍需版本更新。Legal 与 About 在各自页签中选择 English / Hindi，缺失语言可能回退到英文或内置文案。保存后请在 App 刷新对应页面；客户端内容缓存有效期为 5 分钟，并非保存后立即推送到所有设备。"
+          />
           <Tabs
             items={[
               {
@@ -449,7 +528,7 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={homeForm} layout="vertical">
+                  <Form form={homeForm} layout="vertical" disabled={saving}>
                     <Alert
                       type="info"
                       showIcon
@@ -541,7 +620,7 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={depositForm} layout="vertical">
+                  <Form form={depositForm} layout="vertical" disabled={saving}>
                     <Alert
                       type="warning"
                       showIcon
@@ -585,7 +664,7 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={supportForm} layout="vertical">
+                  <Form form={supportForm} layout="vertical" disabled={saving}>
                     <Alert
                       type="info"
                       showIcon
@@ -653,7 +732,7 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={tradingForm} layout="vertical">
+                  <Form form={tradingForm} layout="vertical" disabled={saving}>
                     <Alert
                       type="warning"
                       showIcon
@@ -729,7 +808,8 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={aboutForm} layout="vertical">
+                  <Form form={aboutForm} layout="vertical" disabled={saving}>
+                    <Space wrap style={{ marginBottom: 16 }}><Text type="secondary">编辑语言</Text><Select value={aboutLocale} style={{ width: 140 }} options={[{ value: "en", label: "English" }, { value: "hi", label: "Hindi" }]} disabled={loading || saving} onChange={(value) => changeDocumentLanguage("ABOUT", value)} aria-label="About 编辑语言" /></Space>
                     <Alert
                       type="info"
                       showIcon
@@ -740,7 +820,7 @@ export default function AppOpsContentPage() {
                           app_version 仅为营销展示文案，≠ 真实构建版本（PackageInfo）。
                           公司展示素材请到{" "}
                           <Link href="/company-showcase">平台公司信息</Link>。
-                          当前 ABOUT 以 English CMS 行为主。
+                          ABOUT 与 Legal 可分别编辑 English / Hindi；缺失语言会回退到英文或内置文案。
                         </>
                       }
                     />
@@ -757,11 +837,11 @@ export default function AppOpsContentPage() {
                         aboutForm
                           .validateFields()
                           .then((values) =>
-                            saveModule("ABOUT", values, [...aboutFields]),
+                            saveModule("ABOUT", values, aboutFields.map((field) => ({ ...field, locale: aboutLocale }))),
                           )
                       }
                     >
-                      保存 About
+                      保存 About（{aboutLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -774,7 +854,8 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={legalForm} layout="vertical">
+                  <Form form={legalForm} layout="vertical" disabled={saving}>
+                    <Space wrap style={{ marginBottom: 16 }}><Text type="secondary">编辑语言</Text><Select value={legalLocale} style={{ width: 140 }} options={[{ value: "en", label: "English" }, { value: "hi", label: "Hindi" }]} disabled={loading || saving} onChange={(value) => changeDocumentLanguage("LEGAL", value)} aria-label="Legal 编辑语言" /></Space>
                     <Alert
                       type="info"
                       showIcon
@@ -789,9 +870,9 @@ export default function AppOpsContentPage() {
                               e.locale === "hi" &&
                               e.body.trim(),
                           )
-                            ? " · Hindi configured"
-                            : " · Hindi not configured"}
-                          。此处编辑 English 文档，保存前请由运营主体确认最终内容。
+                            ? " · Hindi 已配置"
+                            : " · Hindi 尚无有效内容"}
+                          。可分别编辑 English / Hindi；保存前请由运营主体确认最终内容。
                           {" "}
                           Last updated：
                           {(() => {
@@ -892,13 +973,13 @@ export default function AppOpsContentPage() {
                           return;
                         }
                         await saveModule("LEGAL", values, [
-                          { key: "privacy.document", title: true },
-                          { key: "terms.document", title: true },
-                          { key: "risk.document", title: true },
+                          { key: "privacy.document", title: true, locale: legalLocale },
+                          { key: "terms.document", title: true, locale: legalLocale },
+                          { key: "risk.document", title: true, locale: legalLocale },
                         ]);
                       }}
                     >
-                      保存 Legal
+                      保存 Legal（{legalLocale.toUpperCase()}）
                     </Button>
                   </Form>
                 ),
@@ -911,7 +992,7 @@ export default function AppOpsContentPage() {
                   </span>
                 ),
                 children: (
-                  <Form form={insightsForm} layout="vertical">
+                  <Form form={insightsForm} layout="vertical" disabled={saving}>
                     <Alert
                       type="warning"
                       showIcon
@@ -934,7 +1015,8 @@ export default function AppOpsContentPage() {
                           { value: "en", label: "English" },
                           { value: "hi", label: "Hindi" },
                         ]}
-                        onChange={(value) => setInsightsLocale(value)}
+                        disabled={loading || saving}
+                        onChange={(value) => confirmDiscard(() => setInsightsLocale(value), "切换兼容文案语言？")}
                       />
                     </Space>
                     <Collapse

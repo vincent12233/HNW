@@ -94,7 +94,7 @@ Plain-text CMS bodies (SelectableText / Text). No HTML injection.
 | Gap | Notes |
 |-----|--------|
 | Store URL field | Not in schema — Force Update uses supportUrl + Retry |
-| Risk Disclosure | Still deferred |
+| Risk Disclosure | Admin/App surfaces implemented; compliance review still required before production |
 | Device/emulator E2E | Report actual availability in Phase 13 report |
 | Analytics | Not added |
 

@@ -1,11 +1,12 @@
 ﻿"use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, SearchOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
+import { Button, Card, Form, Input, InputNumber, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsModal from "@/components/OpsModal";
 import OpsEmpty from "@/components/OpsEmpty";
 import OpsErrorState from "@/components/OpsErrorState";
 import OpsPageHeader from "@/components/OpsPageHeader";
@@ -33,6 +34,10 @@ export default function QuantPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [form] = Form.useForm();
+  const [saving, setSaving] = useState(false);
+  const saveLock = useRef(false);
+  const actionLock = useRef(false);
+  const [actionId, setActionId] = useState<string | null>(null);
 
   async function loadItems() {
     setLoading(true);
@@ -71,29 +76,59 @@ export default function QuantPage() {
   }
 
   async function submitStrategy() {
-    const values = form.getFieldsValue();
-    const payload = {
-      ...values,
-      annualReturn: Number(values.annualReturn).toFixed(2),
-      maxDrawdown: Number(values.maxDrawdown).toFixed(2),
-    };
-    if (editing) {
-      await api.patch(`/admin-products/quant/${editing.id}`, payload);
-      message.success("量化策略已更新");
-    } else {
-      await api.post("/admin-products/quant", payload);
-      message.success("量化策略已新增");
+    if (saveLock.current) return;
+    saveLock.current = true;
+    setSaving(true);
+    try {
+      const values = form.getFieldsValue();
+      const payload = {
+        ...values,
+        annualReturn: Number(values.annualReturn).toFixed(2),
+        maxDrawdown: Number(values.maxDrawdown).toFixed(2),
+      };
+      if (editing) {
+        await api.patch(`/admin-products/quant/${editing.id}`, payload);
+        message.success("量化策略已更新");
+      } else {
+        await api.post("/admin-products/quant", payload);
+        message.success("量化策略已新增");
+      }
+      setOpen(false);
+      setEditing(null);
+      form.resetFields();
+      await loadItems();
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "量化策略保存失败，请重试"));
+    } finally {
+      saveLock.current = false;
+      setSaving(false);
     }
-    setOpen(false);
-    setEditing(null);
-    form.resetFields();
-    await loadItems();
+  }
+
+  async function runRowAction(record: Strategy, action: () => Promise<unknown>, success: string) {
+    if (actionLock.current) return false;
+    actionLock.current = true;
+    setActionId(record.id);
+    try {
+      await action();
+      message.success(success);
+      await loadItems();
+      return true;
+    } catch (requestError: unknown) {
+      message.error(getApiErrorMessage(requestError, "操作失败，请重试"));
+      return false;
+    } finally {
+      actionLock.current = false;
+      setActionId(null);
+    }
   }
 
   async function deleteStrategy(record: Strategy) {
-    await api.delete(`/admin-products/quant/${record.id}`);
-    await loadItems();
-    message.success("量化策略已删除");
+    return runRowAction(record, () => api.delete(`/admin-products/quant/${record.id}`), "量化策略已删除");
+  }
+
+  async function changeStatus(record: Strategy, status: string) {
+    await runRowAction(record, () => api.patch(`/admin-products/quant/${record.id}/status`, { status }), "状态已更新");
   }
 
   const columns: ColumnsType<Strategy> = [
@@ -110,12 +145,12 @@ export default function QuantPage() {
       width: 180,
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} aria-label={`编辑 ${record.code}`} onClick={() => openEdit(record)}>编辑</Button>
-          <Button size="small" onClick={async () => { await api.patch(`/admin-products/quant/${record.id}/status`, { status: "运行中" }); await loadItems(); }}>运行</Button>
-          <Button size="small" danger onClick={async () => { await api.patch(`/admin-products/quant/${record.id}/status`, { status: "暂停" }); await loadItems(); }}>暂停</Button>
+          <Button size="small" disabled={actionId !== null} icon={<EditOutlined />} aria-label={`编辑 ${record.code}`} onClick={() => openEdit(record)}>编辑</Button>
+          <Button size="small" disabled={actionId !== null || record.status === "运行中"} loading={actionId === record.id} onClick={() => void changeStatus(record, "运行中")}>运行</Button>
+          <Button size="small" danger disabled={actionId !== null || record.status === "暂停"} onClick={() => void changeStatus(record, "暂停")}>暂停</Button>
           <Popconfirm title="确认删除这个量化策略？" okText="删除" cancelText="取消" onConfirm={() => deleteStrategy(record)}>
             <Tooltip title="删除量化策略">
-              <Button size="small" danger icon={<DeleteOutlined />} aria-label={`删除 ${record.code}`} />
+              <Button size="small" disabled={actionId !== null} danger icon={<DeleteOutlined />} aria-label={`删除 ${record.code}`} />
             </Tooltip>
           </Popconfirm>
         </Space>
@@ -138,13 +173,12 @@ export default function QuantPage() {
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
             <Input prefix={<SearchOutlined />} allowClear placeholder="搜索策略编号、名称、市场或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载量化策略" style={{ width: 380, maxWidth: "100%" }} />
-            <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} aria-label="新增量化策略">新增策略</Button>
           </Space>
-          <Table rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1300 }} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载量化策略" : "当前没有量化策略。"} onRetry={loading ? undefined : () => void loadItems()} /> }} />
+          <Table rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1300 }} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载量化策略" : keyword.trim() ? "没有匹配的结果，请调整或清空搜索条件。" : "当前没有量化策略。"} extra={!loading && keyword.trim() ? <Button onClick={() => setKeyword("")}>清空搜索</Button> : undefined} onRetry={loading || keyword.trim() ? undefined : () => void loadItems()} /> }} />
         </Card>
       </Space>
-      <Modal title={editing ? "编辑量化策略" : "新增量化策略"} open={open} onCancel={() => { setOpen(false); setEditing(null); }} onOk={() => form.validateFields().then(submitStrategy)} okText="保存" cancelText="取消">
-        <Form form={form} layout="vertical">
+      <OpsModal title={editing ? "编辑量化策略" : "新增量化策略"} open={open} confirmLoading={saving} cancelButtonProps={{ disabled: saving }} closable={!saving} keyboard={!saving} onCancel={() => { if (saveLock.current) return; setOpen(false); setEditing(null); }} onOk={() => form.submit()} okText="保存" cancelText="取消">
+        <Form form={form} layout="vertical" disabled={saving} onFinish={submitStrategy}>
           <Form.Item name="code" label="策略编号" rules={[{ required: true, message: "请输入策略编号" }]}><Input /></Form.Item>
           <Form.Item name="name" label="策略名称" rules={[{ required: true, message: "请输入策略名称" }]}><Input /></Form.Item>
           <Form.Item name="market" label="市场" initialValue="NSE"><Input /></Form.Item>
@@ -152,7 +186,7 @@ export default function QuantPage() {
           <Form.Item name="annualReturn" label="年化收益 %" rules={[{ required: true, message: "请输入年化收益" }]}><InputNumber precision={2} style={{ width: "100%" }} /></Form.Item>
           <Form.Item name="maxDrawdown" label="最大回撤 %" rules={[{ required: true, message: "请输入最大回撤" }]}><InputNumber min={0} precision={2} style={{ width: "100%" }} /></Form.Item>
         </Form>
-      </Modal>
+      </OpsModal>
     </AdminShell>
   );
 }

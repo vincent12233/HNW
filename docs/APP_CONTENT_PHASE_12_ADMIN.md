@@ -35,7 +35,7 @@ APP 管理
 | Deposit | Clear warning: no platform bank / payment channel config |
 | Support | Client content vs **INTERNAL SUPPORT DESK ONLY** |
 | Trading & Portfolio | Presentation-only warnings; legacy key notes for Positions/Overview |
-| Legal | Privacy/Terms; English available / Hindi not configured; preview; last updated |
+| Legal | Privacy/Terms/Risk Disclosure; English/Hindi selector; preview; last updated |
 | About | Marketing version ≠ build version; link to Company Showcase |
 | Legacy Insights | Compatibility only; points to `/insights` for new articles |
 

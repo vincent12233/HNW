@@ -167,13 +167,13 @@ test('G.5 account, 403, 404 and global error states stay password-login only', (
   assert.match(shell, /businessProfile\?\.employeeNo/);
   assert.match(shell, /\/login\?session=expired/);
   assert.doesNotMatch(shell, /user\.phone/);
-  assert.match(login, /session=expired/);
+  assert.ok(login.includes('params.get("session") !== "expired"'));
   assert.match(login, /员工编号和密码/);
   assert.doesNotMatch(login, AUTH_INVENT);
   assert.match(denied, /status="403"/);
   assert.match(denied, /没有访问该页面的权限/);
   assert.match(missing, /status="404"/);
-  assert.match(crashed, /不会展示堆栈/);
+  assert.match(crashed, /请重试当前页面/);
   assert.doesNotMatch(crashed, /error\.stack|error\.message/);
   assert.match(api, /\/login\?session=expired/);
 });

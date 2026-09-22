@@ -71,14 +71,15 @@ test('J.4 403, 404, session expired and global error keep password-login return 
   assert.match(missing, /status="404"/);
   assert.match(missing, /返回登录入口/);
   assert.match(missing, /返回工作台/);
-  assert.match(crashed, /不会展示堆栈/);
+  assert.match(crashed, /请重试当前页面/);
   assert.match(crashed, /返回登录入口/);
   assert.doesNotMatch(crashed, /error\.stack|error\.message/);
   assert.match(global, /返回登录入口/);
-  assert.match(global, /不会展示堆栈/);
+  assert.match(global, /请重试/);
+  assert.doesNotMatch(global, /error\.stack|error\.message/);
   assert.doesNotMatch(global, /suppressHydrationWarning/);
   assert.doesNotMatch(layout, /suppressHydrationWarning/);
-  assert.match(login, /session=expired/);
+  assert.ok(login.includes('params.get("session") !== "expired"'));
   assert.match(login, /员工编号和密码/);
   assert.match(shell, /\/login\?session=expired/);
   assert.match(shell, /aria-label="返回登录入口"/);

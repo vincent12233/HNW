@@ -39,8 +39,8 @@
 | Markets F&O / Commodities / Currency | Category filter | Catalog could enable | HARDCODED | Tabs usually empty |
 | Markets ETFs | Heuristic category | Instruments | PARTIAL | Keyword heuristics |
 | Learning / Wealth Insights | INSIGHTS app-content | `/app-content` Insights | CONFIGURABLE | Client still has hardcoded article fallbacks |
-| Privacy / Terms | LEGAL documents | `/app-content` Legal | CONFIGURABLE | EN defaults; HI legal missing |
-| About Us | ABOUT keys | `/app-content` About | PARTIAL | Entity fields often empty |
+| Privacy / Terms / Risk | LEGAL documents | `/app-content` Legal | CONFIGURABLE | English/Hindi editor; operator must provide translations and compliance approval |
+| About Us | ABOUT keys | `/app-content` About | CONFIGURABLE | Entity fields still require operator data |
 | Support UI copy | SUPPORT CMS | `/app-content` Support | CONFIGURABLE | Greeting, hours, topics, presets |
 | Support live chat | SaleSmartly (CMS script URL / env) | Script URL in CMS; Nest `/support-console` separate | PARTIAL | **App does not call Nest `/support/*`** |
 | Account recovery | `/auth/recovery*`, `/support/recovery*` | Support recovery | PARTIAL | Password recovery path only |

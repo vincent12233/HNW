@@ -19,11 +19,23 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
   List<InsightArticle> _structured = const [];
   bool _structuredApiOk = false;
   bool _loading = true;
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
+    AppContentService.instance.addListener(_onContentChanged);
     _load();
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() => _content = AppContentService.instance.current);
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onContentChanged);
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -36,6 +48,16 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
       _content = content;
       _loading = false;
     });
+  }
+
+  Future<void> _refresh() async {
+    if (_refreshing) return;
+    setState(() => _refreshing = true);
+    try {
+      await _load();
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
+    }
   }
 
   @override
@@ -67,19 +89,37 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
         : 0;
 
     return AppPageScaffold(
-      appBar: AppBar(title: const AppText('Wealth Insights')),
+      appBar: AppBar(
+        title: const AppText('Wealth Insights'),
+        actions: [
+          IconButton(
+            tooltip: tr('Refresh'),
+            onPressed: _loading || _refreshing ? null : _refresh,
+            icon: _refreshing
+                ? const SizedBox.square(
+                    dimension: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.refresh),
+          ),
+        ],
+      ),
       body: _loading
           ? const AppLoadingView(message: 'Loading insights')
           : count == 0
           ? (useStructured
-                ? const AppEmptyState(
+                ? AppEmptyState(
                     icon: Icons.article_outlined,
                     title: 'No published insights yet.',
+                    onRetry: _refresh,
                   )
-                : const AppErrorView(
+                : AppErrorView(
                     title: 'Insights are temporarily unavailable.',
+                    onRetry: _refresh,
                   ))
-          : ListView(
+          : RefreshIndicator(
+              onRefresh: _refresh,
+              child: ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [
                 Padding(
@@ -141,6 +181,7 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                     ),
                   ),
               ],
+              ),
             ),
     );
   }

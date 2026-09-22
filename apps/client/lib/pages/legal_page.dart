@@ -26,7 +26,18 @@ class _LegalPageState extends State<LegalPage> {
   @override
   void initState() {
     super.initState();
+    AppContentService.instance.addListener(_onContentChanged);
     _load();
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() => _content = AppContentService.instance.current);
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onContentChanged);
+    super.dispose();
   }
 
   Future<void> _load({bool force = false}) async {

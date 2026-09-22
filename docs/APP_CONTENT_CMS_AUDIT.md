@@ -26,7 +26,7 @@ Admin /app-content
 
 | Layer | Path | Notes |
 |-------|------|-------|
-| Admin UI | `apps/admin/app/app-content/page.tsx` | Static field defs; en/hi ops locale; ABOUT/LEGAL always save `en` |
+| Admin UI | `apps/admin/app/app-content/page.tsx` | Static field defs; en/hi ops locale; ABOUT/LEGAL save the selected locale |
 | Admin nav | `apps/admin/components/AdminShell.tsx` | Menu `/app-content` under 运营配置; **ADMIN-only** |
 | Admin API client | `apps/admin/lib/api.ts` | Axios; page uses GET list + POST bulk only |
 | Controller | `apps/api/src/app-content/app-content.controller.ts` | Public + admin endpoints |
@@ -118,7 +118,7 @@ Even if wired later, content writes today store **neither before nor after** sna
 | SUPPORT | 17 | en+hi + zh admin-only | Yes | Client keys yes; zh no |
 | TRADING | 33 | en+hi | Yes | Mostly yes |
 | LEGAL | 2 | **en only** | Yes | Yes |
-| ABOUT | 6 | **en only** | Yes | Yes |
+| ABOUT | 6 | **en/hi** | Yes | Yes |
 | INSIGHTS | 10 (intro×2 + article.01–08) | en+hi | Yes | Yes |
 
 Approx **~134 unique keys**; **~256 default rows** including articles×2 locales (defaults file expands articles via `flatMap`).
@@ -188,15 +188,15 @@ Status values: `COMPLETE` | `ADMIN_ONLY` | `CLIENT_ONLY` | `API_ONLY` | `STALE_C
 
 | Key | Admin | Flutter | HI | Status |
 |-----|:-----:|:-------:|:--:|--------|
-| `privacy.document` | Y (JSON) | `LegalPage` + hardcoded fallback | Missing CMS | COMPLETE for en; hi falls to en then local |
-| `terms.document` | Y (JSON) | Same | Missing CMS | COMPLETE for en |
-| Risk Disclosure | **No** | **No page** | — | MISSING / ADMIN_MISSING | Document only — do not add in Phase 10 |
+| `privacy.document` | Y (JSON), English/Hindi selector | `LegalPage` + hardcoded fallback | Hindi requires operator content | IMPLEMENTED; fallback remains |
+| `terms.document` | Y (JSON), English/Hindi selector | Same | Hindi requires operator content | IMPLEMENTED; fallback remains |
+| `risk.document` | Y (JSON), English/Hindi selector | `LegalPage` risk branch + fallback | Hindi requires operator content | IMPLEMENTED; compliance review still required |
 
 ### ABOUT
 
 | Key | Notes | Status |
 |-----|-------|--------|
-| `company_name`, `legal_name`, `registered_address`, `grievance_contact`, `summary` | Flutter About sheet | COMPLETE (en) |
+| `company_name`, `legal_name`, `registered_address`, `grievance_contact`, `summary` | Flutter About sheet; English/Hindi selector | IMPLEMENTED; missing fields still fall back |
 | `app_version` | CMS body default `Version 1.0.0`; Flutter fallback same; **not PackageInfo** | OVER_CONFIGURED / confusion | Prefer build metadata; CMS may keep marketing “release note” separately |
 
 ### INSIGHTS
@@ -204,8 +204,9 @@ Status values: `COMPLETE` | `ADMIN_ONLY` | `CLIENT_ONLY` | `API_ONLY` | `STALE_C
 | Entity | Current | Status | Recommendation |
 |--------|---------|--------|----------------|
 | `intro.title` / `intro.body` | KV | COMPLETE | KEEP_AS_KEY_VALUE short-term |
-| `article.01` … `article.08` | Fixed 8 title+body rows | NEEDS_STRUCTURED_ENTITY | Phase 11B: `id, slug, locale, title, summary, body, image?, published, sortOrder, publishedAt` |
-| Local `wealthInsightArticles` | 8 hardcoded tuples | Fallback safety | Keep until structured API |
+| `article.01` … `article.08` | Legacy KV compatibility rows | FALLBACK_ONLY | Prefer `/admin/insights` structured entities |
+| `/admin/insights` articles | Structured CRUD entities | IMPLEMENTED | Primary App source when API succeeds |
+| Local `wealthInsightArticles` | 8 hardcoded tuples | Fallback safety | Used only when structured and KV sources fail |
 
 ---
 
@@ -287,7 +288,7 @@ Company video remains CompanyShowcase / content CTAs — not confused with app v
 | Locale | Coverage |
 |--------|----------|
 | en | Full defaults for all modules |
-| hi | HOME/DEPOSIT/SUPPORT(client)/TRADING/INSIGHTS; **not** LEGAL/ABOUT |
+| hi | HOME/DEPOSIT/SUPPORT(client)/TRADING/INSIGHTS/LEGAL/ABOUT; operator must provide approved translations |
 | zh | SUPPORT tags + quick_reply only (admin console) |
 
 **Flutter CMS outage behavior:** previous in-memory bundle or empty; every UI string has local fallback; **no fake prices/balances/news/orders**. Trading APIs independent — **core trading remains usable**. Support chat may fail if script URL unavailable from CMS/env/dart-define.
@@ -304,7 +305,7 @@ Company video remains CompanyShowcase / content CTAs — not confused with app v
 - Align Admin labels/defaults for Positions / Overview / Product Holdings
 - Optional: Alert Preferences / Appearance as CMS keys
 - Wire content writes into AuditLog (before/after)
-- Consider LEGAL/ABOUT hi rows
+- Populate and review LEGAL/ABOUT hi rows before launch
 - Clarify `about.app_version` vs PackageInfo
 
 ### PHASE 11B — Structured entities (only where justified)
@@ -323,7 +324,7 @@ Company video remains CompanyShowcase / content CTAs — not confused with app v
 - Consume new structured endpoints
 - Prefer PackageInfo for version
 - Fill remaining hardcoded Profile row titles if product wants CMS
-- Risk Disclosure only if legal + Admin + client surfaces exist
+- Risk Disclosure now has Admin + client surfaces; compliance review remains before release
 
 ---
 
@@ -338,7 +339,7 @@ Company video remains CompanyShowcase / content CTAs — not confused with app v
 | Public unauthenticated read | `@Get('app-content')` ungarded |
 | Featured = Instrument order | `market-data.service` `findMany` orderBy `displayOrder` |
 | Insights fixed 8 | `article.01`–`08` in defaults + Admin |
-| Risk Disclosure absent | No client page / no LEGAL key |
+| Risk Disclosure | Admin and client surfaces are implemented; compliance approval remains a release gate |
 
 ---
 

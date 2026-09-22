@@ -68,7 +68,7 @@ Goal: **reuse and normalize** the existing App Content system — do not build a
 | No Announcement entity | Ops notices missing or misused as “news” | **11B done** |
 | Banner only title/subtitle | No image/link/schedule | **11B: KEEP_AS_KV** until real need |
 | No AppSettings (maintenance / min version) | Cannot safely gate clients | **11B done** (API + model; UI gate in 13) |
-| LEGAL/ABOUT en-only in CMS | hi relies on API→en→local | 11A |
+| LEGAL/ABOUT locale coverage | CMS supports en/hi; missing hi falls back to en/local | 11A/12 |
 | Role names vs product language | Code has `ADMIN` only (UI: 超级管理员); no PLATFORM_ADMIN/SUPER_ADMIN | Document; optional role rename later — **out of Phase 10** |
 | `about.app_version` is CMS copy | Can diverge from build | 11A / 13 |
 | Rename drift (Holdings vs Positions) | Admin defaults lag Flutter | 11A |
@@ -167,7 +167,7 @@ Per platform row:
 
 1. Authorative locales for client: **en**, **hi** (match Flutter `AppLanguage`).
 2. Public API: requested → en → (client local fallback).
-3. LEGAL/ABOUT: add hi rows when legal-approved; until then en + local fallback is acceptable.
+3. LEGAL/ABOUT: populate and approve hi rows before launch; en + local fallback remains the runtime safety net.
 4. zh SUPPORT quick replies remain admin-console locale, not a third client language.
 
 ---
@@ -243,7 +243,7 @@ Reuse existing `AuditLog` + `AuditService` — do not create a parallel audit pr
 - Featured Home/Markets via public instruments filters
 - See `docs/APP_CONTENT_PHASE_13_CLIENT.md` + end-to-end matrix
 
-**Remaining product gaps:** store URL field; Risk Disclosure; production release ops (out of this track).
+**Remaining product gaps:** store URL field; Risk Disclosure compliance approval; production release ops (out of this track).
 
 ---
 

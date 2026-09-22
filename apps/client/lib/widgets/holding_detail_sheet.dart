@@ -15,12 +15,7 @@ int holdingFrozenQuantity(PortfolioPosition position) =>
 bool holdingQuoteUsable(StockQuote? quote) =>
     quote != null && quote.price > 0;
 
-String holdingIst(DateTime value) {
-  final ist = value.toUtc().add(const Duration(hours: 5, minutes: 30));
-  String two(int number) => number.toString().padLeft(2, '0');
-  return '${two(ist.day)}/${two(ist.month)}/${ist.year} '
-      '${two(ist.hour)}:${two(ist.minute)} IST';
-}
+String holdingIst(DateTime value) => formatIstDateTime(value);
 
 Future<void> showHoldingDetails(
   BuildContext context, {

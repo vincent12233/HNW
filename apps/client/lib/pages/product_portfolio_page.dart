@@ -117,10 +117,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   String _date(dynamic value) {
     final parsed = DateTime.tryParse('$value');
     if (parsed == null) return '--';
-    final ist = parsed.toUtc().add(const Duration(hours: 5, minutes: 30));
-    String two(int number) => number.toString().padLeft(2, '0');
-    return '${two(ist.day)}/${two(ist.month)}/${ist.year} '
-        '${two(ist.hour)}:${two(ist.minute)} IST';
+    return formatIstDateTime(parsed);
   }
 
   String _signed(dynamic value) {

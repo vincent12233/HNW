@@ -20,9 +20,11 @@ AppChipVariant chipVariantForStatus(String? raw) {
     case 'REJECTED':
     case 'NOT_ALLOTTED':
     case 'NOTALLOTTED':
-    case 'CANCELLED':
     case 'CLOSED':
       return AppChipVariant.failed;
+    case 'CANCELLED':
+    case 'CANCELED':
+      return AppChipVariant.neutral;
     case 'PARTIAL_REPAID':
     case 'OVERDUE':
     case 'ALLOCATED':

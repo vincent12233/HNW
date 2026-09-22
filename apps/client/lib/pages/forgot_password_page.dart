@@ -14,6 +14,7 @@ import '../theme/auth_layout.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/international_phone_field.dart';
 import '../widgets/onboarding_widgets.dart';
+import '../widgets/app_feedback.dart';
 
 class ForgotPasswordPage extends StatefulWidget {
   const ForgotPasswordPage({super.key});
@@ -211,7 +212,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     ),
     resizeToAvoidBottomInset: true,
     body: !ready
-        ? const Center(child: CircularProgressIndicator())
+        ? const AppLoadingView()
         : Align(
             alignment: Alignment.topCenter,
             child: ConstrainedBox(

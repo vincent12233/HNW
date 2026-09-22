@@ -1,10 +1,11 @@
-import '../widgets/app_page_scaffold.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/insight_articles_service.dart';
 import '../services/insight_list_result.dart';
 import '../theme/app_colors.dart';
+import '../widgets/app_feedback.dart';
+import '../widgets/app_page_scaffold.dart';
 
 class WealthInsightsPage extends StatefulWidget {
   const WealthInsightsPage({super.key});
@@ -68,20 +69,16 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
     return AppPageScaffold(
       appBar: AppBar(title: const AppText('Wealth Insights')),
       body: _loading
-          ? const Center(child: CircularProgressIndicator())
+          ? const AppLoadingView(message: 'Loading insights')
           : count == 0
-          ? Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: AppText(
-                  useStructured
-                      ? 'No published insights yet.'
-                      : 'Insights are temporarily unavailable.',
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
-                ),
-              ),
-            )
+          ? (useStructured
+                ? const AppEmptyState(
+                    icon: Icons.article_outlined,
+                    title: 'No published insights yet.',
+                  )
+                : const AppErrorView(
+                    title: 'Insights are temporarily unavailable.',
+                  ))
           : ListView(
               padding: const EdgeInsets.only(bottom: 24),
               children: [

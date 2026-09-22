@@ -12,7 +12,7 @@ import '../../utils/number_formatters.dart';
 import '../app_feedback.dart';
 import '../app_status_label.dart';
 import '../record_detail_sheet.dart';
-import '../responsive_empty_state.dart';
+import '../app_page_scaffold.dart';
 import 'product_offer_card.dart';
 import 'trading_guide_card.dart';
 
@@ -115,14 +115,14 @@ class _OtcTabState extends State<OtcTab> {
               child: TradingGuideCard(title: guideTitle, body: guideBody),
             ),
           Expanded(
-            child: ResponsiveEmptyState(
+            child: AppEmptyState(
               icon: Icons.handshake_outlined,
               title: content.text(
                 'trading',
                 'otc.empty_title',
                 fallback: 'No OTC opportunities available',
               ),
-              subtitle: content.text(
+              message: content.text(
                 'trading',
                 'otc.empty_subtitle',
                 fallback:

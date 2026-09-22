@@ -33,24 +33,30 @@ class AppStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (fg, bg) = _colors;
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: compact ? AppSpacing.sm : AppSpacing.md,
-        vertical: compact ? AppSpacing.xxs + 1 : AppSpacing.xs,
-      ),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: AppRadius.borderSm,
-        border: Border.all(color: fg.withValues(alpha: 0.22)),
-      ),
-      child: Text(
-        label,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: AppTypography.labelSmall.copyWith(
-          color: fg,
-          fontWeight: FontWeight.w700,
-          fontSize: compact ? 10 : 11,
+    final scaled = MediaQuery.textScalerOf(context).scale(compact ? 10 : 11);
+    return Semantics(
+      label: 'Status $label',
+      container: true,
+      explicitChildNodes: true,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? AppSpacing.sm : AppSpacing.md,
+          vertical: compact ? AppSpacing.xxs + 1 : AppSpacing.xs,
+        ),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: AppRadius.borderSm,
+          border: Border.all(color: fg.withValues(alpha: 0.22)),
+        ),
+        child: Text(
+          label,
+          maxLines: scaled > 14 ? 2 : 1,
+          overflow: TextOverflow.ellipsis,
+          style: AppTypography.labelSmall.copyWith(
+            color: fg,
+            fontWeight: FontWeight.w700,
+            fontSize: compact ? 10 : 11,
+          ),
         ),
       ),
     );

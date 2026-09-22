@@ -8,8 +8,8 @@ import '../../models/ipo.dart';
 import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
 import '../app_feedback.dart';
+import '../app_page_scaffold.dart';
 import 'product_offer_card.dart';
-import '../responsive_empty_state.dart';
 import 'trading_guide_card.dart';
 
 class IpoTab extends StatefulWidget {
@@ -134,7 +134,7 @@ class _IpoTabState extends State<IpoTab> {
       }
       final content = AppContentService.instance.current;
       final isOpen = selectedSection == 1;
-      return ResponsiveEmptyState(
+      return AppEmptyState(
         icon: Icons.campaign_outlined,
         title: isOpen
             ? content.text(
@@ -147,7 +147,7 @@ class _IpoTabState extends State<IpoTab> {
                 'ipo.empty_title',
                 fallback: 'No IPO records',
               ),
-        subtitle: isOpen
+        message: isOpen
             ? content.text(
                 'trading',
                 'ipo.empty_open_subtitle',

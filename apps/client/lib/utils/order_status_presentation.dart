@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../models/trading_order.dart';
 import '../theme/app_colors.dart';
+import '../utils/number_formatters.dart';
 import '../widgets/app_chip.dart';
 
 /// Display helpers for trading order status wire values.
@@ -115,12 +116,7 @@ abstract final class OrderStatusPresentation {
     return '${raw.substring(0, 4)}…${raw.substring(raw.length - 4)}';
   }
 
-  static String formatIst(DateTime value) {
-    final ist = value.toUtc().add(const Duration(hours: 5, minutes: 30));
-    String two(int number) => number.toString().padLeft(2, '0');
-    return '${two(ist.day)}/${two(ist.month)}/${ist.year} '
-        '${two(ist.hour)}:${two(ist.minute)} IST';
-  }
+  static String formatIst(DateTime value) => formatIstDateTime(value);
 
   static String missing(String? value) {
     final raw = value?.trim() ?? '';

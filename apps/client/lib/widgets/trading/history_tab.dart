@@ -6,7 +6,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../responsive_empty_state.dart';
+import '../app_page_scaffold.dart';
 import 'order_card.dart';
 
 class HistoryTab extends StatefulWidget {
@@ -50,10 +50,10 @@ class _HistoryTabState extends State<HistoryTab> {
           order.status == 'REJECTED',
     );
     if (allHistory.isEmpty) {
-      return const ResponsiveEmptyState(
+      return const AppEmptyState(
         icon: Icons.history,
         title: 'No order history',
-        subtitle: 'Completed, cancelled, and rejected orders will appear here.',
+        message: 'Completed, cancelled, and rejected orders will appear here.',
       );
     }
 
@@ -97,10 +97,11 @@ class _HistoryTabState extends State<HistoryTab> {
           child: AppStatusSwitch(
             switchKey: '$status|$side|${filtered.length}',
             child: filtered.isEmpty
-                ? const ResponsiveEmptyState(
+                ? const AppEmptyState(
                     icon: Icons.filter_alt_outlined,
                     title: 'No matching history',
-                    subtitle: 'Nothing in the currently loaded orders matches these filters.',
+                    message:
+                        'Nothing in the currently loaded orders matches these filters.',
                   )
                 : ListView.separated(
                     padding: AppSpacing.page,

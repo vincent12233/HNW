@@ -10,7 +10,7 @@ import '../../theme/app_motion.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/product_category.dart';
 import '../stock_logo.dart';
-import '../responsive_empty_state.dart';
+import '../app_page_scaffold.dart';
 import '../holding_detail_sheet.dart';
 
 class HoldingsTab extends StatefulWidget {
@@ -494,10 +494,10 @@ class _HoldingsTabState extends State<HoldingsTab> {
   }
 
   Widget _emptyState(String title, String subtitle) {
-    return ResponsiveEmptyState(
+    return AppEmptyState(
       icon: Icons.account_balance_wallet_outlined,
       title: title,
-      subtitle: subtitle,
+      message: subtitle,
     );
   }
 

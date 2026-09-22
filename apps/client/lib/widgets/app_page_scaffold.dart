@@ -61,16 +61,21 @@ class AppEmptyState extends StatelessWidget {
     required this.title,
     this.message,
     this.icon = Icons.inbox_outlined,
+    this.iconColor,
     this.onRetry,
+    this.action,
     this.compact = false,
   });
   final String title;
   final String? message;
   final IconData icon;
+  final Color? iconColor;
   final VoidCallback? onRetry;
+  final Widget? action;
   final bool compact;
   @override
   Widget build(BuildContext context) {
+    final accent = iconColor ?? AppColors.brandPrimary;
     final column = ConstrainedBox(
       constraints: const BoxConstraints(maxWidth: 420),
       child: Column(
@@ -80,10 +85,12 @@ class AppEmptyState extends StatelessWidget {
             width: 72,
             height: 72,
             decoration: BoxDecoration(
-              color: AppColors.brandPrimarySoft,
+              color: iconColor == null
+                  ? AppColors.brandPrimarySoft
+                  : accent.withValues(alpha: 0.10),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 34, color: AppColors.brandPrimary),
+            child: Icon(icon, size: 34, color: accent),
           ),
           const SizedBox(height: AppSpacing.xl - 2),
           AppText(
@@ -104,9 +111,13 @@ class AppEmptyState extends StatelessWidget {
               ),
             ),
           ],
-          if (onRetry != null) ...[
+          if (action != null) ...[
+            const SizedBox(height: AppSpacing.xl - 2),
+            action!,
+          ] else if (onRetry != null) ...[
             const SizedBox(height: AppSpacing.xl - 2),
             OutlinedButton.icon(
+              style: OutlinedButton.styleFrom(minimumSize: const Size(120, 48)),
               onPressed: onRetry,
               icon: const Icon(Icons.refresh, size: 18),
               label: const AppText('Retry'),
@@ -121,8 +132,23 @@ class AppEmptyState extends StatelessWidget {
         child: column,
       );
     }
-    return Center(
-      child: SingleChildScrollView(padding: AppSpacing.page, child: column),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final minHeight =
+            constraints.hasBoundedHeight && constraints.maxHeight > 220
+            ? (constraints.maxHeight - 48).clamp(180.0, 420.0)
+            : 0.0;
+        return Center(
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: AppSpacing.page,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minHeight: minHeight, maxWidth: 420),
+              child: Center(child: column),
+            ),
+          ),
+        );
+      },
     );
   }
 }

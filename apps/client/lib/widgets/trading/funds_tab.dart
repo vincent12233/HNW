@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import '../../app_config.dart';
 import '../../models/account_transaction.dart';
 import '../../utils/number_formatters.dart';
+import '../app_feedback.dart';
+import '../app_page_scaffold.dart';
 
 class FundsTab extends StatelessWidget {
   const FundsTab({
@@ -22,7 +24,13 @@ class FundsTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (loading && transactions.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingView(message: 'Loading account activity');
+    }
+    if (loadFailed && transactions.isEmpty) {
+      return AppErrorView(
+        title: 'Unable to load account activity. Please try again.',
+        onRetry: onRefresh == null || loading ? null : () => onRefresh!(),
+      );
     }
     return Column(
       children: [
@@ -32,10 +40,8 @@ class FundsTab extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Column(
               children: [
-                AppText(
-                  transactions.isEmpty
-                      ? 'Unable to load account activity. Please try again.'
-                      : 'Unable to refresh account activity. Previously loaded records are shown.',
+                const AppText(
+                  'Unable to refresh account activity. Previously loaded records are shown.',
                 ),
                 if (onRefresh != null)
                   TextButton.icon(
@@ -46,56 +52,29 @@ class FundsTab extends StatelessWidget {
               ],
             ),
           ),
-        if (!(loadFailed && transactions.isEmpty))
-          Expanded(child: _buildRecords(context)),
+        Expanded(child: _buildRecords(context)),
       ],
     );
   }
 
   Widget _buildRecords(BuildContext context) {
     if (transactions.isEmpty) {
-      final theme = Theme.of(context);
       return RefreshIndicator(
         onRefresh: onRefresh ?? () async {},
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.fromLTRB(32, 24, 32, 32),
-          children: [
-            const SizedBox(height: 72),
-            Icon(
-              Icons.receipt_long_outlined,
-              size: 64,
-              color: theme.colorScheme.primary.withValues(alpha: 0.72),
-            ),
-            const SizedBox(height: 16),
-            AppText(
-              'No fund transactions',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            AppText(
+        child: AppEmptyState(
+          icon: Icons.receipt_long_outlined,
+          title: 'No fund transactions',
+          message:
               'Deposits credited by finance and withdrawals you submit will appear here.',
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            if (onRefresh != null) ...[
-              const SizedBox(height: 18),
-              Center(
-                child: OutlinedButton.icon(
+          action: onRefresh == null
+              ? null
+              : OutlinedButton.icon(
                   onPressed: () {
                     onRefresh!();
                   },
                   icon: const Icon(Icons.refresh_rounded, size: 18),
                   label: const AppText('Refresh account activity'),
                 ),
-              ),
-            ],
-          ],
         ),
       );
     }

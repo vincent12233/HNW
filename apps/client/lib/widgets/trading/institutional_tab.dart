@@ -5,7 +5,7 @@ import '../../models/institutional_opportunity.dart';
 import '../../models/stock_quote.dart';
 import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
-import '../responsive_empty_state.dart';
+import '../app_page_scaffold.dart';
 import 'product_offer_card.dart';
 import 'trading_guide_card.dart';
 
@@ -49,14 +49,14 @@ class InstitutionalTab extends StatelessWidget {
                   child: TradingGuideCard(title: guideTitle, body: guideBody),
                 ),
               Expanded(
-                child: ResponsiveEmptyState(
+                child: AppEmptyState(
                   icon: Icons.business_center_outlined,
                   title: content.text(
                     'trading',
                     'institutional.empty_title',
                     fallback: 'No institutional offers available',
                   ),
-                  subtitle: content.text(
+                  message: content.text(
                     'trading',
                     'institutional.empty_subtitle',
                     fallback:

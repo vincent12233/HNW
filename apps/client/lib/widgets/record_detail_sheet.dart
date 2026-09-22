@@ -36,6 +36,9 @@ Future<void> showRecordDetailSheet(
                     ),
                     IconButton(
                       tooltip: 'Close details',
+                      style: IconButton.styleFrom(
+                        minimumSize: const Size(48, 48),
+                      ),
                       onPressed: () => Navigator.pop(sheetContext),
                       icon: const Icon(Icons.close),
                     ),

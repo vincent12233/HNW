@@ -6,7 +6,8 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
-import '../responsive_empty_state.dart';
+import '../app_feedback.dart';
+import '../app_page_scaffold.dart';
 import 'order_card.dart';
 
 class OrdersTab extends StatefulWidget {
@@ -73,24 +74,22 @@ class _OrdersTabState extends State<OrdersTab> {
   @override
   Widget build(BuildContext context) {
     if (widget.loading && widget.orders.isEmpty) {
-      return const Center(child: CircularProgressIndicator());
+      return const AppLoadingView(message: 'Loading orders');
     }
     if (widget.failed && widget.orders.isEmpty) {
-      return ResponsiveEmptyState(
-        icon: Icons.warning_amber_rounded,
+      return AppErrorView(
         title: 'Orders could not be loaded',
-        subtitle: 'The last refresh failed. Your previous orders were not removed.',
-        action: TextButton(
-          onPressed: widget.onRefresh == null || _refreshing ? null : _refresh,
-          child: AppText(_refreshing ? 'Refreshing...' : 'Retry'),
-        ),
+        message:
+            'The last refresh failed. Your previous orders were not removed.',
+        onRetry: widget.onRefresh == null || _refreshing ? null : _refresh,
       );
     }
     if (widget.orders.isEmpty) {
-      return ResponsiveEmptyState(
+      return AppEmptyState(
         icon: Icons.receipt_long_outlined,
         title: 'No orders',
-        subtitle: 'Your order activity will appear here. No sample orders are shown.',
+        message:
+            'Your order activity will appear here. No sample orders are shown.',
         action: widget.onRefresh == null
             ? null
             : IconButton(
@@ -177,10 +176,11 @@ class _OrdersTabState extends State<OrdersTab> {
           child: AppStatusSwitch(
             switchKey: '$status|$side|$query|${filtered.length}',
             child: filtered.isEmpty
-                ? const ResponsiveEmptyState(
+                ? const AppEmptyState(
                     icon: Icons.filter_alt_outlined,
                     title: 'No matching orders',
-                    subtitle: 'Nothing in the currently loaded orders matches these filters.',
+                    message:
+                        'Nothing in the currently loaded orders matches these filters.',
                   )
                 : RefreshIndicator(
                     onRefresh: widget.onRefresh == null

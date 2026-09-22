@@ -35,6 +35,17 @@ String formatAppDateTime(DateTime? value) {
   return DateFormat('dd MMM yyyy, HH:mm').format(value.toLocal());
 }
 
+DateTime toIst(DateTime value) =>
+    value.toUtc().add(const Duration(hours: 5, minutes: 30));
+
+/// Market quote / order clock in IST. Distinct from [formatAppDateTime] local time.
+String formatIstDateTime(DateTime value) {
+  final ist = toIst(value);
+  String two(int number) => number.toString().padLeft(2, '0');
+  return '${two(ist.day)}/${two(ist.month)}/${ist.year} '
+      '${two(ist.hour)}:${two(ist.minute)} IST';
+}
+
 String formatVolume(num volume) {
   if (volume >= 10000000) {
     return '${(volume / 10000000).toStringAsFixed(2)} Cr';

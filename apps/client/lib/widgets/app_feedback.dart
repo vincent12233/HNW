@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
@@ -14,7 +15,7 @@ class AppLoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final reduceMotion = MediaQuery.disableAnimationsOf(context);
+    final reduceMotion = AppMotion.reduce(context);
     final indicator = reduceMotion
         ? const Icon(
             Icons.hourglass_empty_rounded,
@@ -48,7 +49,11 @@ class AppLoadingView extends StatelessWidget {
       );
     }
     return Center(
-      child: SingleChildScrollView(padding: AppSpacing.page, child: column),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: AppSpacing.page,
+        child: column,
+      ),
     );
   }
 }
@@ -128,7 +133,11 @@ class AppErrorView extends StatelessWidget {
       );
     }
     return Center(
-      child: SingleChildScrollView(padding: AppSpacing.page, child: column),
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: AppSpacing.page,
+        child: column,
+      ),
     );
   }
 }

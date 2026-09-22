@@ -1,15 +1,20 @@
 "use client";
 
 import { LockOutlined, ReloadOutlined, SearchOutlined, StopOutlined, UnlockOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Popconfirm, Space, Table, Tag, Typography, message } from "antd";
+import { Button, Card, Input, Popconfirm, Space, Table, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { isAxiosError } from "axios";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
 import { api } from "@/lib/api";
+import { filterLoadedRows, maskOpsPhone } from "@/lib/ops-directory";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type Customer = {
   id: string;
@@ -36,13 +41,7 @@ function formatMoney(value?: string | number | null) {
 }
 
 function statusTag(status: string) {
-  const map: Record<string, { color: string; label: string }> = {
-    ACTIVE: { color: "green", label: "正常" },
-    SUSPENDED: { color: "orange", label: "已冻结" },
-    DISABLED: { color: "red", label: "已禁用" },
-  };
-  const config = map[status] ?? { color: "default", label: status };
-  return <Tag color={config.color}>{config.label}</Tag>;
+  return <OpsStatusTag code={status} />;
 }
 
 export default function BusinessAccountsPage() {
@@ -97,17 +96,13 @@ export default function BusinessAccountsPage() {
   }, [loadCustomers]);
 
   const filtered = useMemo(() => {
-    const value = keyword.trim().toLowerCase();
-    if (!value) return customers;
-    return customers.filter((item) =>
-      [
-        item.customerNo,
-        item.fullName,
-        item.phone,
-        item.status,
-        item.account?.accountNumber,
-      ].some((field) => String(field ?? "").toLowerCase().includes(value)),
-    );
+    return filterLoadedRows(customers, keyword, (item) => [
+      item.customerNo,
+      item.fullName,
+      maskOpsPhone(item.phone, ""),
+      item.status,
+      item.account?.accountNumber,
+    ]);
   }, [customers, keyword]);
 
   const columns: ColumnsType<Customer> = [
@@ -119,7 +114,7 @@ export default function BusinessAccountsPage() {
       render: (_, record) => (
         <Space orientation="vertical" size={0}>
           <Text strong>{record.fullName || "未命名客户"}</Text>
-          <Text type="secondary">{record.customerNo || "-"} / +91 {record.phone || "-"}</Text>
+          <Text type="secondary">{record.customerNo || "Unavailable"} / {maskOpsPhone(record.phone)}</Text>
         </Space>
       ),
     },
@@ -135,14 +130,14 @@ export default function BusinessAccountsPage() {
       fixed: "right",
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<UnlockOutlined />} disabled={saving || loading || record.status === "ACTIVE"} onClick={() => updateStatus(record.id, "ACTIVE")}>
+          <Button size="small" icon={<UnlockOutlined />} aria-label="解冻账户" disabled={saving || loading || record.status === "ACTIVE"} onClick={() => updateStatus(record.id, "ACTIVE")}>
             解冻
           </Button>
-          <Button size="small" icon={<LockOutlined />} disabled={saving || loading || record.status === "SUSPENDED"} onClick={() => updateStatus(record.id, "SUSPENDED")}>
+          <Button size="small" icon={<LockOutlined />} aria-label="冻结账户" disabled={saving || loading || record.status === "SUSPENDED"} onClick={() => updateStatus(record.id, "SUSPENDED")}>
             冻结
           </Button>
           <Popconfirm title="确认禁用该客户账户？" okText="确认" cancelText="取消" onConfirm={() => updateStatus(record.id, "DISABLED")}>
-            <Button size="small" danger icon={<StopOutlined />} disabled={saving || loading || record.status === "DISABLED"}>
+            <Button size="small" danger icon={<StopOutlined />} aria-label="禁用账户" disabled={saving || loading || record.status === "DISABLED"}>
               禁用
             </Button>
           </Popconfirm>
@@ -153,18 +148,19 @@ export default function BusinessAccountsPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>账户管理</Title>
-          <Paragraph type="secondary">查看自己名下客户账户，并对异常账户进行冻结、解冻或禁用。</Paragraph>
-        </div>
-        {error && <Alert type="error" title={error} showIcon />}
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="账户管理"
+          crumbs={[{ title: "我的客户" }, { title: "账户管理" }]}
+          description="查看自己名下客户账户，并对异常账户进行冻结、解冻或禁用。列表手机号已脱敏。本页不新增资金或交易操作。"
+          extra={<Button icon={<ReloadOutlined />} disabled={saving} loading={loading} onClick={() => void loadCustomers()} aria-label="刷新客户账户">刷新</Button>}
+        />
+        {error ? <OpsErrorState title={error} onRetry={() => void loadCustomers()} /> : null}
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input allowClear prefix={<SearchOutlined />} placeholder="搜索客户编号、姓名、手机号、交易账号或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 430 }} />
-            <Button icon={<ReloadOutlined />} disabled={saving} loading={loading} onClick={loadCustomers}>刷新</Button>
+            <Input allowClear prefix={<SearchOutlined />} placeholder="搜索已加载的客户编号、姓名、脱敏手机号、交易账号或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载账户" style={{ width: 430, maxWidth: "100%" }} />
           </Space>
-          <Table<Customer> rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1280 }} pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 个账户` }} />
+          <Table<Customer> rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1280 }} pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 个已加载账户` }} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载账户" : "当前没有已加载的客户账户。"} onRetry={loading ? undefined : () => void loadCustomers()} /> }} />
         </Card>
       </Space>
     </AdminShell>

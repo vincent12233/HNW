@@ -49,6 +49,7 @@ export default function DepositsPage() {
   const canCreateTopUp = getBackendRole() === "FINANCE";
   const [createOpen, setCreateOpen] = useState(false);
   const [creating, setCreating] = useState(false);
+  const creatingRef = useRef(false);
   const [createForm] = Form.useForm<{ accountNumber: string; amount: number; referenceId: string; note: string }>();
 
   const load = useCallback(async () => {
@@ -126,6 +127,8 @@ export default function DepositsPage() {
 
 
   async function createTopUp(values: { accountNumber: string; amount: number; referenceId: string; note: string }) {
+    if (creatingRef.current) return;
+    creatingRef.current = true;
     setCreating(true);
     try {
       const accountNumber = values.accountNumber.trim().toUpperCase();
@@ -137,9 +140,11 @@ export default function DepositsPage() {
       message.success(formatCreditSuccessMessage(data, "上分订单已创建并入账"));
       setCreateOpen(false);
       createForm.resetFields();
+      await load();
     } catch (error: unknown) {
       message.error(getApiErrorMessage(error, "创建上分订单失败"));
     } finally {
+      creatingRef.current = false;
       setCreating(false);
     }
   }

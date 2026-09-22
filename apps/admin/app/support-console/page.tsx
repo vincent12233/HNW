@@ -22,10 +22,15 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import RecoveryInbox from "@/components/RecoveryInbox";
 import { api, getApiErrorMessage } from '@/lib/api';
+import { maskOpsPhone } from "@/lib/ops-directory";
+import { formatOpsDateTime } from "@/lib/ops-format";
 
-const { Title, Paragraph, Text } = Typography;
+const { Paragraph, Text } = Typography;
 
 const supportTags = ["入金咨询", "提现问题", "KYC", "交易问题", "账户问题", "紧急", "已跟进"];
 
@@ -65,7 +70,7 @@ type SupportMessage = {
 };
 
 function formatDate(value?: string | null) {
-  return value ? new Date(value).toLocaleString("zh-CN") : "-";
+  return formatOpsDateTime(value);
 }
 
 export default function SupportConsolePage() {
@@ -221,17 +226,22 @@ export default function SupportConsolePage() {
   return (
     <AdminShell>
       <RecoveryInbox />
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>在线客服后台</Title>
-          <Paragraph type="secondary">
-            处理客户咨询，支持客服标签、自定义备注标签、快捷回复和消息翻译辅助。客户看不到这些后台标签。
-          </Paragraph>
-        </div>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          eyebrow="SUPPORT"
+          title="客服会话台"
+          crumbs={[{ title: "客服" }, { title: "客服会话台" }]}
+          description="处理客户咨询，支持客服标签、自定义备注标签、快捷回复和消息翻译辅助。客户看不到这些后台标签。本页不新增工单系统或客户经理入口。"
+          extra={
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void loadConversations()} aria-label="刷新客服会话">
+              刷新
+            </Button>
+          }
+        />
 
-        {error && <Alert type="error" showIcon title={error} />}
+        {error ? <OpsErrorState title={error} onRetry={() => void loadConversations()} /> : null}
 
-        <div style={{ display: "grid", gridTemplateColumns: "360px minmax(0, 1fr)", gap: 16 }}>
+        <div className="ops-support-grid">
           <Card
             title="客户会话"
             extra={<Button icon={<ReloadOutlined />} loading={loading} onClick={loadConversations} />}
@@ -239,7 +249,7 @@ export default function SupportConsolePage() {
             <List
               loading={loading}
               dataSource={conversations}
-              locale={{ emptyText: <Empty description="暂无会话" /> }}
+              locale={{ emptyText: <OpsEmpty description={loading ? "正在加载会话" : "暂无会话"} onRetry={loading ? undefined : () => void loadConversations()} /> }}
               renderItem={(item) => (
                 <List.Item
                   onClick={() => {
@@ -259,7 +269,7 @@ export default function SupportConsolePage() {
                       <Space wrap>
                         <Text strong>{item.client?.fullName || "客户"}</Text>
                         {item.client?.customerNo && <Tag>{item.client.customerNo}</Tag>}
-                        {item.client?.phone && <Tag>+91 {item.client.phone}</Tag>}
+                        {item.client?.phone && <Tag>{maskOpsPhone(item.client.phone)}</Tag>}
                       </Space>
                     }
                     description={
@@ -288,7 +298,7 @@ export default function SupportConsolePage() {
                 <Space wrap>
                   <span>{selected.client?.fullName || "客户"}</span>
                   {selected.client?.customerNo && <Tag>{selected.client.customerNo}</Tag>}
-                  {selected.client?.phone && <Tag>+91 {selected.client.phone}</Tag>}
+                  {selected.client?.phone && <Tag>{maskOpsPhone(selected.client.phone)}</Tag>}
                 </Space>
               ) : (
                 "聊天窗口"

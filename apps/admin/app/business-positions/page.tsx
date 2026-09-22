@@ -7,7 +7,6 @@ import {
   WalletOutlined,
 } from "@ant-design/icons";
 import {
-  Alert,
   Button,
   Card,
   Col,
@@ -24,9 +23,13 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from '@/lib/api';
+import { maskOpsPhone } from "@/lib/ops-directory";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type PositionCategory = "INSTITUTIONAL" | "IPO" | "OTC";
 
@@ -138,8 +141,7 @@ export default function BusinessPositionsPage() {
           <Space orientation="vertical" size={0}>
             <Text strong>{record.account.user.fullName || "未命名客户"}</Text>
             <Text type="secondary">
-              {record.account.user.customerNo || "-"} / +91{" "}
-              {record.account.user.phone || "-"}
+              {record.account.user.customerNo || "Unavailable"} / {maskOpsPhone(record.account.user.phone)}
             </Text>
             <Text type="secondary">{record.account.accountNumber}</Text>
           </Space>
@@ -216,15 +218,24 @@ export default function BusinessPositionsPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>客户持仓</Title>
-          <Paragraph type="secondary">
-            与客户 App 持仓同步，按涨停股、IPO、OTC 分类查看自己名下客户的真实持仓。
-          </Paragraph>
-        </div>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="客户持仓"
+          crumbs={[{ title: "交易业务" }, { title: "客户持仓" }]}
+          description="与客户 App 持仓同步，按涨停股、IPO、OTC 分类查看自己名下客户的真实持仓。手机号已脱敏。本页不新增交易或结算操作。"
+          extra={
+            <Button
+              icon={<ReloadOutlined />}
+              onClick={() => loadPositions(category)}
+              loading={loading}
+              aria-label="刷新客户持仓"
+            >
+              刷新
+            </Button>
+          }
+        />
 
-        {error && <Alert type="error" title={error} showIcon />}
+        {error ? <OpsErrorState title={error} onRetry={() => void loadPositions(category)} /> : null}
 
         <Row gutter={[16, 16]}>
           <Col xs={24} md={8}>
@@ -271,16 +282,18 @@ export default function BusinessPositionsPage() {
             <Input
               allowClear
               prefix={<SearchOutlined />}
-              placeholder="搜索客户、手机号、交易账号、股票简称或公司名称"
+              placeholder="搜索客户、脱敏手机号、交易账号、股票简称或公司名称"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
               onPressEnter={() => loadPositions(category)}
-              style={{ width: 460 }}
+              aria-label="搜索客户持仓"
+              style={{ width: 460, maxWidth: "100%" }}
             />
             <Button
               icon={<ReloadOutlined />}
               onClick={() => loadPositions(category)}
               loading={loading}
+              aria-label="刷新客户持仓"
             >
               刷新
             </Button>
@@ -309,6 +322,7 @@ export default function BusinessPositionsPage() {
               pageSize: 12,
               showTotal: (total) => `共 ${total} 条持仓`,
             }}
+            locale={{ emptyText: <OpsEmpty description={loading ? "正在加载持仓" : "当前没有持仓记录。"} onRetry={loading ? undefined : () => void loadPositions(category)} /> }}
           />
         </Card>
       </Space>

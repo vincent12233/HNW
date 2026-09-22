@@ -25,6 +25,8 @@ import {
 } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import {
   newAssignmentIdempotencyKey,
   type AssignmentBusiness,
@@ -34,7 +36,7 @@ import {
   type AssignmentStaff,
 } from "@/lib/team-assignment";
 
-const { Paragraph, Text, Title } = Typography;
+const { Paragraph, Text } = Typography;
 
 export default function TeamAssignmentWorkspace() {
   const [data, setData] = useState<AssignmentListResponse | null>(null);
@@ -197,14 +199,18 @@ export default function TeamAssignmentWorkspace() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }} className="assignment-workspace">
-      <div>
-        <Title level={3} style={{ marginBottom: 4 }}>团队归属管理</Title>
-        <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-          仅超级管理员可以把业务员分配或转移到管理员。转移只改管理员—业务员归属，不改客户归属、VIP、资金或交易。
-        </Paragraph>
-      </div>
-      {error ? <Alert type="error" showIcon title={error} action={<Button onClick={() => void load()}>重试</Button>} /> : null}
+    <Space direction="vertical" size={16} style={{ width: "100%" }} className="assignment-workspace ops-workspace">
+      <OpsPageHeader
+        title="团队归属管理"
+        crumbs={[{ title: "治理与人员" }, { title: "团队归属管理" }]}
+        description="仅超级管理员可以把业务员分配或转移到管理员。转移只改管理员—业务员归属，不改客户归属、VIP、资金或交易。"
+        extra={
+          <Button icon={<ReloadOutlined aria-hidden />} aria-label="刷新团队归属" onClick={() => void load()} loading={loading}>
+            刷新
+          </Button>
+        }
+      />
+      {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
       <Space wrap>
         <Input.Search
           allowClear

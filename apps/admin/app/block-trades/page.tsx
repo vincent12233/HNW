@@ -19,9 +19,10 @@ import {
 import dayjs from "dayjs";
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "@/components/AdminShell";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from "@/lib/api";
 
-const { Title, Paragraph, Text } = Typography;
+const { Paragraph, Title, Text } = Typography;
 
 type Instrument = {
   id: string;
@@ -220,19 +221,22 @@ export default function OtcOffersPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>OTC 上架管理</Title>
-          <Paragraph type="secondary">
-            实时行情仅作参考；上架/编辑时填写折扣结算价（成交按此价格结算）。新上架与重新上架会生成
-            4 位交易密钥；编辑价格或有效期不会更换密钥。已上架标的请用「编辑」，勿重复上架。
-          </Paragraph>
-        </div>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="OTC 上架管理"
+          crumbs={[{ title: "产品上架" }, { title: "OTC 上架" }]}
+          description="实时行情仅作参考；上架/编辑时填写折扣结算价（成交按此价格结算）。新上架与重新上架会生成 4 位交易密钥；编辑价格或有效期不会更换密钥。已上架标的请用「编辑」，勿重复上架。"
+          extra={
+            <Button icon={<ReloadOutlined />} onClick={() => void load()} aria-label="刷新 OTC 上架">
+              刷新
+            </Button>
+          }
+        />
         <Card>
           <Space
             style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}
           >
-            <Button icon={<ReloadOutlined />} onClick={load}>
+            <Button icon={<ReloadOutlined />} onClick={() => void load()} aria-label="刷新 OTC 上架">
               刷新
             </Button>
             <Button
@@ -248,8 +252,10 @@ export default function OtcOffersPage() {
           </Space>
           <Table
             rowKey="id"
+            className="ops-directory-table"
             loading={loading}
             dataSource={offers}
+            scroll={{ x: 1100 }}
             columns={[
               {
                 title: "股票",

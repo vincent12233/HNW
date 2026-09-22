@@ -493,18 +493,24 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           <Result
             status="warning"
             title="暂时无法连接后台服务"
-            subTitle="请检查网络或稍后重试。连接恢复后将继续验证当前会话。"
+            subTitle="请检查网络或稍后重试。连接恢复后将继续验证当前会话。会话过期会转到登录页，不会改写认证协议。"
             extra={
-              <Button
-                type="primary"
-                icon={<ReloadOutlined />}
-                onClick={() => {
-                  setSessionUnavailable(false);
-                  setSessionAttempt((value) => value + 1);
-                }}
-              >
-                重新连接
-              </Button>
+              <Space wrap>
+                <Button
+                  type="primary"
+                  icon={<ReloadOutlined />}
+                  aria-label="重新连接后台服务"
+                  onClick={() => {
+                    setSessionUnavailable(false);
+                    setSessionAttempt((value) => value + 1);
+                  }}
+                >
+                  重新连接
+                </Button>
+                <Button aria-label="返回登录入口" onClick={() => router.replace("/login")}>
+                  返回登录入口
+                </Button>
+              </Space>
             }
           />
         ) : (

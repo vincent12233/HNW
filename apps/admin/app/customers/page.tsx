@@ -192,6 +192,7 @@ export default function CustomersPage() {
   const [tierFilter, setTierFilter] = useState<string>("ALL");
   const [businessFilter, setBusinessFilter] = useState<string>("ALL");
   const [error, setError] = useState("");
+  const [detailError, setDetailError] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword);
 
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -215,21 +216,7 @@ export default function CustomersPage() {
       const response = await api.get<Customer[]>("/admin/customers");
       if (gen !== loadGen.current) return;
       const customerList = Array.isArray(response.data) ? response.data : [];
-      const riskResults = await Promise.allSettled(
-        customerList.map((customer) =>
-          api.get<LoginRisk>(`/admin/customers/${customer.id}/login-risk`),
-        ),
-      );
-      if (gen !== loadGen.current) return;
-      setCustomers(
-        customerList.map((customer, index) => {
-          const result = riskResults[index];
-          return {
-            ...customer,
-            loginRisk: result.status === "fulfilled" ? result.value.data : null,
-          };
-        }),
-      );
+      setCustomers(customerList);
     } catch (requestError: unknown) {
       if (gen !== loadGen.current) return;
       setError(getApiErrorMessage(requestError, "客户数据加载失败"));
@@ -268,13 +255,14 @@ export default function CustomersPage() {
     setHistoryOpen(true);
     setHistoryLoading(true);
     setHistory([]);
+    setDetailError("");
     try {
       const response = await api.get<LoginAudit[]>(
         `/admin/customers/${customer.id}/login-audits`,
       );
       setHistory(Array.isArray(response.data) ? response.data : []);
     } catch (requestError: unknown) {
-      setError(getApiErrorMessage(requestError, "登录记录加载失败"));
+      setDetailError(getApiErrorMessage(requestError, "登录记录加载失败"));
     } finally {
       setHistoryLoading(false);
     }
@@ -285,13 +273,14 @@ export default function CustomersPage() {
     setRiskOpen(true);
     setRiskLoading(true);
     setSelectedRisk(null);
+    setDetailError("");
     try {
       const response = await api.get<LoginRisk>(
         `/admin/customers/${customer.id}/login-risk`,
       );
       setSelectedRisk(response.data);
     } catch (requestError: unknown) {
-      setError(getApiErrorMessage(requestError, "登录风险数据加载失败"));
+      setDetailError(getApiErrorMessage(requestError, "登录风险数据加载失败"));
     } finally {
       setRiskLoading(false);
     }
@@ -330,8 +319,6 @@ export default function CustomersPage() {
         customer.assignedBusiness?.fullName,
         customer.assignedBusiness?.businessProfile?.employeeNo,
         customer.clientTier,
-        customer.loginAudits?.[0]?.ipAddress,
-        customer.loginRisk?.riskLevel,
       ],
     );
   }, [businessFilter, customers, debouncedKeyword, statusFilter, tierFilter]);
@@ -777,6 +764,7 @@ export default function CustomersPage() {
         footer={null}
         width={920}
       >
+        {detailError && historyOpen ? <OpsErrorState title={detailError} /> : null}
         <Table<LoginAudit>
           rowKey={(record) =>
             record.id ?? `${record.createdAt}-${record.ipAddress ?? ""}`
@@ -797,6 +785,7 @@ export default function CustomersPage() {
         width={640}
         loading={riskLoading}
       >
+        {detailError && riskOpen ? <OpsErrorState title={detailError} /> : null}
         {selectedRisk ? (
           <Descriptions size="small" column={1} bordered>
             <Descriptions.Item label="24小时失败登录">

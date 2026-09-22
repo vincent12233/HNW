@@ -1,6 +1,7 @@
 "use client";
 
-import { Button, Result } from "antd";
+import { Button, Result, Space } from "antd";
+import { useRouter } from "next/navigation";
 
 type Props = {
   error: { digest?: string };
@@ -8,6 +9,8 @@ type Props = {
 };
 
 export default function GlobalErrorPage({ error, reset }: Props) {
+  const router = useRouter();
+
   return (
     <main className="ops-system-state" role="alert">
       <Result
@@ -15,9 +18,14 @@ export default function GlobalErrorPage({ error, reset }: Props) {
         title="后台页面暂时无法显示"
         subTitle={error.digest ? `错误编号 ${error.digest}` : "请重试当前页面。不会展示堆栈或内部诊断。"}
         extra={
-          <Button type="primary" aria-label="重试当前页面" onClick={() => reset()}>
-            重试
-          </Button>
+          <Space wrap>
+            <Button type="primary" aria-label="重试当前页面" onClick={() => reset()}>
+              重试
+            </Button>
+            <Button aria-label="返回登录入口" onClick={() => router.replace("/login")}>
+              返回登录入口
+            </Button>
+          </Space>
         }
       />
     </main>

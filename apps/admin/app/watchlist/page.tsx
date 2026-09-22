@@ -1,14 +1,17 @@
 "use client";
 
 import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined, SearchOutlined, StarOutlined } from "@ant-design/icons";
-import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select, Space, Table, Tag, Typography, message } from "antd";
+import { Button, Card, Form, Input, InputNumber, Modal, Popconfirm, Segmented, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
-import { api } from "@/lib/api";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import { api, getApiErrorMessage } from "@/lib/api";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type WatchItem = {
   id: string;
@@ -29,13 +32,17 @@ export default function WatchlistPage() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<WatchItem | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [form] = Form.useForm();
 
   async function loadItems() {
     setLoading(true);
+    setError("");
     try {
       const response = await api.get<WatchItem[]>("/admin-products/watchlist");
       setItems(Array.isArray(response.data) ? response.data : []);
+    } catch (requestError: unknown) {
+      setError(getApiErrorMessage(requestError, "涨停股加载失败"));
     } finally {
       setLoading(false);
     }
@@ -115,7 +122,7 @@ export default function WatchlistPage() {
       width: 120,
       render: (_, record) => (
         <Space>
-          <Button size="small" icon={<EditOutlined />} onClick={() => openEdit(record)}>编辑</Button>
+          <Button size="small" icon={<EditOutlined />} aria-label={`编辑 ${record.symbol}`} onClick={() => openEdit(record)}>编辑</Button>
           <Button
             size="small"
             onClick={async () => {
@@ -128,7 +135,9 @@ export default function WatchlistPage() {
             {record.status === "ACTIVE" ? "暂停" : "展示"}
           </Button>
           <Popconfirm title="确认删除这条涨停股？" okText="删除" cancelText="取消" onConfirm={() => deleteItem(record)}>
-            <Button size="small" danger icon={<DeleteOutlined />} />
+            <Tooltip title="删除涨停股">
+              <Button size="small" danger icon={<DeleteOutlined />} aria-label={`删除 ${record.symbol}`} />
+            </Tooltip>
           </Popconfirm>
         </Space>
       ),
@@ -137,23 +146,28 @@ export default function WatchlistPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>涨停股上架</Title>
-          <Paragraph type="secondary">
-            仅管理员可以新增、上架或下架涨停股（机构股票）；业务员和客户端只能查看已上架项目。
-            涨停股成交按实时行情结算。客户端「自选股」是普通股票关注列表，与涨停股无关。
-          </Paragraph>
-        </div>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="涨停股上架"
+          crumbs={[{ title: "产品上架" }, { title: "涨停股上架" }]}
+          description="仅管理员可以新增、上架或下架涨停股（机构股票）；业务员和客户端只能查看已上架项目。涨停股成交按实时行情结算。客户端「自选股」是普通股票关注列表，与涨停股无关。"
+          extra={
+            <Space>
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void loadItems()} aria-label="刷新涨停股">刷新</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} aria-label="新增涨停股">新增涨停股</Button>
+            </Space>
+          }
+        />
+        {error ? <OpsErrorState title={error} onRetry={() => void loadItems()} /> : null}
         <Card>
           <Space wrap style={{ width: "100%", justifyContent: "space-between", marginBottom: 16 }}>
-            <Input prefix={<SearchOutlined />} allowClear placeholder="搜索代码、名称、分类或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} style={{ width: 360 }} />
+            <Input prefix={<SearchOutlined />} allowClear placeholder="搜索代码、名称、分类或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载涨停股" style={{ width: 360, maxWidth: "100%" }} />
             <Space>
-              <Button icon={<ReloadOutlined />} loading={loading} onClick={loadItems}>刷新</Button>
-              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新增涨停股</Button>
+              <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void loadItems()} aria-label="刷新涨停股">刷新</Button>
+              <Button type="primary" icon={<PlusOutlined />} onClick={openCreate} aria-label="新增涨停股">新增涨停股</Button>
             </Space>
           </Space>
-          <Table rowKey="id" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1020 }} />
+          <Table rowKey="id" className="ops-directory-table" columns={columns} dataSource={filtered} loading={loading} scroll={{ x: 1020 }} locale={{ emptyText: <OpsEmpty description={loading ? "正在加载涨停股" : "当前没有涨停股。"} onRetry={loading ? undefined : () => void loadItems()} /> }} />
         </Card>
       </Space>
 

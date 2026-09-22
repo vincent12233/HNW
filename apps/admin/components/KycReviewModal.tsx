@@ -329,13 +329,13 @@ export default function KycReviewModal({
                   <Descriptions.Item label="开户名">
                     <span className="kyc-wrap-text">{submission.bankDetails.accountHolder || "—"}</span>
                   </Descriptions.Item>
-                  <Descriptions.Item label="账号">{submission.bankDetails.accountNumber || "—"}</Descriptions.Item>
+                  <Descriptions.Item label="审核专用账号">{submission.bankDetails.accountNumber || "—"}</Descriptions.Item>
                   <Descriptions.Item label="IFSC">{submission.bankDetails.ifscCode || "未提供"}</Descriptions.Item>
                 </Descriptions>
               ) : (
                 <Alert type="info" showIcon title="该提交未包含银行资料。" />
               )}
-              <Text type="secondary">以上资料来自客户提交，需人工核对。系统未做影像识别、活体或银行自动验证，也不提供一次性校验码。</Text>
+              <Text type="secondary">以上资料来自客户提交，仅用于本审核专用视图的人工核对。系统未做影像识别、活体或银行自动验证，也不提供一次性校验码。</Text>
             </section>
 
             <section className="kyc-step" aria-labelledby="kyc-step-review">

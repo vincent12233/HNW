@@ -15,9 +15,27 @@ import OpsStatusTag from "@/components/OpsStatusTag";
 import { api, formatCreditSuccessMessage, getApiErrorMessage } from "@/lib/api";
 import { maskBankAccount } from "@/lib/ops-directory";
 import { formatOpsDateTime } from "@/lib/ops-format";
-import { GOVERNANCE_COPY } from "@/lib/ops-governance";
+import { GOVERNANCE_COPY, UNAVAILABLE } from "@/lib/ops-governance";
 
 const { Text } = Typography;
+
+function approvalTypeCode(action?: string | null) {
+  const value = action?.toUpperCase() ?? "";
+  if (value.includes("CREDIT")) return "CREDIT";
+  if (value.includes("DEBIT")) return "DEBIT";
+  return "";
+}
+
+function approvalTypeLabel(action?: string | null) {
+  const code = approvalTypeCode(action);
+  if (code === "CREDIT") return "账户入金";
+  if (code === "DEBIT") return "账户扣款";
+  return action?.trim() || UNAVAILABLE;
+}
+
+function displayField(value?: string | null) {
+  return value?.trim() ? value : UNAVAILABLE;
+}
 
 type Approval = {
   id: string;
@@ -89,8 +107,14 @@ export default function ApprovalsPage() {
       dataIndex: "action",
       width: 140,
       render: (value: string) => (
-        <OpsStatusTag code={value.includes("CREDIT") ? "APPROVED" : "REJECTED"} label={value.includes("CREDIT") ? "账户入金" : "账户扣款"} />
+        <OpsStatusTag code={approvalTypeCode(value)} label={approvalTypeLabel(value)} />
       ),
+    },
+    {
+      title: "状态",
+      dataIndex: "status",
+      width: 120,
+      render: (value: string) => <OpsStatusTag code={value} label={displayField(value)} />,
     },
     { title: "账户", width: 160, render: (_, row) => maskBankAccount(row.payload.accountNumber) },
     {
@@ -211,10 +235,11 @@ export default function ApprovalsPage() {
       >
         {selected && (
           <Space orientation="vertical" size={8} style={{ width: "100%" }}>
-            <Text>类型：{selected.action.includes("CREDIT") ? "账户入金" : "账户扣款"}</Text>
+            <Text>类型：{approvalTypeLabel(selected.action)}</Text>
+            <Text>状态：{displayField(selected.status)}</Text>
             <Text>账户：{maskBankAccount(selected.payload.accountNumber)}</Text>
             <Text>金额：<OpsMoney value={selected.payload.amount} /></Text>
-            <Text>流水号：{selected.payload.referenceId || "—"}</Text>
+            <Text>流水号：{displayField(selected.payload.referenceId)}</Text>
             <Text type="secondary">
               发起人：{selected.requestedBy.fullName}（{selected.requestedBy.role}）
             </Text>

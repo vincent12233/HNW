@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Result } from "antd";
+import { Button, Result, Space } from "antd";
 import { useRouter } from "next/navigation";
 
 export default function NotFoundPage() {
@@ -13,9 +13,14 @@ export default function NotFoundPage() {
         title="页面不存在"
         subTitle="当前地址没有对应的后台页面。权限和菜单范围没有因此扩大。"
         extra={
-          <Button type="primary" aria-label="返回登录入口" onClick={() => router.replace("/login")}>
-            返回登录入口
-          </Button>
+          <Space wrap>
+            <Button type="primary" aria-label="返回登录入口" onClick={() => router.replace("/login")}>
+              返回登录入口
+            </Button>
+            <Button aria-label="返回工作台" onClick={() => router.replace("/dashboard")}>
+              返回工作台
+            </Button>
+          </Space>
         }
       />
     </main>

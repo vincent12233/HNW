@@ -1,13 +1,16 @@
 "use client";
 
-import { Alert, Button, Card, Input, InputNumber, Modal, Space, Switch, Table, Typography } from "antd";
+import { Button, Card, Input, InputNumber, Modal, Space, Switch, Table, Typography } from "antd";
 import { ReloadOutlined, SaveOutlined } from "@ant-design/icons";
 import { useCallback, useEffect, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from "@/lib/api";
 import { vipTierLabel } from "@/lib/vip";
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type TierRow = {
   tierCode: string;
@@ -113,20 +116,24 @@ export default function VipSettingsPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
-        <div>
-          <Title level={3} style={{ marginBottom: 4 }}>VIP 等级设置</Title>
-          <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            仅超级管理员可配置累计充值门槛。门槛留空表示该等级未配置；全部留空时系统不会生成建议等级。VIP 等级不影响交易、资金、产品、费用、KYC 或风控。
-          </Paragraph>
-        </div>
+      <Space direction="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="VIP 等级设置"
+          crumbs={[{ title: "治理与人员" }, { title: "VIP 等级设置" }]}
+          description="仅超级管理员可配置累计充值门槛。门槛留空表示该等级未配置；全部留空时系统不会生成建议等级。VIP 只作为普通等级字段，不影响交易、资金、产品、费用、KYC 或风控。"
+          extra={
+            <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} aria-label="刷新 VIP 等级设置">
+              刷新
+            </Button>
+          }
+        />
         {error ? (
-          <Alert type="error" showIcon message={error} action={<Button onClick={() => void load()}>重试</Button>} />
+          <OpsErrorState title={error} onRetry={() => void load()} />
         ) : null}
         <Card>
           <Space style={{ marginBottom: 12 }}>
-            <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading}>刷新</Button>
-            <Button type="primary" icon={<SaveOutlined />} onClick={() => void save()} loading={saving}>保存设置</Button>
+            <Button icon={<ReloadOutlined />} onClick={() => void load()} loading={loading} aria-label="刷新 VIP 等级设置">刷新</Button>
+            <Button type="primary" icon={<SaveOutlined />} onClick={() => void save()} loading={saving} aria-label="保存 VIP 等级设置">保存设置</Button>
             <Button href="/audit-logs">查看配置审计</Button>
           </Space>
           <Table
@@ -134,7 +141,8 @@ export default function VipSettingsPage() {
             loading={loading}
             pagination={false}
             dataSource={rows}
-            locale={{ emptyText: "暂无 VIP 等级配置" }}
+            locale={{ emptyText: <OpsEmpty description={loading ? "正在加载 VIP 等级" : "暂无 VIP 等级配置"} onRetry={loading ? undefined : () => void load()} /> }}
+            scroll={{ x: 960 }}
             columns={[
               {
                 title: "等级",

@@ -9,6 +9,10 @@ export type OpsStatusSpec = {
 };
 
 const STATUS_MAP: Record<string, Omit<OpsStatusSpec, "code">> = {
+  CREDIT: { label: "账户入金", tone: "info" },
+  DEBIT: { label: "账户扣款", tone: "warning" },
+  ADMIN_CREDIT: { label: "财务上分", tone: "info" },
+  ADMIN_DEBIT: { label: "后台扣款", tone: "warning" },
   PENDING: { label: "待处理", tone: "warning" },
   APPROVED: { label: "已通过", tone: "success" },
   REJECTED: { label: "已拒绝", tone: "error" },

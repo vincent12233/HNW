@@ -1,13 +1,18 @@
 "use client";
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
-import { Alert, Button, Card, Input, Space, Table, Tag, Typography } from "antd";
+import { Button, Input, Space, Table, Typography } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
 import OpsPageHeader from "@/components/OpsPageHeader";
-import { api, getApiErrorMessage } from '@/lib/api';
+import OpsStatusTag from "@/components/OpsStatusTag";
+import { api, getApiErrorMessage } from "@/lib/api";
+import { maskBankAccount, maskIfsc, maskOpsPhone } from "@/lib/ops-directory";
+import { formatOpsDateTime, OPS_TABLE_PAGINATION } from "@/lib/ops-format";
 
 const { Text } = Typography;
 
@@ -49,8 +54,15 @@ export default function BankAccountsPage() {
     const q = query.trim().toLowerCase();
     if (!q) return rows;
     return rows.filter((row) =>
-      [row.bankName, row.accountHolder, row.accountNumber, row.ifscCode, row.user.fullName, row.user.phone, row.user.customerNo]
-        .some((value) => String(value ?? "").toLowerCase().includes(q)),
+      [
+        row.bankName,
+        row.accountHolder,
+        maskBankAccount(row.accountNumber, ""),
+        maskIfsc(row.ifscCode, ""),
+        row.user.fullName,
+        maskOpsPhone(row.user.phone, ""),
+        row.user.customerNo,
+      ].some((value) => String(value ?? "").toLowerCase().includes(q)),
     );
   }, [query, rows]);
 
@@ -64,7 +76,7 @@ export default function BankAccountsPage() {
         <Space orientation="vertical" size={0}>
           <Text strong>{row.user.fullName}</Text>
           <Text type="secondary">
-            {row.user.customerNo || "-"} / +91 {row.user.phone || "-"}
+            {row.user.customerNo || "Unavailable"} / {maskOpsPhone(row.user.phone)}
           </Text>
         </Space>
       ),
@@ -75,31 +87,39 @@ export default function BankAccountsPage() {
       title: "账户",
       dataIndex: "accountNumber",
       width: 180,
-      render: (value) => <Text copyable>{value}</Text>,
+      render: (value: string) => <span className="ops-id">{maskBankAccount(value)}</span>,
     },
-    { title: "IFSC", dataIndex: "ifscCode", width: 130 },
+    {
+      title: "IFSC",
+      dataIndex: "ifscCode",
+      width: 130,
+      render: (value: string) => maskIfsc(value),
+    },
     {
       title: "状态",
-      width: 110,
-      render: (_, row) => <Tag color={row.isPrimary ? "green" : "default"}>{row.isPrimary ? "主要账户" : "已添加"}</Tag>,
+      width: 120,
+      render: (_, row) => (
+        <OpsStatusTag code={row.isPrimary ? "ACTIVE" : "PENDING"} label={row.isPrimary ? "主要账户" : "已添加"} />
+      ),
     },
     {
       title: "添加时间",
       dataIndex: "createdAt",
       width: 180,
-      render: (value) => new Date(value).toLocaleString("zh-CN"),
+      render: (value: string) => formatOpsDateTime(value),
     },
   ];
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           eyebrow="SETTLEMENT"
           title="客户银行账户"
-          description="客户在 APP 添加后立即同步显示，本页只读查看，无需审核，也不改变提现收款校验流程。"
+          crumbs={[{ title: "资金" }, { title: "银行账户" }]}
+          description="本页只读展示客户已保存的银行资料，用于提现核对。列表默认脱敏，不提供完整账号复制，也不表示银行已完成验证。"
           extra={
-            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()}>
+            <Button icon={<ReloadOutlined />} loading={loading} onClick={() => void load()} aria-label="刷新银行账户">
               刷新
             </Button>
           }
@@ -107,7 +127,7 @@ export default function BankAccountsPage() {
 
         <div className="ops-stat-strip">
           <div className="ops-stat-pill">
-            <span className="label">账户总数</span>
+            <span className="label">已加载账户</span>
             <span className="value">{rows.length}</span>
           </div>
           <div className="ops-stat-pill">
@@ -120,28 +140,34 @@ export default function BankAccountsPage() {
           </div>
         </div>
 
-        {error && <Alert type="error" showIcon title={error} action={<Button onClick={() => void load()}>重试</Button>} />}
+        {error ? <OpsErrorState title={error} onRetry={() => void load()} /> : null}
 
-        <Card>
-          <div className="ops-toolbar">
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="搜索客户、银行、账号或 IFSC"
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              style={{ width: 380, maxWidth: "100%" }}
-            />
-          </div>
-          <Table
-            rowKey="id"
-            columns={columns}
-            dataSource={data}
-            loading={loading}
-            scroll={{ x: 1140 }}
-            pagination={{ pageSize: 20, showTotal: (total) => `共 ${total} 个银行账户` }}
-          />
-        </Card>
+        <Input
+          allowClear
+          prefix={<SearchOutlined aria-hidden />}
+          placeholder="搜索已加载的客户、银行或脱敏账号"
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          aria-label="搜索已加载的银行账户"
+          style={{ width: 380, maxWidth: "100%" }}
+        />
+        <Table
+          rowKey="id"
+          className="ops-directory-table"
+          columns={columns}
+          dataSource={data}
+          loading={loading}
+          scroll={{ x: 1140 }}
+          pagination={OPS_TABLE_PAGINATION}
+          locale={{
+            emptyText: (
+              <OpsEmpty
+                description={loading ? "正在加载银行账户" : "当前没有已加载的银行账户。"}
+                onRetry={loading ? undefined : () => void load()}
+              />
+            ),
+          }}
+        />
       </Space>
     </AdminShell>
   );

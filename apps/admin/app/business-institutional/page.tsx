@@ -2,22 +2,24 @@
 
 import { ReloadOutlined, SearchOutlined } from "@ant-design/icons";
 import {
-  Alert,
   Button,
   Card,
   Input,
   Space,
   Table,
-  Tag,
   Typography,
 } from "antd";
 import type { ColumnsType } from "antd/es/table";
 import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
+import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsStatusTag from "@/components/OpsStatusTag";
 import { api, getApiErrorMessage } from '@/lib/api';
 
-const { Title, Paragraph, Text } = Typography;
+const { Text } = Typography;
 
 type InstitutionalStock = {
   id: string;
@@ -108,9 +110,7 @@ export default function BusinessInstitutionalPage() {
       dataIndex: "status",
       width: 120,
       render: (value) => (
-        <Tag color={["ACTIVE", "展示中"].includes(value) ? "green" : "default"}>
-          {value === "ACTIVE" ? "已启用" : value}
-        </Tag>
+        <OpsStatusTag code={value} label={value === "ACTIVE" ? "已启用" : value} />
       ),
     },
     { title: "推荐理由", dataIndex: "reason", render: (value) => value || "-" },
@@ -118,15 +118,18 @@ export default function BusinessInstitutionalPage() {
 
   return (
     <AdminShell>
-      <Space orientation="vertical" size="large" style={{ width: "100%" }}>
-        <div>
-          <Title level={2}>涨停股</Title>
-          <Paragraph type="secondary">
-            此处同步展示超级管理员已启用的涨停股（机构股票），业务员可查看并向客户跟进。
-            涨停股成交按实时行情结算；与客户端普通股票「自选股」不是同一产品。
-          </Paragraph>
-        </div>
-        {error && <Alert type="error" title={error} showIcon />}
+      <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="涨停股"
+          crumbs={[{ title: "交易业务" }, { title: "涨停股" }]}
+          description="此处同步展示超级管理员已启用的涨停股（机构股票），业务员可查看并向客户跟进。涨停股成交按实时行情结算；与客户端普通股票「自选股」不是同一产品。本页只读。"
+          extra={
+            <Button icon={<ReloadOutlined />} onClick={() => void loadItems()} loading={loading} aria-label="刷新涨停股">
+              刷新
+            </Button>
+          }
+        />
+        {error ? <OpsErrorState title={error} onRetry={() => void loadItems()} /> : null}
         <Card>
           <Space
             wrap
@@ -142,25 +145,30 @@ export default function BusinessInstitutionalPage() {
               placeholder="搜索简称、公司名称、市场、分类或状态"
               value={keyword}
               onChange={(event) => setKeyword(event.target.value)}
-              style={{ width: 420 }}
+              aria-label="搜索已加载涨停股"
+              style={{ width: 420, maxWidth: "100%" }}
             />
             <Button
               icon={<ReloadOutlined />}
-              onClick={loadItems}
+              onClick={() => void loadItems()}
               loading={loading}
+              aria-label="刷新涨停股"
             >
               刷新
             </Button>
           </Space>
           <Table<InstitutionalStock>
             rowKey="id"
+            className="ops-directory-table"
             columns={columns}
             dataSource={filtered}
             loading={loading}
+            scroll={{ x: 980 }}
             pagination={{
               pageSize: 15,
               showTotal: (total) => `共 ${total} 条涨停股`,
             }}
+            locale={{ emptyText: <OpsEmpty description={loading ? "正在加载涨停股" : "当前没有已加载的涨停股。"} onRetry={loading ? undefined : () => void loadItems()} /> }}
           />
         </Card>
       </Space>

@@ -1,21 +1,19 @@
 "use client";
 
-import { Space, Typography } from "antd";
+import { Space } from "antd";
 import AdminShell from "@/components/AdminShell";
+import OpsPageHeader from "@/components/OpsPageHeader";
 import VipClientsWorkspace from "@/components/VipClientsWorkspace";
-
-const { Title, Paragraph } = Typography;
 
 export default function BusinessVipPage() {
   return (
     <AdminShell>
-      <Space direction="vertical" size={16} style={{ width: "100%" }}>
-        <div>
-          <Title level={3} style={{ marginBottom: 4 }}>我的客户 VIP</Title>
-          <Paragraph type="secondary" style={{ marginBottom: 0 }}>
-            只能查看和调整分配给自己的客户。建议等级仅供参考，必须填写原因并二次确认后才会改写当前等级。
-          </Paragraph>
-        </div>
+      <Space direction="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
+        <OpsPageHeader
+          title="我的客户 VIP"
+          crumbs={[{ title: "我的客户" }, { title: "我的客户 VIP" }]}
+          description="只能查看和调整分配给自己的客户。建议等级仅供参考，必须填写原因并二次确认后才会改写当前等级。VIP 调整只改当前等级字段，不改变交易或资金规则。"
+        />
         <VipClientsWorkspace
           endpoint="/business/vip-clients"
           historyEndpoint={(userId) => `/business/vip-clients/${userId}/history`}

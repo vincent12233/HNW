@@ -309,31 +309,9 @@ export default function BusinessCustomersPage() {
         deviceAvailable && deviceResponse.status === "fulfilled" ? deviceResponse.value.data : [],
       );
 
-      const riskResults = await Promise.allSettled(
-        list.map((customer) =>
-          api.get<LoginRisk>(`/business/customers/${customer.id}/login-risk`),
-        ),
-      );
-      if (request !== listRequest.current) return;
-      if (!ipAvailable || !deviceAvailable || riskResults.some((result) => result.status === "rejected")) {
+      if (!ipAvailable || !deviceAvailable) {
         setError("客户列表已加载，部分风险信息获取失败；风险结果不完整，请刷新重试");
       }
-
-      setCustomers(
-        list.map((customer, index) => {
-          const result = riskResults[index];
-
-          if (result.status === "fulfilled") {
-            return {
-              ...customer,
-
-              loginRisk: result.value.data,
-            };
-          }
-
-          return customer;
-        }),
-      );
     } catch (error: unknown) {
       if (request !== listRequest.current) return;
       const message = isAxiosError<{ message?: string | string[] }>(error)
@@ -526,15 +504,7 @@ export default function BusinessCustomersPage() {
     {
       title: "登录风险",
       width: 120,
-      render: (_, record) => {
-        const tag = riskTag(record.loginRisk?.riskLevel);
-        return (
-          <OpsStatusTag
-            code={tag.color === "red" ? "FAILED" : tag.color === "orange" ? "PENDING" : "ACTIVE"}
-            label={tag.text}
-          />
-        );
-      },
+      render: () => <OpsStatusTag code="" label="详情查看" />,
     },
     {
       title: "共享IP",

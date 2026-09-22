@@ -1197,7 +1197,10 @@ class _MarketsPageState extends State<MarketsPage> {
               const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  semanticsLabel: 'Loading yearly market range',
+                ),
               )
             else
               const Icon(
@@ -1467,7 +1470,10 @@ class _MarketsPageState extends State<MarketsPage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            semanticsLabel: 'Loading more stocks',
+                          ),
                         )
                       : AppText(
                           _searchFailed
@@ -1631,7 +1637,10 @@ class _MarketsPageState extends State<MarketsPage> {
             icon: _searchLoading
                 ? const SizedBox.square(
                     dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Refreshing market data',
+                    ),
                   )
                 : const Icon(Icons.refresh_rounded, size: 18),
             label: const AppText('Refresh market data'),

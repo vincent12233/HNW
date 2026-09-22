@@ -204,7 +204,7 @@ class _RegisterPageState extends State<RegisterPage> {
             Text('Continue to identity verification', style: AuthLayout.title),
             SizedBox(height: 8),
             AppText(
-              'Your account is not active yet. Complete the existing document verification steps. No SMS or email code is sent.',
+              'Your account is not active yet. Complete the existing document verification steps.',
               style: TextStyle(
                 fontSize: 14,
                 height: 1.4,
@@ -262,7 +262,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: const VerificationBanner(
                   title: 'Invite Code is Mandatory',
                   subtitle:
-                      'You need a valid invite code to create an account. No SMS or email verification is sent.',
+                      'A valid invite code is required to create an account.',
                   icon: Icons.card_giftcard,
                 ),
               ),
@@ -277,7 +277,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       controller: phone,
                       country: country,
                       enabled: !busy && !succeeded,
-                      lockCountry: true,
                       errorText: phoneError,
                       textInputAction: TextInputAction.next,
                       onSubmitted: (_) => passwordFocus.requestFocus(),
@@ -321,41 +320,35 @@ class _RegisterPageState extends State<RegisterPage> {
                         ),
                       ),
                     ),
-                    AnimatedSize(
-                      duration: AppMotion.duration(context, AppMotion.micro),
-                      curve: AppMotion.ease,
-                      alignment: Alignment.topCenter,
-                      child: passwordFocus.hasFocus || password.text.isNotEmpty
-                          ? Padding(
-                              padding: const EdgeInsets.only(top: 8, left: 2),
-                              child: Row(
-                                children: [
-                                  Icon(
-                                    password.text.length >= 8
-                                        ? Icons.check_circle_outline
-                                        : Icons.radio_button_unchecked,
-                                    size: 16,
-                                    color: AppColors.textSecondary,
-                                    semanticLabel: password.text.length >= 8
-                                        ? 'Password has at least 8 characters'
-                                        : 'Password needs at least 8 characters',
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Expanded(
-                                    child: AppText(
-                                      'At least 8 characters',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        letterSpacing: 0,
-                                        color: AppColors.textSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
+                    if (passwordFocus.hasFocus || password.text.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8, left: 2),
+                        child: Row(
+                          children: [
+                            Icon(
+                              password.text.length >= 8
+                                  ? Icons.check_circle_outline
+                                  : Icons.radio_button_unchecked,
+                              size: 16,
+                              color: AppColors.textSecondary,
+                              semanticLabel: password.text.length >= 8
+                                  ? 'Password has at least 8 characters'
+                                  : 'Password needs at least 8 characters',
+                            ),
+                            const SizedBox(width: 6),
+                            const Expanded(
+                              child: AppText(
+                                'At least 8 characters',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  letterSpacing: 0,
+                                  color: AppColors.textSecondary,
+                                ),
                               ),
-                            )
-                          : const SizedBox(width: double.infinity),
-                    ),
+                            ),
+                          ],
+                        ),
+                      ),
                   ],
                 ),
               ),

@@ -52,47 +52,73 @@ class InternationalPhoneField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final codeLabel = '+${country.phoneCode}';
+    final countryLabel = 'Country code $codeLabel';
     final prefix = lockCountry
-        ? Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: Center(
-              child: Text(
-                codeLabel,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0,
-                  color: AppColors.textPrimary,
+        ? Semantics(
+            label: countryLabel,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Center(
+                child: Text(
+                  codeLabel,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ),
           )
-        : TextButton(
-            onPressed: !enabled
-                ? null
-                : () => showCountryPicker(
-                    context: context,
-                    showPhoneCode: true,
-                    favorite: const ['IN'],
-                    onSelect: onCountryChanged,
-                  ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppText(country.flagEmoji, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 6),
-                Flexible(
-                  child: AppText(
-                    codeLabel,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
+        : Tooltip(
+            message: countryLabel,
+            child: TextButton(
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 6),
+                minimumSize: Size.zero,
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              onPressed: !enabled
+                  ? null
+                  : () => showCountryPicker(
+                      context: context,
+                      showPhoneCode: true,
+                      favorite: const ['IN'],
+                      onSelect: onCountryChanged,
                     ),
+              child: MediaQuery(
+                data: MediaQuery.of(context).copyWith(
+                  textScaler: TextScaler.noScaling,
+                ),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      AppText(
+                        country.flagEmoji,
+                        style: const TextStyle(fontSize: 18),
+                      ),
+                      const SizedBox(width: 4),
+                      AppText(
+                        codeLabel,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0,
+                        ),
+                      ),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 16,
+                        semanticLabel: countryLabel,
+                      ),
+                    ],
                   ),
                 ),
-                const Icon(Icons.keyboard_arrow_down, size: 16),
-              ],
+              ),
             ),
           );
 

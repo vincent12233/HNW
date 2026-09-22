@@ -251,7 +251,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                               ),
                               SizedBox(height: 8),
                               AppText(
-                                'Password reset is handled by customer support. After you connect, a support specialist can issue a recovery code. The app does not send an SMS or email code.',
+                                'Password reset is handled by customer support. After you connect, a support specialist can issue a recovery code.',
                                 style: TextStyle(
                                   fontSize: 14,
                                   height: 1.4,
@@ -279,7 +279,6 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             controller: phone,
                             country: country,
                             enabled: !busy && !succeeded,
-                            lockCountry: true,
                             errorText: phoneError,
                             textInputAction: TextInputAction.done,
                             onSubmitted: (_) => _connect(),
@@ -370,7 +369,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                             ),
                             const SizedBox(height: 8),
                             const AppText(
-                              'Enter the recovery code issued by support, then choose a new password. This is not an SMS one-time code.',
+                              'Enter the recovery code issued by support, then choose a new password.',
                               style: TextStyle(
                                 fontSize: 13,
                                 height: 1.4,

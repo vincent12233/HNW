@@ -454,11 +454,10 @@ class SecureFooter extends StatelessWidget {
   Widget build(BuildContext context) => const Padding(
     padding: EdgeInsets.only(top: 20),
     child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Icon(Icons.lock_outline, size: 14, color: AppColors.textTertiary),
         SizedBox(width: 6),
-        Flexible(
+        Expanded(
           child: AppText(
             'Sign in with your registered Indian mobile number and password.',
             textAlign: TextAlign.center,
@@ -515,7 +514,12 @@ class VerificationBanner extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: accent, size: AuthLayout.iconSize),
+          Icon(
+            icon,
+            color: accent,
+            size: AuthLayout.iconSize,
+            semanticLabel: title,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(

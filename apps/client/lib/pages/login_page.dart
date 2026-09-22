@@ -290,7 +290,6 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                       controller: phoneController,
                       country: country,
                       enabled: !busy && !succeeded,
-                      lockCountry: true,
                       errorText: phoneError,
                       textInputAction: TextInputAction.next,
                       onSubmitted: (_) => passwordFocus.requestFocus(),
@@ -340,45 +339,32 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                   ),
                 ),
               ),
-              AnimatedSize(
-                duration: AppMotion.duration(context, AppMotion.state),
-                curve: AppMotion.ease,
-                alignment: Alignment.topCenter,
-                child: requiresTwoFactor
-                    ? Padding(
-                        key: verificationFieldKey,
-                        padding: const EdgeInsets.only(top: 16),
-                        child: AnimatedOpacity(
-                          duration: AppMotion.duration(
-                            context,
-                            AppMotion.state,
-                          ),
-                          opacity: 1,
-                          child: AuthFocusGlow(
-                            child: AuthErrorShake(
-                              errorText: verificationError,
-                              child: TextField(
-                                controller: verificationController,
-                                focusNode: verificationFocus,
-                                enabled: !busy && !succeeded,
-                                autocorrect: false,
-                                enableSuggestions: false,
-                                keyboardType: TextInputType.visiblePassword,
-                                textInputAction: TextInputAction.done,
-                                onSubmitted: (_) => _submit(),
-                                decoration: onboardingInput(
-                                  'Authenticator or recovery code',
-                                  errorText: verificationError,
-                                  helperText:
-                                      'Use the authenticator app or a support-issued recovery code. No SMS code is sent.',
-                                ),
-                              ),
-                            ),
-                          ),
+              if (requiresTwoFactor)
+                Padding(
+                  key: verificationFieldKey,
+                  padding: const EdgeInsets.only(top: 16),
+                  child: AuthFocusGlow(
+                    child: AuthErrorShake(
+                      errorText: verificationError,
+                      child: TextField(
+                        controller: verificationController,
+                        focusNode: verificationFocus,
+                        enabled: !busy && !succeeded,
+                        autocorrect: false,
+                        enableSuggestions: false,
+                        keyboardType: TextInputType.visiblePassword,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submit(),
+                        decoration: onboardingInput(
+                          'Authenticator or recovery code',
+                          errorText: verificationError,
+                          helperText:
+                              'Use the authenticator app or a support-issued recovery code.',
                         ),
-                      )
-                    : const SizedBox(width: double.infinity),
-              ),
+                      ),
+                    ),
+                  ),
+                ),
               const SizedBox(height: 8),
               AppEntrance(
                 delay: const Duration(milliseconds: 340),
@@ -456,18 +442,21 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                             ),
                           ),
                         ),
-                        TextButton(
-                          onPressed: busy || succeeded
-                              ? null
-                              : () => Navigator.push(
-                                  context,
-                                  AuthSlidePageRoute<void>(
-                                    builder: (_) => const RegisterPage(),
+                        Flexible(
+                          child: TextButton(
+                            onPressed: busy || succeeded
+                                ? null
+                                : () => Navigator.push(
+                                    context,
+                                    AuthSlidePageRoute<void>(
+                                      builder: (_) => const RegisterPage(),
+                                    ),
                                   ),
-                                ),
-                          child: const AppText(
-                            'Create Account',
-                            style: TextStyle(fontSize: 13, letterSpacing: 0),
+                            child: const AppText(
+                              'Create Account',
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: 13, letterSpacing: 0),
+                            ),
                           ),
                         ),
                       ],

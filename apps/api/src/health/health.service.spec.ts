@@ -298,13 +298,13 @@ describe('HealthService IST session integration', () => {
     expect(weekend.body.reason).toBe('MARKET_CLOSED');
   });
 
-  it('fails open-market readiness when the provider is missing', async () => {
+  it('fails open-market readiness when the provider is unsupported', async () => {
     const config = {
       get: jest.fn((key: string) => {
         if (key === 'MARKET_OPEN_TIME_IST') return '09:15';
         if (key === 'MARKET_CLOSE_TIME_IST') return '15:30';
         if (key === 'MARKET_DATA_STALE_AFTER_MS') return '60000';
-        if (key === 'MARKET_DATA_PROVIDER') return '';
+        if (key === 'MARKET_DATA_PROVIDER') return 'UNSUPPORTED';
         if (key === 'MARKET_DATA_STREAMING_ENABLED') return 'false';
         return undefined;
       }),

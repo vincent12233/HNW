@@ -91,10 +91,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   }
 
   Future<void> _refreshAll() async {
-    await Future.wait([
-      AppContentService.instance.load(force: true),
-      _load(),
-    ]);
+    await Future.wait([AppContentService.instance.load(force: true), _load()]);
   }
 
   double _number(dynamic value) =>
@@ -132,6 +129,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     if (_hidden) return '******';
     return '${(quantity - available).clamp(0, quantity).toInt()}';
   }
+
   String _date(dynamic value) {
     final parsed = DateTime.tryParse('$value');
     if (parsed == null) return '--';
@@ -174,110 +172,115 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         constraints: const BoxConstraints(maxWidth: 760),
         child: RefreshIndicator(
           onRefresh: _refreshAll,
-      child: ListView(
-        key: const Key('portfolio-list'),
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: AppSpacing.page,
-        children: [
-          Row(
+          child: ListView(
+            key: const Key('portfolio-list'),
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: AppSpacing.page,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    AppText(
-                      AppContentService.instance.current.text(
-                        'trading',
-                        'portfolio.page_title',
-                        fallback: 'Portfolio',
-                      ),
-                      style: AppTypography.headline.copyWith(fontSize: 20),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    AppText(
-                      AppContentService.instance.current.text(
-                        'trading',
-                        'portfolio.page_subtitle',
-                        fallback: 'Institutional · OTC · IPO',
-                      ),
-                      style: AppTypography.caption,
-                    ),
-                  ],
-                ),
-              ),
-              IconButton(
-                tooltip: tr('Refresh'),
-                onPressed: _loading ? null : _load,
-                icon: const Icon(Icons.refresh),
-              ),
-              IconButton(
-                tooltip: tr('Notifications'),
-                onPressed: widget.onNotifications,
-                icon: const Icon(Icons.notifications_none),
-              ),
-            ],
-          ),
-          if (_loading && data != null)
-            const LinearProgressIndicator(minHeight: 2),
-          if (_loading && data == null)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: AppSpacing.sectionGap),
-              child: Column(
+              Row(
                 children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: AppSpacing.md),
-                  AppText('Loading portfolio'),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        AppText(
+                          AppContentService.instance.current.text(
+                            'trading',
+                            'portfolio.page_title',
+                            fallback: 'Portfolio',
+                          ),
+                          style: AppTypography.headline.copyWith(fontSize: 20),
+                        ),
+                        const SizedBox(height: AppSpacing.xxs),
+                        AppText(
+                          AppContentService.instance.current.text(
+                            'trading',
+                            'portfolio.page_subtitle',
+                            fallback: 'Institutional · OTC · IPO',
+                          ),
+                          style: AppTypography.caption,
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: tr('Refresh'),
+                    onPressed: _loading ? null : _load,
+                    icon: const Icon(Icons.refresh),
+                  ),
+                  IconButton(
+                    tooltip: tr('Notifications'),
+                    onPressed: widget.onNotifications,
+                    icon: const Icon(Icons.notifications_none),
+                  ),
                 ],
               ),
-            ),
-          if (_error != null && data == null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
-              child: AppEmptyState(
-                title: 'Unable to load portfolio',
-                message: _error,
-                icon: Icons.wifi_off_outlined,
-                onRetry: _loading ? null : _load,
-              ),
-            ),
-          if (_error != null && data != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: AppSpacing.md + 2),
-              child: Semantics(
-                liveRegion: true,
-                child: AppCard(
+              if (_loading && data != null)
+                const LinearProgressIndicator(minHeight: 2),
+              if (_loading && data == null)
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    vertical: AppSpacing.sectionGap,
+                  ),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      AppText(
-                        'Showing previously loaded portfolio data.',
-                        style: AppTypography.bodyMedium.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.xs),
-                      AppText(_error!, style: AppTypography.bodySmall),
-                      TextButton.icon(
-                        onPressed: _loading ? null : _load,
-                        icon: const Icon(Icons.refresh),
-                        label: const AppText('Retry'),
-                      ),
+                      CircularProgressIndicator(),
+                      SizedBox(height: AppSpacing.md),
+                      AppText('Loading portfolio'),
                     ],
                   ),
                 ),
-              ),
-            ),
-          if (data != null)
-            AppFadeIn(
-              switchKey: '$_period|${data['asOf']}|${data['positionCount']}',
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: _content(data),
-              ),
-            ),
-        ],
-      ),
-    ),
+              if (_error != null && data == null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                  child: AppEmptyState(
+                    title: 'Unable to load portfolio',
+                    message: _error,
+                    icon: Icons.wifi_off_outlined,
+                    onRetry: _loading ? null : _load,
+                  ),
+                ),
+              if (_error != null && data != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: AppSpacing.md + 2,
+                  ),
+                  child: Semantics(
+                    liveRegion: true,
+                    child: AppCard(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          AppText(
+                            'Showing previously loaded portfolio data.',
+                            style: AppTypography.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: AppSpacing.xs),
+                          AppText(_error!, style: AppTypography.bodySmall),
+                          TextButton.icon(
+                            onPressed: _loading ? null : _load,
+                            icon: const Icon(Icons.refresh),
+                            label: const AppText('Retry'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              if (data != null)
+                AppFadeIn(
+                  switchKey:
+                      '$_period|${data['asOf']}|${data['positionCount']}',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: _content(data),
+                  ),
+                ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -390,28 +393,28 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 child: AppStatusSwitch(
                   switchKey: '$_period|$hasHistory|$_loading',
                   child: _loading
-                    ? const Center(
-                        child: CircularProgressIndicator(
-                          color: AppColors.textInverse,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : !hasHistory
-                    ? Center(
-                        child: AppText(
-                          'Insufficient history',
-                          style: AppTypography.bodyMedium.copyWith(
-                            color: inverseMuted,
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: AppColors.textInverse,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : !hasHistory
+                      ? Center(
+                          child: AppText(
+                            'Insufficient history',
+                            style: AppTypography.bodyMedium.copyWith(
+                              color: inverseMuted,
+                            ),
+                          ),
+                        )
+                      : CustomPaint(
+                          painter: _ValueHistoryPainter(
+                            points
+                                .map((row) => _number(row['productValue']))
+                                .toList(),
                           ),
                         ),
-                      )
-                    : CustomPaint(
-                        painter: _ValueHistoryPainter(
-                          points
-                              .map((row) => _number(row['productValue']))
-                              .toList(),
-                        ),
-                      ),
                 ),
               ),
             const SizedBox(height: AppSpacing.sm),
@@ -839,7 +842,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             '${position['symbol'] ?? '--'} · ${position['exchange'] ?? '--'}',
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.titleSmall.copyWith(fontWeight: FontWeight.w800),
+            style: AppTypography.titleSmall.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
           ),
           AppText(
             '${position['name'] ?? '--'}',
@@ -850,8 +855,16 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           const SizedBox(height: AppSpacing.sm),
           AppText(
             _productView == 'POSITIONS'
-                ? 'Frozen ${frozen == null ? '--' : _hidden ? '******' : '${frozen.toInt()}'} · Avail ${_quantity(position['availableQuantity'])} · Qty ${_quantity(position['quantity'])}'
-                : 'Qty ${_quantity(position['quantity'])} · Avail ${_quantity(position['availableQuantity'])} · Frozen ${frozen == null ? '--' : _hidden ? '******' : '${frozen.toInt()}'}',
+                ? 'Frozen ${frozen == null
+                      ? '--'
+                      : _hidden
+                      ? '******'
+                      : '${frozen.toInt()}'} · Avail ${_quantity(position['availableQuantity'])} · Qty ${_quantity(position['quantity'])}'
+                : 'Qty ${_quantity(position['quantity'])} · Avail ${_quantity(position['availableQuantity'])} · Frozen ${frozen == null
+                      ? '--'
+                      : _hidden
+                      ? '******'
+                      : '${frozen.toInt()}'}',
             style: AppTypography.bodySmall,
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -879,6 +892,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     final frozen = quantity != null && available != null
         ? (quantity - available).clamp(0, quantity)
         : null;
+    final content = AppContentService.instance.current;
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -899,31 +913,58 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   '${position['symbol'] ?? '--'}',
                   style: AppTypography.headline.copyWith(fontSize: 20),
                 ),
-                AppText('${position['name'] ?? '--'} · ${position['exchange'] ?? '--'}'),
+                AppText(
+                  '${position['name'] ?? '--'} · ${position['exchange'] ?? '--'}',
+                ),
                 const SizedBox(height: AppSpacing.lg),
-                AppText('Quantity: ${_quantity(position['quantity'])}'),
-                AppText('Available: ${_quantity(position['availableQuantity'])}'),
                 AppText(
-                  'Frozen: ${frozen == null ? '--' : _hidden ? '******' : '${frozen.toInt()}'}',
-                ),
-                AppText('Average cost: ${_money(position['averagePrice'])}'),
-                AppText(
-                  'Current price: ${position['valuationSource'] == 'COST' ? 'Unavailable' : _money(position['currentPrice'])}',
-                ),
-                AppText('Current value: ${_money(position['currentValue'])}'),
-                AppText(
-                  'Invested: ${quantity == null || _availableNumber(position['averagePrice']) == null ? '--' : _money(quantity * _number(position['averagePrice']))}',
+                  '${content.text('trading', 'portfolio.detail.quantity', fallback: 'Quantity')}: ${_quantity(position['quantity'])}',
                 ),
                 AppText(
-                  'Realized P&L: ${_availableNumber(position['realizedPnl']) == null ? 'Unavailable' : _pnlText(position['realizedPnl'])}',
+                  '${content.text('trading', 'portfolio.detail.available', fallback: 'Available')}: ${_quantity(position['availableQuantity'])}',
                 ),
-                AppText('Unrealized P&L: ${_pnlText(position['unrealizedPnl'])}'),
-                const AppText("Day P&L: Unavailable"),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.frozen', fallback: 'Frozen')}: ${frozen == null
+                      ? '--'
+                      : _hidden
+                      ? '******'
+                      : '${frozen.toInt()}'}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.average_cost', fallback: 'Average cost')}: ${_money(position['averagePrice'])}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.current_price', fallback: 'Current price')}: ${position['valuationSource'] == 'COST' ? 'Unavailable' : _money(position['currentPrice'])}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.current_value', fallback: 'Current value')}: ${_money(position['currentValue'])}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.invested', fallback: 'Invested')}: ${quantity == null || _availableNumber(position['averagePrice']) == null ? '--' : _money(quantity * _number(position['averagePrice']))}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.realized_pnl', fallback: 'Realized P&L')}: ${_availableNumber(position['realizedPnl']) == null ? 'Unavailable' : _pnlText(position['realizedPnl'])}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.unrealized_pnl', fallback: 'Unrealized P&L')}: ${_pnlText(position['unrealizedPnl'])}',
+                ),
+                AppText(
+                  '${content.text('trading', 'portfolio.detail.day_pnl', fallback: 'Day P&L')}: Unavailable',
+                ),
                 const SizedBox(height: AppSpacing.md),
                 AppText(
                   position['valuationSource'] == 'COST'
-                      ? 'Valued at cost. Market quote unavailable.'
-                      : 'Valued from the current market quote in this response.',
+                      ? content.text(
+                          'trading',
+                          'portfolio.detail.valuation_cost',
+                          fallback: 'Valued at cost. Market quote unavailable.',
+                        )
+                      : content.text(
+                          'trading',
+                          'portfolio.detail.valuation_market',
+                          fallback:
+                              'Valued from the current market quote in this response.',
+                        ),
                   style: AppTypography.caption,
                 ),
                 AppText(

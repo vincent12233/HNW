@@ -447,6 +447,49 @@ class AuthPasswordToggle extends StatelessWidget {
   }
 }
 
+class AuthTextActionRow extends StatelessWidget {
+  const AuthTextActionRow({
+    super.key,
+    required this.prompt,
+    required this.actionLabel,
+    required this.onPressed,
+  });
+
+  final String prompt;
+  final String actionLabel;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      alignment: WrapAlignment.center,
+      crossAxisAlignment: WrapCrossAlignment.center,
+      children: [
+        AppText(
+          prompt,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 13,
+            letterSpacing: 0,
+            color: AppColors.textSecondary,
+          ),
+        ),
+        TextButton(
+          style: TextButton.styleFrom(
+            visualDensity: VisualDensity.compact,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+          ),
+          onPressed: onPressed,
+          child: AppText(
+            actionLabel,
+            style: const TextStyle(fontSize: 13, letterSpacing: 0),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class SecureFooter extends StatelessWidget {
   const SecureFooter({super.key});
 
@@ -454,8 +497,16 @@ class SecureFooter extends StatelessWidget {
   Widget build(BuildContext context) => const Padding(
     padding: EdgeInsets.only(top: 20),
     child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.lock_outline, size: 14, color: AppColors.textTertiary),
+        Padding(
+          padding: EdgeInsets.only(top: 2),
+          child: Icon(
+            Icons.lock_outline,
+            size: 14,
+            color: AppColors.textTertiary,
+          ),
+        ),
         SizedBox(width: 6),
         Expanded(
           child: AppText(

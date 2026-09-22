@@ -246,7 +246,11 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Create Account', style: AuthLayout.title),
+                    Text(
+                      'Create Account',
+                      style: AuthLayout.title,
+                      softWrap: true,
+                    ),
                     SizedBox(height: AuthLayout.titleGap),
                     AppText(
                       'Register with an Indian mobile number, password, and invite code.',
@@ -505,35 +509,12 @@ class _RegisterPageState extends State<RegisterPage> {
                       onPressed: _submit,
                     ),
                     const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Flexible(
-                          child: AppText(
-                            'Already have an account?',
-                            overflow: TextOverflow.ellipsis,
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontSize: 13,
-                              letterSpacing: 0,
-                              color: AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                        TextButton(
-                          style: TextButton.styleFrom(
-                            visualDensity: VisualDensity.compact,
-                            padding: const EdgeInsets.symmetric(horizontal: 8),
-                          ),
-                          onPressed: busy || succeeded
-                              ? null
-                              : () => Navigator.pop(context),
-                          child: const AppText(
-                            'Login',
-                            style: TextStyle(fontSize: 13, letterSpacing: 0),
-                          ),
-                        ),
-                      ],
+                    AuthTextActionRow(
+                      prompt: 'Already have an account?',
+                      actionLabel: 'Login',
+                      onPressed: busy || succeeded
+                          ? null
+                          : () => Navigator.pop(context),
                     ),
                   ],
                 ),

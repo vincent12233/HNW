@@ -13,7 +13,6 @@ import {
   Card,
   Descriptions,
   Drawer,
-  Empty,
   Modal,
   Select,
   Skeleton,
@@ -25,6 +24,8 @@ import {
 } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api";
+import OpsEmpty from "@/components/OpsEmpty";
+import OpsErrorState from "@/components/OpsErrorState";
 import VipSuggestionTag from "@/components/VipSuggestionTag";
 import {
   filterVipClients,
@@ -275,7 +276,11 @@ export default function VipClientsWorkspace({
           loading={loading}
           dataSource={visibleRows}
           locale={{
-            emptyText: error ? "加载失败" : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={emptyText} />,
+            emptyText: error ? (
+              <OpsErrorState description="VIP 客户列表未能加载" />
+            ) : (
+              <OpsEmpty description={emptyText} />
+            ),
           }}
           pagination={{ pageSize: 20 }}
           scroll={{ x: 1180 }}
@@ -397,7 +402,7 @@ export default function VipClientsWorkspace({
           loading={historyLoading}
           dataSource={historyRows}
           pagination={false}
-          locale={{ emptyText: "暂无等级调整记录" }}
+          locale={{ emptyText: <OpsEmpty description="暂无等级调整记录" /> }}
           columns={[
             { title: "时间", dataIndex: "createdAt", render: (value, row) => value || row.changedAt },
             { title: "原等级", dataIndex: "previousTier", render: vipTierLabel },

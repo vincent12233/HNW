@@ -25,6 +25,7 @@ import {
 } from "antd";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, getApiErrorMessage } from "@/lib/api";
+import OpsEmpty from "@/components/OpsEmpty";
 import OpsErrorState from "@/components/OpsErrorState";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import {
@@ -251,7 +252,7 @@ export default function TeamAssignmentWorkspace() {
             loading={loading}
             pagination={false}
             dataSource={data?.unassigned ?? []}
-            locale={{ emptyText: "没有未归属业务员" }}
+            locale={{ emptyText: <OpsEmpty description="没有未归属业务员" /> }}
             columns={businessColumns(pickerManagers)}
             scroll={{ x: 720 }}
           />
@@ -274,7 +275,7 @@ export default function TeamAssignmentWorkspace() {
                 size="small"
                 dataSource={(manager.businesses ?? []) as AssignmentBusiness[]}
                 columns={businessColumns(pickerManagers)}
-                locale={{ emptyText: "该管理员名下暂无业务员" }}
+                locale={{ emptyText: <OpsEmpty description="该管理员名下暂无业务员" /> }}
               />
             ),
           }}
@@ -369,7 +370,7 @@ export default function TeamAssignmentWorkspace() {
           loading={historyLoading}
           pagination={false}
           dataSource={historyRows}
-          locale={{ emptyText: "暂无归属历史" }}
+          locale={{ emptyText: <OpsEmpty description="暂无归属历史" /> }}
           columns={[
             { title: "时间", dataIndex: "createdAt", render: (value: string) => new Date(value).toLocaleString() },
             { title: "原管理员", dataIndex: "previousManagerName", render: (value: string | null) => value || "未归属" },

@@ -111,26 +111,19 @@ export class DepositService {
             referenceId: created.id,
           },
         });
-        await this.audit.createLog(
-          {
-            actorId: supportUserId,
-            action: 'DEPOSIT_DETAILS_SUBMITTED',
-            resource: 'deposit',
-            resourceId: created.id,
-            description:
-              'Deposit details submitted by support for finance verification',
-            metadata: {
-              referenceId,
-              amount: amount.toFixed(2),
-              conversationId,
-            },
-          },
-          tx,
-        );
         return created;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    await this.audit.createLog({
+      actorId: supportUserId,
+      action: 'DEPOSIT_DETAILS_SUBMITTED',
+      resource: 'deposit',
+      resourceId: deposit.id,
+      description:
+        'Deposit details submitted by support for finance verification',
+      metadata: { referenceId, amount: amount.toFixed(2), conversationId },
+    });
     return deposit;
   }
 

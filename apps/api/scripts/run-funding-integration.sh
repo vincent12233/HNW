@@ -15,14 +15,29 @@ if [[ -z "${FUNDING_INTEGRATION_DATABASE_URL:-}" ]]; then
     exit 1
   fi
   FUNDING_INTEGRATION_DATABASE_URL="postgresql://hnw_test:${HNW_E2E_DB_PASSWORD}@127.0.0.1:55432/hnw_funding_integration?schema=public"
+  export FUNDING_INTEGRATION_DATABASE_URL
 fi
-
-python3 "$ROOT/apps/api/scripts/assert-funding-integration-url.py" \
-  "$FUNDING_INTEGRATION_DATABASE_URL"
 
 export FUNDING_INTEGRATION_DATABASE_URL
 # Prisma migrate deploy reads DATABASE_URL. Point it only at the isolated test DB.
 export DATABASE_URL="$FUNDING_INTEGRATION_DATABASE_URL"
+
+python3 - <<'PY'
+import os, sys
+from urllib.parse import urlparse
+raw = os.environ.get("FUNDING_INTEGRATION_DATABASE_URL", "")
+try:
+    parsed = urlparse(raw)
+except Exception:
+    sys.exit("Invalid FUNDING_INTEGRATION_DATABASE_URL")
+host = (parsed.hostname or "").lower()
+if host not in {"localhost", "127.0.0.1", "postgres"}:
+    sys.exit(f"Refusing host {parsed.hostname}")
+name = (parsed.path or "").lstrip("/").split("/")[0]
+if not any(token in name.lower() for token in ("test", "e2e", "integration")):
+    sys.exit(f"Refusing database name {name}")
+print(f"Using isolated database {name} on {host}")
+PY
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "Docker is required to start compose.local-test.yaml PostgreSQL 17." >&2

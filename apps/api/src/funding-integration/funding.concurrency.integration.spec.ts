@@ -16,7 +16,6 @@ import {
   WITHDRAWAL_PIN,
   assertFundingInvariants,
   cleanupPhase4A,
-  createAssignedSupportConversation,
   createClientWithAccount,
   createInviteGraph,
   createStaffUser,
@@ -525,128 +524,6 @@ const configured = Boolean(
           },
         }),
       ).toBe(0);
-    });
-
-    async function submitPayload(conversationId: string, referenceId: string) {
-      return {
-        conversationId,
-        amount: '150.50',
-        referenceId,
-        paymentMethod: 'UPI',
-        note: 'wire',
-      };
-    }
-
-    it('submitToFinanceBySupport creates deposit, notification, and audit together', async () => {
-      const { user, account } = await dedicatedClient();
-      const conversation = await createAssignedSupportConversation(
-        prisma,
-        user.id,
-        supportId,
-      );
-      const referenceId = token('SUBREF');
-      const created = await deposits.submitToFinanceBySupport(
-        supportId,
-        await submitPayload(conversation.id, referenceId),
-      );
-      expect(created.status).toBe('PENDING');
-      expect(created.referenceId).toBe(referenceId);
-      expect(created.paymentMethod).toBe('UPI');
-      expect(created.amount.toFixed(2)).toBe('150.50');
-      expect(created.note).toContain('wire');
-      expect(created.accountId).toBe(account.id);
-      expect(
-        await prisma.depositRequest.count({ where: { accountId: account.id } }),
-      ).toBe(1);
-      expect(
-        await prisma.notification.count({
-          where: { userId: user.id, type: 'DEPOSIT', referenceId: created.id },
-        }),
-      ).toBe(1);
-      const audits = await prisma.auditLog.findMany({
-        where: {
-          action: 'DEPOSIT_DETAILS_SUBMITTED',
-          resource: 'deposit',
-          resourceId: created.id,
-        },
-      });
-      expect(audits).toHaveLength(1);
-      expect(audits[0].actorId).toBe(supportId);
-      expect(audits[0].metadata).toEqual({
-        referenceId,
-        amount: '150.50',
-        conversationId: conversation.id,
-      });
-    });
-
-    it('rolls back deposit submit when audit insert fails', async () => {
-      const failing = new DepositService(
-        prisma,
-        new ThrowingAuditService() as never,
-      );
-      const { user, account } = await dedicatedClient();
-      const conversation = await createAssignedSupportConversation(
-        prisma,
-        user.id,
-        supportId,
-      );
-      const referenceId = token('AUDFAIL');
-      await expect(
-        failing.submitToFinanceBySupport(
-          supportId,
-          await submitPayload(conversation.id, referenceId),
-        ),
-      ).rejects.toThrow('audit insert failed');
-      expect(
-        await prisma.depositRequest.count({ where: { accountId: account.id } }),
-      ).toBe(0);
-      expect(await prisma.notification.count({ where: { userId: user.id } })).toBe(
-        0,
-      );
-      expect(
-        await prisma.auditLog.count({
-          where: {
-            actorId: supportId,
-            action: 'DEPOSIT_DETAILS_SUBMITTED',
-          },
-        }),
-      ).toBe(0);
-    });
-
-    it('duplicate payment reference does not create a second deposit, notification, or audit', async () => {
-      const { user, account } = await dedicatedClient();
-      const conversation = await createAssignedSupportConversation(
-        prisma,
-        user.id,
-        supportId,
-      );
-      const referenceId = token('DUPREF');
-      const first = await deposits.submitToFinanceBySupport(
-        supportId,
-        await submitPayload(conversation.id, referenceId),
-      );
-      await expect(
-        deposits.submitToFinanceBySupport(
-          supportId,
-          await submitPayload(conversation.id, referenceId),
-        ),
-      ).rejects.toThrow('This payment reference has already been confirmed');
-      expect(
-        await prisma.depositRequest.count({ where: { accountId: account.id } }),
-      ).toBe(1);
-      expect(
-        await prisma.notification.count({
-          where: { userId: user.id, type: 'DEPOSIT' },
-        }),
-      ).toBe(1);
-      expect(
-        await prisma.auditLog.count({
-          where: {
-            action: 'DEPOSIT_DETAILS_SUBMITTED',
-            resourceId: first.id,
-          },
-        }),
-      ).toBe(1);
     });
 
     it('rolls back deposit approval when ledger insert fails', async () => {

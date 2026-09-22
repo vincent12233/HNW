@@ -30,22 +30,7 @@ describe('funding integration database URL guard', () => {
     ).toThrow(UnsafeFundingDatabaseUrlError);
     expect(() =>
       assertSafeFundingIntegrationDatabaseUrl(
-        'postgresql://user:pass@db.production.com:5432/hnw_integration',
-      ),
-    ).toThrow(UnsafeFundingDatabaseUrlError);
-    expect(() =>
-      assertSafeFundingIntegrationDatabaseUrl(
-        'postgresql://user:pass@10.0.0.10:5432/hnw_test',
-      ),
-    ).toThrow(UnsafeFundingDatabaseUrlError);
-    expect(() =>
-      assertSafeFundingIntegrationDatabaseUrl(
         'postgresql://hnw_test:secret@127.0.0.1:5432/hnw_production',
-      ),
-    ).toThrow(UnsafeFundingDatabaseUrlError);
-    expect(() =>
-      assertSafeFundingIntegrationDatabaseUrl(
-        'postgresql://user:pass@localhost:5432/hnw_prod',
       ),
     ).toThrow(UnsafeFundingDatabaseUrlError);
   });

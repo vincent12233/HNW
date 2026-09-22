@@ -7,16 +7,20 @@ import 'package:india_trading_app/widgets/home/home_action_button.dart';
 import 'package:india_trading_app/widgets/market_header.dart';
 import 'package:india_trading_app/widgets/profile_menu.dart';
 import 'package:india_trading_app/widgets/stock_list_tile.dart';
+import 'package:india_trading_app/widgets/floating_support_button.dart';
 
-Widget host(Widget child, {double textScale = 1}) => MaterialApp(
-  builder: (context, content) => MediaQuery(
-    data: MediaQuery.of(
-      context,
-    ).copyWith(textScaler: TextScaler.linear(textScale)),
-    child: content!,
-  ),
-  home: Scaffold(body: child),
-);
+Widget host(Widget child, {double textScale = 1, bool reduceMotion = false}) =>
+    MaterialApp(
+      builder: (context, content) => MediaQuery(
+        data: MediaQuery.of(context).copyWith(
+          textScaler: TextScaler.linear(textScale),
+          disableAnimations: reduceMotion,
+          accessibleNavigation: reduceMotion,
+        ),
+        child: content!,
+      ),
+      home: Scaffold(body: child),
+    );
 
 void smallPhone(WidgetTester tester) {
   tester.view.physicalSize = const Size(320, 568);
@@ -26,6 +30,17 @@ void smallPhone(WidgetTester tester) {
 }
 
 void main() {
+  testWidgets('support button honors reduced motion on first frame', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      host(FloatingSupportButton(onTap: () {}), reduceMotion: true),
+    );
+    await tester.pump();
+    expect(tester.takeException(), isNull);
+    expect(find.byType(FloatingSupportButton), findsOneWidget);
+  });
+
   testWidgets(
     'quote values fit large text and favorite does not open details',
     (tester) async {

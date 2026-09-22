@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../l10n/app_language.dart';
+import '../theme/app_motion.dart';
 import 'support_ui_metrics.dart';
 
 /// Compact right-edge support tab that scales with phone size.
@@ -23,6 +24,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
   late final AnimationController _enter;
   late final Animation<Offset> _slide;
   late final Animation<double> _fade;
+  bool _motionConfigured = false;
 
   @override
   void initState() {
@@ -36,7 +38,20 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _enter, curve: Curves.easeOutCubic));
     _fade = CurvedAnimation(parent: _enter, curve: Curves.easeOut);
-    _enter.forward();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_motionConfigured) return;
+    _motionConfigured = true;
+    // Respect the platform preference while keeping the control immediately
+    // available to users who disable motion.
+    if (AppMotion.reduce(context)) {
+      _enter.value = 1;
+    } else {
+      _enter.forward();
+    }
   }
 
   @override

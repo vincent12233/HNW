@@ -162,6 +162,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 
 ## 文档
 
+完整索引和文档状态见 `docs/README.md`。
+
 - `docs/生产部署说明.md`（服务器上线主路径）
 - `docs/本地启动与联调.md`（本机无 Docker 联调）
 - `docs/运营流程说明.md`

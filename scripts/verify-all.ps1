@@ -61,7 +61,13 @@ Invoke-Step "API lint, tests and build" {
     Invoke-Native "npm.cmd" @("run", "db:generate")
     Invoke-Native "npm.cmd" @("run", "lint")
     Invoke-Native "npm.cmd" @("test", "--", "--runInBand")
-    Invoke-Native "npm.cmd" @("run", "build")
+    $previousApiUrl = $env:NEXT_PUBLIC_API_URL
+    $env:NEXT_PUBLIC_API_URL = if ($env:HNW_BUILD_API_URL) { $env:HNW_BUILD_API_URL } else { "https://build.invalid" }
+    try {
+      Invoke-Native "npm.cmd" @("run", "build")
+    } finally {
+      $env:NEXT_PUBLIC_API_URL = $previousApiUrl
+    }
   } finally {
     Pop-Location
   }

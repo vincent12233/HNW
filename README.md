@@ -161,6 +161,8 @@ Windows：
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 ```
 
+PowerShell 验证脚本同样会在后台构建阶段使用 `HNW_BUILD_API_URL`；未设置时使用 HTTPS 占位地址。
+
 快速检查，不跑业务冒烟：
 
 ```powershell

@@ -6,12 +6,14 @@ on:
   pull_request:
     paths:
       - 'apps/admin/**'
+      - '.nvmrc'
       - '.github/workflows/admin-ci.yml'
   push:
     branches:
       - main
     paths:
       - 'apps/admin/**'
+      - '.nvmrc'
       - '.github/workflows/admin-ci.yml'
 
 permissions:
@@ -35,7 +37,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/admin/package-lock.json
 

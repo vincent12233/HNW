@@ -69,7 +69,15 @@ jobs:
       - name: Generate Prisma client
         run: npm run db:generate
 
+      - name: Create isolated migration database
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres \
+            -c 'DROP DATABASE IF EXISTS trading_ci_fresh;' \
+            -c 'CREATE DATABASE trading_ci_fresh;'
+
       - name: Apply database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
         run: npm run db:migrate
 
       - name: Lint API
@@ -103,4 +111,6 @@ jobs:
           exit 1
 
       - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
         run: npm test -- --runInBand

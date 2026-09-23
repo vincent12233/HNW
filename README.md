@@ -60,6 +60,14 @@ docker compose -f .\compose.local-test.yaml down
 
 见 `docs/本地启动与联调.md`：本机安装 PostgreSQL + Node，直接跑 API / admin / Flutter。
 
+项目统一使用 Node.js 24 和 npm；`.nvmrc`、GitHub Actions 与本地验证脚本保持一致。不要生成或提交 pnpm/yarn 锁文件。
+
+```bash
+nvm use
+node --version
+npm --version
+```
+
 ```powershell
 cd apps/api
 Copy-Item .env.example .env

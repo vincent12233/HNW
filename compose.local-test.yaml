@@ -13,6 +13,16 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports: ["127.0.0.1:56379:6379"]
+    volumes: ["redis-data:/data"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
   api:
     build:
       context: .
@@ -23,6 +33,7 @@ services:
       PORT: 3100
       DATABASE_URL: postgresql://hnw_test:${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}@postgres:5432/hnw_e2e?schema=public
       SHADOW_DATABASE_URL: postgresql://hnw_test:${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}@postgres:5432/hnw_e2e_shadow?schema=public
+      RATE_LIMIT_REDIS_URL: redis://redis:6379
       JWT_SECRET: ${HNW_E2E_JWT_SECRET:-local-e2e-jwt-secret-change-before-production}
       OTC_KEY_ENCRYPTION_SECRET: ${HNW_E2E_OTC_SECRET:-local-e2e-otc-secret-change-before-production}
       OBJECT_SIGNING_SECRET: ${HNW_E2E_OBJECT_SECRET:-local-e2e-object-secret-change-before-production}
@@ -40,6 +51,8 @@ services:
     volumes: ["private-objects:/app/private-objects"]
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
@@ -89,4 +102,5 @@ services:
     ports: ["127.0.0.1:3007:3007"]
 volumes:
   postgres-data:
+  redis-data:
   private-objects:

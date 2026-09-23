@@ -145,6 +145,8 @@ macOS / Linux：
 ```bash
 export DATABASE_URL='postgresql://hnw_test:<password>@127.0.0.1:55432/hnw_e2e?schema=public'
 export HNW_VERIFY_PG=1
+export RATE_LIMIT_REDIS_URL='redis://127.0.0.1:56379'
+export HNW_VERIFY_REDIS=1
 ./scripts/verify-all.sh
 ```
 

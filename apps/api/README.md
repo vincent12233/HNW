@@ -37,6 +37,7 @@ http://localhost:3000
 ```env
 NODE_ENV=production
 DATABASE_URL=正式数据库连接
+RATE_LIMIT_REDIS_URL=redis://正式Redis地址:6379
 JWT_SECRET=≥32位高强度随机密钥
 TWO_FACTOR_ENCRYPTION_KEY=独立≥32位密钥
 OTC_KEY_ENCRYPTION_SECRET=另一组≥32位密钥

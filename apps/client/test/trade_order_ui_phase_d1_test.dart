@@ -721,7 +721,7 @@ void main() {
       await openConfirm(tester, buy: false);
       expect(placed, isEmpty);
       expect(find.text('Confirm Sell'), findsOneWidget);
-      await tester.tap(find.text('Buy'));
+      await tester.tap(find.text('Buy'), warnIfMissed: false);
       await pumpFrames(tester);
       expect(placed, isEmpty);
       await disposeTree(tester);

@@ -627,7 +627,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
           </Space>
         </Header>
         <Content id="ops-main-content" tabIndex={-1} className="ops-content">
-          {verified && allowed ? children : verified ? <OpsPermissionDenied role={role} /> : null}
+          <div className="ops-page-frame" key={activeKey}>
+            {verified && allowed ? children : verified ? <OpsPermissionDenied role={role} /> : null}
+          </div>
         </Content>
       </Layout>
       <OpsModal

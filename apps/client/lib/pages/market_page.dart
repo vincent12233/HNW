@@ -85,6 +85,7 @@ class MarketHomePage extends StatefulWidget {
 class _MarketHomePageState extends State<MarketHomePage>
     with WidgetsBindingObserver {
   int selectedIndex = 0;
+  int _previousSelectedIndex = 0;
   String _portfolioPeriod = '1D';
   List<double> _portfolioSeries = const <double>[];
   bool _portfolioHistoryLoading = false;
@@ -925,8 +926,9 @@ class _MarketHomePageState extends State<MarketHomePage>
             child: Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: 1040),
-                child: AppFadeIn(
+                child: AppPageTransition(
                   switchKey: selectedIndex,
+                  forward: selectedIndex >= _previousSelectedIndex,
                   child: _selectedBody(),
                 ),
               ),
@@ -954,6 +956,13 @@ class _MarketHomePageState extends State<MarketHomePage>
           decoration: const BoxDecoration(
             color: AppColors.surface,
             border: Border(top: BorderSide(color: AppColors.border)),
+            boxShadow: [
+              BoxShadow(
+                color: Color(0x120F2942),
+                blurRadius: 14,
+                offset: Offset(0, -3),
+              ),
+            ],
           ),
           child: Center(
             heightFactor: 1,
@@ -1027,6 +1036,7 @@ class _MarketHomePageState extends State<MarketHomePage>
     if (index == selectedIndex) return;
     HapticFeedback.selectionClick();
     setState(() {
+      _previousSelectedIndex = selectedIndex;
       selectedIndex = index;
     });
 

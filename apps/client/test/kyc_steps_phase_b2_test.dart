@@ -108,7 +108,9 @@ void main() {
   }
 
   group('documents', () {
-    testWidgets('PAN and Aadhaar required rules stay unchanged', (tester) async {
+    testWidgets('PAN and Aadhaar required rules stay unchanged', (
+      tester,
+    ) async {
       await pumpPage(
         tester,
         home: const KycUploadPage(
@@ -139,7 +141,10 @@ void main() {
       expect(find.text('Aadhaar Back (Required)'), findsOneWidget);
       await tester.tap(find.text('Continue'));
       await tester.pump();
-      expect(find.text('Add both the front and back of Aadhaar'), findsOneWidget);
+      expect(
+        find.text('Add both the front and back of Aadhaar'),
+        findsOneWidget,
+      );
       expect(find.text('Capture Selfie'), findsNothing);
       expectNoFalseClaims(tester, reason: 'document rules');
     });
@@ -155,7 +160,9 @@ void main() {
             fullName: 'Test Customer',
             pickDocument: ({required back}) async {
               pickCount += 1;
-              return _pngFile(pickCount == 1 ? 'pan-front.png' : 'pan-replaced.png');
+              return _pngFile(
+                pickCount == 1 ? 'pan-front.png' : 'pan-replaced.png',
+              );
             },
           ),
         ),
@@ -243,7 +250,10 @@ void main() {
       );
       await tester.tap(find.text('Choose File'));
       await tester.pumpAndSettle();
-      expect(find.text('Each KYC file must be 15 MB or smaller'), findsOneWidget);
+      expect(
+        find.text('Each KYC file must be 15 MB or smaller'),
+        findsOneWidget,
+      );
       expect(find.text('Capture Selfie'), findsNothing);
     });
   });
@@ -392,7 +402,9 @@ void main() {
           ),
         ),
       );
-      final small = tester.getSize(find.byKey(const ValueKey('signature-canvas')));
+      final small = tester.getSize(
+        find.byKey(const ValueKey('signature-canvas')),
+      );
       expect(small.width, lessThanOrEqualTo(320));
       await tester.timedDrag(
         find.byKey(const ValueKey('signature-canvas')),
@@ -411,7 +423,9 @@ void main() {
           ),
         ),
       );
-      final wide = tester.getSize(find.byKey(const ValueKey('signature-canvas')));
+      final wide = tester.getSize(
+        find.byKey(const ValueKey('signature-canvas')),
+      );
       expect(wide.width, lessThanOrEqualTo(AuthLayout.maxFormWidth + 0.5));
       await tester.timedDrag(
         find.byKey(const ValueKey('signature-canvas')),
@@ -461,7 +475,8 @@ void main() {
       expect(payload['accountNumber'], '123456789012');
       expect(payload['ifscCode'], 'HDFC0001234');
       expect(payload['bankName'], 'HDFC Bank');
-      await tester.tap(find.text('Continue'));
+      await tester.ensureVisible(find.byType(AuthSubmitButton));
+      await tester.tap(find.byType(AuthSubmitButton));
       await tester.pump();
       expect(calls, 1);
       expectNoFalseClaims(tester, reason: 'bank payload');
@@ -686,7 +701,9 @@ void main() {
     testWidgets('icon buttons expose labels and 44px targets', (tester) async {
       await pumpPage(
         tester,
-        home: const BankDetailsPage(initial: {'accountHolder': 'Test Customer'}),
+        home: const BankDetailsPage(
+          initial: {'accountHolder': 'Test Customer'},
+        ),
       );
       final visibility = find.byTooltip('Show account number');
       expect(visibility, findsWidgets);

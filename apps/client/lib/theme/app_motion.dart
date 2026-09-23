@@ -55,6 +55,46 @@ class AppFadeIn extends StatelessWidget {
   }
 }
 
+/// Gives primary-tab changes a small sense of direction without retaining
+/// offstage pages or changing their layout constraints.
+class AppPageTransition extends StatelessWidget {
+  const AppPageTransition({
+    super.key,
+    required this.switchKey,
+    required this.child,
+    this.forward = true,
+  });
+
+  final Object switchKey;
+  final Widget child;
+  final bool forward;
+
+  @override
+  Widget build(BuildContext context) {
+    final reduce = AppMotion.reduce(context);
+    return AnimatedSwitcher(
+      duration: AppMotion.duration(context, AppMotion.page),
+      reverseDuration: AppMotion.duration(context, AppMotion.micro),
+      switchInCurve: AppMotion.ease,
+      switchOutCurve: Curves.easeIn,
+      layoutBuilder: (currentChild, previousChildren) =>
+          currentChild ?? const SizedBox.shrink(),
+      transitionBuilder: (child, animation) {
+        if (reduce) return child;
+        final offset = Tween<Offset>(
+          begin: Offset(forward ? 0.025 : -0.025, 0),
+          end: Offset.zero,
+        ).animate(animation);
+        return FadeTransition(
+          opacity: animation,
+          child: SlideTransition(position: offset, child: child),
+        );
+      },
+      child: KeyedSubtree(key: ValueKey(switchKey), child: child),
+    );
+  }
+}
+
 class AppStatusSwitch extends StatelessWidget {
   const AppStatusSwitch({
     super.key,

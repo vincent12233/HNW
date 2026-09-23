@@ -344,33 +344,46 @@ class AuthPageScaffold extends StatelessWidget {
       backgroundColor: AuthLayout.pageBackground,
       resizeToAvoidBottomInset: true,
       appBar: appBar,
-      body: SafeArea(
-        top: appBar == null,
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            return Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(maxWidth: maxWidth),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: SingleChildScrollView(
-                    padding: insets,
-                    keyboardDismissBehavior:
-                        ScrollViewKeyboardDismissBehavior.onDrag,
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: (constraints.maxHeight - insets.vertical)
-                            .clamp(0, double.infinity),
+      body: Stack(
+        children: [
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: ColoredBox(
+              color: AppColors.brandPrimary,
+              child: SizedBox(height: 3),
+            ),
+          ),
+          SafeArea(
+            top: appBar == null,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: SingleChildScrollView(
+                        padding: insets,
+                        keyboardDismissBehavior:
+                            ScrollViewKeyboardDismissBehavior.onDrag,
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            minHeight: (constraints.maxHeight - insets.vertical)
+                                .clamp(0, double.infinity),
+                          ),
+                          child: AuthOutgoingShift(child: child),
+                        ),
                       ),
-                      child: AuthOutgoingShift(child: child),
                     ),
                   ),
-                ),
-              ),
-            );
-          },
-        ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

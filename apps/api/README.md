@@ -51,6 +51,7 @@ MANAGER_INITIAL_PASSWORD=≥12位
 CORS_ORIGINS=https://admin.example.com,https://manager.example.com,https://finance.example.com,https://business.example.com,https://operator.example.com,https://app.example.com
 VIRUS_SCAN_URL=https://malware-scanner.example.com/scan
 PRIVATE_OBJECT_ROOT=/var/lib/hnw/private-objects
+TRUST_PROXY_HOPS=1
 PORT=3000
 ```
 

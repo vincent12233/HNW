@@ -31,6 +31,7 @@ services:
       NODE_ENV: development
       HOST: 0.0.0.0
       PORT: 3100
+      TRUST_PROXY_HOPS: 0
       DATABASE_URL: postgresql://hnw_test:${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}@postgres:5432/hnw_e2e?schema=public
       SHADOW_DATABASE_URL: postgresql://hnw_test:${HNW_E2E_DB_PASSWORD:?Set HNW_E2E_DB_PASSWORD before starting}@postgres:5432/hnw_e2e_shadow?schema=public
       RATE_LIMIT_REDIS_URL: redis://redis:6379

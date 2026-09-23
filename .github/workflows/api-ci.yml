@@ -35,6 +35,7 @@ jobs:
       HNW_VERIFY_PG: '1'
       HNW_VERIFY_REDIS: '1'
       RATE_LIMIT_REDIS_URL: redis://localhost:6379
+      TRUST_PROXY_HOPS: '0'
 
     services:
       postgres:

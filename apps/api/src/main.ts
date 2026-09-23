@@ -11,6 +11,7 @@ import {
   normalizeRateLimitPath,
   type RateLimitStore,
 } from './common/rate-limit-store';
+import { resolveTrustProxyHops } from './common/trust-proxy';
 
 const httpLogger = new Logger('HttpAudit');
 
@@ -49,6 +50,7 @@ function assertPublicHttpsUrl(label: string, value: string) {
 
 function validateProductionEnvironment() {
   if (process.env.NODE_ENV !== 'production') return;
+  resolveTrustProxyHops();
   const requiredSecrets = [
     'JWT_SECRET',
     'OTC_KEY_ENCRYPTION_SECRET',
@@ -269,7 +271,7 @@ async function bootstrap() {
   const expressApp = app.getHttpAdapter().getInstance() as {
     set: (setting: string, value: unknown) => unknown;
   };
-  expressApp.set('trust proxy', 1);
+  expressApp.set('trust proxy', resolveTrustProxyHops());
   app.use(securityMiddleware(rateLimitStore));
   app.enableShutdownHooks();
   process.once('SIGTERM', () => void rateLimitStore.close());

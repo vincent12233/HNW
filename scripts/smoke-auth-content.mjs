@@ -64,9 +64,32 @@ try {
   entryId = created.data?.id;
   assert.ok(entryId);
 
+  const createdAt = created.data?.updatedAt;
+  assert.ok(createdAt);
+
+  const updated = await call('/admin/app-content', {
+    method: 'PUT',
+    token: accessToken,
+    body: { module: 'HOME', key, locale: 'en', body: 'Smoke content updated' },
+  });
+  assert.equal(updated.response.status, 200, 'Content update failed');
+
   const publicContent = await call('/app-content?locale=en');
   assert.equal(publicContent.response.status, 200);
-  assert.equal(publicContent.data?.home?.[key]?.body, 'Smoke content visible');
+  assert.equal(publicContent.data?.home?.[key]?.body, 'Smoke content updated');
+
+  const history = await call(`/admin/app-content/${entryId}/history`, { token: accessToken });
+  assert.equal(history.response.status, 200, 'Content history failed');
+  const creationRevision = history.data?.find((item) => item.action === 'APP_CONTENT_CREATE');
+  assert.ok(creationRevision?.id, 'Creation revision missing');
+  const restored = await call(`/admin/app-content/${entryId}/restore`, {
+    method: 'POST',
+    token: accessToken,
+    body: { revisionId: creationRevision.id, expectedUpdatedAt: updated.data?.updatedAt },
+  });
+  assert.equal(restored.response.status, 201, 'Content restore failed');
+  const restoredPublic = await call('/app-content?locale=en');
+  assert.equal(restoredPublic.data?.home?.[key]?.body, 'Smoke content visible');
 
   const refreshed = await call('/auth/refresh', {
     method: 'POST',

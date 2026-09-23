@@ -53,5 +53,6 @@ jobs:
           test "$(docker image inspect hnw-api-ci --format '{{.Config.User}}')" = node
           test "$(docker image inspect hnw-admin-ci --format '{{.Config.User}}')" = node
           test "$(docker image inspect hnw-admin-ci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEXT_PUBLIC_BACKEND_ROLE=')" = NEXT_PUBLIC_BACKEND_ROLE=ADMIN
-          docker run --rm --entrypoint sh hnw-admin-ci -c 'test -w /app/.next'
+          test "$(docker image inspect hnw-admin-ci --format '{{json .Config.Cmd}}')" = '["node","server.js"]'
+          docker run --rm --entrypoint sh hnw-admin-ci -c 'test -w /app/.next/static && test ! -e /app/node_modules/typescript'
           docker run --rm --entrypoint sh hnw-api-ci -c 'test -w /app/private-objects'

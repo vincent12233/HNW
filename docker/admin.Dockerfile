@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim
+FROM node:24-bookworm-slim AS builder
 
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL=https://api.example.com
@@ -12,9 +12,22 @@ RUN case "$NEXT_PUBLIC_BACKEND_ROLE" in \
       ADMIN|MANAGER|FINANCE|BUSINESS|SUPPORT) ;; \
       *) echo "NEXT_PUBLIC_BACKEND_ROLE must be ADMIN, MANAGER, FINANCE, BUSINESS, or SUPPORT" >&2; exit 1 ;; \
     esac \
-    && npm run build \
-    && chown -R node:node /app/.next
+    && npm run build
+
+FROM node:24-bookworm-slim AS runner
+
+WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=https://api.example.com
+ARG NEXT_PUBLIC_BACKEND_ROLE
+ENV NODE_ENV=production
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+ENV NEXT_PUBLIC_BACKEND_ROLE=${NEXT_PUBLIC_BACKEND_ROLE}
+ENV HOSTNAME=0.0.0.0
+
+COPY --from=builder --chown=node:node /app/.next/standalone ./
+COPY --from=builder --chown=node:node /app/.next/static ./.next/static
+COPY --from=builder --chown=node:node /app/public ./public
 
 USER node
 
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]

@@ -32,6 +32,7 @@ const strictTransportSecurity = isDev
   : [{ key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" }];
 
 const nextConfig: NextConfig = {
+  output: 'standalone',
   distDir: process.env.NEXT_DIST_DIR || '.next',
   allowedDevOrigins: ['127.0.0.2', '127.0.0.3', '127.0.0.4', '127.0.0.5'],
   devIndicators: false,

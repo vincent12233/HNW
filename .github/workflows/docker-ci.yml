@@ -38,11 +38,17 @@ jobs:
         run: docker build -f docker/api.Dockerfile -t hnw-api-ci .
 
       - name: Build Admin image
-        run: docker build -f docker/admin.Dockerfile -t hnw-admin-ci .
+        run: >-
+          docker build
+          -f docker/admin.Dockerfile
+          --build-arg NEXT_PUBLIC_API_URL=https://api.example.com
+          --build-arg NEXT_PUBLIC_BACKEND_ROLE=ADMIN
+          -t hnw-admin-ci .
 
       - name: Assert containers use non-root users
         run: |
           test "$(docker image inspect hnw-api-ci --format '{{.Config.User}}')" = node
           test "$(docker image inspect hnw-admin-ci --format '{{.Config.User}}')" = node
+          test "$(docker image inspect hnw-admin-ci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEXT_PUBLIC_BACKEND_ROLE=')" = NEXT_PUBLIC_BACKEND_ROLE=ADMIN
           docker run --rm --entrypoint sh hnw-admin-ci -c 'test -w /app/.next'
           docker run --rm --entrypoint sh hnw-api-ci -c 'test -w /app/private-objects'

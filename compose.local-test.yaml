@@ -81,7 +81,7 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"const net=require('net');const socket=net.connect(Number(process.env.PORT),'127.0.0.1',()=>{socket.end();process.exit(0)});socket.setTimeout(2000,()=>socket.destroy());socket.on('error',()=>process.exit(1));socket.on('close',hadError=>process.exit(hadError?1:0))\""]
+      test: ["CMD-SHELL", "node -e \"const net=require('net');const socket=net.connect(Number(process.env.PORT),'127.0.0.1',()=>{socket.end();process.exit(0)});socket.setTimeout(2000,()=>{socket.destroy();process.exit(1)});socket.on('error',()=>process.exit(1))\""]
       interval: 10s
       timeout: 5s
       retries: 18

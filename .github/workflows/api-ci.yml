@@ -93,6 +93,7 @@ jobs:
 
       - name: Smoke test built API
         env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
           NODE_ENV: development
           PORT: 3100
           HOST: 127.0.0.1

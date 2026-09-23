@@ -4,12 +4,14 @@ on:
   pull_request:
     paths:
       - 'apps/api/**'
+      - 'scripts/verify-migration-upgrade.sh'
       - '.github/workflows/api-ci.yml'
   push:
     branches:
       - main
     paths:
       - 'apps/api/**'
+      - 'scripts/verify-migration-upgrade.sh'
       - '.github/workflows/api-ci.yml'
 
 permissions:
@@ -91,6 +93,14 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
         run: npm run db:migrate
+
+      - name: Verify migration upgrade with existing account data
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_upgrade?schema=public
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres \
+            -c 'CREATE DATABASE trading_ci_upgrade;'
+          bash ../../scripts/verify-migration-upgrade.sh
 
       - name: Lint API
         run: npm run lint

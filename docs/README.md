@@ -44,3 +44,4 @@
 - Windows：`scripts/verify-all.ps1`
 - OrbStack/Docker：`compose.local-test.yaml`
 - GitHub Actions：`.github/workflows/`
+- 数据库迁移：API CI 同时验证空库迁移和带客户、账户、流水数据的最新迁移升级；本地可在**空的专用测试库**设置 `DATABASE_URL` 后运行 `./scripts/verify-migration-upgrade.sh`。该脚本拒绝非空数据库。

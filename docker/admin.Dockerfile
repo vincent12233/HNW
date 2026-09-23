@@ -1,4 +1,4 @@
-FROM node:24-bookworm-slim AS development
+FROM node:25-bookworm-slim AS development
 
 WORKDIR /app
 COPY --chown=node:node apps/admin/package.json apps/admin/package-lock.json ./
@@ -26,7 +26,7 @@ RUN case "$NEXT_PUBLIC_API_URL" in \
     esac \
     && npm run build
 
-FROM node:24-bookworm-slim AS runner
+FROM node:25-bookworm-slim AS runner
 
 WORKDIR /app
 ARG NEXT_PUBLIC_API_URL

@@ -18,10 +18,29 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
-    # Placeholder URLs for prisma.config.ts / postinstall generate (no DB service).
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci
-      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci?schema=public
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow?schema=public
+      JWT_SECRET: ci-jwt-secret-32-characters-abcdef123456
+      OTC_KEY_ENCRYPTION_SECRET: ci-otc-secret-32-characters-abcdef123456
+      OBJECT_SIGNING_SECRET: ci-object-secret-32-characters-abcdef123456
+      TWO_FACTOR_ENCRYPTION_KEY: ci-2fa-secret-32-characters-abcdef123456
+      HNW_VERIFY_PG: '1'
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: trading_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d trading_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
 
     steps:
       - name: Checkout
@@ -39,6 +58,9 @@ jobs:
 
       - name: Generate Prisma client
         run: npm run db:generate
+
+      - name: Apply database migrations
+        run: npm run db:migrate
 
       - name: Lint API
         run: npm run lint

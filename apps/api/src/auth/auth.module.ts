@@ -21,8 +21,9 @@ import { TwoFactorModule } from './two-factor.module';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          // Long-lived sessions until explicit logout (client + staff).
-          expiresIn: '365d',
+          // Access tokens are issued explicitly by AuthService for 24 hours.
+          // Keep the module default aligned for guards or future issuers.
+          expiresIn: '24h',
         },
       }),
     }),

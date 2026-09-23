@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - 'docker/**'
+      - 'compose.local-test.yaml'
       - 'apps/api/package.json'
       - 'apps/api/package-lock.json'
       - 'apps/admin/package.json'
@@ -14,6 +15,7 @@ on:
     branches: [main]
     paths:
       - 'docker/**'
+      - 'compose.local-test.yaml'
       - 'apps/api/package.json'
       - 'apps/api/package-lock.json'
       - 'apps/admin/package.json'
@@ -36,6 +38,11 @@ jobs:
 
       - name: Build API image
         run: docker build -f docker/api.Dockerfile -t hnw-api-ci .
+
+      - name: Validate local Compose configuration
+        env:
+          HNW_E2E_DB_PASSWORD: ci-compose-password
+        run: docker compose -f compose.local-test.yaml config --quiet
 
       - name: Build Admin image
         run: >-

@@ -63,13 +63,11 @@ updates:
     open-pull-requests-limit: 3
 
   - package-ecosystem: docker
-    directory: /
-    schedule:
-      interval: weekly
-    open-pull-requests-limit: 3
-
-  - package-ecosystem: docker
     directory: /docker
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    ignore:
+      # Keep container images on the same Node major as local development and CI.
+      - dependency-name: node
+        update-types: ["version-update:semver-major"]

@@ -57,6 +57,8 @@ PORT=3000
 
 生产启动：`npm run start:prod`（`NODE_ENV=production node dist/main.js`）。`/health` 与 `/health/ready` 只返回基础状态，不暴露业务数据。
 
+容器启动只运行已构建的 API，不会自动执行迁移或 seed。正式部署请在启动副本前单独执行 `npm run db:migrate`，并按需执行一次 `npm run seed`。
+
 `create-*-user` 脚本在 `NODE_ENV=production` 下会拒绝执行；本地脚本与 seed 一样，再次 upsert **不会覆盖**已有密码哈希。
 
 ## 默认种子账号

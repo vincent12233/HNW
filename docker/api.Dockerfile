@@ -16,4 +16,4 @@ RUN npm run db:generate && npm run build \
 USER node
 
 EXPOSE 3100
-CMD ["sh", "-c", "npm run db:migrate && npm run seed && node dist/main.js"]
+CMD ["node", "dist/main.js"]

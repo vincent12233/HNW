@@ -389,12 +389,20 @@ describe('AppContentService SaleSmartly URL sync', () => {
 });
 
 describe('APP_CONTENT_DEFAULTS coverage', () => {
-  it('keeps every TRADING default available in English and Hindi', () => {
+  it('keeps every operational content key available in English and Hindi', () => {
+    const bilingualModules = new Set([
+      AppContentModule.HOME,
+      AppContentModule.DEPOSIT,
+      AppContentModule.SUPPORT,
+      AppContentModule.TRADING,
+      AppContentModule.INSIGHTS,
+    ]);
     const localesByKey = new Map<string, Set<string>>();
     for (const entry of APP_CONTENT_DEFAULTS) {
-      if (entry.module !== AppContentModule.TRADING) continue;
-      if (!localesByKey.has(entry.key)) localesByKey.set(entry.key, new Set());
-      localesByKey.get(entry.key)!.add(entry.locale || 'en');
+      if (!bilingualModules.has(entry.module) || entry.locale === 'zh') continue;
+      const key = `${entry.module}:${entry.key}`;
+      if (!localesByKey.has(key)) localesByKey.set(key, new Set());
+      localesByKey.get(key)!.add(entry.locale || 'en');
     }
 
     for (const [key, locales] of localesByKey) {

@@ -20,11 +20,6 @@ import { TwoFactorModule } from './two-factor.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
-        signOptions: {
-          // Access tokens are issued explicitly by AuthService for 24 hours.
-          // Keep the module default aligned for guards or future issuers.
-          expiresIn: '24h',
-        },
       }),
     }),
   ],

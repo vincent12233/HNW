@@ -17,6 +17,13 @@ export const homeBannerFields: FieldDef[] = [
   { key: "banner.subtitle", label: "首页横幅副标题", rows: 2 },
   { key: "markets.banner.title", label: "行情页横幅标题", rows: 2 },
   { key: "markets.banner.subtitle", label: "行情页横幅副标题", rows: 2 },
+  { key: "markets.watchlist_error_title", label: "自选列表加载失败标题", rows: 1 },
+  { key: "markets.watchlist_error_body", label: "自选列表加载失败说明", rows: 2 },
+  { key: "markets.search_error_title", label: "行情搜索失败标题", rows: 1 },
+  { key: "markets.search_error_body", label: "行情搜索失败说明", rows: 2 },
+  { key: "markets.load_more", label: "加载更多按钮", rows: 1 },
+  { key: "markets.load_more_retry", label: "加载更多重试按钮", rows: 1 },
+  { key: "markets.refresh", label: "刷新行情按钮", rows: 1 },
 ];
 
 export const homeCompanyFields: FieldDef[] = [
@@ -252,6 +259,9 @@ export const tradingFields: FieldDef[] = [
   { key: "ipo.empty_subtitle", label: "IPO 其他列表空状态说明", rows: 2 },
   { key: "portfolio.page_title", label: "组合页标题", rows: 1 },
   { key: "portfolio.page_subtitle", label: "组合页副标题", rows: 1 },
+  { key: "portfolio.recent_activity", label: "近期活动标题", rows: 1 },
+  { key: "portfolio.view_details", label: "查看详情按钮", rows: 1 },
+  { key: "portfolio.close", label: "关闭按钮", rows: 1 },
   { key: "portfolio.summary_heading", label: "投资摘要标题", rows: 1 },
   { key: "portfolio.allocation_heading", label: "资产配置标题", rows: 1 },
   { key: "portfolio.empty_title", label: "组合空状态标题", rows: 2 },

@@ -70,6 +70,9 @@ class MarketsPage extends StatefulWidget {
 }
 
 class _MarketsPageState extends State<MarketsPage> {
+  String _marketCopy(String key, String fallback) =>
+      AppContentService.instance.current.text('home', key, fallback: fallback);
+
   final MarketDataService _marketDataService = MarketDataService();
   final WatchlistService _watchlistService = WatchlistService();
   final MarketSocketService _marketSocket = MarketSocketService();
@@ -790,8 +793,14 @@ class _MarketsPageState extends State<MarketsPage> {
             child: SizedBox(
               height: constraints.maxHeight,
               child: AppErrorView(
-                title: 'Unable to load watchlist',
-                message: 'Watchlist data is unavailable. Please try again.',
+                title: _marketCopy(
+                  'markets.watchlist_error_title',
+                  'Unable to load watchlist',
+                ),
+                message: _marketCopy(
+                  'markets.watchlist_error_body',
+                  'Watchlist data is unavailable. Please try again.',
+                ),
                 onRetry: () => unawaited(_loadWatchlist()),
               ),
             ),
@@ -1429,8 +1438,11 @@ class _MarketsPageState extends State<MarketsPage> {
       return wrapBrowse(
         _emptyState(
           Icons.cloud_off,
-          'Market data unavailable',
-          'Network error or live search is unavailable. Please refresh to try again.',
+          _marketCopy('markets.search_error_title', 'Market data unavailable'),
+          _marketCopy(
+            'markets.search_error_body',
+            'Network error or live search is unavailable. Please refresh to try again.',
+          ),
         ),
       );
     }
@@ -1477,8 +1489,11 @@ class _MarketsPageState extends State<MarketsPage> {
                         )
                       : AppText(
                           _searchFailed
-                              ? 'Unable to load stocks. Retry'
-                              : 'Load more',
+                              ? _marketCopy(
+                                  'markets.load_more_retry',
+                                  'Unable to load stocks. Retry',
+                                )
+                              : _marketCopy('markets.load_more', 'Load more'),
                         ),
                 ),
               ),
@@ -1643,7 +1658,9 @@ class _MarketsPageState extends State<MarketsPage> {
                     ),
                   )
                 : const Icon(Icons.refresh_rounded, size: 18),
-            label: const AppText('Refresh market data'),
+            label: AppText(
+              _marketCopy('markets.refresh', 'Refresh market data'),
+            ),
           ),
         ),
       ],

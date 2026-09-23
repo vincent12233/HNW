@@ -28,6 +28,11 @@ class ProductPortfolioPage extends StatefulWidget {
 }
 
 class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
+  String _portfolioCopy(String key, String fallback) => AppContentService
+      .instance
+      .current
+      .text('trading', key, fallback: fallback);
+
   Map<String, dynamic>? _data;
   String? _error;
   String _period = '1M';
@@ -750,7 +755,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         const SizedBox(height: AppSpacing.xxl),
         // DETAIL: Recent Activity
         _heading(
-          'Recent Activity',
+          _portfolioCopy('portfolio.recent_activity', 'Recent Activity'),
           action: () => _showActivity(_rows(data['activity'])),
         ),
         if (_rows(data['activity']).isEmpty)
@@ -821,7 +826,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: () => _showHoldings(categories),
-            child: const AppText('View Details'),
+            child: AppText(
+              _portfolioCopy('portfolio.view_details', 'View Details'),
+            ),
           ),
         ),
     ];
@@ -998,7 +1005,12 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       );
       final button = action == null
           ? null
-          : TextButton(onPressed: action, child: const AppText('View Details'));
+          : TextButton(
+              onPressed: action,
+              child: AppText(
+                _portfolioCopy('portfolio.view_details', 'View Details'),
+              ),
+            );
       if (constraints.maxWidth < 320 ||
           MediaQuery.textScalerOf(context).scale(1) > 1.3) {
         return Column(
@@ -1188,7 +1200,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const AppText('Close'),
+            child: AppText(_portfolioCopy('portfolio.close', 'Close')),
           ),
         ],
       ),
@@ -1199,7 +1211,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       Navigator.of(context).push(
         MaterialPageRoute<void>(
           builder: (_) => Scaffold(
-            appBar: AppBar(title: const AppText('Recent Activity')),
+            appBar: AppBar(
+              title: AppText(
+                _portfolioCopy('portfolio.recent_activity', 'Recent Activity'),
+              ),
+            ),
             body: ListView(
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: rows.isEmpty

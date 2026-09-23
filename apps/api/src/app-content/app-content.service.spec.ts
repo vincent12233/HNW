@@ -388,6 +388,68 @@ describe('AppContentService SaleSmartly URL sync', () => {
   });
 });
 
+describe('AppContentService history restore', () => {
+  const current = {
+    id: 'entry-1', module: AppContentModule.HOME, key: 'banner.title', locale: 'en',
+    title: 'Current', body: 'Current text', metadata: { color: 'red' },
+    isActive: true, sortOrder: 1, updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
+  const revision = {
+    id: 'revision-1', metadata: {
+      after: { title: 'Previous', body: 'Previous text', isActive: false, sortOrder: 2, metadata: { color: 'green' } },
+    },
+  };
+
+  it('restores a matched revision and writes a new audit record in the same transaction', async () => {
+    const tx = {
+      appContentEntry: {
+        findUnique: jest.fn().mockResolvedValue(current),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ ...current, ...revision.metadata.after }),
+      },
+    };
+    const createLog = jest.fn().mockResolvedValue({ id: 'new-audit' });
+    const service = mockService({
+      auditLog: { findFirst: jest.fn().mockResolvedValue(revision) },
+      $transaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    }, { createLog });
+    await service.restoreEntry(current.id, revision.id, current.updatedAt.toISOString(), { userId: 'admin-1', role: 'ADMIN' });
+    expect(tx.appContentEntry.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: current.id, updatedAt: current.updatedAt },
+      data: expect.objectContaining({ body: 'Previous text', metadata: { color: 'green' } }),
+    }));
+    expect(createLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'APP_CONTENT_RESTORE', resourceId: current.id,
+      metadata: expect.objectContaining({ revisionId: revision.id }),
+    }), tx);
+  });
+
+  it('rejects a stale editor before writing', async () => {
+    const tx = { appContentEntry: { findUnique: jest.fn().mockResolvedValue(current), updateMany: jest.fn() } };
+    const service = mockService({
+      auditLog: { findFirst: jest.fn().mockResolvedValue(revision) },
+      $transaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    });
+    await expect(service.restoreEntry(current.id, revision.id, '2025-01-01T00:00:00.000Z', { userId: 'admin', role: 'ADMIN' }))
+      .rejects.toThrow('Content changed');
+    expect(tx.appContentEntry.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects a revision from another entry', async () => {
+    const service = mockService({ auditLog: { findFirst: jest.fn().mockResolvedValue(null) } });
+    await expect(service.restoreEntry(current.id, 'unrelated', current.updatedAt.toISOString(), { userId: 'admin', role: 'ADMIN' }))
+      .rejects.toThrow('Revision cannot be restored');
+  });
+
+  it('rejects a missing revision ID before querying audit logs', async () => {
+    const findFirst = jest.fn();
+    const service = mockService({ auditLog: { findFirst } });
+    await expect(service.restoreEntry(current.id, '', current.updatedAt.toISOString(), { userId: 'admin', role: 'ADMIN' }))
+      .rejects.toThrow('Revision ID is required');
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+});
+
 describe('APP_CONTENT_DEFAULTS coverage', () => {
   it('keeps every operational content key available in English and Hindi', () => {
     const bilingualModules = new Set([

@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -166,6 +167,94 @@ export class AppContentService {
     });
   }
 
+  async listHistory(id: string) {
+    const entry = await this.prisma.appContentEntry.findUnique({ where: { id } });
+    if (!entry) throw new NotFoundException('Content entry not found');
+    return this.prisma.auditLog.findMany({
+      where: { resource: 'app_content', resourceId: id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+      select: {
+        id: true,
+        action: true,
+        createdAt: true,
+        metadata: true,
+        actor: { select: { fullName: true, role: true } },
+      },
+    });
+  }
+
+  async restoreEntry(id: string, revisionId: string, expectedUpdatedAt: string, actor: AppContentActor) {
+    if (typeof revisionId !== 'string' || !revisionId.trim()) {
+      throw new BadRequestException('Revision ID is required');
+    }
+    const expected = new Date(expectedUpdatedAt);
+    if (!Number.isFinite(expected.getTime())) throw new BadRequestException('Valid expectedUpdatedAt is required');
+    const revision = await this.prisma.auditLog.findFirst({
+      where: { id: revisionId, resource: 'app_content', resourceId: id },
+    });
+    const data = revision?.metadata;
+    const snapshot = data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>).after : null;
+    if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
+        typeof (snapshot as Record<string, unknown>).body !== 'string') {
+      throw new BadRequestException('Revision cannot be restored');
+    }
+    const prior = snapshot as Record<string, unknown>;
+    if (typeof prior.title !== 'string' && prior.title !== null ||
+        typeof prior.isActive !== 'boolean' ||
+        typeof prior.sortOrder !== 'number' || !Number.isFinite(prior.sortOrder) ||
+        (prior.body as string).length > 200_000) {
+      throw new BadRequestException('Revision snapshot is invalid');
+    }
+    const result = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.appContentEntry.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException('Content entry not found');
+      if (current.updatedAt.getTime() !== expected.getTime()) {
+        throw new ConflictException('Content changed since history was opened; reload and try again');
+      }
+      if (current.module === AppContentModule.SUPPORT && current.key === 'salesmartly_script_url') {
+        throw new BadRequestException('Restore the shared support URL through the editor');
+      }
+      const updated = await tx.appContentEntry.updateMany({
+        where: { id, updatedAt: expected },
+        data: {
+          body: prior.body as string,
+          title: prior.title as string | null,
+          isActive: prior.isActive as boolean,
+          sortOrder: prior.sortOrder as number,
+          ...(Object.hasOwn(prior, 'metadata') ? {
+            metadata: prior.metadata === null ? Prisma.JsonNull : prior.metadata as Prisma.InputJsonValue,
+          } : {}),
+        },
+      });
+      if (updated.count !== 1) throw new ConflictException('Content changed; reload and try again');
+      const restored = await tx.appContentEntry.findUniqueOrThrow({ where: { id } });
+      await this.audit.createLog({
+        actorId: actor.userId,
+        action: 'APP_CONTENT_RESTORE',
+        resource: 'app_content',
+        resourceId: id,
+        description: `Restored ${current.module}/${current.key}/${current.locale}`,
+        metadata: {
+          operatorRole: actor.role,
+          revisionId,
+          module: current.module,
+          key: current.key,
+          locale: current.locale,
+          before: this.snapshot(current),
+          after: this.snapshot(restored),
+        },
+      }, tx);
+      return restored;
+    });
+    return result;
+  }
+
+  private snapshot(row: { title: string | null; body: string; metadata?: Prisma.JsonValue | null; isActive: boolean; sortOrder: number }) {
+    return { title: row.title, body: row.body, metadata: row.metadata ?? null, isActive: row.isActive, sortOrder: row.sortOrder };
+  }
+
   async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor) {
     const module = this.parseModule(String(body.module));
     const key = String(body.key || '').trim();
@@ -262,20 +351,8 @@ export class AppContentService {
           module,
           key,
           locale,
-          before: before
-            ? {
-                title: before.title,
-                body: before.body,
-                isActive: before.isActive,
-                sortOrder: before.sortOrder,
-              }
-            : null,
-          after: {
-            title: result.title,
-            body: result.body,
-            isActive: result.isActive,
-            sortOrder: result.sortOrder,
-          },
+          before: before ? this.snapshot(before) : null,
+          after: this.snapshot(result),
         },
       });
     }
@@ -314,12 +391,7 @@ export class AppContentService {
           module: existing.module,
           key: existing.key,
           locale: existing.locale,
-          before: {
-            title: existing.title,
-            body: existing.body,
-            isActive: existing.isActive,
-            sortOrder: existing.sortOrder,
-          },
+          before: this.snapshot(existing),
           after: null,
         },
       });

@@ -7,6 +7,7 @@ import {
   FileProtectOutlined,
   HomeOutlined,
   InfoCircleOutlined,
+  HistoryOutlined,
   ReloadOutlined,
   SaveOutlined,
   StockOutlined,
@@ -131,6 +132,14 @@ type ContentEntry = {
   isActive: boolean;
   sortOrder: number;
   updatedAt?: string;
+};
+
+type ContentRevision = {
+  id: string;
+  action: string;
+  createdAt: string;
+  actor?: { fullName?: string | null } | null;
+  metadata?: { before?: { body?: string }; after?: { body?: string; title?: string | null } | null } | null;
 };
 
 const legalFieldLabels = {
@@ -263,6 +272,43 @@ export default function AppOpsContentPage() {
     title: string;
     body: string;
   } | null>(null);
+  const [historyEntryId, setHistoryEntryId] = useState<string>();
+  const [history, setHistory] = useState<ContentRevision[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+
+  async function openHistory(id: string) {
+    setHistoryEntryId(id);
+    setHistory([]);
+    setHistoryLoading(true);
+    try {
+      const response = await api.get<ContentRevision[]>(`/admin/app-content/${encodeURIComponent(id)}/history`);
+      setHistory(response.data);
+    } catch (requestError: unknown) {
+      message.error(apiError(requestError, "历史记录加载失败"));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function restoreRevision(revision: ContentRevision) {
+    const current = entries.find((item) => item.id === historyEntryId);
+    if (!current?.updatedAt || restoring) return;
+    setRestoring(true);
+    try {
+      await api.post(`/admin/app-content/${encodeURIComponent(current.id)}/restore`, {
+        revisionId: revision.id,
+        expectedUpdatedAt: current.updatedAt,
+      });
+      setHistoryEntryId(undefined);
+      await loadAll();
+      message.success("历史内容已恢复，页面表单已重新加载");
+    } catch (requestError: unknown) {
+      message.error(apiError(requestError, "恢复失败，请刷新后重试"));
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -549,11 +595,54 @@ export default function AppOpsContentPage() {
               <Button icon={<ReloadOutlined />} loading={loading} disabled={saving} onClick={() => confirmDiscard(() => void loadAll(), "刷新全部文案？")}>
                 刷新
               </Button>
+              <Button icon={<HistoryOutlined />} disabled={loading || saving} onClick={() => confirmDiscard(() => setHistoryEntryId(""), "查看文案历史？")}>
+                历史与恢复
+              </Button>
             </Space>
           }
         />
 
         {error && <Alert type="error" title={error} showIcon />}
+
+        <Modal title="文案历史与恢复" open={historyEntryId !== undefined} onCancel={() => setHistoryEntryId(undefined)} footer={null} width={720} destroyOnHidden>
+          <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="搜索条目、语言"
+              style={{ width: "100%" }}
+              value={historyEntryId || undefined}
+              onChange={(id) => void openHistory(id)}
+              options={entries.map((entry) => ({ value: entry.id, label: `${entry.module} / ${entry.key} / ${entry.locale.toUpperCase()}` }))}
+            />
+            {historyLoading ? <Text type="secondary">正在加载历史…</Text> : null}
+            {historyEntryId && !historyLoading && history.length === 0 ? <Text type="secondary">暂无可用的修改记录。</Text> : null}
+            {history.map((revision) => {
+              const before = revision.metadata?.before?.body;
+              const after = revision.metadata?.after?.body;
+              return (
+                <div key={revision.id} style={{ borderTop: "1px solid #d9d9d9", paddingTop: 12 }}>
+                  <Space wrap style={{ marginBottom: 8 }}>
+                    <Text strong>{revision.action.replace("APP_CONTENT_", "")}</Text>
+                    <Text type="secondary">{new Date(revision.createdAt).toLocaleString("zh-CN")}</Text>
+                    <Text type="secondary">{revision.actor?.fullName || "管理员"}</Text>
+                  </Space>
+                  {typeof before === "string" ? <Paragraph style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><Text type="secondary">修改前：</Text>{before}</Paragraph> : null}
+                  {typeof after === "string" ? <Paragraph style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><Text type="secondary">修改后：</Text>{after}</Paragraph> : null}
+                  {typeof after === "string" ? (
+                    <Button disabled={restoring || saving} loading={restoring} onClick={() => Modal.confirm({
+                      title: "恢复这个历史版本？",
+                      content: "将覆盖当前条目并重新加载页面表单。请先保存其他未提交的修改。",
+                      okText: "确认恢复",
+                      cancelText: "取消",
+                      onOk: () => restoreRevision(revision),
+                    })}>恢复此版本</Button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </Space>
+        </Modal>
 
         <Card loading={loading}>
           <Alert

@@ -89,4 +89,22 @@ export class AppContentController {
       role: request.user.role,
     });
   }
+
+  @Get('admin/app-content/:id/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  history(@Param('id') id: string) {
+    return this.service.listHistory(id);
+  }
+
+  @Post('admin/app-content/:id/restore')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  restore(@Req() request: AuthenticatedRequest, @Param('id') id: string,
+    @Body() body: { revisionId: string; expectedUpdatedAt: string }) {
+    return this.service.restoreEntry(id, body.revisionId, body.expectedUpdatedAt, {
+      userId: request.user.userId,
+      role: request.user.role,
+    });
+  }
 }

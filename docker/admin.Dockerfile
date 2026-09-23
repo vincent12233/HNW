@@ -1,11 +1,13 @@
 FROM node:24-bookworm-slim
 
 WORKDIR /app
+ARG NEXT_PUBLIC_API_URL=http://localhost:3000
+ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 COPY --chown=node:node apps/admin/package.json apps/admin/package-lock.json ./
 RUN npm ci
 COPY --chown=node:node apps/admin ./
-RUN mkdir -p /app/.next && chown node:node /app/.next
+RUN npm run build && chown -R node:node /app/.next
 
 USER node
 
-CMD ["npx", "next", "dev", "-H", "0.0.0.0"]
+CMD ["npm", "run", "start"]

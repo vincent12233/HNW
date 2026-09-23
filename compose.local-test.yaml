@@ -77,11 +77,11 @@ services:
       api:
         condition: service_healthy
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:'+process.env.PORT+'/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      test: ["CMD-SHELL", "node -e \"const net=require('net');const socket=net.connect(Number(process.env.PORT),'127.0.0.1',()=>{socket.end();process.exit(0)});socket.setTimeout(2000,()=>socket.destroy());socket.on('error',()=>process.exit(1));socket.on('close',hadError=>process.exit(hadError?1:0))\""]
       interval: 10s
-      timeout: 20s
+      timeout: 5s
       retries: 18
-      start_period: 60s
+      start_period: 15s
   manager:
     <<: *admin
     environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: MANAGER, PORT: "3004" }

@@ -67,6 +67,7 @@ services:
       context: .
       dockerfile: docker/admin.Dockerfile
       args:
+        NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: ADMIN
     environment: &admin-environment
       NODE_ENV: development
@@ -90,6 +91,7 @@ services:
       context: .
       dockerfile: docker/admin.Dockerfile
       args:
+        NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: MANAGER
     environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: MANAGER, PORT: "3004" }
     command: ["npx", "next", "dev", "-p", "3004", "-H", "0.0.0.0"]
@@ -100,6 +102,7 @@ services:
       context: .
       dockerfile: docker/admin.Dockerfile
       args:
+        NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: FINANCE
     environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: FINANCE, PORT: "3005" }
     command: ["npx", "next", "dev", "-p", "3005", "-H", "0.0.0.0"]
@@ -110,6 +113,7 @@ services:
       context: .
       dockerfile: docker/admin.Dockerfile
       args:
+        NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: BUSINESS
     environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: BUSINESS, PORT: "3006" }
     command: ["npx", "next", "dev", "-p", "3006", "-H", "0.0.0.0"]
@@ -120,6 +124,7 @@ services:
       context: .
       dockerfile: docker/admin.Dockerfile
       args:
+        NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: SUPPORT
     environment: { <<: *admin-environment, NEXT_PUBLIC_BACKEND_ROLE: SUPPORT, PORT: "3007" }
     command: ["npx", "next", "dev", "-p", "3007", "-H", "0.0.0.0"]

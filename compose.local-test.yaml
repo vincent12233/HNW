@@ -47,7 +47,7 @@ services:
       SUPPORT_INITIAL_PASSWORD: ${HNW_E2E_SUPPORT_PASSWORD:-LocalSupport2026!}
       BUSINESS_INITIAL_PASSWORD: ${HNW_E2E_BUSINESS_PASSWORD:-LocalBusiness2026!}
       PRIVATE_OBJECT_ROOT: /app/private-objects
-      CORS_ORIGINS: http://localhost:3002,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007
+      CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007
       MARKET_DATA_STREAMING_ENABLED: "false"
     ports: ["127.0.0.1:3100:3100"]
     volumes: ["private-objects:/app/private-objects"]

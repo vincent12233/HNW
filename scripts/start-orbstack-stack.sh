@@ -17,6 +17,7 @@ if [[ "$(orbctl status)" != Running ]]; then
 fi
 
 export HNW_E2E_DB_PASSWORD="${HNW_E2E_DB_PASSWORD:-HnwE2E_Local_2026_Strong!}"
+docker compose -f "$ROOT/compose.local-test.yaml" config --quiet
 docker compose -f "$ROOT/compose.local-test.yaml" up -d --build --wait --wait-timeout 300
 docker compose -f "$ROOT/compose.local-test.yaml" ps
 

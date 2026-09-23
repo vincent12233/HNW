@@ -21,7 +21,10 @@ run_admin() {
   npm run lint
   npm test
   npx --no-install tsc --noEmit
-  npm run build
+  # Next production rendering validates that the public API URL is HTTPS.
+  # Local OrbStack uses HTTP, so use an explicit build-only placeholder unless
+  # the caller supplies a real HTTPS build endpoint.
+  NEXT_PUBLIC_API_URL="${HNW_BUILD_API_URL:-https://build.invalid}" npm run build
 }
 
 run_client() {

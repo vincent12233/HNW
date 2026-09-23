@@ -142,6 +142,9 @@ macOS / Linux：
 ./scripts/verify-all.sh
 ```
 
+本地 OrbStack 验证会为后台构建自动使用 `https://build.invalid` 占位地址，
+不会改变 API 联调地址；需要指定真实构建地址时设置 `HNW_BUILD_API_URL`。
+
 如果设置了 `DATABASE_URL`，脚本会先执行 Prisma 迁移，并运行 PostgreSQL 集成测试。建议在 OrbStack PostgreSQL 启动后使用：
 
 ```bash

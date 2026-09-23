@@ -21,4 +21,12 @@ docker compose -f "$ROOT/compose.local-test.yaml" config --quiet
 docker compose -f "$ROOT/compose.local-test.yaml" up -d --build --wait --wait-timeout 300
 docker compose -f "$ROOT/compose.local-test.yaml" ps
 
+if [[ -n "${HNW_SMOKE_ADMIN_PASSWORD:-}" ]]; then
+  command -v node >/dev/null || { echo 'Node.js is required for the auth/content smoke test.' >&2; exit 1; }
+  HNW_SMOKE_API_URL="${HNW_SMOKE_API_URL:-http://127.0.0.1:3100}" \
+    node "$ROOT/scripts/smoke-auth-content.mjs"
+else
+  echo 'Set HNW_SMOKE_ADMIN_PASSWORD to run the staff auth/content smoke test.'
+fi
+
 echo 'OrbStack test services are ready. API :3100 | Admin :3002 | Manager :3004 | Finance :3005 | Business :3006 | Support :3007'

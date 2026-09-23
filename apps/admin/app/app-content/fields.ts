@@ -259,6 +259,8 @@ export const tradingFields: FieldDef[] = [
   { key: "ipo.empty_subtitle", label: "IPO 其他列表空状态说明", rows: 2 },
   { key: "portfolio.page_title", label: "组合页标题", rows: 1 },
   { key: "portfolio.page_subtitle", label: "组合页副标题", rows: 1 },
+  { key: "portfolio.loading", label: "组合加载提示", rows: 1 },
+  { key: "portfolio.load_error_title", label: "组合加载失败标题", rows: 1 },
   { key: "portfolio.recent_activity", label: "近期活动标题", rows: 1 },
   { key: "portfolio.view_details", label: "查看详情按钮", rows: 1 },
   { key: "portfolio.close", label: "关闭按钮", rows: 1 },

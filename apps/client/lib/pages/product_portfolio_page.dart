@@ -223,7 +223,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               if (_loading && data != null)
                 const LinearProgressIndicator(minHeight: 2),
               if (_loading && data == null)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(
                     vertical: AppSpacing.sectionGap,
                   ),
@@ -233,7 +233,12 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         semanticsLabel: 'Loading portfolio',
                       ),
                       SizedBox(height: AppSpacing.md),
-                      AppText('Loading portfolio'),
+                      AppText(
+                        _portfolioCopy(
+                          'portfolio.loading',
+                          'Loading portfolio',
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -241,7 +246,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
                   child: AppEmptyState(
-                    title: 'Unable to load portfolio',
+                    title: _portfolioCopy(
+                      'portfolio.load_error_title',
+                      'Unable to load portfolio',
+                    ),
                     message: _error,
                     icon: Icons.wifi_off_outlined,
                     onRetry: _loading ? null : _load,

@@ -1432,7 +1432,11 @@ class _MarketsPageState extends State<MarketsPage> {
     }
 
     if (_searchLoading && stocks.isEmpty) {
-      return wrapBrowse(const AppLoadingView(message: 'Loading markets…'));
+      return wrapBrowse(
+        AppLoadingView(
+          message: _marketCopy('markets.loading', 'Loading markets…'),
+        ),
+      );
     }
     if (allowPagination && _searchFailed && stocks.isEmpty) {
       return wrapBrowse(

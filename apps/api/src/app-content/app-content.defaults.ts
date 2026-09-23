@@ -274,6 +274,8 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'hi',
     sortOrder: 40,
   },
+  { module: AppContentModule.HOME, key: 'markets.loading', body: 'Loading markets…', locale: 'en', sortOrder: 40 },
+  { module: AppContentModule.HOME, key: 'markets.loading', body: 'बाज़ार लोड हो रहे हैं…', locale: 'hi', sortOrder: 40 },
   { module: AppContentModule.HOME, key: 'markets.watchlist_error_title', body: 'Unable to load watchlist', locale: 'en', sortOrder: 41 },
   { module: AppContentModule.HOME, key: 'markets.watchlist_error_title', body: 'वॉचलिस्ट लोड नहीं हो सकी', locale: 'hi', sortOrder: 41 },
   { module: AppContentModule.HOME, key: 'markets.watchlist_error_body', body: 'Watchlist data is unavailable. Please try again.', locale: 'en', sortOrder: 42 },

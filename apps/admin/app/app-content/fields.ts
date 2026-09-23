@@ -17,6 +17,7 @@ export const homeBannerFields: FieldDef[] = [
   { key: "banner.subtitle", label: "首页横幅副标题", rows: 2 },
   { key: "markets.banner.title", label: "行情页横幅标题", rows: 2 },
   { key: "markets.banner.subtitle", label: "行情页横幅副标题", rows: 2 },
+  { key: "markets.loading", label: "行情加载提示", rows: 1 },
   { key: "markets.watchlist_error_title", label: "自选列表加载失败标题", rows: 1 },
   { key: "markets.watchlist_error_body", label: "自选列表加载失败说明", rows: 2 },
   { key: "markets.search_error_title", label: "行情搜索失败标题", rows: 1 },

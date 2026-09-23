@@ -5,6 +5,7 @@ import { randomUUID } from 'crypto';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './observability/all-exceptions.filter';
+import { businessFailureEvent } from './observability/business-events';
 import { isLocalDevelopmentOrigin } from './common/local-development-origin';
 import {
   createRateLimitStore,
@@ -147,6 +148,8 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
     const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
     res.setHeader('x-request-id', requestId);
     res.on('finish', () => {
+      const durationMs = Date.now() - startedAt;
+      const timestamp = new Date().toISOString();
       const payload = JSON.stringify({
         level:
           res.statusCode >= 500
@@ -159,14 +162,29 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
         method: req.method,
         path: req.path,
         statusCode: res.statusCode,
-        durationMs: Date.now() - startedAt,
+        durationMs,
         ip: req.ip,
         userAgent: req.header('user-agent')?.slice(0, 200),
-        timestamp: new Date().toISOString(),
+        timestamp,
       });
       if (res.statusCode >= 500) httpLogger.error(payload);
       else if (res.statusCode >= 400) httpLogger.warn(payload);
       else httpLogger.log(payload);
+
+      const event = businessFailureEvent(req.method, req.path, res.statusCode);
+      if (event) {
+        httpLogger.warn(
+          JSON.stringify({
+            level: 'warn',
+            event,
+            requestId,
+            path: normalizeRateLimitPath(req.path),
+            statusCode: res.statusCode,
+            durationMs,
+            timestamp,
+          }),
+        );
+      }
     });
     res.setHeader('x-content-type-options', 'nosniff');
     res.setHeader('x-frame-options', 'DENY');
@@ -250,9 +268,23 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
     res.setHeader('x-ratelimit-limit', limit);
     res.setHeader('x-ratelimit-remaining', Math.max(0, limit - entry.count));
     if (entry.count > limit) {
-      res.setHeader(
-        'retry-after',
-        Math.max(1, Math.ceil((entry.resetAt - Date.now()) / 1000)),
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((entry.resetAt - Date.now()) / 1000),
+      );
+      res.setHeader('retry-after', retryAfterSeconds);
+      httpLogger.warn(
+        JSON.stringify({
+          level: 'warn',
+          event: 'rate_limit_blocked',
+          requestId,
+          method: req.method,
+          path: normalizeRateLimitPath(req.path),
+          limit,
+          count: entry.count,
+          retryAfterSeconds,
+          timestamp: new Date().toISOString(),
+        }),
       );
       res
         .status(429)

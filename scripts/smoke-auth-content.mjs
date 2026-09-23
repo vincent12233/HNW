@@ -23,6 +23,14 @@ async function call(path, { method = 'GET', token, cookie, body, origin, backend
 const unauthorized = await call('/admin/app-content');
 assert.equal(unauthorized.response.status, 401);
 
+const clientOrigin = await call('/health/ready', { origin: 'http://localhost:3000' });
+assert.equal(clientOrigin.response.status, 200, 'API readiness failed');
+assert.equal(
+  clientOrigin.response.headers.get('access-control-allow-origin'),
+  'http://localhost:3000',
+  'Client origin is not allowed by CORS',
+);
+
 const cookieLogin = await call('/auth/login', {
   method: 'POST',
   origin: 'http://localhost:3002',

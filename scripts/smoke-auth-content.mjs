@@ -4,7 +4,7 @@ const baseUrl = process.env.HNW_SMOKE_API_URL || 'http://127.0.0.1:3100';
 const password = process.env.HNW_SMOKE_ADMIN_PASSWORD;
 if (!password) throw new Error('HNW_SMOKE_ADMIN_PASSWORD is required');
 
-async function call(path, { method = 'GET', token, cookie, body, origin } = {}) {
+async function call(path, { method = 'GET', token, cookie, body, origin, backendRole = 'ADMIN' } = {}) {
   const response = await fetch(new URL(path, baseUrl), {
     method,
     headers: {
@@ -12,7 +12,7 @@ async function call(path, { method = 'GET', token, cookie, body, origin } = {}) 
       ...(token ? { authorization: `Bearer ${token}` } : {}),
       ...(cookie ? { cookie } : {}),
       ...(origin ? { origin } : {}),
-      'x-backend-role': 'ADMIN',
+      'x-backend-role': backendRole,
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
@@ -71,6 +71,19 @@ try {
     body: { revisionId: 'not-authorized', expectedUpdatedAt: created.data?.updatedAt },
   });
   assert.equal(unauthorizedRestore.response.status, 401, 'Unauthenticated restore succeeded');
+
+  const wrongRoleHistory = await call(`/admin/app-content/${entryId}/history`, {
+    token: accessToken,
+    backendRole: 'SUPPORT',
+  });
+  assert.equal(wrongRoleHistory.response.status, 403, 'Wrong staff role read history');
+  const wrongRoleRestore = await call(`/admin/app-content/${entryId}/restore`, {
+    method: 'POST',
+    token: accessToken,
+    backendRole: 'SUPPORT',
+    body: { revisionId: 'not-authorized', expectedUpdatedAt: created.data?.updatedAt },
+  });
+  assert.equal(wrongRoleRestore.response.status, 403, 'Wrong staff role restored content');
 
   const createdAt = created.data?.updatedAt;
   assert.ok(createdAt);

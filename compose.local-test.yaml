@@ -66,6 +66,7 @@ services:
     build:
       context: .
       dockerfile: docker/admin.Dockerfile
+      target: development
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: ADMIN
@@ -90,6 +91,7 @@ services:
     build:
       context: .
       dockerfile: docker/admin.Dockerfile
+      target: development
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: MANAGER
@@ -101,6 +103,7 @@ services:
     build:
       context: .
       dockerfile: docker/admin.Dockerfile
+      target: development
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: FINANCE
@@ -112,6 +115,7 @@ services:
     build:
       context: .
       dockerfile: docker/admin.Dockerfile
+      target: development
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: BUSINESS
@@ -123,6 +127,7 @@ services:
     build:
       context: .
       dockerfile: docker/admin.Dockerfile
+      target: development
       args:
         NEXT_PUBLIC_API_URL: http://localhost:3100
         NEXT_PUBLIC_BACKEND_ROLE: SUPPORT

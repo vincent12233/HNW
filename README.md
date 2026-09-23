@@ -126,6 +126,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-e2e.
 
 ## 一键验收
 
+macOS / Linux：
+
+```bash
+./scripts/verify-all.sh
+```
+
+如果设置了 `DATABASE_URL`，脚本会先执行 Prisma 迁移，并运行 PostgreSQL 集成测试。建议在 OrbStack PostgreSQL 启动后使用：
+
+```bash
+export DATABASE_URL='postgresql://hnw_test:<password>@127.0.0.1:55432/hnw_e2e?schema=public'
+export HNW_VERIFY_PG=1
+./scripts/verify-all.sh
+```
+
+Windows：
+
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 ```

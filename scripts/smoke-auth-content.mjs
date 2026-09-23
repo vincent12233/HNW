@@ -64,6 +64,14 @@ try {
   entryId = created.data?.id;
   assert.ok(entryId);
 
+  const unauthorizedHistory = await call(`/admin/app-content/${entryId}/history`);
+  assert.equal(unauthorizedHistory.response.status, 401, 'Unauthenticated history read succeeded');
+  const unauthorizedRestore = await call(`/admin/app-content/${entryId}/restore`, {
+    method: 'POST',
+    body: { revisionId: 'not-authorized', expectedUpdatedAt: created.data?.updatedAt },
+  });
+  assert.equal(unauthorizedRestore.response.status, 401, 'Unauthenticated restore succeeded');
+
   const createdAt = created.data?.updatedAt;
   assert.ok(createdAt);
 

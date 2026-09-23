@@ -25,6 +25,19 @@ export const homeBannerFields: FieldDef[] = [
   { key: "markets.load_more", label: "加载更多按钮", rows: 1 },
   { key: "markets.load_more_retry", label: "加载更多重试按钮", rows: 1 },
   { key: "markets.refresh", label: "刷新行情按钮", rows: 1 },
+  { key: "markets.search_page.title", label: "股票搜索页标题", rows: 1 },
+  { key: "markets.search_page.hint", label: "股票搜索输入提示", rows: 1 },
+  { key: "markets.search_page.searching", label: "股票搜索加载提示", rows: 1 },
+  { key: "markets.search_page.watchlist_update_error", label: "自选更新失败提示", rows: 2 },
+  { key: "markets.search_page.partial_error", label: "搜索失败但保留结果提示", rows: 2 },
+  { key: "markets.search_page.more_error", label: "加载更多失败但保留结果提示", rows: 2 },
+  { key: "markets.search_page.error_title", label: "股票搜索失败标题", rows: 1 },
+  { key: "markets.search_page.error_body", label: "股票搜索失败说明", rows: 2 },
+  { key: "markets.search_page.empty_title", label: "无行情数据标题", rows: 1 },
+  { key: "markets.search_page.empty_body", label: "无行情数据说明", rows: 2 },
+  { key: "markets.search_page.no_match_title", label: "无匹配股票标题", rows: 1 },
+  { key: "markets.search_page.no_match_body", label: "无匹配股票说明", rows: 2 },
+  { key: "markets.search_page.loading_more", label: "加载更多进行中提示", rows: 1 },
 ];
 
 export const homeCompanyFields: FieldDef[] = [

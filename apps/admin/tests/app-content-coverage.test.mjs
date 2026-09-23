@@ -109,6 +109,9 @@ test('static Flutter content keys exist in API defaults and Super Admin', () => 
     for (const [, key] of source.matchAll(/_notificationCopy\(\s*'([^']+)'/g)) {
       references.push({ path, module: 'HOME', key: `notifications.${key}` });
     }
+    for (const [, key] of source.matchAll(/_stockSearchCopy\(\s*'([^']+)'/g)) {
+      references.push({ path, module: 'HOME', key: `markets.search_page.${key}` });
+    }
   }
   assert.ok(references.length > 0, 'No static Flutter content references found');
   for (const { path, module, key } of references) {

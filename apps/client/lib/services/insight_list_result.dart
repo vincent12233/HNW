@@ -6,22 +6,6 @@ import '../app_config.dart';
 import '../l10n/app_language.dart';
 import 'insight_articles_service.dart';
 
-enum InsightListSource { structured, legacyKv, local, empty }
-
-class InsightListResult {
-  const InsightListResult({
-    required this.source,
-    required this.articles,
-    required this.apiSucceeded,
-  });
-
-  final InsightListSource source;
-  final List<InsightArticle> articles;
-
-  /// True when structured API returned HTTP 2xx (even if the list is empty).
-  final bool apiSucceeded;
-}
-
 /// Extends [InsightArticlesService] with success-vs-failure semantics.
 extension InsightArticlesFetch on InsightArticlesService {
   /// Distinguishes API SUCCESS [] from FAILURE.

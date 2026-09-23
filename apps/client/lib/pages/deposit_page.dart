@@ -206,7 +206,7 @@ class _DepositPageState extends State<DepositPage> {
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Refresh deposit history',
+                        tooltip: tr('Refresh deposit history'),
                         onPressed: _loading ? null : () => unawaited(_refreshAll()),
                         icon: const Icon(Icons.refresh_rounded),
                       ),

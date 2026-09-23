@@ -451,7 +451,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
                 ),
               ),
               IconButton(
-                tooltip: 'Refresh withdrawal history',
+                tooltip: tr('Refresh withdrawal history'),
                 onPressed: _loading ? null : () => unawaited(_load()),
                 icon: const Icon(Icons.refresh_rounded),
               ),

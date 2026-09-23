@@ -10,6 +10,7 @@ export type FieldDef = {
   rows: number;
   title?: boolean;
   locale?: string;
+  jsonObject?: boolean;
 };
 
 export const homeBannerFields: FieldDef[] = [
@@ -38,6 +39,15 @@ export const homeBannerFields: FieldDef[] = [
   { key: "markets.search_page.no_match_title", label: "无匹配股票标题", rows: 1 },
   { key: "markets.search_page.no_match_body", label: "无匹配股票说明", rows: 2 },
   { key: "markets.search_page.loading_more", label: "加载更多进行中提示", rows: 1 },
+];
+
+export const homeGlobalCopyFields: FieldDef[] = [
+  {
+    key: "ui.copy",
+    label: '全局 App 文案覆盖（JSON：{"当前英文原文":"替换文案"}）',
+    rows: 12,
+    jsonObject: true,
+  },
 ];
 
 export const homeCompanyFields: FieldDef[] = [
@@ -159,6 +169,7 @@ export const homeWithdrawFields: FieldDef[] = [
 ];
 
 export const homeFields: FieldDef[] = [
+  ...homeGlobalCopyFields,
   ...homeBannerFields,
   ...homeCompanyFields,
   ...homeFundsFields,

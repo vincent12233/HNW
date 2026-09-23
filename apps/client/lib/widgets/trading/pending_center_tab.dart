@@ -345,7 +345,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
           children: [
             Expanded(child: AppText('${application.companyName} IPO Details')),
             IconButton(
-              tooltip: 'Close',
+              tooltip: tr('Close'),
               onPressed: () => Navigator.pop(dialogContext),
               icon: const Icon(Icons.close),
             ),

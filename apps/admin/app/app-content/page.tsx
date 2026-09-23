@@ -41,6 +41,7 @@ import {
   homeBannerFields,
   homeCompanyFields,
   homeFields,
+  homeGlobalCopyFields,
   homeFundsFields,
   homeLegacyFields,
   homeNewsFields,
@@ -108,7 +109,33 @@ function FieldGroup({
                         ? `${field.label} · 正文`
                         : field.label
                     }
-                    rules={[{ required: true, message: "请填写内容" }]}
+                    rules={[
+                      { required: true, message: "请填写内容" },
+                      ...(field.jsonObject
+                        ? [
+                            {
+                              validator: async (_: unknown, value: string) => {
+                                try {
+                                  const parsed = JSON.parse(value);
+                                  if (
+                                    !parsed ||
+                                    Array.isArray(parsed) ||
+                                    typeof parsed !== "object" ||
+                                    Object.entries(parsed).some(
+                                      ([key, replacement]) =>
+                                        !key.trim() || typeof replacement !== "string",
+                                    )
+                                  ) {
+                                    throw new Error("invalid dictionary");
+                                  }
+                                } catch {
+                                  throw new Error("请输入字符串键值组成的有效 JSON 对象");
+                                }
+                              },
+                            },
+                          ]
+                        : []),
+                    ]}
                   >
                     <TextArea rows={field.rows} />
                   </Form.Item>
@@ -681,6 +708,11 @@ export default function AppOpsContentPage() {
                       hint="首页与行情页顶部营销文案（title / subtitle / CTA）"
                       fields={homeBannerFields}
                       defaultOpen
+                    />
+                    <FieldGroup
+                      title="Global App copy"
+                      hint='覆盖所有使用 AppText / tr 的静态界面文案。请输入有效 JSON，例如 {"Retry":"Try again"}；英文和 Hindi 分开保存。'
+                      fields={homeGlobalCopyFields}
                     />
                     <FieldGroup
                       title="Account / Funds labels"

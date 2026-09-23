@@ -14,6 +14,8 @@
 - [APP 设计系统](APP_DESIGN_SYSTEM.md)：客户端视觉和交互规范。
 - [App 内容端到端矩阵](APP_CONTENT_END_TO_END_MATRIX.md)：App、API、超级管理员内容键映射。
 
+全局静态界面文案在超级管理员后台 `App Content → Home → Global App copy` 中按语言维护；页面级结构化字段优先于全局覆盖。动态行情、订单、账户数据不属于文案配置。
+
 ## 架构与审计参考
 
 - [项目交付总览](项目交付总览.md)

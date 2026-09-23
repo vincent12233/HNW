@@ -134,6 +134,20 @@ class AppContentBundle {
     return (value == null || value.isEmpty) ? null : value;
   }
 
+  Map<String, String> uiCopy() {
+    final raw = home['ui.copy']?.body.trim();
+    if (raw == null || raw.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map) return const {};
+      return decoded.map(
+        (key, value) => MapEntry(key.toString(), value.toString()),
+      );
+    } catch (_) {
+      return const {};
+    }
+  }
+
   LegalDocumentContent privacyDocument() =>
       LegalDocumentContent.fromBlock(legal['privacy.document']);
 
@@ -142,15 +156,6 @@ class AppContentBundle {
 
   LegalDocumentContent riskDocument() =>
       LegalDocumentContent.fromBlock(legal['risk.document']);
-
-  List<AppContentBlock> insightArticles() {
-    final articles =
-        insights.entries
-            .where((entry) => entry.key.startsWith('article.'))
-            .toList()
-          ..sort((a, b) => a.key.compareTo(b.key));
-    return articles.map((entry) => entry.value).toList();
-  }
 
   factory AppContentBundle.fromJson(Map<String, dynamic> json) {
     Map<String, AppContentBlock> parseModule(dynamic value) {
@@ -247,6 +252,7 @@ class AppContentService extends ChangeNotifier {
         return _bundle;
       }
       _bundle = AppContentBundle.fromJson(Map<String, dynamic>.from(decoded));
+      AppLanguage.instance.replaceRemoteCopy(_bundle.uiCopy());
       _loadedAt = DateTime.now();
       _loadedLocale = locale;
       _lastFetchFailed = false;

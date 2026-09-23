@@ -109,7 +109,7 @@ class _OrdersTabState extends State<OrdersTab> {
         action: widget.onRefresh == null
             ? null
             : IconButton(
-                tooltip: 'Refresh orders',
+                tooltip: tr('Refresh orders'),
                 onPressed: _refreshing ? null : _refresh,
                 icon: const Icon(Icons.refresh_rounded),
               ),
@@ -139,7 +139,7 @@ class _OrdersTabState extends State<OrdersTab> {
                 ),
               ),
               IconButton(
-                tooltip: 'Refresh orders',
+                tooltip: tr('Refresh orders'),
                 onPressed: widget.onRefresh == null || _refreshing
                     ? null
                     : _refresh,

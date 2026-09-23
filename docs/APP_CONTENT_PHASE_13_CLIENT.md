@@ -1,6 +1,6 @@
 # App Content Phase 13 — Flutter Dynamic Content & App Settings
 
-**Status:** Complete (client integration).  
+**Status:** Historical; superseded by the current end-to-end matrix.
 **Baseline before phase:** `03da9ca`  
 **No production migration / deploy.**
 
@@ -34,7 +34,7 @@ Invalid/unparseable current version → **no lock**.
 
 - Structured `GET /insights` first via `listResult()` (SUCCESS vs FAILURE)
 - **SUCCESS []** → empty state (no legacy KV)
-- **FAILURE** → legacy KV `article.*` → local static
+- **FAILURE** → explicit retryable error; the client no longer executes legacy KV or bundled article fallbacks
 - Locale: en/hi request; server may return en fallback
 
 ---
@@ -61,7 +61,7 @@ Invalid/unparseable current version → **no lock**.
 
 ## KV content
 
-Unchanged consumers for Home/Deposit/Support/Trading/Legal/About via `AppContentService`. Support desk tags/quick replies remain admin-only.
+Home/Deposit/Support/Trading/Legal/About remain on `AppContentService`. `HOME/ui.copy` provides validated English/Hindi JSON overrides for all static `AppText` / `tr` copy. Support desk tags/quick replies remain admin-only.
 
 ---
 
@@ -83,7 +83,7 @@ Plain-text CMS bodies (SelectableText / Text). No HTML injection.
 
 - Version compare / gate priority / optional dismiss
 - Announcement pick / expired filter
-- Insights SUCCESS [] vs FAILURE legacy
+- Insights SUCCESS [] vs explicit FAILURE state
 - API: ops-content + public featured DTO
 - `flutter analyze` / `flutter test` / web build with localhost define
 

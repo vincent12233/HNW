@@ -84,16 +84,16 @@ class OrderTicketPanel extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm),
         SegmentedButton<bool>(
           showSelectedIcon: false,
-          segments: const [
+          segments: [
             ButtonSegment<bool>(
               value: true,
               label: AppText('Buy'),
-              tooltip: 'Buy',
+              tooltip: tr('Buy'),
             ),
             ButtonSegment<bool>(
               value: false,
               label: AppText('Sell'),
-              tooltip: 'Sell',
+              tooltip: tr('Sell'),
             ),
           ],
           selected: {isBuy},

@@ -218,6 +218,8 @@ const insightArticles: Array<{
 
 export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
   // HOME
+  { module: AppContentModule.HOME, key: 'ui.copy', body: '{}', locale: 'en', sortOrder: 1 },
+  { module: AppContentModule.HOME, key: 'ui.copy', body: '{}', locale: 'hi', sortOrder: 1 },
   { module: AppContentModule.HOME, key: 'notifications.title', body: 'Notifications', locale: 'en', sortOrder: 5 },
   { module: AppContentModule.HOME, key: 'notifications.title', body: 'सूचनाएँ', locale: 'hi', sortOrder: 5 },
   { module: AppContentModule.HOME, key: 'notifications.loading', body: 'Loading notifications', locale: 'en', sortOrder: 5 },

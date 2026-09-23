@@ -270,6 +270,26 @@ export class AppContentService {
     if (rawBody.length > 200_000) {
       throw new BadRequestException('Content body is too long');
     }
+    if (module === AppContentModule.HOME && key === 'ui.copy') {
+      try {
+        const copy = JSON.parse(rawBody) as unknown;
+        if (
+          !copy ||
+          Array.isArray(copy) ||
+          typeof copy !== 'object' ||
+          Object.entries(copy).some(
+            ([source, replacement]) =>
+              !source.trim() || typeof replacement !== 'string',
+          )
+        ) {
+          throw new Error('invalid copy dictionary');
+        }
+      } catch {
+        throw new BadRequestException(
+          'Global App copy must be a JSON object with string values',
+        );
+      }
+    }
 
     const normalizedBody =
       module === AppContentModule.SUPPORT && key === 'salesmartly_script_url'

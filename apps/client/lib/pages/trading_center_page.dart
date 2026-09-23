@@ -388,7 +388,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Markets',
+                    tooltip: tr('Markets'),
                     onPressed: widget.onViewMarkets,
                     icon: const Icon(
                       Icons.search_rounded,
@@ -411,7 +411,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        tooltip: 'Notifications',
+                        tooltip: tr('Notifications'),
                         onPressed: widget.onAlertsTap,
                         icon: const Icon(
                           Icons.notifications_none_rounded,

@@ -396,7 +396,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Remove bank account',
+                  tooltip: tr('Remove bank account'),
                   constraints: const BoxConstraints(
                     minWidth: AppMotion.tapTarget,
                     minHeight: AppMotion.tapTarget,

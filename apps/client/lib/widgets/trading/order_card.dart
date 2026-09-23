@@ -204,7 +204,7 @@ class _OrderCardState extends State<OrderCard> {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     IconButton(
-                      tooltip: 'View order details',
+                      tooltip: tr('View order details'),
                       visualDensity: VisualDensity.compact,
                       onPressed: () => showStandardOrderDetails(
                         context,

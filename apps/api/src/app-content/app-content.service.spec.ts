@@ -242,6 +242,23 @@ function mockService(prisma: any, audit?: any) {
 }
 
 describe('AppContentService SaleSmartly URL sync', () => {
+  it('rejects malformed global App copy before querying the database', async () => {
+    const findUnique = jest.fn();
+    const upsert = jest.fn();
+    const service = mockService({ appContentEntry: { findUnique, upsert } });
+
+    await expect(
+      service.upsertEntry({
+        module: 'HOME',
+        key: 'ui.copy',
+        locale: 'en',
+        body: '["not","an","object"]',
+      }),
+    ).rejects.toThrow('Global App copy must be a JSON object with string values');
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   it('mirrors salesmartly_script_url to the other locale on upsert', async () => {
     const upsert = jest.fn().mockResolvedValue({
       id: 'row',

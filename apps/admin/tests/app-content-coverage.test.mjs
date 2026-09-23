@@ -119,3 +119,26 @@ test('static Flutter content keys exist in API defaults and Super Admin', () => 
     assert.ok(adminKeys.get(module)?.has(key), `${path}: ${module}:${key} missing editor`);
   }
 });
+
+test('Flutter static copy uses AppText or tr so global Admin overrides apply', () => {
+  const allowedDirectText = new Set([
+    'HNW',
+    'MA (5, 10, 20)',
+    'BOLL (20, 2)',
+    'RSI (14)',
+    'MACD (12, 26, 9)',
+    'VOL ${last.vol.toInt()}',
+  ]);
+  const violations = [];
+  for (const path of dartFiles(join(root, '../../client/lib'))) {
+    if (path.endsWith('/l10n/app_language.dart')) continue;
+    const source = readFileSync(path, 'utf8');
+    for (const [, value] of source.matchAll(/(?<![A-Za-z])Text\(\s*['"]([A-Za-z][^'"]*)['"]/g)) {
+      if (!allowedDirectText.has(value)) violations.push(`${path}: Text(${value})`);
+    }
+    for (const [, property, value] of source.matchAll(
+      /\b(tooltip|semanticLabel):\s*['"]([A-Za-z][^'"]*)['"]/g,
+    )) violations.push(`${path}: ${property}(${value})`);
+  }
+  assert.deepEqual(violations, []);
+});

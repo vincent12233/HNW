@@ -17,10 +17,10 @@ class AppLoadingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final reduceMotion = AppMotion.reduce(context);
     final indicator = reduceMotion
-        ? const Icon(
+        ? Icon(
             Icons.hourglass_empty_rounded,
             size: 28,
-            semanticLabel: 'Loading',
+            semanticLabel: tr('Loading'),
           )
         : CircularProgressIndicator(semanticsLabel: tr('Loading'));
     final column = Semantics(

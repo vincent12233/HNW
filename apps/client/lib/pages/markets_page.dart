@@ -469,7 +469,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        tooltip: 'Notifications',
+                        tooltip: tr('Notifications'),
                         onPressed: widget.onNotifications,
                         icon: const Icon(
                           Icons.notifications_none_rounded,

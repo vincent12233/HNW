@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -166,7 +167,96 @@ export class AppContentService {
     });
   }
 
-  async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor) {
+  async listHistory(id: string) {
+    const entry = await this.prisma.appContentEntry.findUnique({ where: { id } });
+    if (!entry) throw new NotFoundException('Content entry not found');
+    return this.prisma.auditLog.findMany({
+      where: { resource: 'app_content', resourceId: id },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+      take: 50,
+      select: {
+        id: true,
+        action: true,
+        createdAt: true,
+        metadata: true,
+        actor: { select: { fullName: true, role: true } },
+      },
+    });
+  }
+
+  async restoreEntry(id: string, revisionId: string, expectedUpdatedAt: string, actor: AppContentActor) {
+    if (typeof revisionId !== 'string' || !revisionId.trim()) {
+      throw new BadRequestException('Revision ID is required');
+    }
+    const expected = new Date(expectedUpdatedAt);
+    if (!Number.isFinite(expected.getTime())) throw new BadRequestException('Valid expectedUpdatedAt is required');
+    const revision = await this.prisma.auditLog.findFirst({
+      where: { id: revisionId, resource: 'app_content', resourceId: id },
+    });
+    const data = revision?.metadata;
+    const snapshot = data && typeof data === 'object' && !Array.isArray(data)
+      ? (data as Record<string, unknown>).after : null;
+    if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
+        typeof (snapshot as Record<string, unknown>).body !== 'string') {
+      throw new BadRequestException('Revision cannot be restored');
+    }
+    const prior = snapshot as Record<string, unknown>;
+    if (typeof prior.title !== 'string' && prior.title !== null ||
+        typeof prior.isActive !== 'boolean' ||
+        typeof prior.sortOrder !== 'number' || !Number.isFinite(prior.sortOrder) ||
+        (prior.body as string).length > 200_000) {
+      throw new BadRequestException('Revision snapshot is invalid');
+    }
+    const result = await this.prisma.$transaction(async (tx) => {
+      const current = await tx.appContentEntry.findUnique({ where: { id } });
+      if (!current) throw new NotFoundException('Content entry not found');
+      if (current.updatedAt.getTime() !== expected.getTime()) {
+        throw new ConflictException('Content changed since history was opened; reload and try again');
+      }
+      if (current.module === AppContentModule.SUPPORT && current.key === 'salesmartly_script_url') {
+        throw new BadRequestException('Restore the shared support URL through the editor');
+      }
+      const updated = await tx.appContentEntry.updateMany({
+        where: { id, updatedAt: expected },
+        data: {
+          body: prior.body as string,
+          title: prior.title as string | null,
+          isActive: prior.isActive as boolean,
+          sortOrder: prior.sortOrder as number,
+          ...(Object.hasOwn(prior, 'metadata') ? {
+            metadata: prior.metadata === null ? Prisma.JsonNull : prior.metadata as Prisma.InputJsonValue,
+          } : {}),
+        },
+      });
+      if (updated.count !== 1) throw new ConflictException('Content changed; reload and try again');
+      const restored = await tx.appContentEntry.findUniqueOrThrow({ where: { id } });
+      await this.audit.createLog({
+        actorId: actor.userId,
+        action: 'APP_CONTENT_RESTORE',
+        resource: 'app_content',
+        resourceId: id,
+        description: `Restored ${current.module}/${current.key}/${current.locale}`,
+        metadata: {
+          operatorRole: actor.role,
+          revisionId,
+          module: current.module,
+          key: current.key,
+          locale: current.locale,
+          before: this.snapshot(current),
+          after: this.snapshot(restored),
+        },
+      }, tx);
+      return restored;
+    });
+    return result;
+  }
+
+  private snapshot(row: { title: string | null; body: string; metadata?: Prisma.JsonValue | null; isActive: boolean; sortOrder: number }) {
+    return { title: row.title, body: row.body, metadata: row.metadata ?? null, isActive: row.isActive, sortOrder: row.sortOrder };
+  }
+
+  async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
     const module = this.parseModule(String(body.module));
     const key = String(body.key || '').trim();
     const locale = this.parseLocale(body.locale);
@@ -180,13 +270,33 @@ export class AppContentService {
     if (rawBody.length > 200_000) {
       throw new BadRequestException('Content body is too long');
     }
+    if (module === AppContentModule.HOME && key === 'ui.copy') {
+      try {
+        const copy = JSON.parse(rawBody) as unknown;
+        if (
+          !copy ||
+          Array.isArray(copy) ||
+          typeof copy !== 'object' ||
+          Object.entries(copy).some(
+            ([source, replacement]) =>
+              !source.trim() || typeof replacement !== 'string',
+          )
+        ) {
+          throw new Error('invalid copy dictionary');
+        }
+      } catch {
+        throw new BadRequestException(
+          'Global App copy must be a JSON object with string values',
+        );
+      }
+    }
 
     const normalizedBody =
       module === AppContentModule.SUPPORT && key === 'salesmartly_script_url'
         ? normalizeSaleSmartlyScriptUrl(rawBody)
         : rawBody;
 
-    const before = await this.prisma.appContentEntry.findUnique({
+    const before = await db.appContentEntry.findUnique({
       where: { module_key_locale: { module, key, locale } },
     });
 
@@ -201,7 +311,7 @@ export class AppContentService {
       locale,
     };
 
-    const result = await this.prisma.appContentEntry.upsert({
+    const result = await db.appContentEntry.upsert({
       where: {
         module_key_locale: { module, key, locale },
       },
@@ -228,7 +338,7 @@ export class AppContentService {
     ) {
       for (const otherLocale of ['en', 'hi']) {
         if (otherLocale === locale) continue;
-        await this.prisma.appContentEntry.upsert({
+        await db.appContentEntry.upsert({
           where: {
             module_key_locale: { module, key, locale: otherLocale },
           },
@@ -251,7 +361,7 @@ export class AppContentService {
     }
 
     if (actor) {
-      await this.audit.createLog({
+      const auditInput = {
         actorId: actor.userId,
         action: before ? 'APP_CONTENT_UPDATE' : 'APP_CONTENT_CREATE',
         resource: 'app_content',
@@ -262,22 +372,12 @@ export class AppContentService {
           module,
           key,
           locale,
-          before: before
-            ? {
-                title: before.title,
-                body: before.body,
-                isActive: before.isActive,
-                sortOrder: before.sortOrder,
-              }
-            : null,
-          after: {
-            title: result.title,
-            body: result.body,
-            isActive: result.isActive,
-            sortOrder: result.sortOrder,
-          },
+          before: before ? this.snapshot(before) : null,
+          after: this.snapshot(result),
         },
-      });
+      };
+      if (tx) await this.audit.createLog(auditInput, tx);
+      else await this.audit.createLog(auditInput);
     }
 
     return result;
@@ -287,11 +387,12 @@ export class AppContentService {
     if (!Array.isArray(entries) || entries.length === 0) {
       throw new BadRequestException('At least one content entry is required');
     }
-    const results = [];
-    for (const entry of entries) {
-      results.push(await this.upsertEntry(entry, actor));
-    }
-    return results;
+    if (entries.length > 200) throw new BadRequestException('Too many content entries');
+    return this.prisma.$transaction(async (tx) => {
+      const results = [];
+      for (const entry of entries) results.push(await this.upsertEntry(entry, actor, tx));
+      return results;
+    }, { timeout: 30_000 });
   }
 
   async deleteEntry(id: string, actor?: AppContentActor) {
@@ -314,12 +415,7 @@ export class AppContentService {
           module: existing.module,
           key: existing.key,
           locale: existing.locale,
-          before: {
-            title: existing.title,
-            body: existing.body,
-            isActive: existing.isActive,
-            sortOrder: existing.sortOrder,
-          },
+          before: this.snapshot(existing),
           after: null,
         },
       });

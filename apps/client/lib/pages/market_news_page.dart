@@ -2,6 +2,7 @@ import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../models/market_news_item.dart';
+import '../services/app_content_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
@@ -28,9 +29,29 @@ class MarketNewsPage extends StatefulWidget {
 }
 
 class _MarketNewsPageState extends State<MarketNewsPage> {
+  String _copy(String key, String fallback) =>
+      AppContentService.instance.current.text('home', key, fallback: fallback);
+
   late List<MarketNewsItem> items = List.of(widget.items);
   bool refreshing = false;
   bool refreshFailed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    AppContentService.instance.addListener(_onContentChanged);
+    AppContentService.instance.load();
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    AppContentService.instance.removeListener(_onContentChanged);
+    super.dispose();
+  }
 
   Future<void> refresh() async {
     if (refreshing || widget.onRefresh == null) return;
@@ -59,11 +80,11 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: AppBar(
-      title: const AppText('Market News'),
+      title: AppText(_copy('news.section_title', 'Market News')),
       actions: [
         if (widget.onRefresh != null)
           IconButton(
-            tooltip: 'Refresh',
+            tooltip: _copy('news.refresh', 'Refresh'),
             onPressed: refreshing ? null : refresh,
             icon: const Icon(Icons.refresh),
           ),
@@ -80,7 +101,10 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
               Padding(
                 padding: const EdgeInsets.all(AppSpacing.md),
                 child: AppText(
-                  'News could not be updated. Please try again.',
+                  _copy(
+                    'news.refresh_error',
+                    'News could not be updated. Please try again.',
+                  ),
                   textAlign: TextAlign.center,
                   style: AppTypography.bodySmall.copyWith(
                     color: AppColors.warning,
@@ -99,9 +123,14 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
                           children: [
                             const SizedBox(height: AppSpacing.xxxl),
                             AppEmptyState(
-                              title: 'Market news is unavailable',
-                              message:
-                                  'Headlines will appear when the market news feed is available.',
+                              title: _copy(
+                                'news.page_empty_title',
+                                'Market news is unavailable',
+                              ),
+                              message: _copy(
+                                'news.page_empty_body',
+                                'Headlines will appear when the market news feed is available.',
+                              ),
                               icon: Icons.newspaper_outlined,
                               onRetry: widget.onRefresh == null
                                   ? null

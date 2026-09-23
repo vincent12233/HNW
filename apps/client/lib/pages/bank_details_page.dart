@@ -134,7 +134,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                                       'Enter the bank account that will be used for withdrawals after manual review.',
                                 )
                               else ...[
-                                Text(
+                                AppText(
                                   'Add Bank Account',
                                   style: AuthLayout.title.copyWith(fontSize: 24),
                                 ),

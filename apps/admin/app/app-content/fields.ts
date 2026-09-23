@@ -10,6 +10,7 @@ export type FieldDef = {
   rows: number;
   title?: boolean;
   locale?: string;
+  jsonObject?: boolean;
 };
 
 export const homeBannerFields: FieldDef[] = [
@@ -17,6 +18,36 @@ export const homeBannerFields: FieldDef[] = [
   { key: "banner.subtitle", label: "首页横幅副标题", rows: 2 },
   { key: "markets.banner.title", label: "行情页横幅标题", rows: 2 },
   { key: "markets.banner.subtitle", label: "行情页横幅副标题", rows: 2 },
+  { key: "markets.loading", label: "行情加载提示", rows: 1 },
+  { key: "markets.watchlist_error_title", label: "自选列表加载失败标题", rows: 1 },
+  { key: "markets.watchlist_error_body", label: "自选列表加载失败说明", rows: 2 },
+  { key: "markets.search_error_title", label: "行情搜索失败标题", rows: 1 },
+  { key: "markets.search_error_body", label: "行情搜索失败说明", rows: 2 },
+  { key: "markets.load_more", label: "加载更多按钮", rows: 1 },
+  { key: "markets.load_more_retry", label: "加载更多重试按钮", rows: 1 },
+  { key: "markets.refresh", label: "刷新行情按钮", rows: 1 },
+  { key: "markets.search_page.title", label: "股票搜索页标题", rows: 1 },
+  { key: "markets.search_page.hint", label: "股票搜索输入提示", rows: 1 },
+  { key: "markets.search_page.searching", label: "股票搜索加载提示", rows: 1 },
+  { key: "markets.search_page.watchlist_update_error", label: "自选更新失败提示", rows: 2 },
+  { key: "markets.search_page.partial_error", label: "搜索失败但保留结果提示", rows: 2 },
+  { key: "markets.search_page.more_error", label: "加载更多失败但保留结果提示", rows: 2 },
+  { key: "markets.search_page.error_title", label: "股票搜索失败标题", rows: 1 },
+  { key: "markets.search_page.error_body", label: "股票搜索失败说明", rows: 2 },
+  { key: "markets.search_page.empty_title", label: "无行情数据标题", rows: 1 },
+  { key: "markets.search_page.empty_body", label: "无行情数据说明", rows: 2 },
+  { key: "markets.search_page.no_match_title", label: "无匹配股票标题", rows: 1 },
+  { key: "markets.search_page.no_match_body", label: "无匹配股票说明", rows: 2 },
+  { key: "markets.search_page.loading_more", label: "加载更多进行中提示", rows: 1 },
+];
+
+export const homeGlobalCopyFields: FieldDef[] = [
+  {
+    key: "ui.copy",
+    label: '全局 App 文案覆盖（JSON：{"当前英文原文":"替换文案"}）',
+    rows: 12,
+    jsonObject: true,
+  },
 ];
 
 export const homeCompanyFields: FieldDef[] = [
@@ -49,9 +80,26 @@ export const homeNewsFields: FieldDef[] = [
   { key: "view_all_cta", label: "「查看全部」按钮", rows: 1 },
   { key: "news.section_title", label: "市场新闻区标题", rows: 1 },
   { key: "news.empty", label: "市场新闻空状态", rows: 2 },
+  { key: "news.page_empty_title", label: "市场新闻页空状态标题", rows: 1 },
+  { key: "news.page_empty_body", label: "市场新闻页空状态说明", rows: 2 },
+  { key: "news.refresh", label: "刷新新闻按钮提示", rows: 1 },
+  { key: "news.refresh_error", label: "新闻刷新失败提示", rows: 2 },
 ];
 
 export const homeProfileFields: FieldDef[] = [
+  { key: "notifications.title", label: "通知页面标题", rows: 1 },
+  { key: "notifications.loading", label: "通知加载提示", rows: 1 },
+  { key: "notifications.load_error", label: "通知加载失败标题", rows: 1 },
+  { key: "notifications.load_error_body", label: "通知加载失败说明", rows: 2 },
+  { key: "notifications.empty_title", label: "无通知标题", rows: 1 },
+  { key: "notifications.empty_body", label: "无通知说明", rows: 2 },
+  { key: "notifications.recent", label: "最近更新标题", rows: 1 },
+  { key: "notifications.caught_up", label: "全部已读提示", rows: 1 },
+  { key: "notifications.unread_count", label: "未读数量模板（{count}）", rows: 1 },
+  { key: "notifications.mark_read_error", label: "标记已读失败提示", rows: 2 },
+  { key: "notifications.mark_all_error", label: "全部标记已读失败提示", rows: 2 },
+  { key: "notifications.marking", label: "标记处理中辅助提示", rows: 1 },
+  { key: "notifications.unread", label: "未读状态辅助提示", rows: 1 },
   { key: "profile.page_title", label: "个人中心页标题", rows: 1 },
   { key: "profile.section.overview", label: "概览分区标题", rows: 1 },
   { key: "profile.section.account", label: "Account 分区标题", rows: 1 },
@@ -121,6 +169,7 @@ export const homeWithdrawFields: FieldDef[] = [
 ];
 
 export const homeFields: FieldDef[] = [
+  ...homeGlobalCopyFields,
   ...homeBannerFields,
   ...homeCompanyFields,
   ...homeFundsFields,
@@ -252,6 +301,11 @@ export const tradingFields: FieldDef[] = [
   { key: "ipo.empty_subtitle", label: "IPO 其他列表空状态说明", rows: 2 },
   { key: "portfolio.page_title", label: "组合页标题", rows: 1 },
   { key: "portfolio.page_subtitle", label: "组合页副标题", rows: 1 },
+  { key: "portfolio.loading", label: "组合加载提示", rows: 1 },
+  { key: "portfolio.load_error_title", label: "组合加载失败标题", rows: 1 },
+  { key: "portfolio.recent_activity", label: "近期活动标题", rows: 1 },
+  { key: "portfolio.view_details", label: "查看详情按钮", rows: 1 },
+  { key: "portfolio.close", label: "关闭按钮", rows: 1 },
   { key: "portfolio.summary_heading", label: "投资摘要标题", rows: 1 },
   { key: "portfolio.allocation_heading", label: "资产配置标题", rows: 1 },
   { key: "portfolio.empty_title", label: "组合空状态标题", rows: 2 },

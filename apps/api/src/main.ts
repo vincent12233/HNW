@@ -5,10 +5,15 @@ import { randomUUID } from 'crypto';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './observability/all-exceptions.filter';
+import { businessFailureEvent } from './observability/business-events';
 import { isLocalDevelopmentOrigin } from './common/local-development-origin';
+import {
+  createRateLimitStore,
+  normalizeRateLimitPath,
+  type RateLimitStore,
+} from './common/rate-limit-store';
+import { resolveTrustProxyHops } from './common/trust-proxy';
 
-type RateEntry = { count: number; resetAt: number };
-const rateEntries = new Map<string, RateEntry>();
 const httpLogger = new Logger('HttpAudit');
 
 function isLoopbackOrPrivateHostname(hostname: string) {
@@ -46,6 +51,7 @@ function assertPublicHttpsUrl(label: string, value: string) {
 
 function validateProductionEnvironment() {
   if (process.env.NODE_ENV !== 'production') return;
+  resolveTrustProxyHops();
   const requiredSecrets = [
     'JWT_SECRET',
     'OTC_KEY_ENCRYPTION_SECRET',
@@ -106,6 +112,9 @@ function validateProductionEnvironment() {
       'PRIVATE_OBJECT_ROOT must be an absolute filesystem path in production',
     );
   }
+  if (!process.env.RATE_LIMIT_REDIS_URL?.trim()) {
+    throw new Error('RATE_LIMIT_REDIS_URL is required in production');
+  }
 }
 
 function requestLimit(path: string) {
@@ -133,12 +142,15 @@ function requestLimit(path: string) {
   return 300;
 }
 
-function securityMiddleware(req: Request, res: Response, next: NextFunction) {
-  const startedAt = Date.now();
-  const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
-  res.setHeader('x-request-id', requestId);
-  res.on('finish', () => {
-    const payload = JSON.stringify({
+function securityMiddleware(rateLimitStore: RateLimitStore) {
+  return async (req: Request, res: Response, next: NextFunction) => {
+    const startedAt = Date.now();
+    const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
+    res.setHeader('x-request-id', requestId);
+    res.on('finish', () => {
+      const durationMs = Date.now() - startedAt;
+      const timestamp = new Date().toISOString();
+      const payload = JSON.stringify({
         level:
           res.statusCode >= 500
             ? 'error'
@@ -150,114 +162,152 @@ function securityMiddleware(req: Request, res: Response, next: NextFunction) {
         method: req.method,
         path: req.path,
         statusCode: res.statusCode,
-        durationMs: Date.now() - startedAt,
+        durationMs,
         ip: req.ip,
         userAgent: req.header('user-agent')?.slice(0, 200),
-        timestamp: new Date().toISOString(),
+        timestamp,
       });
-    if (res.statusCode >= 500) httpLogger.error(payload);
-    else if (res.statusCode >= 400) httpLogger.warn(payload);
-    else httpLogger.log(payload);
-  });
-  res.setHeader('x-content-type-options', 'nosniff');
-  res.setHeader('x-frame-options', 'DENY');
-  res.setHeader('referrer-policy', 'no-referrer');
-  res.setHeader(
-    'permissions-policy',
-    'camera=(), microphone=(), geolocation=()',
-  );
-  res.setHeader('cross-origin-resource-policy', 'same-site');
-  res.setHeader(
-    'content-security-policy',
-    "default-src 'none'; frame-ancestors 'none'",
-  );
-  // Early middleware errors must remain readable by allowed browser clients.
-  const requestOrigin = req.header('origin');
-  const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
-    .split(',')
-    .map((value) => value.trim());
-  if (
-    requestOrigin &&
-    (configuredOrigins.includes(requestOrigin) ||
-      (process.env.NODE_ENV !== 'production' &&
-        isLocalDevelopmentOrigin(requestOrigin)))
-  ) {
-    res.setHeader('Access-Control-Allow-Origin', requestOrigin);
-    res.setHeader('Access-Control-Allow-Credentials', 'true');
-    res.vary('Origin');
-  }
-  if (req.method === 'OPTIONS') {
-    next();
-    return;
-  }
-  // Staff sessions use an HttpOnly cookie. Require an explicitly allowed
-  // browser origin for state-changing cookie requests to prevent CSRF.
-  if (
-    ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
-    req.headers.cookie?.match(/(?:^|;\s*)staff_access(?:_[a-z]+)?=/)
-  ) {
-    const origin = req.header('origin');
-    const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
+      if (res.statusCode >= 500) httpLogger.error(payload);
+      else if (res.statusCode >= 400) httpLogger.warn(payload);
+      else httpLogger.log(payload);
+
+      const event = businessFailureEvent(req.method, req.path, res.statusCode);
+      if (event) {
+        httpLogger.warn(
+          JSON.stringify({
+            level: 'warn',
+            event,
+            requestId,
+            path: normalizeRateLimitPath(req.path),
+            statusCode: res.statusCode,
+            durationMs,
+            timestamp,
+          }),
+        );
+      }
+    });
+    res.setHeader('x-content-type-options', 'nosniff');
+    res.setHeader('x-frame-options', 'DENY');
+    res.setHeader('referrer-policy', 'no-referrer');
+    res.setHeader(
+      'permissions-policy',
+      'camera=(), microphone=(), geolocation=()',
+    );
+    res.setHeader('cross-origin-resource-policy', 'same-site');
+    res.setHeader(
+      'content-security-policy',
+      "default-src 'none'; frame-ancestors 'none'",
+    );
+    // Early middleware errors must remain readable by allowed browser clients.
+    const requestOrigin = req.header('origin');
+    const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
       .split(',')
-      .map((value) => value.trim())
-      .filter(Boolean);
-    const localOrigin =
-      process.env.NODE_ENV !== 'production' &&
-      !!origin &&
-      isLocalDevelopmentOrigin(origin);
-    if (!origin || (!allowedOrigins.includes(origin) && !localOrigin)) {
-      res.status(403).json({
-        statusCode: 403,
-        message: 'Origin verification failed',
+      .map((value) => value.trim());
+    if (
+      requestOrigin &&
+      (configuredOrigins.includes(requestOrigin) ||
+        (process.env.NODE_ENV !== 'production' &&
+          isLocalDevelopmentOrigin(requestOrigin)))
+    ) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.vary('Origin');
+    }
+    if (req.method === 'OPTIONS') {
+      next();
+      return;
+    }
+    // Staff sessions use an HttpOnly cookie. Require an explicitly allowed
+    // browser origin for state-changing cookie requests to prevent CSRF.
+    if (
+      ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method) &&
+      req.headers.cookie?.match(/(?:^|;\s*)staff_access(?:_[a-z]+)?=/)
+    ) {
+      const origin = req.header('origin');
+      const allowedOrigins = (process.env.CORS_ORIGINS ?? '')
+        .split(',')
+        .map((value) => value.trim())
+        .filter(Boolean);
+      const localOrigin =
+        process.env.NODE_ENV !== 'production' &&
+        !!origin &&
+        isLocalDevelopmentOrigin(origin);
+      if (!origin || (!allowedOrigins.includes(origin) && !localOrigin)) {
+        res.status(403).json({
+          statusCode: 403,
+          message: 'Origin verification failed',
+          requestId,
+        });
+        return;
+      }
+    }
+    if (process.env.NODE_ENV === 'production') {
+      res.setHeader(
+        'strict-transport-security',
+        'max-age=31536000; includeSubDomains',
+      );
+    }
+
+    const windowMs = 60_000;
+    const key = `${req.ip}:${req.method}:${normalizeRateLimitPath(req.path)}`;
+    let entry;
+    try {
+      entry = await rateLimitStore.consume(key, windowMs);
+    } catch (error) {
+      httpLogger.error(
+        JSON.stringify({ event: 'rate_limit_store_error', requestId, error }),
+      );
+      res.status(503).json({
+        statusCode: 503,
+        message: 'Request protection is temporarily unavailable',
         requestId,
       });
       return;
     }
-  }
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader(
-      'strict-transport-security',
-      'max-age=31536000; includeSubDomains',
-    );
-  }
-
-  const now = Date.now();
-  const windowMs = 60_000;
-  const key = `${req.ip}:${req.method}:${req.path}`;
-  const current = rateEntries.get(key);
-  const entry =
-    !current || current.resetAt <= now
-      ? { count: 0, resetAt: now + windowMs }
-      : current;
-  entry.count += 1;
-  rateEntries.set(key, entry);
-  const limit = requestLimit(req.path);
-  res.setHeader('x-ratelimit-limit', limit);
-  res.setHeader('x-ratelimit-remaining', Math.max(0, limit - entry.count));
-  if (entry.count > limit) {
-    res.setHeader('retry-after', Math.ceil((entry.resetAt - now) / 1000));
-    res
-      .status(429)
-      .json({ statusCode: 429, message: 'Too many requests', requestId });
-    return;
-  }
-  if (rateEntries.size > 10_000) {
-    for (const [entryKey, value] of rateEntries) {
-      if (value.resetAt <= now) rateEntries.delete(entryKey);
+    const limit = requestLimit(req.path);
+    res.setHeader('x-ratelimit-limit', limit);
+    res.setHeader('x-ratelimit-remaining', Math.max(0, limit - entry.count));
+    if (entry.count > limit) {
+      const retryAfterSeconds = Math.max(
+        1,
+        Math.ceil((entry.resetAt - Date.now()) / 1000),
+      );
+      res.setHeader('retry-after', retryAfterSeconds);
+      httpLogger.warn(
+        JSON.stringify({
+          level: 'warn',
+          event: 'rate_limit_blocked',
+          requestId,
+          method: req.method,
+          path: normalizeRateLimitPath(req.path),
+          limit,
+          count: entry.count,
+          retryAfterSeconds,
+          timestamp: new Date().toISOString(),
+        }),
+      );
+      res
+        .status(429)
+        .json({ statusCode: 429, message: 'Too many requests', requestId });
+      return;
     }
-  }
-  next();
+    next();
+  };
 }
 
 async function bootstrap() {
   validateProductionEnvironment();
+  const rateLimitStore = await createRateLimitStore();
   const app = await NestFactory.create(AppModule);
 
   const expressApp = app.getHttpAdapter().getInstance() as {
     set: (setting: string, value: unknown) => unknown;
   };
-  expressApp.set('trust proxy', 1);
-  app.use(securityMiddleware);
+  expressApp.set('trust proxy', resolveTrustProxyHops());
+  app.use(securityMiddleware(rateLimitStore));
+  app.enableShutdownHooks();
+  process.once('SIGTERM', () => void rateLimitStore.close());
+  process.once('SIGINT', () => void rateLimitStore.close());
 
   // KYC includes two ID files (15 MB each), a selfie (2 MB) and a signature (1 MB). Base64 increases payload size by
   // roughly one third; KycService enforces each individual file limit.

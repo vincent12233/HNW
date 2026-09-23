@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_language.dart';
 import '../models/trading_order.dart';
 import '../theme/app_colors.dart';
 import '../utils/number_formatters.dart';
@@ -132,7 +133,7 @@ Future<bool> confirmCancelTradingOrder(
     context: context,
     builder: (dialogContext) {
       return AlertDialog(
-        title: const Text('Cancel this order?'),
+        title: const AppText('Cancel this order?'),
         content: Text(
           '${OrderStatusPresentation.sideLabel(order.isBuy ? 'BUY' : 'SELL')} '
           '${order.symbol} · ${order.exchange}\n'
@@ -141,12 +142,12 @@ Future<bool> confirmCancelTradingOrder(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Keep order'),
+            child: const AppText('Keep order'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.loss),
-            child: const Text('Confirm cancel'),
+            child: const AppText('Confirm cancel'),
           ),
         ],
       );

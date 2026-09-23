@@ -298,7 +298,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                 backgroundColor: Colors.white.withValues(alpha: 0.12),
               ),
               icon: Icon(Icons.close_rounded, size: 16 * m.scale),
-              tooltip: 'Close',
+              tooltip: tr('Close'),
             ),
             SizedBox(width: 6 * m.scale),
             Stack(
@@ -439,7 +439,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                   height: 28 * m.scale,
                 ),
                 onPressed: () => setState(() => _noticeVisible = false),
-                tooltip: 'Dismiss hours notice',
+                tooltip: tr('Dismiss hours notice'),
                 icon: Icon(
                   Icons.close_rounded,
                   size: 14 * m.scale,

@@ -1,8 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import ts from 'typescript';
 
 import {
   aboutFields,
@@ -29,19 +30,32 @@ function apiDefaultKeys() {
     join(root, '../../api/src/app-content/app-content.defaults.ts'),
     'utf8',
   );
+  const syntax = ts.createSourceFile('app-content.defaults.ts', source, ts.ScriptTarget.Latest, true);
   const byModule = new Map();
-  const rows = source.matchAll(
-    /module:\s*AppContentModule\.(\w+),[\s\S]*?key:\s*'([^']+)',[\s\S]*?locale:\s*'([^']+)'/g,
-  );
-  for (const [, module, key] of rows) {
-    if (!byModule.has(module)) byModule.set(module, new Set());
-    byModule.get(module).add(key);
-  }
+  const property = (node, name) => node.properties.find(
+    (item) => ts.isPropertyAssignment(item) && item.name.getText(syntax) === name,
+  )?.initializer;
+  const visit = (node) => {
+    if (ts.isObjectLiteralExpression(node)) {
+      const moduleNode = property(node, 'module');
+      const key = property(node, 'key');
+      const locale = property(node, 'locale');
+      if (moduleNode && ts.isPropertyAccessExpression(moduleNode) &&
+          moduleNode.expression.getText(syntax) === 'AppContentModule' &&
+          key && ts.isStringLiteral(key) && locale && ts.isStringLiteral(locale)) {
+        const name = moduleNode.name.text;
+        if (!byModule.has(name)) byModule.set(name, new Map());
+        if (!byModule.get(name).has(key.text)) byModule.get(name).set(key.text, new Set());
+        byModule.get(name).get(key.text).add(locale.text);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(syntax);
   return byModule;
 }
 
-test('every API App Content default has a Super Admin editor field', () => {
-  const adminKeys = new Map([
+const adminKeys = new Map([
     ['HOME', keysOf([...homeFields, ...homeLegacyFields])],
     ['DEPOSIT', keysOf(depositFields)],
     [
@@ -52,12 +66,79 @@ test('every API App Content default has a Super Admin editor field', () => {
     ['ABOUT', keysOf(aboutFields)],
     ['LEGAL', new Set(['privacy.document', 'terms.document', 'risk.document'])],
     ['INSIGHTS', keysOf([...insightIntroFields, ...insightArticleKeys.map((key) => ({ key }))])],
-  ]);
+]);
+
+test('every API App Content default has a Super Admin editor field', () => {
 
   for (const [module, apiKeys] of apiDefaultKeys()) {
     const editable = adminKeys.get(module);
     assert.ok(editable, `Missing Super Admin module editor for ${module}`);
-    const missing = [...apiKeys].filter((key) => !editable.has(key));
+    const missing = [...apiKeys.keys()].filter((key) => !editable.has(key));
     assert.deepEqual(missing, [], `${module} keys missing from Super Admin`);
+    if (!['LEGAL', 'ABOUT'].includes(module)) {
+      for (const [key, locales] of apiKeys) {
+        if (locales.has('zh')) continue;
+        assert.deepEqual([...locales].sort(), ['en', 'hi'], `${module}:${key} locale coverage`);
+      }
+    }
   }
+});
+
+function* dartFiles(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const path = join(directory, entry.name);
+    if (entry.isDirectory()) yield* dartFiles(path);
+    else if (entry.name.endsWith('.dart')) yield path;
+  }
+}
+
+test('static Flutter content keys exist in API defaults and Super Admin', () => {
+  const defaults = apiDefaultKeys();
+  const references = [];
+  for (const path of dartFiles(join(root, '../../client/lib'))) {
+    const source = readFileSync(path, 'utf8');
+    for (const [, module, key] of source.matchAll(
+      /\.text\(\s*'(home|deposit|support|trading|legal|about|insights)'\s*,\s*'([^']+)'/g,
+    )) references.push({ path, module: module.toUpperCase(), key });
+    for (const [, key] of source.matchAll(/_marketCopy\(\s*'([^']+)'/g)) {
+      references.push({ path, module: 'HOME', key });
+    }
+    for (const [, key] of source.matchAll(/_portfolioCopy\(\s*'([^']+)'/g)) {
+      references.push({ path, module: 'TRADING', key });
+    }
+    for (const [, key] of source.matchAll(/_notificationCopy\(\s*'([^']+)'/g)) {
+      references.push({ path, module: 'HOME', key: `notifications.${key}` });
+    }
+    for (const [, key] of source.matchAll(/_stockSearchCopy\(\s*'([^']+)'/g)) {
+      references.push({ path, module: 'HOME', key: `markets.search_page.${key}` });
+    }
+  }
+  assert.ok(references.length > 0, 'No static Flutter content references found');
+  for (const { path, module, key } of references) {
+    assert.ok(defaults.get(module)?.has(key), `${path}: ${module}:${key} missing API default`);
+    assert.ok(adminKeys.get(module)?.has(key), `${path}: ${module}:${key} missing editor`);
+  }
+});
+
+test('Flutter static copy uses AppText or tr so global Admin overrides apply', () => {
+  const allowedDirectText = new Set([
+    'HNW',
+    'MA (5, 10, 20)',
+    'BOLL (20, 2)',
+    'RSI (14)',
+    'MACD (12, 26, 9)',
+    'VOL ${last.vol.toInt()}',
+  ]);
+  const violations = [];
+  for (const path of dartFiles(join(root, '../../client/lib'))) {
+    if (path.endsWith('/l10n/app_language.dart')) continue;
+    const source = readFileSync(path, 'utf8');
+    for (const [, value] of source.matchAll(/(?<![A-Za-z])Text\(\s*['"]([A-Za-z][^'"]*)['"]/g)) {
+      if (!allowedDirectText.has(value)) violations.push(`${path}: Text(${value})`);
+    }
+    for (const [, property, value] of source.matchAll(
+      /\b(tooltip|semanticLabel):\s*['"]([A-Za-z][^'"]*)['"]/g,
+    )) violations.push(`${path}: ${property}(${value})`);
+  }
+  assert.deepEqual(violations, []);
 });

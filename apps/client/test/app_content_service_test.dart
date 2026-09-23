@@ -7,6 +7,10 @@ void main() {
     final bundle = AppContentBundle.fromJson({
       'home': {
         'banner.title': {'body': 'Live markets', 'locale': 'en'},
+        'ui.copy': {
+          'body': '{"Retry":"Try again","Cancel":"Go back"}',
+          'locale': 'en',
+        },
       },
       'deposit': {
         'instructions': {'body': 'Contact support', 'locale': 'en'},
@@ -49,6 +53,7 @@ void main() {
     });
 
     expect(bundle.text('home', 'banner.title'), 'Live markets');
+    expect(bundle.uiCopy(), {'Retry': 'Try again', 'Cancel': 'Go back'});
     expect(bundle.text('deposit', 'instructions'), 'Contact support');
     expect(
       bundle.text('support', 'hours'),
@@ -57,7 +62,6 @@ void main() {
     expect(bundle.privacyDocument().sections.single.heading, '1');
     expect(bundle.riskDocument().sections.single.body, 'Capital can be lost');
     expect(bundle.text('about', 'company_name'), 'India Trading App');
-    expect(bundle.insightArticles().single.title, 'Account and KYC');
     expect(bundle.hasContent, isTrue);
   });
 
@@ -84,4 +88,13 @@ void main() {
       );
     },
   );
+
+  test('ignores malformed global UI copy', () {
+    final bundle = AppContentBundle.fromJson({
+      'home': {
+        'ui.copy': {'body': 'not-json', 'locale': 'en'},
+      },
+    });
+    expect(bundle.uiCopy(), isEmpty);
+  });
 }

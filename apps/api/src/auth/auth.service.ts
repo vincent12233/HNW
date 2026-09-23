@@ -25,14 +25,9 @@ import { RegisterDto } from './dto/register.dto';
 import { normalizePhone, internationalPhone } from './phone-number';
 import { TwoFactorService } from './two-factor.service';
 import { fixedInviteCode } from '../common/fixed-invite';
+import { SESSION_TTL } from './session-policy';
 @Injectable()
 export class AuthService {
-  // Short-lived access tokens; refresh tokens extend the session safely.
-  private static readonly CLIENT_TOKEN_SECONDS = 24 * 60 * 60;
-  private static readonly STAFF_TOKEN_SECONDS = 24 * 60 * 60;
-  private static readonly ACCESS_TOKEN_TTL = '24h';
-  private static readonly REFRESH_TOKEN_SECONDS = 30 * 24 * 60 * 60;
-  private static readonly REFRESH_TOKEN_TTL = '30d';
   private static readonly REFRESH_PURPOSE = 'REFRESH';
 
   constructor(
@@ -42,16 +37,6 @@ export class AuthService {
     private readonly config: ConfigService,
     private readonly twoFactor: TwoFactorService,
   ) {}
-
-  private isStaffRole(role: UserRole) {
-    return role !== UserRole.CLIENT;
-  }
-
-  private accessTokenExpiresIn(role: UserRole) {
-    return this.isStaffRole(role)
-      ? AuthService.STAFF_TOKEN_SECONDS
-      : AuthService.CLIENT_TOKEN_SECONDS;
-  }
 
   private async issueAccessToken(user: {
     id: string;
@@ -66,7 +51,7 @@ export class AuthService {
         role: user.role,
         version: user.authVersion,
       },
-      { expiresIn: AuthService.ACCESS_TOKEN_TTL },
+      { expiresIn: SESSION_TTL.access.jwt },
     );
   }
 
@@ -84,7 +69,7 @@ export class AuthService {
         version: user.authVersion,
         purpose: AuthService.REFRESH_PURPOSE,
       },
-      { expiresIn: AuthService.REFRESH_TOKEN_TTL },
+      { expiresIn: SESSION_TTL.refresh.jwt },
     );
   }
 
@@ -102,8 +87,8 @@ export class AuthService {
       accessToken,
       refreshToken,
       tokenType: 'Bearer' as const,
-      expiresIn: this.accessTokenExpiresIn(user.role),
-      refreshExpiresIn: AuthService.REFRESH_TOKEN_SECONDS,
+      expiresIn: SESSION_TTL.access.seconds,
+      refreshExpiresIn: SESSION_TTL.refresh.seconds,
     };
   }
 

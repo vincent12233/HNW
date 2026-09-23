@@ -1,4 +1,6 @@
 import { AppContentModule } from '../generated/prisma/enums';
+import { AuditService } from '../audit/audit.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
 import {
   AppContentService,
@@ -240,6 +242,23 @@ function mockService(prisma: any, audit?: any) {
 }
 
 describe('AppContentService SaleSmartly URL sync', () => {
+  it('rejects malformed global App copy before querying the database', async () => {
+    const findUnique = jest.fn();
+    const upsert = jest.fn();
+    const service = mockService({ appContentEntry: { findUnique, upsert } });
+
+    await expect(
+      service.upsertEntry({
+        module: 'HOME',
+        key: 'ui.copy',
+        locale: 'en',
+        body: '["not","an","object"]',
+      }),
+    ).rejects.toThrow('Global App copy must be a JSON object with string values');
+    expect(findUnique).not.toHaveBeenCalled();
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
   it('mirrors salesmartly_script_url to the other locale on upsert', async () => {
     const upsert = jest.fn().mockResolvedValue({
       id: 'row',
@@ -388,7 +407,137 @@ describe('AppContentService SaleSmartly URL sync', () => {
   });
 });
 
+describe('AppContentService history restore', () => {
+  const current = {
+    id: 'entry-1', module: AppContentModule.HOME, key: 'banner.title', locale: 'en',
+    title: 'Current', body: 'Current text', metadata: { color: 'red' },
+    isActive: true, sortOrder: 1, updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+  };
+  const revision = {
+    id: 'revision-1', metadata: {
+      after: { title: 'Previous', body: 'Previous text', isActive: false, sortOrder: 2, metadata: { color: 'green' } },
+    },
+  };
+
+  it('restores a matched revision and writes a new audit record in the same transaction', async () => {
+    const tx = {
+      appContentEntry: {
+        findUnique: jest.fn().mockResolvedValue(current),
+        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
+        findUniqueOrThrow: jest.fn().mockResolvedValue({ ...current, ...revision.metadata.after }),
+      },
+    };
+    const createLog = jest.fn().mockResolvedValue({ id: 'new-audit' });
+    const service = mockService({
+      auditLog: { findFirst: jest.fn().mockResolvedValue(revision) },
+      $transaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    }, { createLog });
+    await service.restoreEntry(current.id, revision.id, current.updatedAt.toISOString(), { userId: 'admin-1', role: 'ADMIN' });
+    expect(tx.appContentEntry.updateMany).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: current.id, updatedAt: current.updatedAt },
+      data: expect.objectContaining({ body: 'Previous text', metadata: { color: 'green' } }),
+    }));
+    expect(createLog).toHaveBeenCalledWith(expect.objectContaining({
+      action: 'APP_CONTENT_RESTORE', resourceId: current.id,
+      metadata: expect.objectContaining({ revisionId: revision.id }),
+    }), tx);
+  });
+
+  it('rejects a stale editor before writing', async () => {
+    const tx = { appContentEntry: { findUnique: jest.fn().mockResolvedValue(current), updateMany: jest.fn() } };
+    const service = mockService({
+      auditLog: { findFirst: jest.fn().mockResolvedValue(revision) },
+      $transaction: (fn: (client: typeof tx) => Promise<unknown>) => fn(tx),
+    });
+    await expect(service.restoreEntry(current.id, revision.id, '2025-01-01T00:00:00.000Z', { userId: 'admin', role: 'ADMIN' }))
+      .rejects.toThrow('Content changed');
+    expect(tx.appContentEntry.updateMany).not.toHaveBeenCalled();
+  });
+
+  it('rejects a revision from another entry', async () => {
+    const service = mockService({ auditLog: { findFirst: jest.fn().mockResolvedValue(null) } });
+    await expect(service.restoreEntry(current.id, 'unrelated', current.updatedAt.toISOString(), { userId: 'admin', role: 'ADMIN' }))
+      .rejects.toThrow('Revision cannot be restored');
+  });
+
+  it('rejects a missing revision ID before querying audit logs', async () => {
+    const findFirst = jest.fn();
+    const service = mockService({ auditLog: { findFirst } });
+    await expect(service.restoreEntry(current.id, '', current.updatedAt.toISOString(), { userId: 'admin', role: 'ADMIN' }))
+      .rejects.toThrow('Revision ID is required');
+    expect(findFirst).not.toHaveBeenCalled();
+  });
+});
+
+const databaseUrl = process.env.DATABASE_URL;
+const localTestDatabase = (() => {
+  try {
+    const url = new URL(databaseUrl || '');
+    return ['localhost', '127.0.0.1', 'postgres'].includes(url.hostname) &&
+      /e2e|test|local|dev/i.test(url.pathname);
+  } catch { return false; }
+})();
+
+(process.env.HNW_VERIFY_PG === '1' && localTestDatabase ? describe : describe.skip)(
+  'AppContentService bulk transaction on local PostgreSQL', () => {
+    let prisma: PrismaService;
+    let service: AppContentService;
+    const key = `test.bulk.atomic.${process.pid}`;
+
+    beforeAll(async () => {
+      prisma = new PrismaService({ get: () => databaseUrl } as any);
+      await prisma.$connect();
+      service = new AppContentService(prisma, new AuditService(prisma));
+    });
+
+    afterAll(async () => {
+      await prisma.appContentEntry.deleteMany({ where: { module: AppContentModule.HOME, key } });
+      await prisma.$disconnect();
+    });
+
+    it('rolls back earlier rows when a later entry fails validation', async () => {
+      await expect(service.bulkUpsert([
+        { module: 'HOME', key, locale: 'en', body: 'English' },
+        { module: 'INVALID', key, locale: 'hi', body: 'Hindi' },
+      ])).rejects.toThrow('Invalid content module');
+      expect(await prisma.appContentEntry.count({ where: { module: AppContentModule.HOME, key } })).toBe(0);
+    });
+
+    it('commits all rows on success', async () => {
+      await service.bulkUpsert([
+        { module: 'HOME', key, locale: 'en', body: 'English' },
+        { module: 'HOME', key, locale: 'hi', body: 'Hindi' },
+      ]);
+      expect(await prisma.appContentEntry.count({ where: { module: AppContentModule.HOME, key } })).toBe(2);
+    });
+  },
+);
+
 describe('APP_CONTENT_DEFAULTS coverage', () => {
+  it('keeps every operational content key available in English and Hindi', () => {
+    const bilingualModules = new Set([
+      AppContentModule.HOME,
+      AppContentModule.DEPOSIT,
+      AppContentModule.SUPPORT,
+      AppContentModule.TRADING,
+      AppContentModule.INSIGHTS,
+    ]);
+    const localesByKey = new Map<string, Set<string>>();
+    for (const entry of APP_CONTENT_DEFAULTS) {
+      if (!bilingualModules.has(entry.module) || entry.locale === 'zh') continue;
+      const key = `${entry.module}:${entry.key}`;
+      if (!localesByKey.has(key)) localesByKey.set(key, new Set());
+      localesByKey.get(key)!.add(entry.locale || 'en');
+    }
+
+    for (const [key, locales] of localesByKey) {
+      expect({ key, locales: [...locales].sort() }).toEqual({
+        key,
+        locales: ['en', 'hi'],
+      });
+    }
+  });
+
   it('includes HOME/DEPOSIT/SUPPORT/TRADING defaults for en and hi', () => {
     const byModuleLocale = new Map<string, Set<string>>();
     for (const entry of APP_CONTENT_DEFAULTS) {

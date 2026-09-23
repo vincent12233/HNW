@@ -7,6 +7,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
 import { createCharacterizationHttpApp } from '../testing/create-http-app';
 import { stubAuthenticatedUser } from '../testing/stub-auth.guard';
 import { UserRole } from '../generated/prisma/enums';
+import { SESSION_TTL } from './session-policy';
 
 describe('Current staff login cookie and role isolation', () => {
   let app: INestApplication;
@@ -62,12 +63,14 @@ describe('Current staff login cookie and role isolation', () => {
     expect(response.body.accessToken).toBeUndefined();
     expect(response.body.refreshToken).toBeUndefined();
     expect(response.body.user.role).toBe('ADMIN');
+    expect(response.body.expiresIn).toBe(SESSION_TTL.access.seconds);
     const cookie = response.headers['set-cookie'];
     expect(cookie).toBeDefined();
     const serialized = Array.isArray(cookie) ? cookie.join(';') : String(cookie);
     expect(serialized).toMatch(/staff_access_admin=staff-access/);
     expect(serialized).toMatch(/HttpOnly/i);
     expect(serialized).toMatch(/SameSite=Lax/i);
+    expect(serialized).toContain(`Max-Age=${SESSION_TTL.access.seconds}`);
   });
 
   it('keeps bearer tokens for staff login without Origin (non-browser clients)', async () => {

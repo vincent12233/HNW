@@ -270,7 +270,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text('Welcome Back!', style: AuthLayout.title),
+                    AppText('Welcome Back!', style: AuthLayout.title),
                     SizedBox(height: AuthLayout.titleGap),
                     AppText('Login to continue', style: AuthLayout.subtitle),
                   ],

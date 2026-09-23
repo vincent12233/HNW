@@ -9,7 +9,11 @@ ENV DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build
 ENV SHADOW_DATABASE_URL=postgresql://build:build@127.0.0.1:5432/build_shadow
 RUN npm ci --ignore-scripts
 COPY apps/api ./
-RUN npm run db:generate && npm run build
+RUN npm run db:generate && npm run build \
+    && mkdir -p /app/private-objects \
+    && chown -R node:node /app
+
+USER node
 
 EXPOSE 3100
-CMD ["sh", "-c", "npm run db:migrate && npm run seed && node dist/main.js"]
+CMD ["node", "dist/main.js"]

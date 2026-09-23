@@ -340,7 +340,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                           ),
                         ),
                         IconButton(
-                          tooltip: 'Send message',
+                          tooltip: tr('Send message'),
                           onPressed: busy ? null : _send,
                           icon: const Icon(
                             Icons.send,

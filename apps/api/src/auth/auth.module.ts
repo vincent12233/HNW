@@ -20,10 +20,6 @@ import { TwoFactorModule } from './two-factor.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
-        signOptions: {
-          // Long-lived sessions until explicit logout (client + staff).
-          expiresIn: '365d',
-        },
       }),
     }),
   ],

@@ -221,7 +221,7 @@ Reuse existing `AuditLog` + `AuditService` — do not create a parallel audit pr
 - Document OVER_CONFIGURED guide/terms policy
 
 ### PHASE 11B — Structured entities only where justified — **DONE**
-- InsightArticle (+ legacy KV fallback / idempotent import)
+- InsightArticle (legacy KV is imported server-side for data migration only; the client has no legacy fallback)
 - Announcement (Banner deferred as KEEP_AS_KV)
 - AppClientSetting (maintenance / versions)
 - Instrument `featuredHome` / `featuredMarkets` (no duplicate catalog)

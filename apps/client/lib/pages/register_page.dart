@@ -201,7 +201,10 @@ class _RegisterPageState extends State<RegisterPage> {
           children: [
             AuthBrandHeader(),
             SizedBox(height: 32),
-            Text('Continue to identity verification', style: AuthLayout.title),
+            AppText(
+              'Continue to identity verification',
+              style: AuthLayout.title,
+            ),
             SizedBox(height: 8),
             AppText(
               'Your account is not active yet. Complete the existing document verification steps.',
@@ -248,7 +251,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 child: const Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Text(
+                    AppText(
                       'Create Account',
                       style: AuthLayout.title,
                       softWrap: true,
@@ -391,13 +394,13 @@ class _RegisterPageState extends State<RegisterPage> {
                               children: [
                                 if (confirm.text.isNotEmpty &&
                                     password.text == confirm.text)
-                                  const Padding(
-                                    padding: EdgeInsets.only(right: 4),
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
                                     child: Icon(
                                       Icons.check_circle_outline,
                                       size: 18,
                                       color: AppColors.textSecondary,
-                                      semanticLabel: 'Passwords match',
+                                      semanticLabel: tr('Passwords match'),
                                     ),
                                   ),
                                 AuthPasswordToggle(

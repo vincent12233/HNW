@@ -7,6 +7,7 @@ import {
   FileProtectOutlined,
   HomeOutlined,
   InfoCircleOutlined,
+  HistoryOutlined,
   ReloadOutlined,
   SaveOutlined,
   StockOutlined,
@@ -22,6 +23,7 @@ import {
   Modal,
   Select,
   Space,
+  Tag,
   Tabs,
   Typography,
   message,
@@ -32,12 +34,14 @@ import { useEffect, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
+import { missingLocaleKeys } from "./coverage";
 import {
   aboutFields,
   depositFields,
   homeBannerFields,
   homeCompanyFields,
   homeFields,
+  homeGlobalCopyFields,
   homeFundsFields,
   homeLegacyFields,
   homeNewsFields,
@@ -105,7 +109,33 @@ function FieldGroup({
                         ? `${field.label} · 正文`
                         : field.label
                     }
-                    rules={[{ required: true, message: "请填写内容" }]}
+                    rules={[
+                      { required: true, message: "请填写内容" },
+                      ...(field.jsonObject
+                        ? [
+                            {
+                              validator: async (_: unknown, value: string) => {
+                                try {
+                                  const parsed = JSON.parse(value);
+                                  if (
+                                    !parsed ||
+                                    Array.isArray(parsed) ||
+                                    typeof parsed !== "object" ||
+                                    Object.entries(parsed).some(
+                                      ([key, replacement]) =>
+                                        !key.trim() || typeof replacement !== "string",
+                                    )
+                                  ) {
+                                    throw new Error("invalid dictionary");
+                                  }
+                                } catch {
+                                  throw new Error("请输入字符串键值组成的有效 JSON 对象");
+                                }
+                              },
+                            },
+                          ]
+                        : []),
+                    ]}
                   >
                     <TextArea rows={field.rows} />
                   </Form.Item>
@@ -130,6 +160,20 @@ type ContentEntry = {
   sortOrder: number;
   updatedAt?: string;
 };
+
+type ContentRevision = {
+  id: string;
+  action: string;
+  createdAt: string;
+  actor?: { fullName?: string | null } | null;
+  metadata?: { before?: { body?: string }; after?: { body?: string; title?: string | null } | null } | null;
+};
+
+const legalFieldLabels = {
+  "privacy.document": "隐私政策",
+  "terms.document": "服务条款",
+  "risk.document": "风险披露",
+} as const;
 
 function parseLegalDocument(body: string) {
   let document: unknown;
@@ -211,6 +255,29 @@ function entryTitle(
   );
 }
 
+function SavedLocaleStatus({
+  entries,
+  module,
+  keyName,
+}: {
+  entries: ContentEntry[];
+  module: ContentEntry["module"];
+  keyName: string;
+}) {
+  return (
+    <Space size={4} wrap aria-label={`${keyName} 已保存语言状态`}>
+      {(["en", "hi"] as const).map((locale) => {
+        const missing = missingLocaleKeys(entries, module, [keyName], locale).length > 0;
+        return (
+          <Tag key={locale} color={missing ? "error" : "success"}>
+            {locale.toUpperCase()} {missing ? "缺失" : "已配置"}
+          </Tag>
+        );
+      })}
+    </Space>
+  );
+}
+
 export default function AppOpsContentPage() {
   const [entries, setEntries] = useState<ContentEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -232,6 +299,43 @@ export default function AppOpsContentPage() {
     title: string;
     body: string;
   } | null>(null);
+  const [historyEntryId, setHistoryEntryId] = useState<string>();
+  const [history, setHistory] = useState<ContentRevision[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+
+  async function openHistory(id: string) {
+    setHistoryEntryId(id);
+    setHistory([]);
+    setHistoryLoading(true);
+    try {
+      const response = await api.get<ContentRevision[]>(`/admin/app-content/${encodeURIComponent(id)}/history`);
+      setHistory(response.data);
+    } catch (requestError: unknown) {
+      message.error(apiError(requestError, "历史记录加载失败"));
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function restoreRevision(revision: ContentRevision) {
+    const current = entries.find((item) => item.id === historyEntryId);
+    if (!current?.updatedAt || restoring) return;
+    setRestoring(true);
+    try {
+      await api.post(`/admin/app-content/${encodeURIComponent(current.id)}/restore`, {
+        revisionId: revision.id,
+        expectedUpdatedAt: current.updatedAt,
+      });
+      setHistoryEntryId(undefined);
+      await loadAll();
+      message.success("历史内容已恢复，页面表单已重新加载");
+    } catch (requestError: unknown) {
+      message.error(apiError(requestError, "恢复失败，请刷新后重试"));
+    } finally {
+      setRestoring(false);
+    }
+  }
 
   async function loadAll() {
     setLoading(true);
@@ -444,6 +548,9 @@ export default function AppOpsContentPage() {
         const locale = field.locale ?? "en";
         const body = values[field.key] ?? "";
         const titleKey = `${field.key}__title`;
+        const title = field.title ? values[titleKey] || null : undefined;
+        const previous = entries.find((entry) => entry.module === module && entry.key === field.key && entry.locale === locale);
+        if (previous && previous.body === body && (!field.title || (previous.title ?? null) === title)) return [];
         // Do not send isActive/sortOrder — preserve existing DB values on body edits.
         return [
           {
@@ -451,10 +558,14 @@ export default function AppOpsContentPage() {
             key: field.key,
             locale,
             body,
-            title: field.title ? values[titleKey] || null : undefined,
+            title,
           },
         ];
       });
+      if (!payload.length) {
+        message.info("当前模块没有需要保存的修改");
+        return;
+      }
       const { data: savedEntries } = await api.post<ContentEntry[]>("/admin/app-content/bulk", { entries: payload });
       setEntries((current) => {
         const updated = new Map(current.map((entry) => [`${entry.module}:${entry.locale}:${entry.key}`, entry]));
@@ -465,13 +576,26 @@ export default function AppOpsContentPage() {
       });
       message.success("当前模块已保存，其他模块未保存的修改已保留。请在 App 刷新验证。");
     } catch (requestError: unknown) {
-      message.error(`${apiError(requestError, "保存失败")} 当前输入已保留；批量保存可能部分成功，请重试当前模块。`);
+      message.error(`${apiError(requestError, "保存失败")} 本次修改未写入，当前输入已保留。`);
     } finally {
       savingRef.current = false;
       setSaving(false);
     }
   }
 
+
+  const missingAboutHi = missingLocaleKeys(
+    entries,
+    "ABOUT",
+    aboutFields.map((field) => field.key),
+    "hi",
+  );
+  const missingLegalHi = missingLocaleKeys(
+    entries,
+    "LEGAL",
+    Object.keys(legalFieldLabels),
+    "hi",
+  );
 
   return (
     <AdminShell>
@@ -505,11 +629,54 @@ export default function AppOpsContentPage() {
               <Button icon={<ReloadOutlined />} loading={loading} disabled={saving} onClick={() => confirmDiscard(() => void loadAll(), "刷新全部文案？")}>
                 刷新
               </Button>
+              <Button icon={<HistoryOutlined />} disabled={loading || saving} onClick={() => confirmDiscard(() => setHistoryEntryId(""), "查看文案历史？")}>
+                历史与恢复
+              </Button>
             </Space>
           }
         />
 
         {error && <Alert type="error" title={error} showIcon />}
+
+        <Modal title="文案历史与恢复" open={historyEntryId !== undefined} onCancel={() => setHistoryEntryId(undefined)} footer={null} width={720} destroyOnHidden>
+          <Space orientation="vertical" style={{ width: "100%" }} size="middle">
+            <Select
+              showSearch
+              optionFilterProp="label"
+              placeholder="搜索条目、语言"
+              style={{ width: "100%" }}
+              value={historyEntryId || undefined}
+              onChange={(id) => void openHistory(id)}
+              options={entries.map((entry) => ({ value: entry.id, label: `${entry.module} / ${entry.key} / ${entry.locale.toUpperCase()}` }))}
+            />
+            {historyLoading ? <Text type="secondary">正在加载历史…</Text> : null}
+            {historyEntryId && !historyLoading && history.length === 0 ? <Text type="secondary">暂无可用的修改记录。</Text> : null}
+            {history.map((revision) => {
+              const before = revision.metadata?.before?.body;
+              const after = revision.metadata?.after?.body;
+              return (
+                <div key={revision.id} style={{ borderTop: "1px solid #d9d9d9", paddingTop: 12 }}>
+                  <Space wrap style={{ marginBottom: 8 }}>
+                    <Text strong>{revision.action.replace("APP_CONTENT_", "")}</Text>
+                    <Text type="secondary">{new Date(revision.createdAt).toLocaleString("zh-CN")}</Text>
+                    <Text type="secondary">{revision.actor?.fullName || "管理员"}</Text>
+                  </Space>
+                  {typeof before === "string" ? <Paragraph style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><Text type="secondary">修改前：</Text>{before}</Paragraph> : null}
+                  {typeof after === "string" ? <Paragraph style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><Text type="secondary">修改后：</Text>{after}</Paragraph> : null}
+                  {typeof after === "string" ? (
+                    <Button disabled={restoring || saving} loading={restoring} onClick={() => Modal.confirm({
+                      title: "恢复这个历史版本？",
+                      content: "将覆盖当前条目并重新加载页面表单。请先保存其他未提交的修改。",
+                      okText: "确认恢复",
+                      cancelText: "取消",
+                      onOk: () => restoreRevision(revision),
+                    })}>恢复此版本</Button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </Space>
+        </Modal>
 
         <Card loading={loading}>
           <Alert
@@ -541,6 +708,11 @@ export default function AppOpsContentPage() {
                       hint="首页与行情页顶部营销文案（title / subtitle / CTA）"
                       fields={homeBannerFields}
                       defaultOpen
+                    />
+                    <FieldGroup
+                      title="Global App copy"
+                      hint='覆盖所有使用 AppText / tr 的静态界面文案。请输入有效 JSON，例如 {"Retry":"Try again"}；英文和 Hindi 分开保存。'
+                      fields={homeGlobalCopyFields}
                     />
                     <FieldGroup
                       title="Account / Funds labels"
@@ -824,8 +996,28 @@ export default function AppOpsContentPage() {
                         </>
                       }
                     />
+                    {missingAboutHi.length > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        title={`About Hindi 尚缺 ${missingAboutHi.length} 项已保存内容`}
+                        description={missingAboutHi
+                          .map((key) => aboutFields.find((field) => field.key === key)?.label ?? key)
+                          .join("、")}
+                      />
+                    )}
                     {aboutFields.map((field) => (
-                      <Form.Item key={field.key} name={field.key} label={field.label}>
+                      <Form.Item
+                        key={field.key}
+                        name={field.key}
+                        label={
+                          <Space wrap>
+                            {field.label}
+                            <SavedLocaleStatus entries={entries} module="ABOUT" keyName={field.key} />
+                          </Space>
+                        }
+                      >
                         <TextArea rows={field.rows} />
                       </Form.Item>
                     ))}
@@ -863,16 +1055,7 @@ export default function AppOpsContentPage() {
                       title="Privacy Policy / Terms of Service / Risk Disclosure"
                       description={
                         <>
-                          English available
-                          {entries.some(
-                            (e) =>
-                              e.module === "LEGAL" &&
-                              e.locale === "hi" &&
-                              e.body.trim(),
-                          )
-                            ? " · Hindi 已配置"
-                            : " · Hindi 尚无有效内容"}
-                          。可分别编辑 English / Hindi；保存前请由运营主体确认最终内容。
+                          每份文档分别显示已保存的 English / Hindi 状态。保存前请由运营主体确认最终内容。
                           {" "}
                           Last updated：
                           {(() => {
@@ -888,6 +1071,17 @@ export default function AppOpsContentPage() {
                         </>
                       }
                     />
+                    {missingLegalHi.length > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        title={`Legal Hindi 尚缺 ${missingLegalHi.length} 份已保存文档`}
+                        description={missingLegalHi
+                          .map((key) => legalFieldLabels[key as keyof typeof legalFieldLabels])
+                          .join("、")}
+                      />
+                    )}
                     <Paragraph type="secondary">
                       正文 JSON：{`{"effective":"...","sections":[{"heading":"...","body":"..."}]}`}
                     </Paragraph>
@@ -896,7 +1090,7 @@ export default function AppOpsContentPage() {
                     </Form.Item>
                     <Form.Item
                       name="privacy.document"
-                      label="隐私政策 JSON"
+                      label={<Space wrap>隐私政策 JSON<SavedLocaleStatus entries={entries} module="LEGAL" keyName="privacy.document" /></Space>}
                       rules={[{ required: true, message: "请填写隐私政策" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />
@@ -919,7 +1113,7 @@ export default function AppOpsContentPage() {
                     </Form.Item>
                     <Form.Item
                       name="terms.document"
-                      label="服务条款 JSON"
+                      label={<Space wrap>服务条款 JSON<SavedLocaleStatus entries={entries} module="LEGAL" keyName="terms.document" /></Space>}
                       rules={[{ required: true, message: "请填写服务条款" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />
@@ -942,7 +1136,7 @@ export default function AppOpsContentPage() {
                     </Form.Item>
                     <Form.Item
                       name="risk.document"
-                      label="风险披露 JSON"
+                      label={<Space wrap>风险披露 JSON<SavedLocaleStatus entries={entries} module="LEGAL" keyName="risk.document" /></Space>}
                       rules={[{ required: true, message: "请填写风险披露" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />

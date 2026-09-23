@@ -1,0 +1,58 @@
+name: Docker CI
+
+on:
+  pull_request:
+    paths:
+      - 'docker/**'
+      - 'compose.local-test.yaml'
+      - 'apps/api/**'
+      - 'apps/admin/**'
+      - '.dockerignore'
+      - '.github/workflows/docker-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'compose.local-test.yaml'
+      - 'apps/api/**'
+      - 'apps/admin/**'
+      - '.dockerignore'
+      - '.github/workflows/docker-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build API image
+        run: docker build -f docker/api.Dockerfile -t hnw-api-ci .
+
+      - name: Validate local Compose configuration
+        env:
+          HNW_E2E_DB_PASSWORD: ci-compose-password
+        run: docker compose -f compose.local-test.yaml config --quiet
+
+      - name: Build Admin image
+        run: >-
+          docker build
+          -f docker/admin.Dockerfile
+          --build-arg NEXT_PUBLIC_API_URL=https://api.hnw-ci.invalid
+          --build-arg NEXT_PUBLIC_BACKEND_ROLE=ADMIN
+          -t hnw-admin-ci .
+
+      - name: Assert containers use non-root users
+        run: |
+          test "$(docker image inspect hnw-api-ci --format '{{.Config.User}}')" = node
+          test "$(docker image inspect hnw-admin-ci --format '{{.Config.User}}')" = node
+          test "$(docker image inspect hnw-admin-ci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEXT_PUBLIC_BACKEND_ROLE=')" = NEXT_PUBLIC_BACKEND_ROLE=ADMIN
+          test "$(docker image inspect hnw-admin-ci --format '{{json .Config.Cmd}}')" = '["node","server.js"]'
+          docker run --rm --entrypoint sh hnw-admin-ci -c 'test -w /app/.next/static && test ! -e /app/node_modules/typescript'
+          docker run --rm --entrypoint sh hnw-api-ci -c 'test -w /app/private-objects'

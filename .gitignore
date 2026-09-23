@@ -1,5 +1,7 @@
 # Local editor state
 .idea/
+.DS_Store
+Thumbs.db
 .agents/
 .claude/
 .windsurf/
@@ -56,6 +58,7 @@ node_modules/
 dist/
 build/
 coverage/
+*.tsbuildinfo
 backups/
 
 # Local visual verification captures and accidental Windows cache folder

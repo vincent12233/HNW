@@ -651,6 +651,7 @@ class _StockDetailPageState extends State<StockDetailPage> {
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: AppConfig.primaryColor,
+                        semanticsLabel: 'Updating watchlist',
                       ),
                     )
                   : Icon(
@@ -904,7 +905,9 @@ class _StockDetailPageState extends State<StockDetailPage> {
 
   Widget _newsTab() {
     if (newsLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Center(
+        child: CircularProgressIndicator(semanticsLabel: 'Loading news'),
+      );
     }
     if (newsFailed) {
       return Center(

@@ -57,6 +57,10 @@ export const homeNewsFields: FieldDef[] = [
   { key: "view_all_cta", label: "「查看全部」按钮", rows: 1 },
   { key: "news.section_title", label: "市场新闻区标题", rows: 1 },
   { key: "news.empty", label: "市场新闻空状态", rows: 2 },
+  { key: "news.page_empty_title", label: "市场新闻页空状态标题", rows: 1 },
+  { key: "news.page_empty_body", label: "市场新闻页空状态说明", rows: 2 },
+  { key: "news.refresh", label: "刷新新闻按钮提示", rows: 1 },
+  { key: "news.refresh_error", label: "新闻刷新失败提示", rows: 2 },
 ];
 
 export const homeProfileFields: FieldDef[] = [

@@ -44,7 +44,7 @@ jobs:
         run: >-
           docker build
           -f docker/admin.Dockerfile
-          --build-arg NEXT_PUBLIC_API_URL=https://api.example.com
+          --build-arg NEXT_PUBLIC_API_URL=https://api.hnw-ci.invalid
           --build-arg NEXT_PUBLIC_BACKEND_ROLE=ADMIN
           -t hnw-admin-ci .
 

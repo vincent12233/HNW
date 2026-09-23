@@ -9,11 +9,18 @@ USER node
 CMD ["npm", "run", "dev"]
 
 FROM development AS builder
-ARG NEXT_PUBLIC_API_URL=https://api.example.com
+ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_ROLE
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
 ENV NEXT_PUBLIC_BACKEND_ROLE=${NEXT_PUBLIC_BACKEND_ROLE}
-RUN case "$NEXT_PUBLIC_BACKEND_ROLE" in \
+RUN case "$NEXT_PUBLIC_API_URL" in \
+      https://* ) ;; \
+      *) echo "NEXT_PUBLIC_API_URL must be an HTTPS URL" >&2; exit 1 ;; \
+    esac \
+    && case "$NEXT_PUBLIC_API_URL" in \
+      *example.com* ) echo "NEXT_PUBLIC_API_URL must not use an example domain" >&2; exit 1 ;; \
+    esac \
+    && case "$NEXT_PUBLIC_BACKEND_ROLE" in \
       ADMIN|MANAGER|FINANCE|BUSINESS|SUPPORT) ;; \
       *) echo "NEXT_PUBLIC_BACKEND_ROLE must be ADMIN, MANAGER, FINANCE, BUSINESS, or SUPPORT" >&2; exit 1 ;; \
     esac \
@@ -22,7 +29,7 @@ RUN case "$NEXT_PUBLIC_BACKEND_ROLE" in \
 FROM node:24-bookworm-slim AS runner
 
 WORKDIR /app
-ARG NEXT_PUBLIC_API_URL=https://api.example.com
+ARG NEXT_PUBLIC_API_URL
 ARG NEXT_PUBLIC_BACKEND_ROLE
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}

@@ -37,13 +37,13 @@ function apiDefaultKeys() {
   )?.initializer;
   const visit = (node) => {
     if (ts.isObjectLiteralExpression(node)) {
-      const module = property(node, 'module');
+      const moduleNode = property(node, 'module');
       const key = property(node, 'key');
       const locale = property(node, 'locale');
-      if (module && ts.isPropertyAccessExpression(module) &&
-          module.expression.getText(syntax) === 'AppContentModule' &&
+      if (moduleNode && ts.isPropertyAccessExpression(moduleNode) &&
+          moduleNode.expression.getText(syntax) === 'AppContentModule' &&
           key && ts.isStringLiteral(key) && locale && ts.isStringLiteral(locale)) {
-        const name = module.name.text;
+        const name = moduleNode.name.text;
         if (!byModule.has(name)) byModule.set(name, new Map());
         if (!byModule.get(name).has(key.text)) byModule.get(name).set(key.text, new Set());
         byModule.get(name).get(key.text).add(locale.text);
@@ -105,6 +105,9 @@ test('static Flutter content keys exist in API defaults and Super Admin', () => 
     }
     for (const [, key] of source.matchAll(/_portfolioCopy\(\s*'([^']+)'/g)) {
       references.push({ path, module: 'TRADING', key });
+    }
+    for (const [, key] of source.matchAll(/_notificationCopy\(\s*'([^']+)'/g)) {
+      references.push({ path, module: 'HOME', key: `notifications.${key}` });
     }
   }
   assert.ok(references.length > 0, 'No static Flutter content references found');

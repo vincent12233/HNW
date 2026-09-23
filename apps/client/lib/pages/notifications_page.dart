@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
 import '../app_config.dart';
+import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
@@ -20,6 +23,13 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
+  static const _notificationContentPrefix = 'notifications';
+
+  String _notificationCopy(String key, String fallback) => AppContentService
+      .instance
+      .current
+      .text('home', "$_notificationContentPrefix.$key", fallback: fallback);
+
   late final service = widget.accountService ?? ClientAccountService();
   bool _fetching = false;
   final Set<String> markingRead = <String>{};
@@ -35,12 +45,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   void initState() {
     super.initState();
+    AppContentService.instance.addListener(_onContentChanged);
+    unawaited(AppContentService.instance.load());
     load();
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
     _loadGeneration++;
+    AppContentService.instance.removeListener(_onContentChanged);
     super.dispose();
   }
 
@@ -60,7 +77,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
       setState(() => items = result);
     } catch (_) {
       if (!mounted || generation != _loadGeneration) return;
-      setState(() => errorMessage = 'Unable to load notifications');
+      setState(
+        () => errorMessage = _notificationCopy(
+          'load_error',
+          'Unable to load notifications',
+        ),
+      );
     } finally {
       _fetching = false;
       if (mounted && generation == _loadGeneration) {
@@ -94,7 +116,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: AppText('Unable to mark notification as read')),
+        SnackBar(
+          content: AppText(
+            _notificationCopy(
+              'mark_read_error',
+              'Unable to mark notification as read',
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => markingRead.remove(id));
@@ -116,7 +145,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: AppText('Unable to mark all notifications')),
+        SnackBar(
+          content: AppText(
+            _notificationCopy(
+              'mark_all_error',
+              'Unable to mark all notifications',
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => markingAll = false);
@@ -127,7 +163,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
   Widget build(BuildContext context) => AppPageScaffold(
     backgroundColor: const Color(0xFFF7F9FC),
     appBar: AppBar(
-      title: const AppText('Notifications'),
+      title: AppText(_notificationCopy('title', 'Notifications')),
       actions: [
         if (hasUnread)
           IconButton(
@@ -140,11 +176,14 @@ class _NotificationsPageState extends State<NotificationsPage> {
                 ? null
                 : markAllRead,
             icon: markingAll
-                ? const SizedBox.square(
+                ? SizedBox.square(
                     dimension: 20,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      semanticsLabel: 'Marking notifications as read',
+                      semanticsLabel: _notificationCopy(
+                        'marking',
+                        'Marking notifications as read',
+                      ),
                     ),
                   )
                 : const Icon(Icons.done_all_rounded),
@@ -165,19 +204,28 @@ class _NotificationsPageState extends State<NotificationsPage> {
     body: AppStatusSwitch(
       switchKey: '$loading|$errorMessage|${items.length}',
       child: loading && items.isEmpty
-          ? const AppLoadingView(message: 'Loading notifications')
+          ? AppLoadingView(
+              message: _notificationCopy('loading', 'Loading notifications'),
+            )
           : errorMessage != null && items.isEmpty
           ? AppErrorView(
-              title: 'Unable to load notifications',
-              message:
-                  'The server did not return notifications. You can retry.',
+              title: _notificationCopy(
+                'load_error',
+                'Unable to load notifications',
+              ),
+              message: _notificationCopy(
+                'load_error_body',
+                'The server did not return notifications. You can retry.',
+              ),
               onRetry: load,
             )
           : items.isEmpty
-          ? const AppEmptyState(
-              title: 'No notifications yet',
-              message:
-                  'Account and order updates will appear here when the server sends them.',
+          ? AppEmptyState(
+              title: _notificationCopy('empty_title', 'No notifications yet'),
+              message: _notificationCopy(
+                'empty_body',
+                'Account and order updates will appear here when the server sends them.',
+              ),
               icon: Icons.notifications_none,
             )
           : RefreshIndicator(
@@ -207,16 +255,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             ),
                           Row(
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: AppText(
-                                  'Recent updates',
+                                  _notificationCopy('recent', 'Recent updates'),
                                   style: AppTypography.titleMedium,
                                 ),
                               ),
                               AppText(
                                 unreadCount == 0
-                                    ? 'All caught up'
-                                    : '$unreadCount unread',
+                                    ? _notificationCopy(
+                                        'caught_up',
+                                        'All caught up',
+                                      )
+                                    : _notificationCopy(
+                                        'unread_count',
+                                        '{count} unread',
+                                      ).replaceAll('{count}', '$unreadCount'),
                                 style: AppTypography.caption.copyWith(
                                   color: unreadCount == 0
                                       ? AppConfig.textSecondaryColor
@@ -301,16 +355,19 @@ class _NotificationsPageState extends State<NotificationsPage> {
                             ),
                           ),
                           if (markingRead.contains(id))
-                            const SizedBox.square(
+                            SizedBox.square(
                               dimension: 16,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                semanticsLabel: 'Marking notification as read',
+                                semanticsLabel: _notificationCopy(
+                                  'marking',
+                                  'Marking notification as read',
+                                ),
                               ),
                             )
                           else if (unread)
                             Semantics(
-                              label: 'Unread',
+                              label: _notificationCopy('unread', 'Unread'),
                               child: Container(
                                 width: 9,
                                 height: 9,

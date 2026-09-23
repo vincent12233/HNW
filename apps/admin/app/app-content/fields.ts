@@ -64,6 +64,19 @@ export const homeNewsFields: FieldDef[] = [
 ];
 
 export const homeProfileFields: FieldDef[] = [
+  { key: "notifications.title", label: "通知页面标题", rows: 1 },
+  { key: "notifications.loading", label: "通知加载提示", rows: 1 },
+  { key: "notifications.load_error", label: "通知加载失败标题", rows: 1 },
+  { key: "notifications.load_error_body", label: "通知加载失败说明", rows: 2 },
+  { key: "notifications.empty_title", label: "无通知标题", rows: 1 },
+  { key: "notifications.empty_body", label: "无通知说明", rows: 2 },
+  { key: "notifications.recent", label: "最近更新标题", rows: 1 },
+  { key: "notifications.caught_up", label: "全部已读提示", rows: 1 },
+  { key: "notifications.unread_count", label: "未读数量模板（{count}）", rows: 1 },
+  { key: "notifications.mark_read_error", label: "标记已读失败提示", rows: 2 },
+  { key: "notifications.mark_all_error", label: "全部标记已读失败提示", rows: 2 },
+  { key: "notifications.marking", label: "标记处理中辅助提示", rows: 1 },
+  { key: "notifications.unread", label: "未读状态辅助提示", rows: 1 },
   { key: "profile.page_title", label: "个人中心页标题", rows: 1 },
   { key: "profile.section.overview", label: "概览分区标题", rows: 1 },
   { key: "profile.section.account", label: "Account 分区标题", rows: 1 },

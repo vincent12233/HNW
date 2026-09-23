@@ -389,6 +389,22 @@ describe('AppContentService SaleSmartly URL sync', () => {
 });
 
 describe('APP_CONTENT_DEFAULTS coverage', () => {
+  it('keeps every TRADING default available in English and Hindi', () => {
+    const localesByKey = new Map<string, Set<string>>();
+    for (const entry of APP_CONTENT_DEFAULTS) {
+      if (entry.module !== AppContentModule.TRADING) continue;
+      if (!localesByKey.has(entry.key)) localesByKey.set(entry.key, new Set());
+      localesByKey.get(entry.key)!.add(entry.locale || 'en');
+    }
+
+    for (const [key, locales] of localesByKey) {
+      expect({ key, locales: [...locales].sort() }).toEqual({
+        key,
+        locales: ['en', 'hi'],
+      });
+    }
+  });
+
   it('includes HOME/DEPOSIT/SUPPORT/TRADING defaults for en and hi', () => {
     const byModuleLocale = new Map<string, Set<string>>();
     for (const entry of APP_CONTENT_DEFAULTS) {

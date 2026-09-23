@@ -73,5 +73,24 @@ jobs:
           test -f dist/main.js
           test ! -e dist/src/main.js
 
+      - name: Smoke test built API
+        env:
+          NODE_ENV: development
+          PORT: 3100
+          HOST: 127.0.0.1
+          MARKET_DATA_STREAMING_ENABLED: 'false'
+        run: |
+          node dist/main.js > /tmp/hnw-api-smoke.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3100/health/ready > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/hnw-api-smoke.log
+          exit 1
+
       - name: Run unit tests
         run: npm test -- --runInBand

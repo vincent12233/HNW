@@ -1,0 +1,48 @@
+name: Docker CI
+
+on:
+  pull_request:
+    paths:
+      - 'docker/**'
+      - 'apps/api/package.json'
+      - 'apps/api/package-lock.json'
+      - 'apps/admin/package.json'
+      - 'apps/admin/package-lock.json'
+      - '.dockerignore'
+      - '.github/workflows/docker-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'docker/**'
+      - 'apps/api/package.json'
+      - 'apps/api/package-lock.json'
+      - 'apps/admin/package.json'
+      - 'apps/admin/package-lock.json'
+      - '.dockerignore'
+      - '.github/workflows/docker-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-images:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Build API image
+        run: docker build -f docker/api.Dockerfile -t hnw-api-ci .
+
+      - name: Build Admin image
+        run: docker build -f docker/admin.Dockerfile -t hnw-admin-ci .
+
+      - name: Assert containers use non-root users
+        run: |
+          test "$(docker image inspect hnw-api-ci --format '{{.Config.User}}')" = node
+          test "$(docker image inspect hnw-admin-ci --format '{{.Config.User}}')" = node
+          docker run --rm --entrypoint sh hnw-admin-ci -c 'test -w /app/.next'
+          docker run --rm --entrypoint sh hnw-api-ci -c 'test -w /app/private-objects'

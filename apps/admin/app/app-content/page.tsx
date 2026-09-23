@@ -22,6 +22,7 @@ import {
   Modal,
   Select,
   Space,
+  Tag,
   Tabs,
   Typography,
   message,
@@ -32,6 +33,7 @@ import { useEffect, useRef, useState } from "react";
 import AdminShell from "@/components/AdminShell";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
+import { missingLocaleKeys } from "./coverage";
 import {
   aboutFields,
   depositFields,
@@ -131,6 +133,12 @@ type ContentEntry = {
   updatedAt?: string;
 };
 
+const legalFieldLabels = {
+  "privacy.document": "隐私政策",
+  "terms.document": "服务条款",
+  "risk.document": "风险披露",
+} as const;
+
 function parseLegalDocument(body: string) {
   let document: unknown;
   try {
@@ -208,6 +216,29 @@ function entryTitle(
       (item) =>
         item.module === module && item.key === key && item.locale === locale,
     )?.title ?? ""
+  );
+}
+
+function SavedLocaleStatus({
+  entries,
+  module,
+  keyName,
+}: {
+  entries: ContentEntry[];
+  module: ContentEntry["module"];
+  keyName: string;
+}) {
+  return (
+    <Space size={4} wrap aria-label={`${keyName} 已保存语言状态`}>
+      {(["en", "hi"] as const).map((locale) => {
+        const missing = missingLocaleKeys(entries, module, [keyName], locale).length > 0;
+        return (
+          <Tag key={locale} color={missing ? "error" : "success"}>
+            {locale.toUpperCase()} {missing ? "缺失" : "已配置"}
+          </Tag>
+        );
+      })}
+    </Space>
   );
 }
 
@@ -472,6 +503,19 @@ export default function AppOpsContentPage() {
     }
   }
 
+
+  const missingAboutHi = missingLocaleKeys(
+    entries,
+    "ABOUT",
+    aboutFields.map((field) => field.key),
+    "hi",
+  );
+  const missingLegalHi = missingLocaleKeys(
+    entries,
+    "LEGAL",
+    Object.keys(legalFieldLabels),
+    "hi",
+  );
 
   return (
     <AdminShell>
@@ -824,8 +868,28 @@ export default function AppOpsContentPage() {
                         </>
                       }
                     />
+                    {missingAboutHi.length > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        title={`About Hindi 尚缺 ${missingAboutHi.length} 项已保存内容`}
+                        description={missingAboutHi
+                          .map((key) => aboutFields.find((field) => field.key === key)?.label ?? key)
+                          .join("、")}
+                      />
+                    )}
                     {aboutFields.map((field) => (
-                      <Form.Item key={field.key} name={field.key} label={field.label}>
+                      <Form.Item
+                        key={field.key}
+                        name={field.key}
+                        label={
+                          <Space wrap>
+                            {field.label}
+                            <SavedLocaleStatus entries={entries} module="ABOUT" keyName={field.key} />
+                          </Space>
+                        }
+                      >
                         <TextArea rows={field.rows} />
                       </Form.Item>
                     ))}
@@ -863,16 +927,7 @@ export default function AppOpsContentPage() {
                       title="Privacy Policy / Terms of Service / Risk Disclosure"
                       description={
                         <>
-                          English available
-                          {entries.some(
-                            (e) =>
-                              e.module === "LEGAL" &&
-                              e.locale === "hi" &&
-                              e.body.trim(),
-                          )
-                            ? " · Hindi 已配置"
-                            : " · Hindi 尚无有效内容"}
-                          。可分别编辑 English / Hindi；保存前请由运营主体确认最终内容。
+                          每份文档分别显示已保存的 English / Hindi 状态。保存前请由运营主体确认最终内容。
                           {" "}
                           Last updated：
                           {(() => {
@@ -888,6 +943,17 @@ export default function AppOpsContentPage() {
                         </>
                       }
                     />
+                    {missingLegalHi.length > 0 && (
+                      <Alert
+                        type="warning"
+                        showIcon
+                        style={{ marginBottom: 16 }}
+                        title={`Legal Hindi 尚缺 ${missingLegalHi.length} 份已保存文档`}
+                        description={missingLegalHi
+                          .map((key) => legalFieldLabels[key as keyof typeof legalFieldLabels])
+                          .join("、")}
+                      />
+                    )}
                     <Paragraph type="secondary">
                       正文 JSON：{`{"effective":"...","sections":[{"heading":"...","body":"..."}]}`}
                     </Paragraph>
@@ -896,7 +962,7 @@ export default function AppOpsContentPage() {
                     </Form.Item>
                     <Form.Item
                       name="privacy.document"
-                      label="隐私政策 JSON"
+                      label={<Space wrap>隐私政策 JSON<SavedLocaleStatus entries={entries} module="LEGAL" keyName="privacy.document" /></Space>}
                       rules={[{ required: true, message: "请填写隐私政策" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />
@@ -919,7 +985,7 @@ export default function AppOpsContentPage() {
                     </Form.Item>
                     <Form.Item
                       name="terms.document"
-                      label="服务条款 JSON"
+                      label={<Space wrap>服务条款 JSON<SavedLocaleStatus entries={entries} module="LEGAL" keyName="terms.document" /></Space>}
                       rules={[{ required: true, message: "请填写服务条款" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />
@@ -942,7 +1008,7 @@ export default function AppOpsContentPage() {
                     </Form.Item>
                     <Form.Item
                       name="risk.document"
-                      label="风险披露 JSON"
+                      label={<Space wrap>风险披露 JSON<SavedLocaleStatus entries={entries} module="LEGAL" keyName="risk.document" /></Space>}
                       rules={[{ required: true, message: "请填写风险披露" }, legalDocumentRule]}
                     >
                       <TextArea rows={12} />

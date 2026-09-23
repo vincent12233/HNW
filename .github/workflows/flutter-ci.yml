@@ -12,6 +12,13 @@ on:
       - 'apps/client/**'
       - '.github/workflows/flutter-ci.yml'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: flutter-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   analyze-and-test:
     runs-on: ubuntu-latest

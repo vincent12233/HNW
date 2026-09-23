@@ -12,6 +12,13 @@ on:
       - 'apps/api/**'
       - '.github/workflows/api-ci.yml'
 
+permissions:
+  contents: read
+
+concurrency:
+  group: api-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest

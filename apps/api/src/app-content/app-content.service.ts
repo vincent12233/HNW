@@ -255,7 +255,8 @@ export class AppContentService {
     return { title: row.title, body: row.body, metadata: row.metadata ?? null, isActive: row.isActive, sortOrder: row.sortOrder };
   }
 
-  async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor) {
+  async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
     const module = this.parseModule(String(body.module));
     const key = String(body.key || '').trim();
     const locale = this.parseLocale(body.locale);
@@ -275,7 +276,7 @@ export class AppContentService {
         ? normalizeSaleSmartlyScriptUrl(rawBody)
         : rawBody;
 
-    const before = await this.prisma.appContentEntry.findUnique({
+    const before = await db.appContentEntry.findUnique({
       where: { module_key_locale: { module, key, locale } },
     });
 
@@ -290,7 +291,7 @@ export class AppContentService {
       locale,
     };
 
-    const result = await this.prisma.appContentEntry.upsert({
+    const result = await db.appContentEntry.upsert({
       where: {
         module_key_locale: { module, key, locale },
       },
@@ -317,7 +318,7 @@ export class AppContentService {
     ) {
       for (const otherLocale of ['en', 'hi']) {
         if (otherLocale === locale) continue;
-        await this.prisma.appContentEntry.upsert({
+        await db.appContentEntry.upsert({
           where: {
             module_key_locale: { module, key, locale: otherLocale },
           },
@@ -340,7 +341,7 @@ export class AppContentService {
     }
 
     if (actor) {
-      await this.audit.createLog({
+      const auditInput = {
         actorId: actor.userId,
         action: before ? 'APP_CONTENT_UPDATE' : 'APP_CONTENT_CREATE',
         resource: 'app_content',
@@ -354,7 +355,9 @@ export class AppContentService {
           before: before ? this.snapshot(before) : null,
           after: this.snapshot(result),
         },
-      });
+      };
+      if (tx) await this.audit.createLog(auditInput, tx);
+      else await this.audit.createLog(auditInput);
     }
 
     return result;
@@ -364,11 +367,12 @@ export class AppContentService {
     if (!Array.isArray(entries) || entries.length === 0) {
       throw new BadRequestException('At least one content entry is required');
     }
-    const results = [];
-    for (const entry of entries) {
-      results.push(await this.upsertEntry(entry, actor));
-    }
-    return results;
+    if (entries.length > 200) throw new BadRequestException('Too many content entries');
+    return this.prisma.$transaction(async (tx) => {
+      const results = [];
+      for (const entry of entries) results.push(await this.upsertEntry(entry, actor, tx));
+      return results;
+    }, { timeout: 30_000 });
   }
 
   async deleteEntry(id: string, actor?: AppContentActor) {

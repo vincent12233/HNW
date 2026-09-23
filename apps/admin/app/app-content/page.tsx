@@ -521,6 +521,9 @@ export default function AppOpsContentPage() {
         const locale = field.locale ?? "en";
         const body = values[field.key] ?? "";
         const titleKey = `${field.key}__title`;
+        const title = field.title ? values[titleKey] || null : undefined;
+        const previous = entries.find((entry) => entry.module === module && entry.key === field.key && entry.locale === locale);
+        if (previous && previous.body === body && (!field.title || (previous.title ?? null) === title)) return [];
         // Do not send isActive/sortOrder — preserve existing DB values on body edits.
         return [
           {
@@ -528,10 +531,14 @@ export default function AppOpsContentPage() {
             key: field.key,
             locale,
             body,
-            title: field.title ? values[titleKey] || null : undefined,
+            title,
           },
         ];
       });
+      if (!payload.length) {
+        message.info("当前模块没有需要保存的修改");
+        return;
+      }
       const { data: savedEntries } = await api.post<ContentEntry[]>("/admin/app-content/bulk", { entries: payload });
       setEntries((current) => {
         const updated = new Map(current.map((entry) => [`${entry.module}:${entry.locale}:${entry.key}`, entry]));
@@ -542,7 +549,7 @@ export default function AppOpsContentPage() {
       });
       message.success("当前模块已保存，其他模块未保存的修改已保留。请在 App 刷新验证。");
     } catch (requestError: unknown) {
-      message.error(`${apiError(requestError, "保存失败")} 当前输入已保留；批量保存可能部分成功，请重试当前模块。`);
+      message.error(`${apiError(requestError, "保存失败")} 本次修改未写入，当前输入已保留。`);
     } finally {
       savingRef.current = false;
       setSaving(false);

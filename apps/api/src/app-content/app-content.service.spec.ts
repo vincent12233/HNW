@@ -1,4 +1,6 @@
 import { AppContentModule } from '../generated/prisma/enums';
+import { AuditService } from '../audit/audit.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
 import {
   AppContentService,
@@ -449,6 +451,50 @@ describe('AppContentService history restore', () => {
     expect(findFirst).not.toHaveBeenCalled();
   });
 });
+
+const databaseUrl = process.env.DATABASE_URL;
+const localTestDatabase = (() => {
+  try {
+    const url = new URL(databaseUrl || '');
+    return ['localhost', '127.0.0.1', 'postgres'].includes(url.hostname) &&
+      /e2e|test|local|dev/i.test(url.pathname);
+  } catch { return false; }
+})();
+
+(process.env.HNW_VERIFY_PG === '1' && localTestDatabase ? describe : describe.skip)(
+  'AppContentService bulk transaction on local PostgreSQL', () => {
+    let prisma: PrismaService;
+    let service: AppContentService;
+    const key = `test.bulk.atomic.${process.pid}`;
+
+    beforeAll(async () => {
+      prisma = new PrismaService({ get: () => databaseUrl } as any);
+      await prisma.$connect();
+      service = new AppContentService(prisma, new AuditService(prisma));
+    });
+
+    afterAll(async () => {
+      await prisma.appContentEntry.deleteMany({ where: { module: AppContentModule.HOME, key } });
+      await prisma.$disconnect();
+    });
+
+    it('rolls back earlier rows when a later entry fails validation', async () => {
+      await expect(service.bulkUpsert([
+        { module: 'HOME', key, locale: 'en', body: 'English' },
+        { module: 'INVALID', key, locale: 'hi', body: 'Hindi' },
+      ])).rejects.toThrow('Invalid content module');
+      expect(await prisma.appContentEntry.count({ where: { module: AppContentModule.HOME, key } })).toBe(0);
+    });
+
+    it('commits all rows on success', async () => {
+      await service.bulkUpsert([
+        { module: 'HOME', key, locale: 'en', body: 'English' },
+        { module: 'HOME', key, locale: 'hi', body: 'Hindi' },
+      ]);
+      expect(await prisma.appContentEntry.count({ where: { module: AppContentModule.HOME, key } })).toBe(2);
+    });
+  },
+);
 
 describe('APP_CONTENT_DEFAULTS coverage', () => {
   it('keeps every operational content key available in English and Hindi', () => {

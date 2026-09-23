@@ -18,6 +18,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { AppContentService } from './app-content.service';
 import {
   BulkUpsertAppContentDto,
+  RestoreAppContentDto,
   UpsertAppContentDto,
 } from './dto/upsert-app-content.dto';
 
@@ -101,7 +102,7 @@ export class AppContentController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   restore(@Req() request: AuthenticatedRequest, @Param('id') id: string,
-    @Body() body: { revisionId: string; expectedUpdatedAt: string }) {
+    @Body() body: RestoreAppContentDto) {
     return this.service.restoreEntry(id, body.revisionId, body.expectedUpdatedAt, {
       userId: request.user.userId,
       role: request.user.role,

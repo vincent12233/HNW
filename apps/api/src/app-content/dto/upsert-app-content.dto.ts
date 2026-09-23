@@ -8,6 +8,7 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  IsDateString,
   Max,
   MaxLength,
   Min,
@@ -65,4 +66,14 @@ export class BulkUpsertAppContentDto {
   @ValidateNested({ each: true })
   @Type(() => UpsertAppContentDto)
   entries: UpsertAppContentDto[];
+}
+
+export class RestoreAppContentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  revisionId: string;
+
+  @IsDateString()
+  expectedUpdatedAt: string;
 }

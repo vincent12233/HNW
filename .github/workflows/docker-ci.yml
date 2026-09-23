@@ -5,10 +5,8 @@ on:
     paths:
       - 'docker/**'
       - 'compose.local-test.yaml'
-      - 'apps/api/package.json'
-      - 'apps/api/package-lock.json'
-      - 'apps/admin/package.json'
-      - 'apps/admin/package-lock.json'
+      - 'apps/api/**'
+      - 'apps/admin/**'
       - '.dockerignore'
       - '.github/workflows/docker-ci.yml'
   push:
@@ -16,10 +14,8 @@ on:
     paths:
       - 'docker/**'
       - 'compose.local-test.yaml'
-      - 'apps/api/package.json'
-      - 'apps/api/package-lock.json'
-      - 'apps/admin/package.json'
-      - 'apps/admin/package-lock.json'
+      - 'apps/api/**'
+      - 'apps/admin/**'
       - '.dockerignore'
       - '.github/workflows/docker-ci.yml'
 

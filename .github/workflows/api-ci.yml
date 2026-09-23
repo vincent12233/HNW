@@ -114,7 +114,7 @@ jobs:
           node dist/main.js > /tmp/hnw-api-smoke.log 2>&1 &
           api_pid=$!
           trap 'kill "$api_pid" 2>/dev/null || true' EXIT
-          for attempt in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             if curl --fail --silent http://127.0.0.1:3100/health/ready > /dev/null; then
               exit 0
             fi

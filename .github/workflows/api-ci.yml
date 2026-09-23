@@ -5,6 +5,7 @@ on:
     paths:
       - 'apps/api/**'
       - 'scripts/verify-migration-upgrade.sh'
+      - 'scripts/smoke-auth-content.mjs'
       - '.github/workflows/api-ci.yml'
   push:
     branches:
@@ -12,6 +13,7 @@ on:
     paths:
       - 'apps/api/**'
       - 'scripts/verify-migration-upgrade.sh'
+      - 'scripts/smoke-auth-content.mjs'
       - '.github/workflows/api-ci.yml'
 
 permissions:
@@ -137,3 +139,36 @@ jobs:
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
         run: npm test -- --runInBand
+
+      - name: Seed integration administrator
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
+          ADMIN_FIXED_INVITE_CODE: CI_FIXED_INVITE_2026
+          ADMIN_INITIAL_PASSWORD: CI_Admin_2026_Password
+          MANAGER_INITIAL_PASSWORD: CI_Manager_2026_Password
+          FINANCE_INITIAL_PASSWORD: CI_Finance_2026_Password
+          SUPPORT_INITIAL_PASSWORD: CI_Support_2026_Password
+          BUSINESS_INITIAL_PASSWORD: CI_Business_2026_Password
+        run: npm run seed
+
+      - name: Smoke test staff authentication and App content
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
+          HNW_SMOKE_ADMIN_PASSWORD: CI_Admin_2026_Password
+          NODE_ENV: development
+          PORT: 3100
+          HOST: 127.0.0.1
+          MARKET_DATA_STREAMING_ENABLED: 'false'
+        run: |
+          node dist/main.js > /tmp/hnw-api-integration.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3100/health/ready > /dev/null; then
+              node ../../scripts/smoke-auth-content.mjs
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/hnw-api-integration.log
+          exit 1

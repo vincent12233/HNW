@@ -2,7 +2,7 @@
 
 面向印度手机号客户注册的交易平台：客户 App、五个分离的运营后台、API 后端。客服通过客户端内 SaleSmartly 原生 SDK 接入。
 
-**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。仓库同时提供隔离的本机 Docker Compose 环境，专用于 E2E 和后台联调。
+**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。macOS 本地使用 OrbStack 运行隔离的 Compose 环境，专用于 E2E 和后台联调。
 
 ## 项目组成
 
@@ -39,24 +39,25 @@ docs/生产部署说明.md
 
 服务器上：`npm ci` → 迁移 / seed → `npm run build` → `npm run start:prod`（API 入口为 `dist/main.js`），五个后台分别构建并用 Nginx 反代。
 
-## 本机 Docker E2E 联调（推荐）
+## macOS OrbStack E2E 联调（推荐）
 
-启动 Docker Desktop 后，在仓库根目录执行：
+启动 OrbStack 后，在仓库根目录执行：
 
-```powershell
-$env:HNW_E2E_DB_PASSWORD="HnwE2E_Local_2026_Strong!"
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\start-docker-stack.ps1
+```bash
+./scripts/start-orbstack-stack.sh
 ```
+
+首次使用可通过 `HNW_E2E_DB_PASSWORD` 覆盖本机测试数据库密码。OrbStack 的容器引擎使用标准 `docker compose` 命令，脚本会校验当前 Docker context 为 `orbstack`。
 
 该环境使用独立的 `hnw_e2e` 数据库，不连接生产数据。停止环境：
 
-```powershell
-docker compose -f .\compose.local-test.yaml down
+```bash
+docker compose -f compose.local-test.yaml down
 ```
 
-启动脚本会等待数据库、API 就绪检查和五个后台登录页通过健康检查后再报告成功。首次构建可能需要下载依赖；若失败，查看仓库根目录的 `docker-compose-startup.log`。这套 Compose 使用开发模式和本机测试密码，不能直接部署到公网。
+启动脚本会等待数据库、API 就绪检查和五个后台登录页通过健康检查后再报告成功。首次构建可能需要下载依赖；若失败，运行 `docker compose -f compose.local-test.yaml logs --tail 120` 查看日志。这套 Compose 使用开发模式和本机测试密码，不能直接部署到公网。
 
-## 本机联调（无 Docker）
+## 本机联调（无容器）
 
 见 `docs/本地启动与联调.md`：本机安装 PostgreSQL + Node，直接跑 API / admin / Flutter。
 
@@ -96,7 +97,7 @@ API: http://localhost:3000
 专用运营员: http://localhost:3007/login
 ```
 
-Docker E2E API 地址为 `http://localhost:3100`，后台端口仍为 `3002/3004/3005/3006/3007`。
+OrbStack E2E API 地址为 `http://localhost:3100`，后台端口仍为 `3002/3004/3005/3006/3007`。
 
 客户 App：
 
@@ -124,7 +125,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-e2e.
 | 业务员 | `BUSINESS001` | `BUSINESS_INITIAL_PASSWORD` 环境变量 |
 | 专用运营员 | `SUPPORT001` | `SUPPORT_INITIAL_PASSWORD` 环境变量 |
 
-原生部署和正式环境不提供默认密码：首次初始化前必须在 API 环境变量中设置各角色强密码。本机 Docker 环境有隔离测试专用的默认值，见 `compose.local-test.yaml` 中的 `HNW_E2E_*_PASSWORD`；可在首次启动前覆盖。种子脚本不会重置已有账号密码，修改环境变量也不会更改已有数据库中的密码。
+原生部署和正式环境不提供默认密码：首次初始化前必须在 API 环境变量中设置各角色强密码。本机 OrbStack 环境有隔离测试专用的默认值，见 `compose.local-test.yaml` 中的 `HNW_E2E_*_PASSWORD`；可在首次启动前覆盖。种子脚本不会重置已有账号密码，修改环境变量也不会更改已有数据库中的密码。
 
 ## 免账号行情与新闻
 
@@ -168,7 +169,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 完整索引和文档状态见 `docs/README.md`。
 
 - `docs/生产部署说明.md`（服务器上线主路径）
-- `docs/本地启动与联调.md`（本机无 Docker 联调）
+- `docs/本地启动与联调.md`（本机无容器联调）
 - `docs/运营流程说明.md`
 - `docs/客户APP发布配置.md`
 - `docs/交付验收清单.md`

@@ -5,7 +5,7 @@
 ## 当前权威文档
 
 - [生产部署说明](生产部署说明.md)：服务器、PostgreSQL、Nginx、API 和后台部署。
-- [本地启动与联调](本地启动与联调.md)：无 Docker 的开发环境。
+- [本地启动与联调](本地启动与联调.md)：无容器的开发环境。
 - [上线准备与验收](上线准备与验收.md)：发布门槛和阻断项。
 - [交付验收清单](交付验收清单.md)：交付前逐项确认。
 - [客户 APP 发布配置](客户APP发布配置.md)：Android/iOS 构建配置。
@@ -42,6 +42,7 @@
 
 - macOS/Linux：`./scripts/verify-all.sh`
 - Windows：`scripts/verify-all.ps1`
-- OrbStack/Docker：`compose.local-test.yaml`
+- macOS OrbStack：`./scripts/start-orbstack-stack.sh`（使用 `compose.local-test.yaml`）。
 - GitHub Actions：`.github/workflows/`
 - 数据库迁移：API CI 同时验证空库迁移和带客户、账户、流水数据的最新迁移升级；本地可在**空的专用测试库**设置 `DATABASE_URL` 后运行 `./scripts/verify-migration-upgrade.sh`。该脚本拒绝非空数据库。
+- 认证与内容联调：API CI 使用临时数据库测试管理员登录、Cookie/Token 注销、刷新及后台内容到公开接口的读取；本机 OrbStack API 运行后可设置 `HNW_SMOKE_ADMIN_PASSWORD` 并运行 `node scripts/smoke-auth-content.mjs`。

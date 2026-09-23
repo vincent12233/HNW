@@ -119,11 +119,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
   @override
   Widget build(BuildContext context) => AppPageScaffold(
     appBar: AppBar(
-      title: AppText(
-        _title,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      title: AppText(_title, maxLines: 1, overflow: TextOverflow.ellipsis),
     ),
     body: loading && data == null && error == null
         ? const AppLoadingView(message: 'Loading account')
@@ -206,10 +202,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
               ),
               const Padding(
                 padding: EdgeInsets.only(top: AppSpacing.xs),
-                child: AppText(
-                  'Read-only',
-                  style: AppTypography.caption,
-                ),
+                child: AppText('Read-only', style: AppTypography.caption),
               ),
             ],
           ),
@@ -239,17 +232,16 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
     if (_savingProfile) return;
     final fullName = _profileNameController.text.trim();
     if (fullName.length < 2) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: AppText('Enter your full name')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: AppText('Enter your full name')));
       return;
     }
     setState(() => _savingProfile = true);
     try {
       final saved = await service.updateProfile(fullName);
       if (!mounted) return;
-      final confirmed =
-          saved['fullName']?.toString().trim().isNotEmpty == true
+      final confirmed = saved['fullName']?.toString().trim().isNotEmpty == true
           ? saved['fullName'].toString().trim()
           : fullName;
       _profileNameController.text = confirmed;
@@ -273,9 +265,9 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: AppText(clientErrorMessage(error))),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: AppText(clientErrorMessage(error))));
       }
     } finally {
       if (mounted) setState(() => _savingProfile = false);
@@ -288,9 +280,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: AppText(label, style: AppTypography.caption),
-          ),
+          Expanded(child: AppText(label, style: AppTypography.caption)),
           Flexible(
             child: AppText(
               value,
@@ -406,13 +396,14 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                   ),
                 ),
                 IconButton(
-                  tooltip: 'Remove bank account',
+                  tooltip: tr('Remove bank account'),
                   constraints: const BoxConstraints(
                     minWidth: AppMotion.tapTarget,
                     minHeight: AppMotion.tapTarget,
                   ),
                   icon: const Icon(Icons.delete_outline_rounded),
-                  onPressed: _deletingBank || loading || error != null || id.isEmpty
+                  onPressed:
+                      _deletingBank || loading || error != null || id.isEmpty
                       ? null
                       : () => _deleteBank(bank),
                 ),
@@ -495,7 +486,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             secondary: _savingPreferences.contains(entry.key)
                 ? const SizedBox.square(
                     dimension: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Saving preference',
+                    ),
                   )
                 : null,
             value: preferences[entry.key] == true,
@@ -518,9 +512,7 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
                     } catch (error) {
                       if (mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: AppText(clientErrorMessage(error)),
-                          ),
+                          SnackBar(content: AppText(clientErrorMessage(error))),
                         );
                       }
                     } finally {
@@ -549,7 +541,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const AppText('Total assets', style: AppTypography.caption),
-              AppText(formatPriceValue(r['totalAssets']), style: AppTypography.titleMedium),
+              AppText(
+                formatPriceValue(r['totalAssets']),
+                style: AppTypography.titleMedium,
+              ),
             ],
           ),
         ),
@@ -560,7 +555,10 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
             children: [
               for (final e in c.entries) ...[
                 AppText(e.key, style: AppTypography.caption),
-                AppText(formatPriceValue(e.value), style: AppTypography.titleMedium),
+                AppText(
+                  formatPriceValue(e.value),
+                  style: AppTypography.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
               ],
             ],

@@ -37,6 +37,7 @@ http://localhost:3000
 ```env
 NODE_ENV=production
 DATABASE_URL=正式数据库连接
+RATE_LIMIT_REDIS_URL=redis://正式Redis地址:6379
 JWT_SECRET=≥32位高强度随机密钥
 TWO_FACTOR_ENCRYPTION_KEY=独立≥32位密钥
 OTC_KEY_ENCRYPTION_SECRET=另一组≥32位密钥
@@ -50,10 +51,13 @@ MANAGER_INITIAL_PASSWORD=≥12位
 CORS_ORIGINS=https://admin.example.com,https://manager.example.com,https://finance.example.com,https://business.example.com,https://operator.example.com,https://app.example.com
 VIRUS_SCAN_URL=https://malware-scanner.example.com/scan
 PRIVATE_OBJECT_ROOT=/var/lib/hnw/private-objects
+TRUST_PROXY_HOPS=1
 PORT=3000
 ```
 
 生产启动：`npm run start:prod`（`NODE_ENV=production node dist/main.js`）。`/health` 与 `/health/ready` 只返回基础状态，不暴露业务数据。
+
+容器启动只运行已构建的 API，不会自动执行迁移或 seed。正式部署请在启动副本前单独执行 `npm run db:migrate`，并按需执行一次 `npm run seed`。
 
 `create-*-user` 脚本在 `NODE_ENV=production` 下会拒绝执行；本地脚本与 seed 一样，再次 upsert **不会覆盖**已有密码哈希。
 

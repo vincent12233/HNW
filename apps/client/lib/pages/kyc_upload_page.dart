@@ -323,7 +323,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     return [
       const AuthBrandHeader(showSlogan: false),
       const SizedBox(height: AuthLayout.titleGap),
-      const Text('KYC Verification', style: AuthLayout.title),
+      const AppText('KYC Verification', style: AuthLayout.title),
       const SizedBox(height: AuthLayout.titleGap),
       const AppText(
         'Use your PAN or Aadhaar, selfie, signature, and bank details.',
@@ -1176,7 +1176,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
           ),
           content: const SizedBox(
             width: 320,
-            child: Text(
+            child: AppText(
               'Your application has been submitted.\nPlease wait for review.',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 16, height: 1.5),

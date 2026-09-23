@@ -10,19 +10,16 @@ import { isAbsolute, join, relative, resolve, sep } from 'path';
 
 function resolveObjectSigningSecret() {
   const dedicated = process.env.OBJECT_SIGNING_SECRET?.trim() ?? '';
-  if (process.env.NODE_ENV === 'production') {
-    if (
-      dedicated.length < 32 ||
-      /replace|change-me|development/i.test(dedicated) ||
-      dedicated === process.env.JWT_SECRET
-    ) {
-      throw new Error(
-        'OBJECT_SIGNING_SECRET must be a unique random value of at least 32 characters',
-      );
-    }
-    return dedicated;
+  if (
+    dedicated.length < 32 ||
+    /replace|change-me|development/i.test(dedicated) ||
+    dedicated === process.env.JWT_SECRET
+  ) {
+    throw new Error(
+      'OBJECT_SIGNING_SECRET must be a unique random value of at least 32 characters',
+    );
   }
-  return dedicated || process.env.JWT_SECRET || 'development-only-change-me';
+  return dedicated;
 }
 
 function resolvePrivateObjectRoot() {

@@ -14,6 +14,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import type { AuthenticatedRequest } from './authenticated-request';
+import { SESSION_TTL } from './session-policy';
 
 const backendRoles = new Set([
   'ADMIN',
@@ -22,8 +23,6 @@ const backendRoles = new Set([
   'BUSINESS',
   'SUPPORT',
 ]);
-const staffSessionSeconds = 24 * 60 * 60;
-
 function staffCookieName(role?: string) {
   const normalized = role?.trim().toUpperCase();
   return normalized && backendRoles.has(normalized)
@@ -78,14 +77,14 @@ export class AuthController {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: staffSessionSeconds * 1000,
+        maxAge: SESSION_TTL.access.seconds * 1000,
         path: '/',
       });
       return {
         ...result,
         accessToken: undefined,
         refreshToken: undefined,
-        expiresIn: staffSessionSeconds,
+        expiresIn: SESSION_TTL.access.seconds,
       };
     }
     return result;

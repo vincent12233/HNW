@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../models/stock_quote.dart';
+import '../services/app_content_service.dart';
 import '../services/market_data_service.dart';
 import '../services/logo_market_page.dart';
 import '../services/watchlist_service.dart';
@@ -37,6 +38,11 @@ class StockSearchPage extends StatefulWidget {
 }
 
 class _StockSearchPageState extends State<StockSearchPage> {
+  String _stockSearchCopy(String key, String fallback) => AppContentService
+      .instance
+      .current
+      .text('home', "markets.search_page.$key", fallback: fallback);
+
   final _controller = TextEditingController();
   late final _marketData = widget.marketDataService ?? MarketDataService();
   late final _watchlistService = widget.watchlistService ?? WatchlistService();
@@ -59,8 +65,14 @@ class _StockSearchPageState extends State<StockSearchPage> {
   void initState() {
     super.initState();
     _results = widget.initialStocks;
+    AppContentService.instance.addListener(_onContentChanged);
+    unawaited(AppContentService.instance.load());
     _loadWatchlist();
     unawaited(_search(''));
+  }
+
+  void _onContentChanged() {
+    if (mounted) setState(() {});
   }
 
   Future<void> _loadWatchlist() async {
@@ -115,7 +127,14 @@ class _StockSearchPageState extends State<StockSearchPage> {
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: AppText('Unable to update watchlist')),
+        SnackBar(
+          content: AppText(
+            _stockSearchCopy(
+              'watchlist_update_error',
+              'Unable to update watchlist',
+            ),
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _watchlistSaving.remove(key));
@@ -126,6 +145,7 @@ class _StockSearchPageState extends State<StockSearchPage> {
   void dispose() {
     _debounce?.cancel();
     _controller.dispose();
+    AppContentService.instance.removeListener(_onContentChanged);
     super.dispose();
   }
 
@@ -231,7 +251,7 @@ class _StockSearchPageState extends State<StockSearchPage> {
         .toList();
     return AppPageScaffold(
       appBar: AppBar(
-        title: const AppText('Search stocks'),
+        title: AppText(_stockSearchCopy('title', 'Search stocks')),
         actions: [
           IconButton(
             tooltip: tr('Refresh'),
@@ -251,7 +271,7 @@ class _StockSearchPageState extends State<StockSearchPage> {
             ),
             child: Semantics(
               textField: true,
-              label: tr('Search stocks'),
+              label: _stockSearchCopy('title', 'Search stocks'),
               child: TextField(
                 controller: _controller,
                 autofocus: true,
@@ -260,7 +280,10 @@ class _StockSearchPageState extends State<StockSearchPage> {
                 onChanged: _onChanged,
                 onSubmitted: _submitSearch,
                 decoration: InputDecoration(
-                  hintText: tr('Search symbol or company'),
+                  hintText: _stockSearchCopy(
+                    'hint',
+                    'Search symbol or company',
+                  ),
                   prefixIcon: const Icon(Icons.search_rounded),
                   filled: true,
                   fillColor: AppColors.surface,
@@ -330,8 +353,14 @@ class _StockSearchPageState extends State<StockSearchPage> {
                   Expanded(
                     child: AppText(
                       _failedLoadMore
-                          ? 'More results could not be loaded. Your current results are still available.'
-                          : 'Live search is unavailable. Showing loaded instruments.',
+                          ? _stockSearchCopy(
+                              'more_error',
+                              'More results could not be loaded. Your current results are still available.',
+                            )
+                          : _stockSearchCopy(
+                              'partial_error',
+                              'Live search is unavailable. Showing loaded instruments.',
+                            ),
                       style: AppTypography.labelSmall.copyWith(
                         color: AppColors.warning,
                       ),
@@ -348,22 +377,44 @@ class _StockSearchPageState extends State<StockSearchPage> {
             child: AppFadeIn(
               switchKey: '$_resultQuery:$_loading:$_failed:${visible.length}',
               child: visible.isEmpty && _loading
-                  ? const AppLoadingView(message: 'Searching stocks…')
+                  ? AppLoadingView(
+                      message: _stockSearchCopy(
+                        'searching',
+                        'Searching stocks…',
+                      ),
+                    )
                   : visible.isEmpty && !_hasMore
                   ? (_failed
                         ? AppErrorView(
-                            title: 'Unable to load stocks',
-                            message:
-                                'Search is temporarily unavailable. Please retry.',
+                            title: _stockSearchCopy(
+                              'error_title',
+                              'Unable to load stocks',
+                            ),
+                            message: _stockSearchCopy(
+                              'error_body',
+                              'Search is temporarily unavailable. Please retry.',
+                            ),
                             onRetry: _retrySearch,
                           )
                         : AppEmptyState(
                             title: _controller.text.trim().isEmpty
-                                ? 'No instruments available'
-                                : 'No matching stocks',
+                                ? _stockSearchCopy(
+                                    'empty_title',
+                                    'No instruments available',
+                                  )
+                                : _stockSearchCopy(
+                                    'no_match_title',
+                                    'No matching stocks',
+                                  ),
                             message: _controller.text.trim().isEmpty
-                                ? 'Try again when market data is available.'
-                                : 'Try a different symbol or company name.',
+                                ? _stockSearchCopy(
+                                    'empty_body',
+                                    'Try again when market data is available.',
+                                  )
+                                : _stockSearchCopy(
+                                    'no_match_body',
+                                    'Try a different symbol or company name.',
+                                  ),
                             icon: Icons.search_off,
                             onRetry: _retrySearch,
                           ))
@@ -385,7 +436,10 @@ class _StockSearchPageState extends State<StockSearchPage> {
                                     ),
                               child: AppText(
                                 _loading
-                                    ? 'Loading…'
+                                    ? _stockSearchCopy(
+                                        'loading_more',
+                                        'Loading…',
+                                      )
                                     : _failedLoadMore
                                     ? 'Retry'
                                     : 'Load more',

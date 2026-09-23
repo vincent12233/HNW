@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:india_trading_app/l10n/app_language.dart';
 import 'package:india_trading_app/pages/account_content_page.dart';
+import 'package:india_trading_app/services/insight_articles_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -16,6 +17,20 @@ void main() {
     await AppLanguage.instance.select('hi');
     await AppLanguage.instance.load();
     expect(tr('Portfolio'), 'पोर्टफोलियो');
+    await AppLanguage.instance.select('en');
+  });
+  test('remote UI copy overrides local copy for the active locale', () async {
+    await AppLanguage.instance.select('en');
+    AppLanguage.instance.replaceRemoteCopy({'Retry': 'Try this again'});
+    expect(tr('Retry'), 'Try this again');
+    AppLanguage.instance.replaceRemoteCopy(const {});
+    expect(tr('Retry'), 'Retry');
+  });
+  test('switching locale clears overrides from the previous locale', () async {
+    await AppLanguage.instance.select('en');
+    AppLanguage.instance.replaceRemoteCopy({'Retry': 'English override'});
+    await AppLanguage.instance.select('hi');
+    expect(tr('Retry'), 'फिर प्रयास करें');
     await AppLanguage.instance.select('en');
   });
   testWidgets(
@@ -31,13 +46,19 @@ void main() {
           locale: Locale('hi'),
           supportedLocales: [Locale('en'), Locale('hi')],
           localizationsDelegates: GlobalMaterialLocalizations.delegates,
-          home: WealthInsightsPage(),
+          home: WealthInsightArticlePage(
+            article: InsightArticle(
+              id: 'hindi-preview',
+              slug: 'hindi-preview',
+              locale: 'hi',
+              title: 'खाता और केवाईसी',
+              body: 'अपनी पहचान और खाते की जानकारी ध्यान से जाँचें।',
+            ),
+          ),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('वेल्थ इनसाइट्स'), findsOneWidget);
-      await tester.tap(find.byType(ListTile).first);
-      await tester.pumpAndSettle();
+      expect(find.text('खाता और केवाईसी'), findsOneWidget);
       expect(find.byType(SelectableText), findsOneWidget);
       expect(tester.takeException(), isNull);
       await AppLanguage.instance.select('en');

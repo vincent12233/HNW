@@ -37,8 +37,10 @@ describe('Two factor authentication', () => {
     };
     prisma = { ...tx, $transaction: (fn: any) => fn(tx) };
     service = new TwoFactorService(prisma, {
-      get: () => 'unit-test-secret',
-      getOrThrow: () => 'unit-test-secret',
+      get: (key: string) =>
+        key === 'TWO_FACTOR_ENCRYPTION_KEY'
+          ? 'unit-test-two-factor-secret-32-characters'
+          : 'unit-test-jwt-secret-32-characters',
     } as any);
   });
   async function enable() {

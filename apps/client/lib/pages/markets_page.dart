@@ -70,6 +70,9 @@ class MarketsPage extends StatefulWidget {
 }
 
 class _MarketsPageState extends State<MarketsPage> {
+  String _marketCopy(String key, String fallback) =>
+      AppContentService.instance.current.text('home', key, fallback: fallback);
+
   final MarketDataService _marketDataService = MarketDataService();
   final WatchlistService _watchlistService = WatchlistService();
   final MarketSocketService _marketSocket = MarketSocketService();
@@ -466,7 +469,7 @@ class _MarketsPageState extends State<MarketsPage> {
                     clipBehavior: Clip.none,
                     children: [
                       IconButton(
-                        tooltip: 'Notifications',
+                        tooltip: tr('Notifications'),
                         onPressed: widget.onNotifications,
                         icon: const Icon(
                           Icons.notifications_none_rounded,
@@ -790,8 +793,14 @@ class _MarketsPageState extends State<MarketsPage> {
             child: SizedBox(
               height: constraints.maxHeight,
               child: AppErrorView(
-                title: 'Unable to load watchlist',
-                message: 'Watchlist data is unavailable. Please try again.',
+                title: _marketCopy(
+                  'markets.watchlist_error_title',
+                  'Unable to load watchlist',
+                ),
+                message: _marketCopy(
+                  'markets.watchlist_error_body',
+                  'Watchlist data is unavailable. Please try again.',
+                ),
                 onRetry: () => unawaited(_loadWatchlist()),
               ),
             ),
@@ -1197,7 +1206,10 @@ class _MarketsPageState extends State<MarketsPage> {
               const SizedBox(
                 width: 20,
                 height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  semanticsLabel: 'Loading yearly market range',
+                ),
               )
             else
               const Icon(
@@ -1420,14 +1432,21 @@ class _MarketsPageState extends State<MarketsPage> {
     }
 
     if (_searchLoading && stocks.isEmpty) {
-      return wrapBrowse(const AppLoadingView(message: 'Loading markets…'));
+      return wrapBrowse(
+        AppLoadingView(
+          message: _marketCopy('markets.loading', 'Loading markets…'),
+        ),
+      );
     }
     if (allowPagination && _searchFailed && stocks.isEmpty) {
       return wrapBrowse(
         _emptyState(
           Icons.cloud_off,
-          'Market data unavailable',
-          'Network error or live search is unavailable. Please refresh to try again.',
+          _marketCopy('markets.search_error_title', 'Market data unavailable'),
+          _marketCopy(
+            'markets.search_error_body',
+            'Network error or live search is unavailable. Please refresh to try again.',
+          ),
         ),
       );
     }
@@ -1467,12 +1486,18 @@ class _MarketsPageState extends State<MarketsPage> {
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            semanticsLabel: 'Loading more stocks',
+                          ),
                         )
                       : AppText(
                           _searchFailed
-                              ? 'Unable to load stocks. Retry'
-                              : 'Load more',
+                              ? _marketCopy(
+                                  'markets.load_more_retry',
+                                  'Unable to load stocks. Retry',
+                                )
+                              : _marketCopy('markets.load_more', 'Load more'),
                         ),
                 ),
               ),
@@ -1631,10 +1656,15 @@ class _MarketsPageState extends State<MarketsPage> {
             icon: _searchLoading
                 ? const SizedBox.square(
                     dimension: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Refreshing market data',
+                    ),
                   )
                 : const Icon(Icons.refresh_rounded, size: 18),
-            label: const AppText('Refresh market data'),
+            label: AppText(
+              _marketCopy('markets.refresh', 'Refresh market data'),
+            ),
           ),
         ),
       ],

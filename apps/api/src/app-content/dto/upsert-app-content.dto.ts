@@ -1,12 +1,14 @@
 import { Type } from 'class-transformer';
 import {
   ArrayMinSize,
+  ArrayMaxSize,
   IsArray,
   IsBoolean,
   IsIn,
   IsInt,
   IsOptional,
   IsString,
+  IsDateString,
   Max,
   MaxLength,
   Min,
@@ -60,7 +62,18 @@ export class UpsertAppContentDto {
 export class BulkUpsertAppContentDto {
   @IsArray()
   @ArrayMinSize(1)
+  @ArrayMaxSize(200)
   @ValidateNested({ each: true })
   @Type(() => UpsertAppContentDto)
   entries: UpsertAppContentDto[];
+}
+
+export class RestoreAppContentDto {
+  @IsString()
+  @MinLength(1)
+  @MaxLength(128)
+  revisionId: string;
+
+  @IsDateString()
+  expectedUpdatedAt: string;
 }

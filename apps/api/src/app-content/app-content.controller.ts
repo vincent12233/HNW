@@ -18,6 +18,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { AppContentService } from './app-content.service';
 import {
   BulkUpsertAppContentDto,
+  RestoreAppContentDto,
   UpsertAppContentDto,
 } from './dto/upsert-app-content.dto';
 
@@ -85,6 +86,24 @@ export class AppContentController {
   @Roles(UserRole.ADMIN)
   remove(@Req() request: AuthenticatedRequest, @Param('id') id: string) {
     return this.service.deleteEntry(id, {
+      userId: request.user.userId,
+      role: request.user.role,
+    });
+  }
+
+  @Get('admin/app-content/:id/history')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  history(@Param('id') id: string) {
+    return this.service.listHistory(id);
+  }
+
+  @Post('admin/app-content/:id/restore')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.ADMIN)
+  restore(@Req() request: AuthenticatedRequest, @Param('id') id: string,
+    @Body() body: RestoreAppContentDto) {
+    return this.service.restoreEntry(id, body.revisionId, body.expectedUpdatedAt, {
       userId: request.user.userId,
       role: request.user.role,
     });

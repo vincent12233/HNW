@@ -36,7 +36,7 @@ Future<void> showRecordDetailSheet(
                       child: AppText(title, style: AppTypography.headline),
                     ),
                     IconButton(
-                      tooltip: 'Close details',
+                      tooltip: tr('Close details'),
                       style: IconButton.styleFrom(
                         minimumSize: const Size(48, 48),
                       ),

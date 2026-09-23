@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:india_trading_app/pages/account_security_page.dart';
 import 'package:india_trading_app/pages/account_content_page.dart';
+import 'package:india_trading_app/services/insight_articles_service.dart';
 import 'package:india_trading_app/widgets/app_page_scaffold.dart';
 import 'package:india_trading_app/widgets/trading/standard_order_details_sheet.dart';
 import 'package:india_trading_app/models/trading_order.dart';
@@ -103,7 +104,19 @@ void main() {
     });
     testWidgets('learning article fits large text at $size', (tester) async {
       viewport(tester, size);
-      await tester.pumpWidget(app(const WealthInsightArticlePage(index: 0)));
+      await tester.pumpWidget(
+        app(
+          const WealthInsightArticlePage(
+            article: InsightArticle(
+              id: 'preview',
+              slug: 'preview',
+              locale: 'en',
+              title: 'Account and KYC',
+              body: 'Review account and identity information carefully.',
+            ),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
       await tester.drag(
         find.byType(SingleChildScrollView).first,

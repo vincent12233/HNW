@@ -13,6 +13,7 @@ import 'package:india_trading_app/widgets/kyc_signature_pad.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/pages/account_security_page.dart';
 import 'package:india_trading_app/pages/account_content_page.dart';
+import 'package:india_trading_app/services/insight_articles_service.dart';
 import 'package:india_trading_app/pages/language_page.dart';
 import 'package:india_trading_app/pages/appearance_page.dart';
 import 'package:india_trading_app/pages/legal_page.dart';
@@ -26,7 +27,15 @@ void main() {
   final pages = <String, Widget>{
     'password': const AccountSecurityPage(),
     'wealth_insights': const WealthInsightsPage(),
-    'article': const WealthInsightArticlePage(index: 0),
+    'article': const WealthInsightArticlePage(
+      article: InsightArticle(
+        id: 'preview',
+        slug: 'preview',
+        locale: 'en',
+        title: 'Account and KYC',
+        body: 'Review account and identity information carefully.',
+      ),
+    ),
     'language': const LanguagePage(),
     'appearance': const AppearancePage(),
     'privacy': const LegalPage(title: 'Privacy'),

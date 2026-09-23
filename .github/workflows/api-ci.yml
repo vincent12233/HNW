@@ -4,13 +4,26 @@ on:
   pull_request:
     paths:
       - 'apps/api/**'
+      - '.nvmrc'
+      - 'scripts/verify-migration-upgrade.sh'
+      - 'scripts/smoke-auth-content.mjs'
       - '.github/workflows/api-ci.yml'
   push:
     branches:
       - main
     paths:
       - 'apps/api/**'
+      - '.nvmrc'
+      - 'scripts/verify-migration-upgrade.sh'
+      - 'scripts/smoke-auth-content.mjs'
       - '.github/workflows/api-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
@@ -18,10 +31,41 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
-    # Placeholder URLs for prisma.config.ts / postinstall generate (no DB service).
     env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci
-      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci?schema=public
+      SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_shadow?schema=public
+      JWT_SECRET: ci-jwt-secret-32-characters-abcdef123456
+      OTC_KEY_ENCRYPTION_SECRET: ci-otc-secret-32-characters-abcdef123456
+      OBJECT_SIGNING_SECRET: ci-object-secret-32-characters-abcdef123456
+      TWO_FACTOR_ENCRYPTION_KEY: ci-2fa-secret-32-characters-abcdef123456
+      HNW_VERIFY_PG: '1'
+      HNW_VERIFY_REDIS: '1'
+      RATE_LIMIT_REDIS_URL: redis://localhost:6379
+      TRUST_PROXY_HOPS: '0'
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: trading_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres -d trading_ci"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=12
 
     steps:
       - name: Checkout
@@ -30,15 +74,37 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version-file: .nvmrc
           cache: npm
           cache-dependency-path: apps/api/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Audit production dependencies
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Generate Prisma client
         run: npm run db:generate
+
+      - name: Create isolated migration database
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres \
+            -c 'DROP DATABASE IF EXISTS trading_ci_fresh;' \
+            -c 'CREATE DATABASE trading_ci_fresh;'
+
+      - name: Apply database migrations
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
+        run: npm run db:migrate
+
+      - name: Verify migration upgrade with existing account data
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_upgrade?schema=public
+        run: |
+          PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres \
+            -c 'CREATE DATABASE trading_ci_upgrade;'
+          bash ../../scripts/verify-migration-upgrade.sh
 
       - name: Lint API
         run: npm run lint
@@ -51,5 +117,60 @@ jobs:
           test -f dist/main.js
           test ! -e dist/src/main.js
 
+      - name: Smoke test built API
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
+          NODE_ENV: development
+          PORT: 3100
+          HOST: 127.0.0.1
+          MARKET_DATA_STREAMING_ENABLED: 'false'
+        run: |
+          node dist/main.js > /tmp/hnw-api-smoke.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3100/health/ready > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/hnw-api-smoke.log
+          exit 1
+
       - name: Run unit tests
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
         run: npm test -- --runInBand
+
+      - name: Seed integration administrator
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
+          ADMIN_FIXED_INVITE_CODE: CI_FIXED_INVITE_2026
+          ADMIN_INITIAL_PASSWORD: CI_Admin_2026_Password
+          MANAGER_INITIAL_PASSWORD: CI_Manager_2026_Password
+          FINANCE_INITIAL_PASSWORD: CI_Finance_2026_Password
+          SUPPORT_INITIAL_PASSWORD: CI_Support_2026_Password
+          BUSINESS_INITIAL_PASSWORD: CI_Business_2026_Password
+        run: npm run seed
+
+      - name: Smoke test staff authentication and App content
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
+          HNW_SMOKE_ADMIN_PASSWORD: CI_Admin_2026_Password
+          NODE_ENV: development
+          PORT: 3100
+          HOST: 127.0.0.1
+          MARKET_DATA_STREAMING_ENABLED: 'false'
+        run: |
+          node dist/main.js > /tmp/hnw-api-integration.log 2>&1 &
+          api_pid=$!
+          trap 'kill "$api_pid" 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:3100/health/ready > /dev/null; then
+              node ../../scripts/smoke-auth-content.mjs
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/hnw-api-integration.log
+          exit 1

@@ -35,24 +35,18 @@ export class TwoFactorService {
     const dedicated = this.config
       .get<string>('TWO_FACTOR_ENCRYPTION_KEY')
       ?.trim();
-    if (process.env.NODE_ENV === 'production') {
-      if (
-        !dedicated ||
-        dedicated.length < 32 ||
-        /replace|change-me|development/i.test(dedicated) ||
-        dedicated === this.config.get<string>('JWT_SECRET')
-      ) {
-        throw new Error(
-          'TWO_FACTOR_ENCRYPTION_KEY must be a unique random value of at least 32 characters',
-        );
-      }
-      return Buffer.from(
-        hkdfSync('sha256', dedicated, 'finvest', 'totp-encryption-v1', 32),
+    if (
+      !dedicated ||
+      dedicated.length < 32 ||
+      /replace|change-me|development/i.test(dedicated) ||
+      dedicated === this.config.get<string>('JWT_SECRET')
+    ) {
+      throw new Error(
+        'TWO_FACTOR_ENCRYPTION_KEY must be a unique random value of at least 32 characters',
       );
     }
-    const material = dedicated || this.config.getOrThrow<string>('JWT_SECRET');
     return Buffer.from(
-      hkdfSync('sha256', material, 'finvest', 'totp-encryption-v1', 32),
+      hkdfSync('sha256', dedicated, 'finvest', 'totp-encryption-v1', 32),
     );
   }
   private encrypt(secret: string) {

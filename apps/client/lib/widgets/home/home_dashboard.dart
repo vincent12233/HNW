@@ -358,7 +358,7 @@ class _AssetPanel extends StatelessWidget {
               ),
               if (dashboard.onSelectPeriod != null)
                 PopupMenuButton<String>(
-                  tooltip: 'Profit period',
+                  tooltip: tr('Profit period'),
                   onSelected: dashboard.onSelectPeriod,
                   itemBuilder: (_) => ['1D', '1W', '1M', '3M', '1Y', 'All']
                       .map(
@@ -583,7 +583,7 @@ class _IndicesGrid extends StatelessWidget {
               ),
             ),
             IconButton(
-              tooltip: 'Retry quotes',
+              tooltip: tr('Retry quotes'),
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
             ),
@@ -1081,7 +1081,7 @@ class _NewsSection extends StatelessWidget {
             ),
             IconButton(
               onPressed: onRetry,
-              tooltip: 'Retry news',
+              tooltip: tr('Retry news'),
               icon: const Icon(Icons.refresh),
             ),
           ],

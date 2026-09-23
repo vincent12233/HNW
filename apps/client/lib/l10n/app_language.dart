@@ -1,9 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class AppLanguage extends ChangeNotifier {
   static final instance = AppLanguage();
   String code = 'en';
+  Map<String, String> _remoteCopy = const {};
+
+  String? remoteCopy(String source) => _remoteCopy[source];
+
+  void replaceRemoteCopy(Map<String, String> value) {
+    if (mapEquals(_remoteCopy, value)) return;
+    _remoteCopy = Map.unmodifiable(value);
+    notifyListeners();
+  }
+
   Future<void> load() async {
     final saved = (await SharedPreferences.getInstance()).getString(
       'app_language',
@@ -18,6 +29,7 @@ class AppLanguage extends ChangeNotifier {
       value,
     );
     if (!saved) throw StateError('Unable to save language');
+    if (code != value) _remoteCopy = const {};
     code = value;
     notifyListeners();
   }
@@ -49,7 +61,6 @@ const professionalTerms = <String, String>{
   'Explore offers': 'View Investment Offers',
   'Help & Support': 'Customer Support',
   'Support & More': 'Support & Legal',
-  'Welcome Back!': 'Welcome back',
   'Login to continue': 'Sign in to your account',
   'Login': 'Sign In',
   'Logout': 'Sign Out',
@@ -62,12 +73,14 @@ const professionalTerms = <String, String>{
   'SUSPENDED': 'Suspended',
 };
 
-String tr(String value) => AppLanguage.instance.code == 'hi'
-    ? hindi[value] ??
-          hindi[professionalTerms[value]] ??
-          professionalTerms[value] ??
-          value
-    : professionalTerms[value] ?? value;
+String tr(String value) =>
+    AppLanguage.instance.remoteCopy(value) ??
+    (AppLanguage.instance.code == 'hi'
+        ? hindi[value] ??
+              hindi[professionalTerms[value]] ??
+              professionalTerms[value] ??
+              value
+        : professionalTerms[value] ?? value);
 
 // Retains const text declarations while reacting to locale changes, including open routes.
 class AppText extends StatelessWidget {

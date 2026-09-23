@@ -308,7 +308,10 @@ class _StockHistoryChartState extends State<StockHistoryChart>
                     const SizedBox(
                       width: 12,
                       height: 12,
-                      child: CircularProgressIndicator(strokeWidth: 1.5),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 1.5,
+                        semanticsLabel: 'Refreshing chart',
+                      ),
                     ),
                 ],
               ),
@@ -447,7 +450,11 @@ class _StockHistoryChartState extends State<StockHistoryChart>
               SizedBox(
                 height: height,
                 child: _loading
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          semanticsLabel: 'Loading chart',
+                        ),
+                      )
                     : _data.isEmpty
                     ? Center(
                         child: Column(

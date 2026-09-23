@@ -84,7 +84,7 @@ Audit actions include create/update/delete (and settings upsert) with `before`/`
 ## Legacy Insights compatibility
 
 1. Idempotent upsert import from seed mapping (`insight-legacy-import.ts`) on Insights service read paths.  
-2. Client Learning Center: **structured API → KV `article.*` → local static list**.  
+2. Historical behavior was **structured API → KV → local static**; current client uses only the structured API and shows an explicit retryable error on failure.
 3. Old Admin `/app-content` Insights KV section remains.
 
 ---

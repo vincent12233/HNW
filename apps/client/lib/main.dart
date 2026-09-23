@@ -11,6 +11,7 @@ import 'pages/market_page.dart';
 import 'pages/register_page.dart';
 import 'pages/splash_page.dart';
 import 'services/app_client_settings_service.dart';
+import 'services/app_content_service.dart';
 import 'services/auth_service.dart';
 import 'services/local_data_cache.dart';
 import 'services/session_expiry_service.dart';
@@ -43,13 +44,13 @@ Future<void> main() async {
                 size: 48,
               ),
               SizedBox(height: 12),
-              Text(
+              AppText(
                 'Content is temporarily unavailable',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
               ),
               SizedBox(height: 6),
-              Text(
+              AppText(
                 'Please refresh or switch tabs.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppConfig.neutralColor),
@@ -193,6 +194,7 @@ class _AuthGateState extends State<AuthGate> {
       authService.restoreSession(),
       LocalDataCache.readJson(LocalDataCache.marketSnapshot),
       LocalDataCache.readJson(LocalDataCache.accountSnapshot),
+      AppContentService.instance.load(),
       _warmApiConnection(),
       Future<void>.delayed(const Duration(milliseconds: 1400)),
     ]);

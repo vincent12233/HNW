@@ -1059,7 +1059,7 @@ class _MarketsPageState extends State<MarketsPage> {
               MediaQuery.textScalerOf(context).scale(1) <= 1.15
           ? 4
           : 2;
-      final gap = 8.0;
+      final gap = constraints.maxWidth < 360 ? 8.0 : 10.0;
       final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
       return Wrap(
         spacing: gap,

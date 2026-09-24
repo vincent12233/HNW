@@ -230,7 +230,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   child: Column(
                     children: [
                       CircularProgressIndicator(
-                        semanticsLabel: 'Loading portfolio',
+                        semanticsLabel: _portfolioCopy(
+                          'portfolio.loading',
+                          'Loading portfolio',
+                        ),
                       ),
                       SizedBox(height: AppSpacing.md),
                       AppText(
@@ -280,7 +283,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                           TextButton.icon(
                             onPressed: _loading ? null : _load,
                             icon: const Icon(Icons.refresh),
-                            label: const AppText('Retry'),
+                            label: AppText(tr('Retry')),
                           ),
                         ],
                       ),
@@ -414,11 +417,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 child: AppStatusSwitch(
                   switchKey: '$_period|$hasHistory|$_loading',
                   child: _loading
-                      ? const Center(
+                      ? Center(
                           child: CircularProgressIndicator(
                             color: AppColors.textInverse,
                             strokeWidth: 2,
-                            semanticsLabel: 'Loading performance',
+                            semanticsLabel: tr('Loading performance'),
                           ),
                         )
                       : !hasHistory
@@ -569,7 +572,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                           CrossAxisAlignment.start,
                                       children: [
                                         AppText(
-                                          category['category'].toString(),
+                                          tr(category['category'].toString()),
                                           style: AppTypography.labelSmall,
                                         ),
                                         const SizedBox(height: AppSpacing.xs),
@@ -619,7 +622,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               final donut = Semantics(
                 image: true,
                 label:
-                    '${tr('Asset Allocation')}, '
+                    '${_portfolioCopy('portfolio.allocation_heading', 'Asset Allocation')}, '
                     '${tr('Current Value')} ${_money(data['currentValue'])}, 100%',
                 child: ExcludeSemantics(
                   child: SizedBox.square(
@@ -728,7 +731,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                     const SizedBox(width: AppSpacing.md - 2),
                     Expanded(
                       child: AppText(
-                        category['category'].toString(),
+                        tr(category['category'].toString()),
                         style: AppTypography.titleSmall,
                       ),
                     ),
@@ -1167,7 +1170,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             children: [
               for (final category in categories) ...[
                 AppText(
-                  category['category'].toString(),
+                  tr(category['category'].toString()),
                   style: AppTypography.titleLarge,
                 ),
                 if (_rows(category['positions']).isEmpty)

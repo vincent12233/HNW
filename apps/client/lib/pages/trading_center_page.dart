@@ -470,12 +470,12 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                 ),
                 Container(
                   margin: const EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
+                    AppSpacing.md,
                     AppSpacing.sm - 2,
-                    AppSpacing.lg,
+                    AppSpacing.md,
                     AppSpacing.md,
                   ),
-                  padding: const EdgeInsets.all(AppSpacing.lg + 2),
+                  padding: const EdgeInsets.all(AppSpacing.md + 2),
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,

@@ -88,7 +88,6 @@ class _MarketsPageState extends State<MarketsPage> {
   bool _watchlistLoading = true;
   bool _watchlistFailed = false;
   final Map<String, List<double>> _indexHistory = <String, List<double>>{};
-  final Map<String, List<double>> _stockHistory = <String, List<double>>{};
   final List<StockQuote> _marketsFeatured = <StockQuote>[];
   final Map<String, (double, double)> _yearRanges =
       <String, (double, double)>{};
@@ -163,12 +162,12 @@ class _MarketsPageState extends State<MarketsPage> {
     AppContentService.instance.addListener(_onContentChanged);
     _loadWatchlist();
     unawaited(_loadIndexHistory());
-    unawaited(_loadFeaturedStockHistory());
+    unawaited(_loadFeaturedStocks());
     unawaited(_searchStocks(reset: true));
     unawaited(AppContentService.instance.load());
   }
 
-  Future<void> _loadFeaturedStockHistory() async {
+  Future<void> _loadFeaturedStocks() async {
     final featured = await FeaturedInstrumentsService.instance
         .marketsFeatured();
     if (!mounted) return;
@@ -176,30 +175,6 @@ class _MarketsPageState extends State<MarketsPage> {
       _marketsFeatured
         ..clear()
         ..addAll(featured);
-    });
-    if (featured.isEmpty) return;
-    final results = await Future.wait(
-      featured.map((stock) async {
-        try {
-          final history = await _marketDataService.fetchHistory(
-            symbol: stock.symbol,
-            exchange: stock.exchange,
-            range: '1D',
-          );
-          return (
-            stock.symbol,
-            history.data.map((point) => point.close).toList(),
-          );
-        } catch (_) {
-          return (stock.symbol, <double>[]);
-        }
-      }),
-    );
-    if (!mounted) return;
-    setState(() {
-      for (final result in results) {
-        if (result.$2.length >= 2) _stockHistory[result.$1] = result.$2;
-      }
     });
   }
 
@@ -355,7 +330,7 @@ class _MarketsPageState extends State<MarketsPage> {
     ]);
     await _loadWatchlist();
     await _loadIndexHistory();
-    await _loadFeaturedStockHistory();
+    await _loadFeaturedStocks();
     if (selectedMoverFilter >= 3) await _loadYearRanges(force: true);
     await _searchStocks(reset: true);
   }

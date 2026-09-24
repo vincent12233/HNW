@@ -163,7 +163,6 @@ class _MarketHomePageState extends State<MarketHomePage>
   AnnouncementItem? _homeAnnouncement;
   final List<MarketNewsItem> marketNews = <MarketNewsItem>[];
   final List<CompanyShowcase> companyShowcases = <CompanyShowcase>[];
-  final Map<String, List<double>> stockHistory = <String, List<double>>{};
   final Map<String, List<double>> indexHistory = <String, List<double>>{};
   AppContentBundle _appContent = AppContentBundle.empty;
   bool _optionalUpdatePrompted = false;
@@ -873,44 +872,9 @@ class _MarketHomePageState extends State<MarketHomePage>
     ]);
     if (!mounted) return;
     setState(() => isLoading = false);
-    unawaited(_loadFeaturedStockHistory());
     unawaited(_loadPortfolioHistory(_portfolioPeriod));
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && selectedIndex == 0) _showPendingIpoAllocationIfNeeded();
-    });
-  }
-
-  Future<void> _loadFeaturedStockHistory() async {
-    final byInstrument = <String, StockQuote>{};
-    for (final stock in <StockQuote>[
-      ...homeTopMovers(stocks, gainers: true),
-      ...homeTopMovers(stocks, gainers: false),
-    ]) {
-      byInstrument['${stock.exchange}:${stock.symbol}'] = stock;
-    }
-    final featured = byInstrument.values.toList();
-    final results = await Future.wait(
-      featured.map((stock) async {
-        try {
-          final history = await marketDataService.fetchHistory(
-            symbol: stock.symbol,
-            exchange: stock.exchange,
-            range: '1D',
-          );
-          return (
-            stock.symbol,
-            history.data.map((point) => point.close).toList(),
-          );
-        } catch (_) {
-          return (stock.symbol, <double>[]);
-        }
-      }),
-    );
-    if (!mounted) return;
-    setState(() {
-      for (final result in results) {
-        if (result.$2.length >= 2) stockHistory[result.$1] = result.$2;
-      }
     });
   }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { EyeInvisibleOutlined, EyeOutlined, IdcardOutlined, LockOutlined } from "@ant-design/icons";
+import { EyeInvisibleOutlined, EyeOutlined, IdcardOutlined, LockOutlined, LoginOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
 import { Alert, Button, Form, Input } from "antd";
 import { isAxiosError } from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [capsLock, setCapsLock] = useState(false);
-  const [deploymentRole, setDeploymentRole] = useState<BackendRole | undefined>(undefined);
+  const [deploymentRole, setDeploymentRole] = useState<BackendRole | undefined>(() => getBackendRole());
 
   useEffect(() => {
     setDeploymentRole(getBackendRole());
@@ -91,7 +91,13 @@ export default function AdminLoginPage() {
   return (
     <main className={`admin-login ${roleClass}`.trim()}>
       <section className="login-card" aria-labelledby="staff-login-title">
-        <p className="login-brand-mark">HNW</p>
+        <div className="login-brand-row">
+          <p className="login-brand-mark">HNW</p>
+          <p className="login-role-context">
+            <SafetyCertificateOutlined aria-hidden />
+            {deploymentRole ? backendRoleLabels[deploymentRole] : "安全员工入口"}
+          </p>
+        </div>
         <p className="eyebrow">员工工作台</p>
         <h1 id="staff-login-title">{roleTitle}</h1>
         <p className="subtitle">
@@ -107,7 +113,14 @@ export default function AdminLoginPage() {
         <Suspense fallback={null}>
           <SessionStatus />
         </Suspense>
-        <Form<Values> layout="vertical" onFinish={submit} size="large" disabled={submitting} requiredMark={false}>
+        <Form<Values>
+          layout="vertical"
+          onFinish={submit}
+          size="large"
+          disabled={submitting}
+          requiredMark={false}
+          aria-busy={submitting}
+        >
           <Form.Item label="员工编号" name="employeeNo" rules={[{ required: true, whitespace: true, message: "请输入员工编号" }]}>
             <Input
               prefix={<IdcardOutlined />}
@@ -141,7 +154,15 @@ export default function AdminLoginPage() {
               大写锁定已开启
             </p>
           )}
-          <Button type="primary" htmlType="submit" loading={submitting} block className="login-submit" style={{ width: "100%", height: 48 }}>
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={submitting}
+            icon={submitting ? undefined : <LoginOutlined />}
+            block
+            className="login-submit"
+            style={{ width: "100%", height: 48 }}
+          >
             {submitting ? "正在登录…" : "登录工作台"}
           </Button>
         </Form>

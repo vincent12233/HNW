@@ -1194,7 +1194,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           onAlertsTap: _openNotifications,
           notificationCount: unreadNotificationCount,
           indexQuotes: indexQuotes,
-          onViewMarkets: () => setState(() => selectedIndex = 1),
+          onViewMarkets: () => _onDestinationSelected(1),
           onOpenOrderTicket: _openStockForTrade,
           marketOpen: marketOpen,
           marketHours: marketHours,
@@ -1502,7 +1502,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           onRetryAccount: () => unawaited(_refreshAccountSnapshot()),
           onRetryNews: () => unawaited(_reloadNews()),
           onRetryQuotes: () => unawaited(_refreshMarketData()),
-          onOpenMarkets: () => setState(() => selectedIndex = 1),
+          onOpenMarkets: () => _onDestinationSelected(1),
           onOpenNews: (item) => unawaited(_openNews(item)),
           onOpenStock: _openStock,
           onOpenIndex: _openHomeIndex,
@@ -1764,7 +1764,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   }
 
   Widget _portfolioBody() => ProductPortfolioPage(
-    onExplore: () => setState(() => selectedIndex = 2),
+    onExplore: () => _onDestinationSelected(2),
     onNotifications: _openNotifications,
   );
 

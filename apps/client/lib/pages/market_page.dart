@@ -1001,9 +1001,9 @@ class _MarketHomePageState extends State<MarketHomePage>
                       tooltip: tr('Trade'),
                     ),
                     NavigationDestination(
-                      icon: const Icon(Icons.pie_chart_outline),
+                      icon: const Icon(Icons.business_center_outlined),
                       selectedIcon: const Icon(
-                        Icons.pie_chart,
+                        Icons.business_center,
                         color: AppColors.navSelected,
                       ),
                       label: tr('Portfolio'),

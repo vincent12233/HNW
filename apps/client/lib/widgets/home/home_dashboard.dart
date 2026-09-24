@@ -483,14 +483,14 @@ class _HomeQuickActions extends StatelessWidget {
       HomeActionButton(
         label: 'Add Money',
         subtitle: 'Instant Deposit',
-        icon: Icons.account_balance_wallet_outlined,
+        icon: Icons.add_card_outlined,
         color: AppColors.brandPrimary,
         onTap: dashboard.onDeposit,
       ),
       HomeActionButton(
         label: 'Withdraw',
         subtitle: 'Withdraw to Bank',
-        icon: Icons.call_made_rounded,
+        icon: Icons.account_balance_outlined,
         color: AppColors.gain,
         onTap: dashboard.onWithdraw,
       ),

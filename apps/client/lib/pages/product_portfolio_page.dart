@@ -530,101 +530,123 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               final legend = Column(
                 children: categories
                     .map(
-                      (category) => InkWell(
-                        onTap: () => _showHoldings([category]),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppSpacing.md - 2,
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.circle,
-                                size: 9,
-                                color: _categoryColor(category['category']),
+                      (category) => Semantics(
+                        button: true,
+                        label:
+                            '${tr(category['category'].toString())}, '
+                            '${tr('Current Value')} ${_money(category['currentValue'])}, '
+                            '${tr('Allocation')} ${_percent(category['allocationPercent'])}',
+                        child: ExcludeSemantics(
+                          child: InkWell(
+                            onTap: () => _showHoldings([category]),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                vertical: AppSpacing.md - 2,
                               ),
-                              const SizedBox(width: AppSpacing.sm),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    AppText(
-                                      category['category'].toString(),
-                                      style: AppTypography.labelSmall,
-                                    ),
-                                    const SizedBox(height: AppSpacing.xs),
-                                    AppText(
-                                      _money(category['currentValue']),
-                                      style: AppTypography.numericSmall
-                                          .copyWith(fontSize: 10),
-                                    ),
-                                    const SizedBox(height: AppSpacing.xs),
-                                    if (!_hidden &&
-                                        _availableNumber(
-                                              category['allocationPercent'],
-                                            ) !=
-                                            null)
-                                      LinearProgressIndicator(
-                                        value:
-                                            (_number(
-                                                      category['allocationPercent'],
-                                                    ) /
-                                                    100)
-                                                .clamp(0.0, 1.0),
-                                        minHeight: 2,
-                                        color: _categoryColor(
-                                          category['category'],
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.circle,
+                                    size: 9,
+                                    color: _categoryColor(category['category']),
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        AppText(
+                                          category['category'].toString(),
+                                          style: AppTypography.labelSmall,
                                         ),
-                                        backgroundColor:
-                                            AppColors.surfaceSecondary,
-                                      ),
-                                  ],
-                                ),
+                                        const SizedBox(height: AppSpacing.xs),
+                                        AppText(
+                                          _money(category['currentValue']),
+                                          style: AppTypography.numericSmall
+                                              .copyWith(fontSize: 10),
+                                        ),
+                                        const SizedBox(height: AppSpacing.xs),
+                                        if (!_hidden &&
+                                            _availableNumber(
+                                                  category['allocationPercent'],
+                                                ) !=
+                                                null)
+                                          LinearProgressIndicator(
+                                            value:
+                                                (_number(
+                                                          category['allocationPercent'],
+                                                        ) /
+                                                        100)
+                                                    .clamp(0.0, 1.0),
+                                            minHeight: 2,
+                                            color: _categoryColor(
+                                              category['category'],
+                                            ),
+                                            backgroundColor:
+                                                AppColors.surfaceSecondary,
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  AppText(
+                                    _percent(category['allocationPercent']),
+                                    style: AppTypography.numericSmall,
+                                  ),
+                                  const SizedBox(width: AppSpacing.xs),
+                                  const Icon(Icons.chevron_right, size: 18),
+                                ],
                               ),
-                              AppText(
-                                _percent(category['allocationPercent']),
-                                style: AppTypography.numericSmall,
-                              ),
-                              const SizedBox(width: AppSpacing.xs),
-                              const Icon(Icons.chevron_right, size: 18),
-                            ],
+                            ),
                           ),
                         ),
                       ),
                     )
                     .toList(),
               );
-              final donut = SizedBox.square(
-                dimension: 128,
-                child: CustomPaint(
-                  painter: _AllocationPainter(
-                    categories.map((c) => _number(c['currentValue'])).toList(),
-                    categories
-                        .map((c) => _categoryColor(c['category']))
-                        .toList(),
-                  ),
-                  child: Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.lg + 2),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          FittedBox(
-                            fit: BoxFit.scaleDown,
-                            child: AppText(
-                              _money(data['currentValue']),
-                              style: AppTypography.numericSmall.copyWith(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 12,
+              final donut = Semantics(
+                image: true,
+                label:
+                    '${tr('Asset Allocation')}, '
+                    '${tr('Current Value')} ${_money(data['currentValue'])}, 100%',
+                child: ExcludeSemantics(
+                  child: SizedBox.square(
+                    dimension: 128,
+                    child: CustomPaint(
+                      painter: _AllocationPainter(
+                        categories
+                            .map((c) => _number(c['currentValue']))
+                            .toList(),
+                        categories
+                            .map((c) => _categoryColor(c['category']))
+                            .toList(),
+                      ),
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(AppSpacing.lg + 2),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              FittedBox(
+                                fit: BoxFit.scaleDown,
+                                child: AppText(
+                                  _money(data['currentValue']),
+                                  style: AppTypography.numericSmall.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ),
-                            ),
+                              const SizedBox(height: AppSpacing.xs),
+                              AppText(
+                                '100%',
+                                style: AppTypography.caption.copyWith(
+                                  fontSize: 10,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: AppSpacing.xs),
-                          AppText(
-                            '100%',
-                            style: AppTypography.caption.copyWith(fontSize: 10),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
                   ),

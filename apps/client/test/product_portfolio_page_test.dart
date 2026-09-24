@@ -113,6 +113,16 @@ void main() {
     expect(find.text('OTC'), findsWidgets);
     expect(find.text('IPO'), findsWidgets);
     expect(find.byType(LinearProgressIndicator), findsWidgets);
+    expect(
+      find.bySemanticsLabel(RegExp(r'Asset Allocation.*100%')),
+      findsOneWidget,
+    );
+    expect(
+      find.bySemanticsLabel(
+        RegExp(r'Institutional[\s\S]*Allocation[\s\S]*100'),
+      ),
+      findsWidgets,
+    );
   });
   testWidgets('late period responses are ignored after disposal', (
     tester,

@@ -7,6 +7,7 @@ import '../services/client_account_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
+import '../theme/app_shadows.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
@@ -326,8 +327,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       Container(
         padding: const EdgeInsets.all(AppSpacing.md + 2),
         decoration: BoxDecoration(
-          color: AppColors.brandDark,
-          borderRadius: AppRadius.borderSm,
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.brandPrimary, AppColors.brandGradientEnd],
+          ),
+          borderRadius: AppRadius.borderMd,
+          border: Border.all(color: Colors.white24),
+          boxShadow: AppShadows.brandHero,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -380,19 +387,24 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                           },
                           showCheckmark: false,
                           selectedColor: AppColors.textInverse,
-                          backgroundColor: Colors.transparent,
-                          side: BorderSide.none,
-                          visualDensity: VisualDensity.compact,
+                          backgroundColor: Colors.white10,
+                          side: BorderSide(
+                            color: _period == period
+                                ? Colors.transparent
+                                : Colors.white12,
+                          ),
+                          visualDensity: VisualDensity.standard,
                           labelStyle: AppTypography.labelSmall.copyWith(
                             fontSize: 10,
                             color: _period == period
                                 ? AppColors.brandDark
                                 : inverseMuted,
                           ),
-                          padding: EdgeInsets.zero,
+                          padding: const EdgeInsets.symmetric(vertical: 1),
                           labelPadding: const EdgeInsets.symmetric(
                             horizontal: AppSpacing.xs + 1,
                           ),
+                          shape: const StadiumBorder(),
                         ),
                       ),
                   ],
@@ -708,6 +720,8 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               horizontal: AppSpacing.md,
               vertical: AppSpacing.md,
             ),
+            borderColor: AppColors.divider,
+            shadow: AppCardShadow.small,
             onTap: () => _showHoldings([category]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

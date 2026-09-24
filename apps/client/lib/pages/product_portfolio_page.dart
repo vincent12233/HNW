@@ -267,7 +267,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           AppText(
-                            'Showing previously loaded portfolio data.',
+                            _portfolioCopy(
+                              'portfolio.stale_data',
+                              'Showing previously loaded portfolio data.',
+                            ),
                             style: AppTypography.bodyMedium.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
@@ -329,7 +332,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               children: [
                 Expanded(
                   child: AppText(
-                    'Total Portfolio Value',
+                    _portfolioCopy(
+                      'portfolio.value_label',
+                      'Total Portfolio Value',
+                    ),
                     style: AppTypography.bodyMedium.copyWith(
                       color: inverseMuted,
                     ),
@@ -418,7 +424,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                       : !hasHistory
                       ? Center(
                           child: AppText(
-                            'Insufficient history',
+                            _portfolioCopy(
+                              'portfolio.insufficient_history',
+                              'Insufficient history',
+                            ),
                             style: AppTypography.bodyMedium.copyWith(
                               color: inverseMuted,
                             ),
@@ -789,11 +798,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           action: () => _showActivity(_rows(data['activity'])),
         ),
         if (_rows(data['activity']).isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
             child: Center(
               child: AppText(
-                'No product activity yet',
+                _portfolioCopy(
+                  'portfolio.no_activity',
+                  'No product activity yet',
+                ),
                 style: AppTypography.bodyMedium,
               ),
             ),
@@ -1250,11 +1262,16 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               padding: const EdgeInsets.all(AppSpacing.xl),
               children: rows.isEmpty
                   ? [
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          vertical: AppSpacing.xxl,
+                        ),
                         child: Center(
                           child: AppText(
-                            'No product activity yet',
+                            _portfolioCopy(
+                              'portfolio.no_activity',
+                              'No product activity yet',
+                            ),
                             style: AppTypography.bodyMedium,
                           ),
                         ),

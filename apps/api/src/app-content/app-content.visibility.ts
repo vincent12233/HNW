@@ -23,11 +23,6 @@ export const DEPRECATED_CONTENT_KEYS: ReadonlyArray<{
     key: 'funds.available_label',
     reason: 'Flutter Home no longer reads this key (Phase 10 STALE_CANDIDATE)',
   },
-  {
-    module: AppContentModule.TRADING,
-    key: 'portfolio.value_label',
-    reason: 'Flutter Portfolio no longer reads this key (Phase 10 STALE_CANDIDATE)',
-  },
 ];
 
 export function isAdminOnlySupportKey(key: string): boolean {

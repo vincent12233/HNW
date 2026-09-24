@@ -660,7 +660,7 @@ class _IndexChip extends StatelessWidget {
       child: ConstrainedBox(
         constraints: const BoxConstraints(minHeight: AppMotion.tapTarget),
         child: AppCard(
-          radius: AppRadius.sm,
+          radius: AppRadius.md,
           padding: const EdgeInsets.fromLTRB(
             AppSpacing.md,
             AppSpacing.sm + 2,

@@ -27,6 +27,7 @@ class ProfileSection extends StatelessWidget {
         const SizedBox(height: AppSpacing.sm + 2),
         AppCard(
           padding: EdgeInsets.zero,
+          radius: AppRadius.sm,
           child: Column(
             children: [
               for (var i = 0; i < children.length; i++) ...[

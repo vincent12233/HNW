@@ -1911,6 +1911,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                   ),
                 ),
               ),
+              IconButton(
+                tooltip: 'Search stocks',
+                onPressed: _openStockSearch,
+                icon: const Icon(Icons.search_rounded, size: 22),
+              ),
               _notificationButton(),
             ],
           ),

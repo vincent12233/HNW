@@ -10,6 +10,7 @@ import '../../theme/app_motion.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/product_category.dart';
 import '../stock_logo.dart';
+import '../app_card.dart';
 import '../app_page_scaffold.dart';
 import '../holding_detail_sheet.dart';
 
@@ -167,261 +168,216 @@ class _HoldingsTabState extends State<HoldingsTab> {
                             ? AppConfig.lossColor
                             : AppConfig.neutralColor;
 
-                        return Material(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          child: InkWell(
-                            borderRadius: BorderRadius.circular(12),
-                            onTap: () => showHoldingDetails(
-                              context,
-                              position: position,
-                              quote: stock,
-                              onSell: (quote) =>
-                                  widget.onSell(quote, isBuy: false),
-                            ),
-                            child: Container(
-                              padding: const EdgeInsets.all(14),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: const Color(0xFFE8EDF5),
-                                ),
-                              ),
-                              child: Column(
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      StockLogo(
-                                        symbol: position.symbol,
-                                        logoUrl:
-                                            position.logoUrl ?? stock?.logoUrl,
-                                        size: 38,
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            AppText(
-                                              position.symbol,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                fontSize: 15,
-                                                fontWeight: FontWeight.w800,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 3),
-                                            AppText(
-                                              position.name.isEmpty
-                                                  ? '${position.quantity} shares'
-                                                  : position.name,
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              style: const TextStyle(
-                                                color: Color(0xFF64748B),
-                                                fontSize: 12,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 6),
-                                            Wrap(
-                                              spacing: 6,
-                                              runSpacing: 4,
-                                              children: [
-                                                _holdingTag(position.exchange),
-                                                _holdingTag(
-                                                  _categoryLabel(category),
-                                                  accent: true,
-                                                ),
-                                                _holdingTag(
-                                                  '${position.quantity} qty',
-                                                ),
-                                                if (selectedView == 'POSITIONS')
-                                                  _holdingTag(
-                                                    frozen > 0
-                                                        ? 'Frozen $frozen'
-                                                        : 'Unfrozen',
-                                                  ),
-                                              ],
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Flexible(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
-                                          children: [
-                                            AppText(
-                                              currentPrice == null
-                                                  ? 'Unavailable'
-                                                  : formatPrice(currentPrice),
-                                              maxLines: 1,
-                                              overflow: TextOverflow.ellipsis,
-                                              textAlign: TextAlign.end,
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.w800,
-                                                fontSize: 14,
-                                              ),
-                                            ),
-                                            if (delayed) ...[
-                                              const SizedBox(height: 3),
-                                              AppText(
-                                                'Delayed quote',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: TextStyle(
-                                                  color: AppColors.warning,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                            if (dayChangePercent != null) ...[
-                                              const SizedBox(height: 3),
-                                              AppText(
-                                                '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}% · ${dayChangePercent > 0
-                                                    ? 'Gain'
-                                                    : dayChangePercent < 0
-                                                    ? 'Loss'
-                                                    : 'Unchanged'}',
-                                                maxLines: 1,
-                                                overflow: TextOverflow.ellipsis,
-                                                textAlign: TextAlign.end,
-                                                style: TextStyle(
-                                                  color: dayColor,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 10,
-                                      vertical: 10,
+                        return AppCard(
+                          radius: 12,
+                          padding: EdgeInsets.zero,
+                          onTap: () => showHoldingDetails(
+                            context,
+                            position: position,
+                            quote: stock,
+                            onSell: (quote) =>
+                                widget.onSell(quote, isBuy: false),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: const BoxDecoration(),
+                            child: Column(
+                              children: [
+                                Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    StockLogo(
+                                      symbol: position.symbol,
+                                      logoUrl:
+                                          position.logoUrl ?? stock?.logoUrl,
+                                      size: 38,
                                     ),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF8FAFC),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: LayoutBuilder(
-                                      builder: (context, constraints) {
-                                        final stacked =
-                                            constraints.maxWidth < 300;
-                                        final metrics = [
-                                          _metricColumn(
-                                            'Invested',
-                                            formatPrice(invested),
-                                          ),
-                                          _metricColumn(
-                                            'Current',
-                                            marketValue == null
-                                                ? 'Unavailable'
-                                                : formatPrice(marketValue),
-                                          ),
-                                          _metricColumn(
-                                            'Unrealized P&L',
-                                            profitLoss == null
-                                                ? 'Unavailable'
-                                                : '${formatSignedPrice(profitLoss)} · ${profitLoss > 0
-                                                      ? 'Gain'
-                                                      : profitLoss < 0
-                                                      ? 'Loss'
-                                                      : 'Unchanged'}',
-                                            valueColor: profitLoss == null
-                                                ? AppColors.textSecondary
-                                                : profitColor,
-                                            subtitle: returnPercent == null
-                                                ? null
-                                                : '${returnPercent >= 0 ? '+' : ''}${returnPercent.toStringAsFixed(2)}%',
-                                          ),
-                                        ];
-                                        if (stacked) {
-                                          return Column(
-                                            children: [
-                                              for (
-                                                var i = 0;
-                                                i < metrics.length;
-                                                i++
-                                              ) ...[
-                                                if (i > 0)
-                                                  const SizedBox(height: 10),
-                                                SizedBox(
-                                                  width: double.infinity,
-                                                  child: metrics[i],
-                                                ),
-                                              ],
-                                            ],
-                                          );
-                                        }
-                                        return Row(
-                                          children: [
-                                            for (final metric in metrics)
-                                              Expanded(child: metric),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                  if (dayChange != null) ...[
-                                    const SizedBox(height: 8),
-                                    Row(
-                                      children: [
-                                        const Expanded(
-                                          child: AppText(
-                                            'Day’s change',
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          AppText(
+                                            position.symbol,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                            style: TextStyle(
-                                              color: Color(0xFF64748B),
-                                              fontSize: 11,
+                                            style: const TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: FontWeight.w800,
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Flexible(
-                                          child: AppText(
-                                            '${formatSignedPrice(dayChange)} · ${dayChange > 0
-                                                ? 'Gain'
-                                                : dayChange < 0
-                                                ? 'Loss'
-                                                : 'Unchanged'}',
+                                          const SizedBox(height: 3),
+                                          AppText(
+                                            position.name.isEmpty
+                                                ? '${position.quantity} shares'
+                                                : position.name,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: const TextStyle(
+                                              color: Color(0xFF64748B),
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Wrap(
+                                            spacing: 6,
+                                            runSpacing: 4,
+                                            children: [
+                                              _holdingTag(position.exchange),
+                                              _holdingTag(
+                                                _categoryLabel(category),
+                                                accent: true,
+                                              ),
+                                              _holdingTag(
+                                                '${position.quantity} qty',
+                                              ),
+                                              if (selectedView == 'POSITIONS')
+                                                _holdingTag(
+                                                  frozen > 0
+                                                      ? 'Frozen $frozen'
+                                                      : 'Unfrozen',
+                                                ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          AppText(
+                                            currentPrice == null
+                                                ? 'Unavailable'
+                                                : formatPrice(currentPrice),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             textAlign: TextAlign.end,
-                                            style: TextStyle(
-                                              color: dayColor,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 14,
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                          if (delayed) ...[
+                                            const SizedBox(height: 3),
+                                            AppText(
+                                              'Delayed quote',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: TextStyle(
+                                                color: AppColors.warning,
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                          if (dayChangePercent != null) ...[
+                                            const SizedBox(height: 3),
+                                            AppText(
+                                              '${dayChangePercent >= 0 ? '+' : ''}${dayChangePercent.toStringAsFixed(2)}% · ${dayChangePercent > 0
+                                                  ? 'Gain'
+                                                  : dayChangePercent < 0
+                                                  ? 'Loss'
+                                                  : 'Unchanged'}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              textAlign: TextAlign.end,
+                                              style: TextStyle(
+                                                color: dayColor,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w700,
+                                              ),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
                                     ),
                                   ],
+                                ),
+                                const SizedBox(height: 12),
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: LayoutBuilder(
+                                    builder: (context, constraints) {
+                                      final stacked =
+                                          constraints.maxWidth < 300;
+                                      final metrics = [
+                                        _metricColumn(
+                                          'Invested',
+                                          formatPrice(invested),
+                                        ),
+                                        _metricColumn(
+                                          'Current',
+                                          marketValue == null
+                                              ? 'Unavailable'
+                                              : formatPrice(marketValue),
+                                        ),
+                                        _metricColumn(
+                                          'Unrealized P&L',
+                                          profitLoss == null
+                                              ? 'Unavailable'
+                                              : '${formatSignedPrice(profitLoss)} · ${profitLoss > 0
+                                                    ? 'Gain'
+                                                    : profitLoss < 0
+                                                    ? 'Loss'
+                                                    : 'Unchanged'}',
+                                          valueColor: profitLoss == null
+                                              ? AppColors.textSecondary
+                                              : profitColor,
+                                          subtitle: returnPercent == null
+                                              ? null
+                                              : '${returnPercent >= 0 ? '+' : ''}${returnPercent.toStringAsFixed(2)}%',
+                                        ),
+                                      ];
+                                      if (stacked) {
+                                        return Column(
+                                          children: [
+                                            for (
+                                              var i = 0;
+                                              i < metrics.length;
+                                              i++
+                                            ) ...[
+                                              if (i > 0)
+                                                const SizedBox(height: 10),
+                                              SizedBox(
+                                                width: double.infinity,
+                                                child: metrics[i],
+                                              ),
+                                            ],
+                                          ],
+                                        );
+                                      }
+                                      return Row(
+                                        children: [
+                                          for (final metric in metrics)
+                                            Expanded(child: metric),
+                                        ],
+                                      );
+                                    },
+                                  ),
+                                ),
+                                if (dayChange != null) ...[
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
-                                      Expanded(
+                                      const Expanded(
                                         child: AppText(
-                                          selectedView == 'POSITIONS'
-                                              ? 'Frozen $frozen · Avail ${position.availableQuantity}'
-                                              : 'Avg ${formatPrice(position.averageCost)}',
+                                          'Day’s change',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(
-                                            color: Color(0xFF94A3B8),
+                                          style: TextStyle(
+                                            color: Color(0xFF64748B),
                                             fontSize: 11,
                                           ),
                                         ),
@@ -429,22 +385,58 @@ class _HoldingsTabState extends State<HoldingsTab> {
                                       const SizedBox(width: 8),
                                       Flexible(
                                         child: AppText(
-                                          selectedView == 'POSITIONS'
-                                              ? 'Avg ${formatPrice(position.averageCost)}'
-                                              : 'Avail ${position.availableQuantity} · Frozen $frozen',
+                                          '${formatSignedPrice(dayChange)} · ${dayChange > 0
+                                              ? 'Gain'
+                                              : dayChange < 0
+                                              ? 'Loss'
+                                              : 'Unchanged'}',
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                           textAlign: TextAlign.end,
-                                          style: const TextStyle(
-                                            color: Color(0xFF94A3B8),
+                                          style: TextStyle(
+                                            color: dayColor,
                                             fontSize: 11,
+                                            fontWeight: FontWeight.w700,
                                           ),
                                         ),
                                       ),
                                     ],
                                   ),
                                 ],
-                              ),
+                                const SizedBox(height: 8),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: AppText(
+                                        selectedView == 'POSITIONS'
+                                            ? 'Frozen $frozen · Avail ${position.availableQuantity}'
+                                            : 'Avg ${formatPrice(position.averageCost)}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Flexible(
+                                      child: AppText(
+                                        selectedView == 'POSITIONS'
+                                            ? 'Avg ${formatPrice(position.averageCost)}'
+                                            : 'Avail ${position.availableQuantity} · Frozen $frozen',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        textAlign: TextAlign.end,
+                                        style: const TextStyle(
+                                          color: Color(0xFF94A3B8),
+                                          fontSize: 11,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
                         );
@@ -518,13 +510,13 @@ class _HoldingsTabState extends State<HoldingsTab> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: accent ? const Color(0xFFEAF1FF) : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(5),
+        color: accent ? AppColors.brandPrimarySoft : AppColors.surfaceSecondary,
+        borderRadius: BorderRadius.circular(6),
       ),
       child: AppText(
         label,
         style: TextStyle(
-          color: accent ? AppConfig.primaryColor : const Color(0xFF64748B),
+          color: accent ? AppColors.brandPrimary : AppColors.textTertiary,
           fontSize: 9,
           fontWeight: FontWeight.w800,
           letterSpacing: 0.3,

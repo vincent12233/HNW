@@ -31,7 +31,7 @@ class StockQuoteHero extends StatelessWidget {
         : stock.change > 0
         ? AppColors.chartGain
         : stock.change < 0
-        ? const Color(0xFFFCA5A5)
+        ? AppColors.lossSoft
         : AppColors.textInverse.withValues(alpha: 0.8);
     final absolute = stock.previousClose != null && stock.previousClose! > 0
         ? stock.price - stock.previousClose!

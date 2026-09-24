@@ -1,7 +1,6 @@
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
@@ -26,7 +25,7 @@ class MarketStatusCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = switch (isOpen) {
-      true => AppConfig.gainColor,
+      true => AppColors.gain,
       false => AppColors.textSecondary,
       null => AppColors.warning,
     };
@@ -112,8 +111,8 @@ class MarketStatusCard extends StatelessWidget {
             child: AppText(
               statusText,
               style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+                color: AppColors.textInverse,
+                fontWeight: FontWeight.w800,
                 fontSize: 16,
               ),
             ),
@@ -121,7 +120,9 @@ class MarketStatusCard extends StatelessWidget {
           Flexible(
             child: AppText(
               hours,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textInverse.withValues(alpha: 0.72),
+              ),
             ),
           ),
         ],

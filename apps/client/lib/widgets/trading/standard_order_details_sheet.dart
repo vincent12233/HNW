@@ -1,9 +1,11 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/trading_order.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
 import '../../utils/order_status_presentation.dart';
 
@@ -16,7 +18,6 @@ Future<void> showStandardOrderDetails(
     context: context,
     isScrollControlled: true,
     useSafeArea: true,
-    backgroundColor: Colors.transparent,
     builder: (_) =>
         _StandardOrderDetailsSheet(order: order, onCancel: onCancel),
   );
@@ -58,12 +59,17 @@ class _StandardOrderDetailsSheetState
         constraints: BoxConstraints(
           maxHeight: MediaQuery.sizeOf(context).height * 0.82,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: AppRadius.sheetTop(),
         ),
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.xl,
+            AppSpacing.sm,
+            AppSpacing.xl,
+            AppSpacing.xxl,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -72,23 +78,20 @@ class _StandardOrderDetailsSheetState
                   width: 42,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFD1D5DB),
-                    borderRadius: BorderRadius.circular(999),
+                    color: AppColors.borderStrong,
+                    borderRadius: AppRadius.borderPill,
                   ),
                 ),
               ),
               const SizedBox(height: 20),
               AppText(
                 order.symbol,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                ),
+                style: AppTypography.headline.copyWith(fontSize: 20),
               ),
               const SizedBox(height: 6),
               AppText(
                 '${tr(order.type == 'LIMIT' ? 'Limit Order' : 'Market Order')} · ${OrderStatusPresentation.tifLabel(order.timeInForce)}',
-                style: const TextStyle(color: AppConfig.textSecondaryColor),
+                style: AppTypography.bodySmall,
               ),
               const SizedBox(height: 12),
               Wrap(
@@ -96,16 +99,19 @@ class _StandardOrderDetailsSheetState
                 runSpacing: 8,
                 children: [
                   _pill(order.isBuy ? 'BUY' : 'SELL', sideColor),
-                  _pill(OrderStatusPresentation.label(order.status), statusColor),
+                  _pill(
+                    OrderStatusPresentation.label(order.status),
+                    statusColor,
+                  ),
                 ],
               ),
               const SizedBox(height: 20),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF8FAFC),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  color: AppColors.surfaceInput,
+                  borderRadius: AppRadius.borderMd,
+                  border: Border.all(color: AppColors.divider),
                 ),
                 child: Column(
                   children: [
@@ -137,12 +143,27 @@ class _StandardOrderDetailsSheetState
                 ),
               ),
               const SizedBox(height: 18),
-              _detailRow('Order Type', order.type == 'LIMIT' ? 'Limit Order' : 'Market Order'),
-              _detailRow('Exchange', OrderStatusPresentation.missing(order.exchange)),
-              _detailRow('Validity', OrderStatusPresentation.tifLabel(order.timeInForce)),
-              _detailRow('Placed', OrderStatusPresentation.formatIst(order.placedAt)),
+              _detailRow(
+                'Order Type',
+                order.type == 'LIMIT' ? 'Limit Order' : 'Market Order',
+              ),
+              _detailRow(
+                'Exchange',
+                OrderStatusPresentation.missing(order.exchange),
+              ),
+              _detailRow(
+                'Validity',
+                OrderStatusPresentation.tifLabel(order.timeInForce),
+              ),
+              _detailRow(
+                'Placed',
+                OrderStatusPresentation.formatIst(order.placedAt),
+              ),
               if (order.updatedAt != null)
-                _detailRow('Updated', OrderStatusPresentation.formatIst(order.updatedAt!)),
+                _detailRow(
+                  'Updated',
+                  OrderStatusPresentation.formatIst(order.updatedAt!),
+                ),
               if (order.clientOrderId?.isNotEmpty == true)
                 _detailRow(
                   'Client order',
@@ -159,15 +180,12 @@ class _StandardOrderDetailsSheetState
                   OrderStatusPresentation.missing(order.rejectionReason),
                 ),
               const SizedBox(height: 18),
-              const AppText(
-                'Order timeline',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-              ),
+              const AppText('Order timeline', style: AppTypography.titleMedium),
               const SizedBox(height: 10),
               _timelineItem(
                 label: 'Submitted',
                 time: order.placedAt,
-                color: const Color(0xFF2563EB),
+                color: AppColors.info,
                 last:
                     order.updatedAt == null &&
                     order.completedAt == null &&
@@ -186,22 +204,19 @@ class _StandardOrderDetailsSheetState
                 _timelineItem(
                   label: 'Filled',
                   time: order.completedAt!,
-                  color: AppConfig.gainColor,
+                  color: AppColors.gain,
                   last: true,
                 ),
               if (order.cancelledAt != null)
                 _timelineItem(
                   label: 'Cancelled',
                   time: order.cancelledAt!,
-                  color: AppConfig.neutralColor,
+                  color: AppColors.neutral,
                   last: true,
                 ),
               if (order.fills.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                const AppText(
-                  'Executions',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                ),
+                const AppText('Executions', style: AppTypography.titleMedium),
                 const SizedBox(height: 10),
                 ...order.fills.map(_executionCard),
                 const SizedBox(height: 4),
@@ -225,16 +240,13 @@ class _StandardOrderDetailsSheetState
                 ),
               ] else ...[
                 const SizedBox(height: 8),
-                const AppText(
-                  'Executions',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                ),
+                const AppText('Executions', style: AppTypography.titleMedium),
                 const SizedBox(height: 10),
                 AppText(
                   order.filledQuantity > 0
                       ? 'Filled ${order.filledQuantity}/${order.quantity}. No execution details are available.'
                       : 'No execution details are available for this order.',
-                  style: const TextStyle(color: Color(0xFF64748B)),
+                  style: AppTypography.bodySmall,
                 ),
               ],
               if (canCancel) ...[
@@ -245,8 +257,8 @@ class _StandardOrderDetailsSheetState
                   child: OutlinedButton(
                     onPressed: cancelling ? null : _cancel,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppConfig.lossColor,
-                      side: BorderSide(color: AppConfig.lossColor),
+                      foregroundColor: AppColors.loss,
+                      side: const BorderSide(color: AppColors.loss),
                     ),
                     child: AppText(
                       cancelling ? 'Cancelling...' : 'Cancel Order',
@@ -303,7 +315,7 @@ class _StandardOrderDetailsSheetState
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: AppRadius.borderPill,
       ),
       child: AppText(
         label,
@@ -320,17 +332,13 @@ class _StandardOrderDetailsSheetState
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth < 340 ? 2 : 3;
-        final itemWidth =
-            (constraints.maxWidth - (columns - 1) * 8) / columns;
+        final itemWidth = (constraints.maxWidth - (columns - 1) * 8) / columns;
         return Wrap(
           spacing: 8,
           runSpacing: 18,
           children: [
             for (final item in items)
-              SizedBox(
-                width: itemWidth,
-                child: _value(item.$1, item.$2),
-              ),
+              SizedBox(width: itemWidth, child: _value(item.$1, item.$2)),
           ],
         );
       },
@@ -341,10 +349,7 @@ class _StandardOrderDetailsSheetState
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          label,
-          style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
-        ),
+        AppText(label, style: AppTypography.caption),
         const SizedBox(height: 5),
         AppText(
           value,
@@ -364,10 +369,7 @@ class _StandardOrderDetailsSheetState
         children: [
           SizedBox(
             width: 110,
-            child: AppText(
-              label,
-              style: const TextStyle(color: Color(0xFF64748B)),
-            ),
+            child: AppText(label, style: AppTypography.bodySmall),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -406,7 +408,7 @@ class _StandardOrderDetailsSheetState
                 ),
                 if (!last)
                   Expanded(
-                    child: Container(width: 2, color: const Color(0xFFE2E8F0)),
+                    child: Container(width: 2, color: AppColors.divider),
                   ),
               ],
             ),
@@ -425,10 +427,7 @@ class _StandardOrderDetailsSheetState
                   const SizedBox(height: 4),
                   AppText(
                     _formatTimelineTime(time),
-                    style: const TextStyle(
-                      color: Color(0xFF64748B),
-                      fontSize: 12,
-                    ),
+                    style: AppTypography.caption,
                   ),
                 ],
               ),
@@ -445,9 +444,9 @@ class _StandardOrderDetailsSheetState
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: AppColors.surfaceInput,
+        borderRadius: AppRadius.borderSm,
+        border: Border.all(color: AppColors.divider),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -462,7 +461,7 @@ class _StandardOrderDetailsSheetState
               ),
               AppText(
                 _formatTimelineTime(fill.executedAt),
-                style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+                style: AppTypography.caption,
               ),
             ],
           ),
@@ -470,13 +469,13 @@ class _StandardOrderDetailsSheetState
           AppText(
             'Gross ${formatPrice(fill.grossAmount)}  |  '
             'Fees ${formatPrice(fill.fees)}',
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11),
+            style: AppTypography.caption,
           ),
           if (fill.executionId.isNotEmpty) ...[
             const SizedBox(height: 4),
             SelectableText(
               fill.executionId,
-              style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+              style: AppTypography.caption.copyWith(fontSize: 10),
             ),
           ],
         ],
@@ -494,15 +493,15 @@ class _StandardOrderDetailsSheetState
   Color _statusColor(String status) {
     switch (status) {
       case 'FILLED':
-        return AppConfig.gainColor;
+        return AppColors.gain;
       case 'CANCELLED':
-        return AppConfig.neutralColor;
+        return AppColors.neutral;
       case 'REJECTED':
-        return AppConfig.lossColor;
+        return AppColors.loss;
       case 'PENDING':
         return AppColors.pending;
       default:
-        return const Color(0xFF2563EB);
+        return AppColors.info;
     }
   }
 }

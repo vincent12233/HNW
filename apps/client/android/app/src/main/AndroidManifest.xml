@@ -5,9 +5,11 @@
     <uses-permission android:name="android.permission.USE_FINGERPRINT"/>
 
     <application
+        android:allowBackup="false"
         android:label="India Trading App"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".SaleSmartlyChatActivity"
             android:exported="false"

@@ -22,6 +22,7 @@
 - [App Content 目标架构](APP_CONTENT_TARGET_ARCHITECTURE.md)
 - [APP ↔ API ↔ Admin 差距矩阵](APP_BACKEND_ADMIN_GAP_MATRIX.md)
 - [APP UI/UX 审计](APP_UI_UX_AUDIT.md)
+- [当前项目审计（2026-09-24）](CURRENT_PROJECT_AUDIT_2026-09-24.md)
 - [最终验收审计](FINAL_ACCEPTANCE_AUDIT.md)
 
 这些文档记录审计时点。代码、自动测试和当前权威文档发生冲突时，以代码和自动测试为准，并更新文档。

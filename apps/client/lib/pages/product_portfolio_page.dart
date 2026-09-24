@@ -873,21 +873,37 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ];
     }
     return [
-      Wrap(
-        spacing: AppSpacing.sm,
-        runSpacing: AppSpacing.sm,
-        children: [
-          for (final item in const [
-            ('HOLDINGS', 'Holdings'),
-            ('POSITIONS', 'Positions'),
-          ])
-            ChoiceChip(
-              key: ValueKey('portfolio-view-${item.$1}'),
-              label: AppText(item.$2),
-              selected: _productView == item.$1,
-              onSelected: (_) => setState(() => _productView = item.$1),
-            ),
-        ],
+      Container(
+        padding: const EdgeInsets.all(AppSpacing.xs),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceSecondary,
+          borderRadius: AppRadius.borderSm,
+        ),
+        child: Row(
+          children: [
+            for (final item in const [
+              ('HOLDINGS', 'Holdings'),
+              ('POSITIONS', 'Positions'),
+            ])
+              Expanded(
+                child: ChoiceChip(
+                  key: ValueKey('portfolio-view-${item.$1}'),
+                  label: AppText(item.$2),
+                  selected: _productView == item.$1,
+                  onSelected: (_) => setState(() => _productView = item.$1),
+                  selectedColor: AppColors.surface,
+                  showCheckmark: false,
+                  side: BorderSide.none,
+                  labelStyle: AppTypography.labelSmall.copyWith(
+                    color: _productView == item.$1
+                        ? AppColors.brandPrimary
+                        : AppColors.textSecondary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
       const SizedBox(height: AppSpacing.sm),
       AppStatusSwitch(

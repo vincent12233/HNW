@@ -312,6 +312,8 @@ export const tradingFields: FieldDef[] = [
   { key: "portfolio.holdings_caption", label: "产品持仓说明", rows: 2 },
   { key: "portfolio.performance_heading", label: "组合表现标题", rows: 1 },
   { key: "portfolio.no_holdings", label: "组合暂无持仓提示", rows: 2 },
+  { key: "portfolio.related_fills_note", label: "产品持仓关联成交说明", rows: 2 },
+  { key: "portfolio.performance_source_note", label: "组合表现数据来源说明", rows: 3 },
   { key: "portfolio.recent_activity", label: "近期活动标题", rows: 1 },
   { key: "portfolio.view_details", label: "查看详情按钮", rows: 1 },
   { key: "portfolio.close", label: "关闭按钮", rows: 1 },

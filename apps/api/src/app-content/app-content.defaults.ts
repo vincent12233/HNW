@@ -1871,6 +1871,36 @@ export const APP_CONTENT_DEFAULTS: DefaultContent[] = [
     locale: 'hi',
     sortOrder: 658,
   },
+  {
+    module: AppContentModule.TRADING,
+    key: 'portfolio.related_fills_note',
+    body: 'Related fills are not included in this product holding record.',
+    locale: 'en',
+    sortOrder: 659,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'portfolio.related_fills_note',
+    body: 'संबंधित फ़िल इस उत्पाद होल्डिंग रिकॉर्ड में शामिल नहीं हैं।',
+    locale: 'hi',
+    sortOrder: 659,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'portfolio.performance_source_note',
+    body:
+      'Source: recorded product snapshots. Returns cover recorded observations only. Deposits and ordinary stocks are excluded.',
+    locale: 'en',
+    sortOrder: 660,
+  },
+  {
+    module: AppContentModule.TRADING,
+    key: 'portfolio.performance_source_note',
+    body:
+      'स्रोत: रिकॉर्ड किए गए उत्पाद स्नैपशॉट। रिटर्न केवल रिकॉर्ड किए गए अवलोकनों को कवर करते हैं। जमा और साधारण शेयर शामिल नहीं हैं।',
+    locale: 'hi',
+    sortOrder: 660,
+  },
   { module: AppContentModule.TRADING, key: 'portfolio.recent_activity', body: 'Recent Activity', locale: 'en', sortOrder: 650 },
   { module: AppContentModule.TRADING, key: 'portfolio.recent_activity', body: 'हाल की गतिविधि', locale: 'hi', sortOrder: 650 },
   { module: AppContentModule.TRADING, key: 'portfolio.view_details', body: 'View Details', locale: 'en', sortOrder: 651 },

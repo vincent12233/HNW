@@ -948,7 +948,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             Padding(
               padding: const EdgeInsets.only(top: AppSpacing.sm),
               child: AppText(
-                'Valued at cost. Market quote unavailable.',
+                _portfolioCopy(
+                  'portfolio.detail.valuation_cost',
+                  'Valued at cost. Market quote unavailable.',
+                ),
                 style: AppTypography.caption.copyWith(color: AppColors.warning),
               ),
             ),
@@ -1043,8 +1046,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   style: AppTypography.caption,
                 ),
                 const SizedBox(height: AppSpacing.sm),
-                const AppText(
-                  'Related fills are not included in this product holding record.',
+                AppText(
+                  _portfolioCopy(
+                    'portfolio.related_fills_note',
+                    'Related fills are not included in this product holding record.',
+                  ),
                   style: AppTypography.caption,
                 ),
               ],
@@ -1165,11 +1171,16 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   style: AppTypography.titleLarge,
                 ),
                 if (_rows(category['positions']).isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: AppSpacing.xxl,
+                    ),
                     child: Center(
                       child: AppText(
-                        'No holdings',
+                        _portfolioCopy(
+                          'portfolio.no_holdings',
+                          'No product holdings in the current response.',
+                        ),
                         style: AppTypography.bodyMedium,
                       ),
                     ),
@@ -1207,7 +1218,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                               top: AppSpacing.md - 2,
                             ),
                             child: AppText(
-                              'Valued at cost. Market quote unavailable.',
+                              _portfolioCopy(
+                                'portfolio.detail.valuation_cost',
+                                'Valued at cost. Market quote unavailable.',
+                              ),
                               style: AppTypography.caption,
                             ),
                           ),
@@ -1334,8 +1348,11 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             AppText('${tr('Since')}: ${_date(history['productFrom'])}'),
             AppText('${tr('As of')}: ${_date(history['to'])}'),
             const SizedBox(height: AppSpacing.md),
-            const AppText(
-              'Source: recorded product snapshots. Returns cover recorded observations only. Deposits and ordinary stocks are excluded.',
+            AppText(
+              _portfolioCopy(
+                'portfolio.performance_source_note',
+                'Source: recorded product snapshots. Returns cover recorded observations only. Deposits and ordinary stocks are excluded.',
+              ),
             ),
           ],
         ),

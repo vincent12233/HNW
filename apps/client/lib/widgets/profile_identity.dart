@@ -146,8 +146,19 @@ class ProfileIdentityHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
-        color: AppColors.brandDark,
-        borderRadius: AppRadius.borderSm,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brandPrimary, AppColors.brandGradientEnd],
+        ),
+        borderRadius: AppRadius.borderMd,
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x262558D9),
+            blurRadius: 16,
+            offset: Offset(0, 8),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -198,7 +209,9 @@ class ProfileIdentityHeader extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs + 1),
                     AppText(
                       maskAccountPhone(phone),
-                      style: AppTypography.caption.copyWith(color: mutedInverse),
+                      style: AppTypography.caption.copyWith(
+                        color: mutedInverse,
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     AppText(
@@ -236,8 +249,15 @@ class ProfileIdentityHeader extends StatelessWidget {
                 IconButton(
                   tooltip: tr('Edit profile'),
                   onPressed: onEdit,
-                  constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
-                  icon: Icon(Icons.edit_outlined, color: mutedInverse, size: 20),
+                  constraints: const BoxConstraints(
+                    minWidth: 44,
+                    minHeight: 44,
+                  ),
+                  icon: Icon(
+                    Icons.edit_outlined,
+                    color: mutedInverse,
+                    size: 20,
+                  ),
                 ),
             ],
           ),
@@ -292,7 +312,9 @@ class ProfileIdentityHeader extends StatelessWidget {
                   for (final item in items)
                     Expanded(
                       child: Padding(
-                        padding: const EdgeInsets.only(right: AppSpacing.sm - 2),
+                        padding: const EdgeInsets.only(
+                          right: AppSpacing.sm - 2,
+                        ),
                         child: item,
                       ),
                     ),

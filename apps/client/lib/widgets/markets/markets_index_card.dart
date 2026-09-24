@@ -46,8 +46,8 @@ class MarketsIndexCard extends StatelessWidget {
       button: onTap != null,
       label: label,
       child: AppCard(
-        radius: AppRadius.sm,
-        padding: const EdgeInsets.all(AppSpacing.md),
+        radius: AppRadius.md,
+        padding: const EdgeInsets.all(AppSpacing.md + 2),
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

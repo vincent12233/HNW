@@ -927,6 +927,32 @@ class _MarketsPageState extends State<MarketsPage> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: EdgeInsets.fromLTRB(horizontalPadding, 8, horizontalPadding, 24),
       children: [
+        Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.md,
+            vertical: AppSpacing.sm + 2,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.brandPrimarySoft,
+            borderRadius: AppRadius.borderSm,
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.insights_rounded, color: AppColors.brandPrimary),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: AppText(
+                  'Indian and global benchmarks at a glance',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.brandDark,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
         _marketSectionHeading(
           'Indian Indices',
           onViewAll: () => _showIndices('Indian Indices', indices),

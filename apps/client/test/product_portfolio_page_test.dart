@@ -89,6 +89,31 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(find.text('Total Portfolio Value'), findsNothing);
   });
+  testWidgets('allocation keeps donut, percentage, legend, and progress bars', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app((_) async => fixture()));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      find.text('Asset Allocation'),
+      180,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+
+    final allocationPaint = find.byWidgetPredicate(
+      (widget) =>
+          widget is CustomPaint &&
+          widget.painter.runtimeType.toString() == '_AllocationPainter',
+      description: 'portfolio allocation donut painter',
+    );
+    expect(allocationPaint, findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+    expect(find.text('Institutional'), findsWidgets);
+    expect(find.text('OTC'), findsWidgets);
+    expect(find.text('IPO'), findsWidgets);
+    expect(find.byType(LinearProgressIndicator), findsWidgets);
+  });
   testWidgets('late period responses are ignored after disposal', (
     tester,
   ) async {

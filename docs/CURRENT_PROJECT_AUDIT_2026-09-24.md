@@ -32,8 +32,8 @@
 ## 本轮实施
 
 1. 发布版 API 地址只允许公网 HTTPS 或同源相对路径；拒绝 HTTP、回环、私网、链路本地、文档地址、用户信息 URL 和本地主机名。
-2. Android 主清单禁用明文流量与应用备份；debug/profile 清单保留本地 HTTP 联调能力。
-3. 新增发布地址与 Android 清单安全回归测试。
+2. Android 主清单禁用明文流量与应用备份，并通过 `dataExtractionRules`/`fullBackupContent` 禁止云备份和设备迁移；debug/profile 清单保留本地 HTTP 联调能力。
+3. 新增发布地址与 Android 清单安全回归测试，覆盖根路径跨域拼接、尾点主机名和 IPv4-mapped/展开 IPv6 地址。
 4. Flutter 锁文件升级 12 个兼容的传递依赖补丁/小版本；直接依赖保持不变。
 5. 删除无路由、无实现、无调用方的空 `StocksModule` 脚手架；真实股票功能仍由现有市场模块承担。
 
@@ -57,7 +57,7 @@
 
 ## 验证基线
 
-- Flutter：`flutter analyze` 无问题；完整测试 430 通过、21 跳过；Android debug 构建纳入最终验证。
+- Flutter：`flutter analyze` 无问题；完整测试 433 通过、21 跳过；Android debug 构建纳入最终验证。
 - Admin：lint 通过；123 测试通过；TypeScript 通过；54 个页面生产构建通过。
 - API：lint 0 错误；完整测试在删除空模块后为 114 套件通过、3 跳过，543 测试通过、16 跳过；构建通过。
 

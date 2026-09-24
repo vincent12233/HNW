@@ -107,7 +107,12 @@ HomeDashboard home({ValueChanged<HomeIndexQuote>? onOpenIndex}) {
     marketHours: '09:15 - 15:30 IST',
     quotesConnected: true,
     indices: const [
-      HomeIndexQuote(label: 'NIFTY 50', price: 24812.4, changePercent: 0.42),
+      HomeIndexQuote(
+        label: 'NIFTY 50',
+        price: 24812.4,
+        changePercent: 0.42,
+        history: [24740, 24785, 24812.4],
+      ),
       HomeIndexQuote(label: 'SENSEX', price: 81200.1, changePercent: -0.18),
     ],
     gainers: [
@@ -373,6 +378,7 @@ void main() {
     await tester.ensureVisible(find.text('NIFTY 50'));
     await tester.tap(find.text('NIFTY 50'));
     expect(opened?.label, 'NIFTY 50');
+    expect(opened?.history, [24740, 24785, 24812.4]);
   });
 
   testWidgets(

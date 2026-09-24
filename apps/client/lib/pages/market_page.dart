@@ -1642,6 +1642,7 @@ class _MarketHomePageState extends State<MarketHomePage>
             ref: ref,
             price: item.price,
             changePercent: item.changePercent,
+            history: item.history,
           ),
           marketOpen: marketOpen,
           marketHours: marketHours,

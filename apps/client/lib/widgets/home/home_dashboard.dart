@@ -548,12 +548,23 @@ class _SectionTitle extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
             ),
             onPressed: onViewAll,
-            child: AppText(
-              'View All',
-              style: AppTypography.labelSmall.copyWith(
-                color: AppColors.brandPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppText(
+                  'View All',
+                  style: AppTypography.labelSmall.copyWith(
+                    color: AppColors.brandPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xxs),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 17,
+                  color: AppColors.brandPrimary,
+                ),
+              ],
             ),
           ),
       ],

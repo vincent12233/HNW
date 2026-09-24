@@ -3,7 +3,10 @@ import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/client_account_service.dart';
 import '../theme/appearance_settings.dart';
-import '../theme/app_motion.dart';
+import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 import '../utils/client_error_message.dart';
 
@@ -36,25 +39,56 @@ class _AppearancePageState extends State<AppearancePage> {
   Widget build(BuildContext context) => AppPageScaffold(
     appBar: AppBar(title: const AppText('Appearance')),
     body: ListView(
+      padding: AppSpacing.page,
       children: [
         if (_busy) const LinearProgressIndicator(),
-        for (final option in {
-          'light': 'Light Theme',
-          'highContrast': 'High contrast',
-        }.entries)
-          ListTile(
-            title: AppText(option.value),
-            selected: AppearanceSettings.instance.value == option.key,
-            enabled: !_busy,
-            onTap: () => _select(option.key),
-            minTileHeight: AppMotion.tapTarget,
-            trailing: AppearanceSettings.instance.value == option.key
-                ? const Icon(Icons.check)
-                : null,
+        const AppText(
+          'Choose how information and controls appear throughout the app.',
+          style: AppTypography.bodySmall,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        for (final option in const [
+          (
+            'light',
+            'Light Theme',
+            'Balanced colors for everyday use',
+            Icons.light_mode_outlined,
+          ),
+          (
+            'highContrast',
+            'High contrast',
+            'Stronger borders and text contrast',
+            Icons.contrast_rounded,
+          ),
+        ])
+          AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            borderColor: AppearanceSettings.instance.value == option.$1
+                ? AppColors.brandPrimary
+                : AppColors.divider,
+            onTap: _busy ? null : () => _select(option.$1),
+            child: Row(
+              children: [
+                Icon(option.$4, color: AppColors.brandPrimary),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(option.$2, style: AppTypography.titleSmall),
+                      const SizedBox(height: AppSpacing.xs),
+                      AppText(option.$3, style: AppTypography.caption),
+                    ],
+                  ),
+                ),
+                if (AppearanceSettings.instance.value == option.$1)
+                  const Icon(Icons.check_circle, color: AppColors.gain),
+              ],
+            ),
           ),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: AppErrorView(title: _error!, compact: true),
           ),
       ],

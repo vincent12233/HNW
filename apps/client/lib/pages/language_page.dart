@@ -4,7 +4,9 @@ import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_colors.dart';
-import '../theme/app_motion.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 
 class LanguagePage extends StatefulWidget {
@@ -40,22 +42,47 @@ class _LanguagePageState extends State<LanguagePage> {
   Widget build(BuildContext context) => AppPageScaffold(
     appBar: AppBar(title: const AppText('Language')),
     body: ListView(
+      padding: AppSpacing.page,
       children: [
-        for (final entry in {'en': 'English', 'hi': 'हिन्दी'}.entries)
-          ListTile(
-            title: Text(entry.value),
-            selected: AppLanguage.instance.code == entry.key,
-            minTileHeight: AppMotion.tapTarget,
-            trailing: AppLanguage.instance.code == entry.key
-                ? const Icon(Icons.check, color: AppColors.gain)
-                : null,
-            enabled: !_saving,
-            onTap: () => _select(entry.key),
+        const AppText(
+          'App content refreshes after your language preference is saved.',
+          style: AppTypography.bodySmall,
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        for (final entry in const [
+          ('en', 'English', 'EN'),
+          ('hi', 'हिन्दी', 'हि'),
+        ])
+          AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            padding: EdgeInsets.zero,
+            borderColor: AppLanguage.instance.code == entry.$1
+                ? AppColors.brandPrimary
+                : AppColors.divider,
+            child: ListTile(
+              minTileHeight: 64,
+              enabled: !_saving,
+              onTap: () => _select(entry.$1),
+              leading: CircleAvatar(
+                backgroundColor: AppColors.brandPrimarySoft,
+                foregroundColor: AppColors.brandPrimary,
+                child: Text(
+                  entry.$3,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.brandPrimary,
+                  ),
+                ),
+              ),
+              title: AppText(entry.$2, style: AppTypography.titleSmall),
+              trailing: AppLanguage.instance.code == entry.$1
+                  ? const Icon(Icons.check_circle, color: AppColors.gain)
+                  : null,
+            ),
           ),
         if (_saving) const LinearProgressIndicator(),
         if (_error != null)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: AppErrorView(title: _error!, compact: true),
           ),
       ],

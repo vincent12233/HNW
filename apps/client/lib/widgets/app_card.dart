@@ -16,7 +16,7 @@ class AppCard extends StatelessWidget {
     this.borderColor,
     this.radius = AppRadius.md,
     this.bordered = true,
-    this.shadow = AppCardShadow.none,
+    this.shadow = AppCardShadow.small,
     this.onTap,
     this.clipBehavior = Clip.antiAlias,
   });
@@ -38,7 +38,7 @@ class AppCard extends StatelessWidget {
       color: backgroundColor ?? AppColors.surface,
       borderRadius: BorderRadius.circular(radius),
       border: bordered
-          ? Border.all(color: borderColor ?? AppColors.border)
+          ? Border.all(color: borderColor ?? AppColors.divider)
           : null,
       boxShadow: switch (shadow) {
         AppCardShadow.none => AppShadows.none,

@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
-import '../../app_config.dart';
 import '../../l10n/app_language.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_radius.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
+import '../app_card.dart';
 import '../stock_logo.dart';
 
 /// Compact trading catalogue card. Price details belong in the trade dialog.
@@ -42,13 +46,9 @@ class ProductOfferCard extends StatelessWidget {
         : valid && (marketPrice - offerPrice).abs() > 1e-9
         ? (marketPrice - offerPrice) / offerPrice * 100
         : null;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
+    return AppCard(
+      padding: const EdgeInsets.all(AppSpacing.lg + 2),
+      radius: AppRadius.lg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -65,48 +65,27 @@ class ProductOfferCard extends StatelessWidget {
                       name,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                      ),
+                      style: AppTypography.titleMedium,
                     ),
                     const SizedBox(height: 6),
                     Wrap(
                       spacing: 8,
                       runSpacing: 6,
                       children: [
-                        AppText(
-                          symbol,
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                          ),
-                        ),
+                        AppText(symbol, style: AppTypography.caption),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 8,
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFF1F5F9),
-                            borderRadius: BorderRadius.circular(6),
+                            color: AppColors.surfaceSecondary,
+                            borderRadius: AppRadius.borderSm,
                           ),
-                          child: AppText(
-                            type,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                          child: AppText(type, style: AppTypography.labelSmall),
                         ),
                         if (status != null)
-                          AppText(
-                            status!,
-                            style: const TextStyle(
-                              fontSize: 11,
-                              color: Colors.black54,
-                            ),
-                          ),
+                          AppText(status!, style: AppTypography.caption),
                       ],
                     ),
                   ],
@@ -125,9 +104,9 @@ class ProductOfferCard extends StatelessWidget {
                   ),
                   decoration: BoxDecoration(
                     color: (expected ?? 0) < 0
-                        ? const Color(0xFFFEE2E2)
-                        : const Color(0xFF10B981),
-                    borderRadius: BorderRadius.circular(5),
+                        ? AppColors.lossSoft
+                        : AppColors.gainSoft,
+                    borderRadius: AppRadius.borderSm,
                   ),
                   child: AppText(
                     expected == null ? '--' : '${expected.toStringAsFixed(2)}%',
@@ -137,8 +116,8 @@ class ProductOfferCard extends StatelessWidget {
                       fontSize: 17,
                       fontWeight: FontWeight.w800,
                       color: (expected ?? 0) < 0
-                          ? AppConfig.lossColor
-                          : Colors.white,
+                          ? AppColors.loss
+                          : AppColors.gain,
                     ),
                   ),
                 ),
@@ -147,11 +126,7 @@ class ProductOfferCard extends StatelessWidget {
               const Flexible(
                 child: AppText(
                   'Expected\nreturn',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                    height: 1.1,
-                  ),
+                  style: AppTypography.caption,
                 ),
               ),
             ],

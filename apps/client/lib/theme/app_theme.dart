@@ -85,7 +85,24 @@ class AppTheme {
       scaffoldBackgroundColor: AppColors.background,
       visualDensity: VisualDensity.standard,
       splashFactory: InkSparkle.splashFactory,
+      hoverColor: AppColors.brandPrimarySoft.withValues(alpha: 0.45),
+      focusColor: AppColors.brandPrimarySoft,
+      highlightColor: AppColors.brandPrimarySoft.withValues(alpha: 0.35),
       textTheme: AppTypography.textTheme(),
+      textSelectionTheme: const TextSelectionThemeData(
+        cursorColor: AppColors.brandPrimary,
+        selectionColor: AppColors.brandPrimarySoft,
+        selectionHandleColor: AppColors.brandPrimary,
+      ),
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: const WidgetStatePropertyAll(4),
+        radius: const Radius.circular(AppRadius.pill),
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.dragged)
+              ? AppColors.borderStrong
+              : AppColors.border;
+        }),
+      ),
       tooltipTheme: const TooltipThemeData(
         waitDuration: Duration(milliseconds: 450),
       ),
@@ -109,14 +126,72 @@ class AppTheme {
         foregroundColor: AppColors.textPrimary,
       ),
       cardTheme: CardThemeData(
-        elevation: 0,
-        shadowColor: Colors.transparent,
+        elevation: 1,
+        shadowColor: AppColors.brandDark.withValues(alpha: 0.08),
         margin: EdgeInsets.zero,
         color: AppColors.surface,
         shape: RoundedRectangleBorder(
           borderRadius: AppRadius.borderMd,
           side: const BorderSide(color: AppColors.border),
         ),
+      ),
+      tabBarTheme: TabBarThemeData(
+        dividerColor: AppColors.divider,
+        indicatorColor: AppColors.brandPrimary,
+        indicatorSize: TabBarIndicatorSize.label,
+        labelColor: AppColors.textPrimary,
+        unselectedLabelColor: AppColors.textTertiary,
+        labelStyle: AppTypography.labelLarge.copyWith(
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: AppTypography.labelLarge,
+        overlayColor: WidgetStatePropertyAll(
+          AppColors.brandPrimarySoft.withValues(alpha: 0.5),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.disabled)) return AppColors.disabled;
+          return states.contains(WidgetState.selected)
+              ? AppColors.brandPrimary
+              : AppColors.borderStrong;
+        }),
+        thumbColor: const WidgetStatePropertyAll(AppColors.surface),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      checkboxTheme: CheckboxThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return AppColors.brandPrimary;
+          }
+          return AppColors.surface;
+        }),
+        side: const BorderSide(color: AppColors.borderStrong, width: 1.25),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+      ),
+      radioTheme: RadioThemeData(
+        fillColor: WidgetStateProperty.resolveWith((states) {
+          return states.contains(WidgetState.selected)
+              ? AppColors.brandPrimary
+              : AppColors.borderStrong;
+        }),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        elevation: 3,
+        focusElevation: 3,
+        hoverElevation: 4,
+        highlightElevation: 2,
+        backgroundColor: AppColors.brandPrimary,
+        foregroundColor: AppColors.textInverse,
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+      ),
+      popupMenuTheme: PopupMenuThemeData(
+        color: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        elevation: 6,
+        shadowColor: AppColors.brandDark.withValues(alpha: 0.14),
+        shape: RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
+        textStyle: AppTypography.bodyMedium,
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: AppSpacing.navHeight,
@@ -322,6 +397,7 @@ class AppTheme {
         actionTextColor: AppColors.brandPrimarySoft,
         shape: RoundedRectangleBorder(borderRadius: AppRadius.borderMd),
         elevation: 0,
+        insetPadding: const EdgeInsets.all(AppSpacing.md),
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AppColors.brandPrimary,

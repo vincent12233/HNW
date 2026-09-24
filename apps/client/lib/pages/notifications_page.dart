@@ -8,6 +8,7 @@ import '../app_config.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../utils/number_formatters.dart';
@@ -161,7 +162,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
   @override
   Widget build(BuildContext context) => AppPageScaffold(
-    backgroundColor: const Color(0xFFF7F9FC),
+    backgroundColor: AppColors.background,
     appBar: AppBar(
       title: AppText(_notificationCopy('title', 'Notifications')),
       actions: [
@@ -294,12 +295,12 @@ class _NotificationsPageState extends State<NotificationsPage> {
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: AppCard(
                       backgroundColor: paymentRequired
-                          ? const Color(0xFFFFFBEB)
+                          ? AppColors.warningSoft
                           : settled
-                          ? const Color(0xFFECFDF5)
+                          ? AppColors.gainSoft
                           : unread
-                          ? const Color(0xFFF1F6FF)
-                          : Colors.white,
+                          ? AppColors.brandPrimarySoft
+                          : AppColors.surface,
                       onTap: unread ? () => markRead(item) : null,
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,

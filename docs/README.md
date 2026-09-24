@@ -49,3 +49,4 @@
 - GitHub Actions：`.github/workflows/`
 - 数据库迁移：API CI 同时验证空库迁移和带客户、账户、流水数据的最新迁移升级；本地可在**空的专用测试库**设置 `DATABASE_URL` 后运行 `./scripts/verify-migration-upgrade.sh`。该脚本拒绝非空数据库。
 - 认证与内容联调：API CI 使用临时数据库测试管理员登录、Cookie/Token 注销、刷新及后台内容到公开接口的读取；本机 OrbStack API 运行后可设置 `HNW_SMOKE_ADMIN_PASSWORD` 并运行 `node scripts/smoke-auth-content.mjs`。
+- [最终收尾交接](FINAL_HANDOFF_2026-09-24.md)

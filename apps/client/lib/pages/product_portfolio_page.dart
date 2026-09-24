@@ -379,9 +379,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             ),
             const SizedBox(height: AppSpacing.sm),
             AppText(
+              key: const ValueKey('portfolio-hero-returns'),
               '${tr('Total Returns')}: ${_pnlText(data['totalPnl'])}',
               style: AppTypography.bodyMedium.copyWith(
-                color: _hidden ? inverseMuted : _pnlColor(data['totalPnl']),
+                color: _hidden || _number(data['totalPnl']) == 0
+                    ? inverseMuted
+                    : _number(data['totalPnl']) > 0
+                    ? AppColors.chartGain
+                    : const Color(0xFFFFB4B4),
               ),
             ),
             const SizedBox(height: AppSpacing.lg),
@@ -412,6 +417,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                           ),
                         )
                       : CustomPaint(
+                          key: const ValueKey('portfolio-history-chart'),
                           painter: _ValueHistoryPainter(
                             points
                                 .map((row) => _number(row['productValue']))
@@ -1429,6 +1435,9 @@ class _AllocationPainter extends CustomPainter {
 class _ValueHistoryPainter extends CustomPainter {
   const _ValueHistoryPainter(this.values);
   final List<double> values;
+  Color get color => values.last < values.first
+      ? const Color(0xFFFFB4B4)
+      : AppColors.chartGain;
   @override
   void paint(Canvas canvas, Size size) {
     if (values.length < 2) return;
@@ -1448,7 +1457,7 @@ class _ValueHistoryPainter extends CustomPainter {
     canvas.drawPath(
       path,
       Paint()
-        ..color = AppColors.chartGain
+        ..color = color
         ..style = PaintingStyle.stroke
         ..strokeWidth = 2,
     );

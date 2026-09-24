@@ -5,6 +5,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:india_trading_app/models/portfolio_position.dart';
 import 'package:india_trading_app/models/stock_quote.dart';
 import 'package:india_trading_app/pages/product_portfolio_page.dart';
+import 'package:india_trading_app/l10n/app_language.dart';
+import 'package:india_trading_app/theme/app_colors.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/utils/number_formatters.dart';
 import 'package:india_trading_app/widgets/holding_detail_sheet.dart';
@@ -277,6 +279,42 @@ void main() {
     expect(find.textContaining(formatSignedPrice(-25)), findsWidgets);
     expect(find.textContaining('Loss'), findsWidgets);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('portfolio hero keeps readable gains and losses on blue', (
+    tester,
+  ) async {
+    setView(tester, const Size(390, 844));
+    final gain = portfolioFixture();
+    await tester.pumpWidget(portfolioApp((_) async => gain));
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<AppText>(find.byKey(const ValueKey('portfolio-hero-returns')))
+          .style
+          ?.color,
+      AppColors.chartGain,
+    );
+    final loss = portfolioFixture();
+    loss['totalPnl'] = -20;
+    loss['history'] = {
+      'points': [
+        {'productValue': 120},
+        {'productValue': 100},
+      ],
+    };
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(portfolioApp((_) async => loss));
+    await tester.pumpAndSettle();
+    final lossColor = tester
+        .widget<AppText>(find.byKey(const ValueKey('portfolio-hero-returns')))
+        .style
+        ?.color;
+    expect(lossColor, const Color(0xFFFFB4B4));
+    final chart = tester.widget<CustomPaint>(
+      find.byKey(const ValueKey('portfolio-history-chart')),
+    );
+    expect((chart.painter as dynamic).color, lossColor);
   });
 
   testWidgets('holdings distinguish frozen available and delayed quotes', (

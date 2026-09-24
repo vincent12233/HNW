@@ -494,13 +494,6 @@ class _HomeQuickActions extends StatelessWidget {
         color: AppColors.gain,
         onTap: dashboard.onWithdraw,
       ),
-      HomeActionButton(
-        label: 'Trade',
-        subtitle: 'Place orders',
-        icon: Icons.swap_horiz_rounded,
-        color: AppColors.brandDark,
-        onTap: dashboard.onTrade,
-      ),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {

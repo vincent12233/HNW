@@ -7,7 +7,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
-import '../theme/app_ui.dart';
 import '../utils/number_formatters.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/account_transaction.dart';
@@ -477,7 +476,17 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                     AppSpacing.md,
                   ),
                   padding: const EdgeInsets.all(AppSpacing.lg + 2),
-                  decoration: AppUi.heroGradient(radius: AppRadius.lg),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.brandPrimary,
+                        AppColors.brandGradientEnd,
+                      ],
+                    ),
+                    borderRadius: AppRadius.borderSm,
+                  ),
                   child: Row(
                     children: [
                       Expanded(
@@ -539,15 +548,28 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                             child: FilledButton(
                               onPressed: () => _openTicket(isBuy: true),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.buy,
-                                foregroundColor: AppColors.textInverse,
+                                backgroundColor: AppColors.buySoft,
+                                foregroundColor: AppColors.buy,
+                                elevation: 0,
                               ),
-                              child: AppText(
-                                AppContentService.instance.current.text(
-                                  'trading',
-                                  'action.buy',
-                                  fallback: 'Buy',
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(
+                                    Icons.shopping_cart_outlined,
+                                    size: 19,
+                                  ),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Flexible(
+                                    child: AppText(
+                                      AppContentService.instance.current.text(
+                                        'trading',
+                                        'action.buy',
+                                        fallback: 'Buy',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -559,15 +581,25 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                             child: FilledButton(
                               onPressed: () => _openTicket(isBuy: false),
                               style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.sell,
-                                foregroundColor: AppColors.textInverse,
+                                backgroundColor: AppColors.sellSoft,
+                                foregroundColor: AppColors.sell,
+                                elevation: 0,
                               ),
-                              child: AppText(
-                                AppContentService.instance.current.text(
-                                  'trading',
-                                  'action.sell',
-                                  fallback: 'Sell',
-                                ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.sell_outlined, size: 19),
+                                  const SizedBox(width: AppSpacing.sm),
+                                  Flexible(
+                                    child: AppText(
+                                      AppContentService.instance.current.text(
+                                        'trading',
+                                        'action.sell',
+                                        fallback: 'Sell',
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           ),
@@ -727,34 +759,41 @@ class _TradingCenterPageState extends State<TradingCenterPage>
               selected:
                   selectedTab == item.$1 ||
                   (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab)),
-              child: TextButton(
-                onPressed: () => _selectTab(item.$1),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  minimumSize: const Size(0, 48),
-                  foregroundColor:
-                      selectedTab == item.$1 ||
-                          (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
-                      ? AppColors.brandPrimary
-                      : AppColors.textSecondary,
-                  shape: const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
+              child: Container(
+                decoration: BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color:
+                          selectedTab == item.$1 ||
+                              (item.$1 == 0 &&
+                                  [2, 3, 4, 7].contains(selectedTab))
+                          ? AppColors.brandPrimary
+                          : Colors.transparent,
+                      width: 2,
+                    ),
                   ),
-                  side: BorderSide(
-                    color:
+                ),
+                child: TextButton(
+                  onPressed: () => _selectTab(item.$1),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 3),
+                    minimumSize: const Size(0, 48),
+                    foregroundColor:
                         selectedTab == item.$1 ||
                             (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
                         ? AppColors.brandPrimary
-                        : Colors.transparent,
-                    width: 2,
+                        : AppColors.textSecondary,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
                   ),
-                ),
-                child: AppText(
-                  item.$2,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  style: AppTypography.labelSmall.copyWith(
-                    fontWeight: FontWeight.w600,
+                  child: AppText(
+                    item.$2,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    style: AppTypography.labelSmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -809,12 +848,12 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     ];
 
     return SizedBox(
-      height: 42,
+      height: 44,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
         scrollDirection: Axis.horizontal,
         itemCount: items.length,
-        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.sm),
+        separatorBuilder: (_, _) => const SizedBox(width: AppSpacing.lg),
         itemBuilder: (context, index) {
           final item = items[index];
           final selected = selectedTab == item.$1;
@@ -822,21 +861,32 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             selected: selected,
             child: Tooltip(
               message: tr(tabs[item.$1].label),
-              child: ChoiceChip(
-                label: AppText(item.$2),
-                selected: selected,
-                selectedColor: AppColors.brandPrimary,
-                backgroundColor: AppColors.surface,
-                labelStyle: AppTypography.labelMedium.copyWith(
-                  color: selected
-                      ? AppColors.textInverse
-                      : AppColors.textPrimary,
-                  fontWeight: FontWeight.w700,
+              child: InkWell(
+                key: ValueKey('trade-shortcut-${item.$1}'),
+                onTap: () => _selectTab(item.$1),
+                child: Container(
+                  alignment: Alignment.center,
+                  constraints: const BoxConstraints(minWidth: 56),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: selected
+                            ? AppColors.brandPrimary
+                            : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  child: AppText(
+                    item.$2,
+                    style: AppTypography.labelSmall.copyWith(
+                      color: selected
+                          ? AppColors.brandPrimary
+                          : AppColors.textSecondary,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
                 ),
-                side: BorderSide(
-                  color: selected ? AppColors.brandPrimary : AppColors.border,
-                ),
-                onSelected: (_) => _selectTab(item.$1),
               ),
             ),
           );

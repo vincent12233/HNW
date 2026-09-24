@@ -26,8 +26,47 @@ class EmptyTradingService extends TradingService {
 }
 
 void main() {
+  testWidgets('trade actions and product tabs fit phone widths', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    FlutterSecureStorage.setMockInitialValues({});
+    for (final width in [320.0, 390.0, 430.0]) {
+      tester.view.physicalSize = Size(width, 844);
+      tester.view.devicePixelRatio = 1;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TradingCenterPage(
+            tradingService: EmptyTradingService(),
+            stocks: const [],
+            positions: const {},
+            orders: const [],
+            institutionalStocks: const [],
+            ipos: const [],
+            ipoApplications: const [],
+            onTrade: (_) {},
+            onApplyIpo: (_) {},
+            onAlertsTap: () {},
+            notificationCount: 0,
+            indexQuotes: const {},
+            onViewMarkets: () {},
+          ),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byIcon(Icons.shopping_cart_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.sell_outlined), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Overview'), findsWidgets);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 1));
+    }
+    tester.view.resetPhysicalSize();
+    tester.view.resetDevicePixelRatio();
+  });
+
   testWidgets(
-    'trade module chips scroll on a narrow screen and open their modules',
+    'trade module tabs scroll on a narrow screen and open their modules',
     (tester) async {
       SharedPreferences.setMockInitialValues({});
       FlutterSecureStorage.setMockInitialValues({});
@@ -61,9 +100,13 @@ void main() {
             widget is ListView && widget.scrollDirection == Axis.horizontal,
       );
 
-      Future<void> tapChip(String label) async {
-        final finder = find.widgetWithText(ChoiceChip, label);
-        expect(finder, findsWidgets);
+      Future<void> tapChip(String label, int index) async {
+        final finder = find.byKey(ValueKey('trade-shortcut-$index'));
+        expect(finder, findsOneWidget);
+        expect(
+          find.descendant(of: finder, matching: find.text(label)),
+          findsOneWidget,
+        );
         await tester.dragUntilVisible(
           finder.first,
           shortcutRow.first,
@@ -74,15 +117,15 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
       }
 
-      for (final entry in <String, Type>{
-        'Overview': TradeList,
-        'Positions': HoldingsTab,
-        'Orders': OrdersTab,
-        'Pending': PendingCenterTab,
-        'History': HistoryTab,
-      }.entries) {
-        await tapChip(entry.key);
-        expect(find.byType(entry.value), findsOneWidget);
+      for (final entry in <(String, int, Type)>[
+        ('Overview', 0, TradeList),
+        ('Positions', 2, HoldingsTab),
+        ('Orders', 4, OrdersTab),
+        ('Pending', 3, PendingCenterTab),
+        ('History', 7, HistoryTab),
+      ]) {
+        await tapChip(entry.$1, entry.$2);
+        expect(find.byType(entry.$3), findsOneWidget);
         expect(tester.takeException(), isNull);
       }
       await tester.tap(find.byTooltip('Account Ledger'));

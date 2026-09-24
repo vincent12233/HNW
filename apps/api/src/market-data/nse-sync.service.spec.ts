@@ -139,4 +139,29 @@ describe('NseSyncService polling selection', () => {
       'D',
     ]);
   });
+
+  it('syncs the four home indices with their actual exchanges', async () => {
+    const { service, provider, ingestion } = createService();
+    provider.getQuote.mockImplementation((symbol: string) =>
+      Promise.resolve({ symbol }),
+    );
+    ingestion.ingest.mockResolvedValue(undefined);
+
+    await (
+      service as unknown as { syncIndices(): Promise<void> }
+    ).syncIndices();
+
+    expect(provider.getQuote.mock.calls).toEqual([
+      ['NIFTY50', 'NSE'],
+      ['SENSEX', 'BSE'],
+      ['BANKNIFTY', 'NSE'],
+      ['INDIAVIX', 'NSE'],
+    ]);
+    expect(ingestion.ingest.mock.calls).toEqual([
+      ['NSE', { symbol: 'NIFTY50' }, 'INDEX'],
+      ['BSE', { symbol: 'SENSEX' }, 'INDEX'],
+      ['NSE', { symbol: 'BANKNIFTY' }, 'INDEX'],
+      ['NSE', { symbol: 'INDIAVIX' }, 'INDEX'],
+    ]);
+  });
 });

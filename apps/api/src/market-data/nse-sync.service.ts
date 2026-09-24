@@ -20,7 +20,12 @@ const PRIORITY_CATEGORIES = new Set(['INSTITUTIONAL', 'INST', 'OTC', 'IPO']);
 @Injectable()
 export class NseSyncService {
   private readonly logger = new Logger(NseSyncService.name);
-  private readonly indices = ['NIFTY50', 'SENSEX', 'BANKNIFTY'];
+  private readonly indices = [
+    { symbol: 'NIFTY50', exchange: 'NSE' },
+    { symbol: 'SENSEX', exchange: 'BSE' },
+    { symbol: 'BANKNIFTY', exchange: 'NSE' },
+    { symbol: 'INDIAVIX', exchange: 'NSE' },
+  ] as const;
   private readonly lastPollingAttempt = new Map<string, number>();
   private syncing = false;
 
@@ -175,10 +180,10 @@ export class NseSyncService {
 
   private async syncIndices() {
     await Promise.allSettled(
-      this.indices.map(async (symbol) => {
+      this.indices.map(async ({ symbol, exchange }) => {
         try {
-          const quote = await this.provider.getQuote(symbol, 'NSE');
-          await this.ingestion.ingest('NSE', quote, 'INDEX');
+          const quote = await this.provider.getQuote(symbol, exchange);
+          await this.ingestion.ingest(exchange, quote, 'INDEX');
         } catch (error: unknown) {
           const message =
             error instanceof Error ? error.message : String(error);

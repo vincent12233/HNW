@@ -34,6 +34,7 @@ export class YahooProvider implements MarketDataProvider {
     NIFTY50: '^NSEI',
     SENSEX: '^BSESN',
     BANKNIFTY: '^NSEBANK',
+    INDIAVIX: '^INDIAVIX',
   };
 
   async getQuote(symbol: string, exchange = 'NSE'): Promise<MarketQuoteResult> {
@@ -100,7 +101,11 @@ export class YahooProvider implements MarketDataProvider {
     range: MarketHistoryResult['range'],
   ): Promise<MarketHistoryResult> {
     const window = this.window(range);
-    const yahooSymbol = `${symbol}.${exchange === 'BSE' ? 'BO' : 'NS'}`;
+    const normalizedSymbol = symbol.trim().toUpperCase();
+    const normalizedExchange = exchange.trim().toUpperCase();
+    const yahooSymbol =
+      this.symbols[normalizedSymbol] ??
+      `${normalizedSymbol}.${normalizedExchange === 'BSE' ? 'BO' : 'NS'}`;
     try {
       const response = await axios.get<YahooChartResponse>(
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`,

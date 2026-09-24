@@ -890,7 +890,7 @@ class _MarketHomePageState extends State<MarketHomePage>
             bottom: false,
             child: Center(
               child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1040),
+                constraints: const BoxConstraints(maxWidth: 760),
                 child: AppPageTransition(
                   switchKey: selectedIndex,
                   forward: selectedIndex >= _previousSelectedIndex,
@@ -933,62 +933,93 @@ class _MarketHomePageState extends State<MarketHomePage>
             heightFactor: 1,
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 760),
-              child: NavigationBar(
-                height: AppSpacing.navHeight,
-                elevation: 0,
-                backgroundColor: AppColors.surface,
-                surfaceTintColor: Colors.transparent,
-                shadowColor: Colors.transparent,
-                labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
-                selectedIndex: selectedIndex,
-                onDestinationSelected: _onDestinationSelected,
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.home_outlined),
-                    selectedIcon: const Icon(
-                      Icons.home,
-                      color: AppColors.navSelected,
+              child: NavigationBarTheme(
+                data: NavigationBarThemeData(
+                  height: AppSpacing.navHeight,
+                  elevation: 0,
+                  backgroundColor: AppColors.surface,
+                  surfaceTintColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  indicatorColor: Colors.transparent,
+                  indicatorShape: const CircleBorder(),
+                  iconTheme: WidgetStateProperty.resolveWith((states) {
+                    return IconThemeData(
+                      size: 22,
+                      color: states.contains(WidgetState.selected)
+                          ? AppColors.navSelected
+                          : AppColors.navUnselected,
+                    );
+                  }),
+                  labelTextStyle: WidgetStateProperty.resolveWith((states) {
+                    return AppTypography.caption.copyWith(
+                      fontSize: 10,
+                      height: 1.2,
+                      fontWeight: states.contains(WidgetState.selected)
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: states.contains(WidgetState.selected)
+                          ? AppColors.navSelected
+                          : AppColors.navUnselected,
+                    );
+                  }),
+                ),
+                child: NavigationBar(
+                  height: AppSpacing.navHeight,
+                  elevation: 0,
+                  backgroundColor: AppColors.surface,
+                  surfaceTintColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
+                  selectedIndex: selectedIndex,
+                  onDestinationSelected: _onDestinationSelected,
+                  destinations: [
+                    NavigationDestination(
+                      icon: const Icon(Icons.home_outlined),
+                      selectedIcon: const Icon(
+                        Icons.home,
+                        color: AppColors.navSelected,
+                      ),
+                      label: tr('Home'),
+                      tooltip: tr('Home'),
                     ),
-                    label: tr('Home'),
-                    tooltip: tr('Home'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.bar_chart_outlined),
-                    selectedIcon: const Icon(
-                      Icons.bar_chart,
-                      color: AppColors.navSelected,
+                    NavigationDestination(
+                      icon: const Icon(Icons.bar_chart_outlined),
+                      selectedIcon: const Icon(
+                        Icons.bar_chart,
+                        color: AppColors.navSelected,
+                      ),
+                      label: tr('Markets'),
+                      tooltip: tr('Markets'),
                     ),
-                    label: tr('Markets'),
-                    tooltip: tr('Markets'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.swap_horiz_rounded),
-                    selectedIcon: const Icon(
-                      Icons.swap_horiz_rounded,
-                      color: AppColors.navSelected,
+                    NavigationDestination(
+                      icon: const Icon(Icons.swap_horiz_rounded),
+                      selectedIcon: const Icon(
+                        Icons.swap_horiz_rounded,
+                        color: AppColors.navSelected,
+                      ),
+                      label: tr('Trade'),
+                      tooltip: tr('Trade'),
                     ),
-                    label: tr('Trade'),
-                    tooltip: tr('Trade'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.pie_chart_outline),
-                    selectedIcon: const Icon(
-                      Icons.pie_chart,
-                      color: AppColors.navSelected,
+                    NavigationDestination(
+                      icon: const Icon(Icons.pie_chart_outline),
+                      selectedIcon: const Icon(
+                        Icons.pie_chart,
+                        color: AppColors.navSelected,
+                      ),
+                      label: tr('Portfolio'),
+                      tooltip: tr('Portfolio'),
                     ),
-                    label: tr('Portfolio'),
-                    tooltip: tr('Portfolio'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.person_outline),
-                    selectedIcon: const Icon(
-                      Icons.person,
-                      color: AppColors.navSelected,
+                    NavigationDestination(
+                      icon: const Icon(Icons.person_outline),
+                      selectedIcon: const Icon(
+                        Icons.person,
+                        color: AppColors.navSelected,
+                      ),
+                      label: tr('Profile'),
+                      tooltip: tr('Profile'),
                     ),
-                    label: tr('Profile'),
-                    tooltip: tr('Profile'),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

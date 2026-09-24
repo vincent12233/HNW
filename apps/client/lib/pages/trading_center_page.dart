@@ -370,240 +370,248 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.md + 2,
-                AppSpacing.lg,
-                AppSpacing.xs,
-              ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: AppText(
-                      'Trade',
-                      style: AppTypography.headline.copyWith(fontSize: 20),
-                    ),
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 760),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.md + 2,
+                    AppSpacing.lg,
+                    AppSpacing.xs,
                   ),
-                  IconButton(
-                    tooltip: tr('Markets'),
-                    onPressed: widget.onViewMarkets,
-                    icon: const Icon(
-                      Icons.search_rounded,
-                      size: 22,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
-                  IconButton(
-                    tooltip: tr('Funds Ledger'),
-                    onPressed: () => _selectTab(8),
-                    icon: Icon(
-                      Icons.account_balance_wallet_outlined,
-                      size: 22,
-                      color: selectedTab == 8
-                          ? AppColors.brandPrimary
-                          : AppColors.textPrimary,
-                    ),
-                  ),
-                  Stack(
-                    clipBehavior: Clip.none,
+                  child: Row(
                     children: [
+                      Expanded(
+                        child: AppText(
+                          'Trade',
+                          style: AppTypography.headline.copyWith(fontSize: 20),
+                        ),
+                      ),
                       IconButton(
-                        tooltip: tr('Notifications'),
-                        onPressed: widget.onAlertsTap,
+                        tooltip: tr('Markets'),
+                        onPressed: widget.onViewMarkets,
                         icon: const Icon(
-                          Icons.notifications_none_rounded,
+                          Icons.search_rounded,
                           size: 22,
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      if (widget.notificationCount > 0)
-                        Positioned(
-                          right: 6,
-                          top: 4,
-                          child: Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 17,
-                              minHeight: 17,
+                      IconButton(
+                        tooltip: tr('Funds Ledger'),
+                        onPressed: () => _selectTab(8),
+                        icon: Icon(
+                          Icons.account_balance_wallet_outlined,
+                          size: 22,
+                          color: selectedTab == 8
+                              ? AppColors.brandPrimary
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                      Stack(
+                        clipBehavior: Clip.none,
+                        children: [
+                          IconButton(
+                            tooltip: tr('Notifications'),
+                            onPressed: widget.onAlertsTap,
+                            icon: const Icon(
+                              Icons.notifications_none_rounded,
+                              size: 22,
+                              color: AppColors.textPrimary,
                             ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: AppSpacing.xs,
+                          ),
+                          if (widget.notificationCount > 0)
+                            Positioned(
+                              right: 6,
+                              top: 4,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  minWidth: 17,
+                                  minHeight: 17,
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppSpacing.xs,
+                                ),
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.loss,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: AppText(
+                                  widget.notificationCount > 9
+                                      ? '9+'
+                                      : widget.notificationCount.toString(),
+                                  style: AppTypography.caption.copyWith(
+                                    color: AppColors.textInverse,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
                             ),
-                            alignment: Alignment.center,
-                            decoration: const BoxDecoration(
-                              color: AppColors.loss,
-                              shape: BoxShape.circle,
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm - 2,
+                    AppSpacing.lg,
+                    AppSpacing.sm,
+                  ),
+                  child: MarketStatusCard(
+                    isOpen: widget.marketOpen,
+                    hours: widget.marketHours,
+                    quotesConnected: widget.quotesConnected,
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.fromLTRB(
+                    AppSpacing.lg,
+                    AppSpacing.sm - 2,
+                    AppSpacing.lg,
+                    AppSpacing.md,
+                  ),
+                  padding: const EdgeInsets.all(AppSpacing.lg + 2),
+                  decoration: AppUi.heroGradient(radius: AppRadius.lg),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _balanceMetric(
+                              'Available Funds',
+                              _accountSnapshot?.availableBalance,
                             ),
-                            child: AppText(
-                              widget.notificationCount > 9
-                                  ? '9+'
-                                  : widget.notificationCount.toString(),
-                              style: AppTypography.caption.copyWith(
-                                color: AppColors.textInverse,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w800,
+                            const SizedBox(height: AppSpacing.md),
+                            _balanceMetric(
+                              'Buying Power',
+                              _accountSnapshot?.buyingPower,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _balanceMetric(
+                              'Frozen Funds',
+                              _accountSnapshot?.frozenBalance,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            _balanceMetric(
+                              'Realized P&L',
+                              _accountSnapshot?.realizedProfitLoss,
+                              valueColor:
+                                  (_accountSnapshot?.realizedProfitLoss ?? 0) >=
+                                      0
+                                  ? AppColors.chartGain
+                                  : AppColors.loss,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                _productTabs(),
+                if (![1, 5, 6].contains(selectedTab)) _tradingShortcuts(),
+                if (selectedTab == 0)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.lg,
+                      AppSpacing.sm,
+                      AppSpacing.lg,
+                      0,
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: SizedBox(
+                            height: AppSpacing.buttonHeight,
+                            child: FilledButton(
+                              onPressed: () => _openTicket(isBuy: true),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.buy,
+                                foregroundColor: AppColors.textInverse,
+                              ),
+                              child: AppText(
+                                AppContentService.instance.current.text(
+                                  'trading',
+                                  'action.buy',
+                                  fallback: 'Buy',
+                                ),
                               ),
                             ),
                           ),
                         ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm - 2,
-                AppSpacing.lg,
-                AppSpacing.sm,
-              ),
-              child: MarketStatusCard(
-                isOpen: widget.marketOpen,
-                hours: widget.marketHours,
-                quotesConnected: widget.quotesConnected,
-              ),
-            ),
-            Container(
-              margin: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.sm - 2,
-                AppSpacing.lg,
-                AppSpacing.md,
-              ),
-              padding: const EdgeInsets.all(AppSpacing.lg + 2),
-              decoration: AppUi.heroGradient(radius: AppRadius.lg),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _balanceMetric(
-                          'Available Funds',
-                          _accountSnapshot?.availableBalance,
-                        ),
-                        const SizedBox(height: AppSpacing.md),
-                        _balanceMetric(
-                          'Buying Power',
-                          _accountSnapshot?.buyingPower,
+                        const SizedBox(width: AppSpacing.sm),
+                        Expanded(
+                          child: SizedBox(
+                            height: AppSpacing.buttonHeight,
+                            child: FilledButton(
+                              onPressed: () => _openTicket(isBuy: false),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: AppColors.sell,
+                                foregroundColor: AppColors.textInverse,
+                              ),
+                              child: AppText(
+                                AppContentService.instance.current.text(
+                                  'trading',
+                                  'action.sell',
+                                  fallback: 'Sell',
+                                ),
+                              ),
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                const SizedBox(height: AppSpacing.sm),
+                if (_ordersFailed || _accountFailed)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.lg,
+                    ),
+                    child: Row(
                       children: [
-                        _balanceMetric(
-                          'Frozen Funds',
-                          _accountSnapshot?.frozenBalance,
+                        Expanded(
+                          child: AppText(
+                            _ordersFailed && _accountFailed
+                                ? 'Orders and balances could not be updated.'
+                                : _ordersFailed
+                                ? 'Orders could not be updated.'
+                                : 'Balances and holdings could not be updated.',
+                            style: AppTypography.bodySmall,
+                          ),
                         ),
-                        const SizedBox(height: AppSpacing.md),
-                        _balanceMetric(
-                          'Realized P&L',
-                          _accountSnapshot?.realizedProfitLoss,
-                          valueColor:
-                              (_accountSnapshot?.realizedProfitLoss ?? 0) >= 0
-                              ? AppColors.chartGain
-                              : AppColors.loss,
+                        TextButton(
+                          onPressed: _transactionsLoading
+                              ? null
+                              : () => _refreshTradingData(),
+                          child: AppText(
+                            AppContentService.instance.current.text(
+                              'trading',
+                              'action.retry',
+                              fallback: 'Retry',
+                            ),
+                          ),
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
+                Expanded(child: _buildContent()),
+              ],
             ),
-            _productTabs(),
-            if (![1, 5, 6].contains(selectedTab)) _tradingShortcuts(),
-            if (selectedTab == 0)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.lg,
-                  AppSpacing.sm,
-                  AppSpacing.lg,
-                  0,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: SizedBox(
-                        height: AppSpacing.buttonHeight,
-                        child: FilledButton(
-                          onPressed: () => _openTicket(isBuy: true),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.buy,
-                            foregroundColor: AppColors.textInverse,
-                          ),
-                          child: AppText(
-                            AppContentService.instance.current.text(
-                              'trading',
-                              'action.buy',
-                              fallback: 'Buy',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: SizedBox(
-                        height: AppSpacing.buttonHeight,
-                        child: FilledButton(
-                          onPressed: () => _openTicket(isBuy: false),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppColors.sell,
-                            foregroundColor: AppColors.textInverse,
-                          ),
-                          child: AppText(
-                            AppContentService.instance.current.text(
-                              'trading',
-                              'action.sell',
-                              fallback: 'Sell',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            const SizedBox(height: AppSpacing.sm),
-            if (_ordersFailed || _accountFailed)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: AppText(
-                        _ordersFailed && _accountFailed
-                            ? 'Orders and balances could not be updated.'
-                            : _ordersFailed
-                            ? 'Orders could not be updated.'
-                            : 'Balances and holdings could not be updated.',
-                        style: AppTypography.bodySmall,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: _transactionsLoading
-                          ? null
-                          : () => _refreshTradingData(),
-                      child: AppText(
-                        AppContentService.instance.current.text(
-                          'trading',
-                          'action.retry',
-                          fallback: 'Retry',
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            Expanded(child: _buildContent()),
-          ],
+          ),
         ),
       ),
     );

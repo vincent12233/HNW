@@ -76,7 +76,7 @@ class _MarketsPageState extends State<MarketsPage> {
   final MarketDataService _marketDataService = MarketDataService();
   final WatchlistService _watchlistService = WatchlistService();
   final MarketSocketService _marketSocket = MarketSocketService();
-  int selectedTab = 0;
+  int selectedTab = 1;
   int selectedMoverFilter = 0;
   String query = '';
   List<StockQuote> _remoteSearchResults = <StockQuote>[];
@@ -101,12 +101,7 @@ class _MarketsPageState extends State<MarketsPage> {
 
   /// Always-visible core tabs, then optional catalog tabs when instruments exist.
   List<(int contentIndex, String label)> get _visibleTabs {
-    final tabs = <(int, String)>[
-      (0, 'Watchlist'),
-      (1, 'Indices'),
-      (2, 'Stocks'),
-      (3, 'Sectors'),
-    ];
+    final tabs = <(int, String)>[(1, 'Indices'), (2, 'Stocks'), (3, 'Sectors')];
     if (_hasCategoryInstruments(_foKeywords)) {
       tabs.add((4, 'F&O'));
     }
@@ -119,6 +114,7 @@ class _MarketsPageState extends State<MarketsPage> {
     if (_hasCategoryInstruments(_currencyKeywords)) {
       tabs.add((7, 'Currency'));
     }
+    tabs.add((0, 'Watchlist'));
     return tabs;
   }
 
@@ -639,11 +635,7 @@ class _MarketsPageState extends State<MarketsPage> {
               child: Align(
                 alignment: Alignment.topCenter,
                 child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: MediaQuery.sizeOf(context).width >= 768
-                        ? 960
-                        : double.infinity,
-                  ),
+                  constraints: const BoxConstraints(maxWidth: 760),
                   child: AppFadeIn(
                     switchKey: effectiveTab,
                     child: _selectedContent(contentIndex: effectiveTab),

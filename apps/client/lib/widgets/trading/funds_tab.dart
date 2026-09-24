@@ -1,10 +1,13 @@
 import '../../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../../app_config.dart';
 import '../../models/account_transaction.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_spacing.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
 import '../app_feedback.dart';
+import '../app_card.dart';
 import '../app_page_scaffold.dart';
 
 class FundsTab extends StatelessWidget {
@@ -82,74 +85,66 @@ class FundsTab extends StatelessWidget {
       onRefresh: onRefresh ?? () async {},
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: AppSpacing.page,
         itemCount: transactions.length,
         separatorBuilder: (_, _) => const SizedBox(height: 10),
         itemBuilder: (context, index) {
           final transaction = transactions[index];
           final credit = transaction.amount >= 0;
-          return Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor:
-                            (credit ? AppConfig.gainColor : AppConfig.lossColor)
-                                .withValues(alpha: 0.10),
-                        child: Icon(
-                          credit
-                              ? Icons.south_west_rounded
-                              : Icons.north_east_rounded,
-                          color: credit
-                              ? AppConfig.gainColor
-                              : AppConfig.lossColor,
-                        ),
+          return AppCard(
+            padding: AppSpacing.card,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor:
+                          (credit ? AppColors.gain : AppColors.loss).withValues(
+                            alpha: 0.10,
+                          ),
+                      child: Icon(
+                        credit
+                            ? Icons.south_west_rounded
+                            : Icons.north_east_rounded,
+                        color: credit ? AppColors.gain : AppColors.loss,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: AppText(
-                          transaction.type.replaceAll('_', ' '),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: AppText(
+                        transaction.type.replaceAll('_', ' '),
+                        style: AppTypography.titleSmall,
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  if (transaction.note?.isNotEmpty == true)
-                    AppText(transaction.note!),
-                  const SizedBox(height: 6),
-                  AppText(
-                    '${transaction.createdAt.toLocal()}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
-                  ),
-                  const Divider(height: 24),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AppText(
-                        '${credit ? '+' : ''}${formatPrice(transaction.amount)}',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w800,
-                          color: credit
-                              ? AppConfig.gainColor
-                              : AppConfig.lossColor,
-                        ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                if (transaction.note?.isNotEmpty == true)
+                  AppText(transaction.note!),
+                const SizedBox(height: 6),
+                AppText(
+                  '${transaction.createdAt.toLocal()}',
+                  style: AppTypography.caption,
+                ),
+                const Divider(height: 24),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      '${credit ? '+' : ''}${formatPrice(transaction.amount)}',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: credit ? AppColors.gain : AppColors.loss,
                       ),
-                      AppText(
-                        'Balance ${formatPrice(transaction.balanceAfter)}',
-                        style: const TextStyle(
-                          fontSize: 11,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+                    ),
+                    AppText(
+                      'Balance ${formatPrice(transaction.balanceAfter)}',
+                      style: AppTypography.caption,
+                    ),
+                  ],
+                ),
+              ],
             ),
           );
         },

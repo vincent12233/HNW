@@ -436,6 +436,18 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('phone market indices stay in one horizontal row', (
+    tester,
+  ) async {
+    await pumpHome(tester, size: const Size(390, 844), home: dashboard());
+    await tester.ensureVisible(find.text('Market Indices'));
+    final nifty = tester.getRect(find.text('NIFTY 50').first);
+    final sensex = tester.getRect(find.text('SENSEX').first);
+    expect(nifty.top, closeTo(sensex.top, 4));
+    expect(sensex.left, greaterThan(nifty.left));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('hide balances swaps amounts without extra requests', (
     tester,
   ) async {

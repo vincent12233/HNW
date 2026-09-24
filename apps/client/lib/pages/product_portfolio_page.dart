@@ -365,52 +365,6 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 ),
               ],
             ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    for (final period in ['1D', '1W', '1M', '3M', '1Y', 'All'])
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: AppSpacing.xxs + 1,
-                        ),
-                        child: ChoiceChip(
-                          key: ValueKey('portfolio-period-$period'),
-                          label: AppText(period),
-                          selected: _period == period,
-                          onSelected: (_) {
-                            if (period == _period) return;
-                            _load(period);
-                          },
-                          showCheckmark: false,
-                          selectedColor: AppColors.textInverse,
-                          backgroundColor: Colors.white10,
-                          side: BorderSide(
-                            color: _period == period
-                                ? Colors.transparent
-                                : Colors.white12,
-                          ),
-                          visualDensity: VisualDensity.standard,
-                          labelStyle: AppTypography.labelSmall.copyWith(
-                            fontSize: 10,
-                            color: _period == period
-                                ? AppColors.brandDark
-                                : inverseMuted,
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 1),
-                          labelPadding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.xs + 1,
-                          ),
-                          shape: const StadiumBorder(),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            ),
             AppText(
               _money(data['currentValue']),
               style: AppTypography.numericInverse.copyWith(fontSize: 24),
@@ -458,6 +412,45 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         ),
                 ),
               ),
+            const SizedBox(height: AppSpacing.sm),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  for (final period in ['1D', '1W', '1M', '3M', '1Y', 'All'])
+                    Padding(
+                      padding: const EdgeInsets.only(right: AppSpacing.xs),
+                      child: ChoiceChip(
+                        key: ValueKey('portfolio-period-$period'),
+                        label: AppText(period),
+                        selected: _period == period,
+                        onSelected: (_) {
+                          if (period != _period) _load(period);
+                        },
+                        showCheckmark: false,
+                        selectedColor: AppColors.textInverse,
+                        backgroundColor: Colors.white10,
+                        side: BorderSide(
+                          color: _period == period
+                              ? Colors.transparent
+                              : Colors.white12,
+                        ),
+                        visualDensity: VisualDensity.compact,
+                        labelStyle: AppTypography.labelSmall.copyWith(
+                          fontSize: 10,
+                          color: _period == period
+                              ? AppColors.brandDark
+                              : inverseMuted,
+                        ),
+                        labelPadding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.sm,
+                        ),
+                        shape: const StadiumBorder(),
+                      ),
+                    ),
+                ],
+              ),
+            ),
             const SizedBox(height: AppSpacing.sm),
             AppText(
               'Source: product valuation snapshots · Range: $_period · Updated ${_date(data['asOf'])}'

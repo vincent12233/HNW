@@ -89,6 +89,18 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(find.text('Total Portfolio Value'), findsNothing);
   });
+  testWidgets('portfolio period controls follow the value and chart', (
+    tester,
+  ) async {
+    await tester.pumpWidget(app((_) async => fixture()));
+    await tester.pumpAndSettle();
+    final value = tester.getRect(find.text('Total Portfolio Value'));
+    final period = tester.getRect(
+      find.byKey(const ValueKey('portfolio-period-1M')),
+    );
+    expect(period.top, greaterThan(value.bottom));
+    expect(tester.takeException(), isNull);
+  });
   testWidgets('allocation keeps donut, percentage, legend, and progress bars', (
     tester,
   ) async {

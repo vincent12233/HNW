@@ -594,6 +594,25 @@ class _IndicesGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
+        if (constraints.maxWidth < 520 && scale <= 1.2) {
+          return SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (var index = 0; index < indices.length; index++) ...[
+                  if (index > 0) const SizedBox(width: AppSpacing.sm),
+                  SizedBox(
+                    width: 116,
+                    child: _IndexChip(
+                      item: indices[index],
+                      onOpen: onOpenIndex,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          );
+        }
         final columns = constraints.maxWidth >= 520
             ? 4
             : constraints.maxWidth < 300 ||

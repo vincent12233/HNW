@@ -68,11 +68,11 @@ class ProfileMenuRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final accent = destructive ? AppColors.loss : color;
     return ListTile(
-      minTileHeight: 64,
-      visualDensity: VisualDensity.standard,
+      minTileHeight: 52,
+      visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
-        vertical: AppSpacing.xxs,
+        vertical: 0,
       ),
       leading: Container(
         width: 28,

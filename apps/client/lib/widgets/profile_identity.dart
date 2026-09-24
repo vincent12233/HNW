@@ -173,22 +173,29 @@ class ProfileIdentityHeader extends StatelessWidget {
                   child: Semantics(
                     button: true,
                     label: tr('Edit profile photo'),
-                    child: CircleAvatar(
-                      radius: 28,
-                      backgroundColor: AppColors.textInverse,
-                      backgroundImage: avatarBytes == null
-                          ? null
-                          : MemoryImage(avatarBytes!),
-                      child: avatarBytes == null
-                          ? AppText(
-                              profileInitials(name),
-                              style: const TextStyle(
-                                color: AppColors.brandPrimary,
-                                fontSize: 22,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            )
-                          : null,
+                    child: Container(
+                      padding: const EdgeInsets.all(2),
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      child: CircleAvatar(
+                        radius: 26,
+                        backgroundColor: AppColors.brandPrimarySoft,
+                        backgroundImage: avatarBytes == null
+                            ? null
+                            : MemoryImage(avatarBytes!),
+                        child: avatarBytes == null
+                            ? AppText(
+                                profileInitials(name),
+                                style: const TextStyle(
+                                  color: AppColors.brandPrimary,
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              )
+                            : null,
+                      ),
                     ),
                   ),
                 ),

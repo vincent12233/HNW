@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../theme/app_colors.dart';
-import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
@@ -98,6 +97,15 @@ class MarketHeader extends StatelessWidget {
                 ],
               ),
             ),
+            IconButton(
+              tooltip: tr('Search stocks'),
+              onPressed: onSearchTap,
+              icon: const Icon(
+                Icons.search_rounded,
+                color: AppColors.textPrimary,
+                size: 22,
+              ),
+            ),
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -144,51 +152,6 @@ class MarketHeader extends StatelessWidget {
               ],
             ),
           ],
-        ),
-        const SizedBox(height: AppSpacing.md),
-        Semantics(
-          button: true,
-          label: 'Search stocks',
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onSearchTap,
-              borderRadius: AppRadius.borderSm,
-              child: Ink(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                  vertical: AppSpacing.sm + 3,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.surface,
-                  borderRadius: AppRadius.borderSm,
-                  border: Border.all(color: AppColors.border),
-                ),
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 44),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.search_rounded,
-                        size: 20,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: AppSpacing.sm),
-                      Expanded(
-                        child: AppText(
-                          'Search stocks, indices…',
-                          style: AppTypography.labelLarge.copyWith(
-                            color: AppColors.textTertiary,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
         ),
       ],
     );

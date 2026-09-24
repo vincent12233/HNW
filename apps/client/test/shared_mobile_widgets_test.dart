@@ -154,7 +154,7 @@ void main() {
     expect(find.byTooltip('Notifications (25)'), findsOneWidget);
     await tester.tapAt(tester.getCenter(find.text('9+')));
     expect(notificationsOpened, 1);
-    final search = find.text('Search stocks, indices…');
+    final search = find.byTooltip('Search stocks');
     await tester.tap(search);
     expect(searchOpened, 1);
   });

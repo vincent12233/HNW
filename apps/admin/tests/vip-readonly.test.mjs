@@ -103,6 +103,8 @@ test('manager VIP page stays scoped and has no transfer or adjust controls', () 
 
 test('business VIP page keeps the existing manual adjust flow', () => {
   const source = readFileSync(join(root, '../app/business-vip/page.tsx'), 'utf8');
+  assert.match(source, /<Space orientation="vertical"/);
+  assert.doesNotMatch(source, /<Space[^>]*direction=/);
   assert.match(source, /\/business\/vip-clients/);
   assert.match(source, /allowAdjust/);
   assert.match(source, /\/business\/vip-clients\/\$\{userId\}\/tier/);

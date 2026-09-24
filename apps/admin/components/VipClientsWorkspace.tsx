@@ -158,7 +158,7 @@ export default function VipClientsWorkspace({
   }
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }} className="vip-workspace">
+    <Space orientation="vertical" size={16} style={{ width: "100%" }} className="vip-workspace">
       {!configured ? (
         <Alert type="info" showIcon message="累计充值门槛尚未配置，因此不会生成建议等级。" />
       ) : null}

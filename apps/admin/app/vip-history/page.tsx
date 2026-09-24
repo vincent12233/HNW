@@ -35,7 +35,7 @@ export default function VipHistoryPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
+      <Space orientation="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           title="VIP 等级变更历史"
           crumbs={[{ title: "治理与人员" }, { title: "VIP 等级变更历史" }]}

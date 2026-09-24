@@ -130,7 +130,7 @@ export default function VipSettingsPage() {
 
   return (
     <AdminShell>
-      <Space direction="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
+      <Space orientation="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           title="VIP 等级设置"
           crumbs={[{ title: "治理与人员" }, { title: "VIP 等级设置" }]}

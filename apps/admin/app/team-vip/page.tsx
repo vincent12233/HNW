@@ -8,7 +8,7 @@ import VipClientsWorkspace from "@/components/VipClientsWorkspace";
 export default function TeamVipPage() {
   return (
     <AdminShell>
-      <Space direction="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
+      <Space orientation="vertical" size={16} style={{ width: "100%" }} className="ops-workspace">
         <OpsPageHeader
           title="团队 VIP 客户"
           crumbs={[{ title: "团队" }, { title: "团队 VIP 客户" }]}

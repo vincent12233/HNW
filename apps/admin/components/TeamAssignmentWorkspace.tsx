@@ -200,7 +200,7 @@ export default function TeamAssignmentWorkspace() {
   ];
 
   return (
-    <Space direction="vertical" size={16} style={{ width: "100%" }} className="assignment-workspace ops-workspace">
+    <Space orientation="vertical" size={16} style={{ width: "100%" }} className="assignment-workspace ops-workspace">
       <OpsPageHeader
         title="团队归属管理"
         crumbs={[{ title: "治理与人员" }, { title: "团队归属管理" }]}
@@ -311,7 +311,7 @@ export default function TeamAssignmentWorkspace() {
       >
         {previewLoading ? <Paragraph>正在生成预览…</Paragraph> : null}
         {preview ? (
-          <Space direction="vertical" size={12} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={12} style={{ width: "100%" }}>
             <Text>业务员：{preview.business.fullName}（{preview.business.employeeNo || "-"}）</Text>
             <Text>当前管理员：{preview.currentManager?.fullName ?? "未归属"}</Text>
             <Text>目标管理员：{preview.newManager.fullName}</Text>
@@ -335,7 +335,7 @@ export default function TeamAssignmentWorkspace() {
         okButtonProps={{ disabled: saving }}
       >
         {preview ? (
-          <Space direction="vertical" size={8} style={{ width: "100%" }}>
+          <Space orientation="vertical" size={8} style={{ width: "100%" }}>
             <Alert
               type="info"
               showIcon

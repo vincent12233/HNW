@@ -482,7 +482,7 @@ class _HomeQuickActions extends StatelessWidget {
     final actions = <Widget>[
       HomeActionButton(
         label: 'Add Money',
-        subtitle: 'Contact support to fund',
+        subtitle: 'Instant Deposit',
         icon: Icons.add_card_outlined,
         color: AppColors.brandPrimary,
         onTap: dashboard.onDeposit,

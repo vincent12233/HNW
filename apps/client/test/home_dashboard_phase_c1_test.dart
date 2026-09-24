@@ -385,7 +385,7 @@ void main() {
         onWithdraw: () => withdrawals++,
       ),
     );
-    expect(find.text('Contact support to fund'), findsOneWidget);
+    expect(find.text('Instant Deposit'), findsOneWidget);
     expect(find.textContaining('payment gateway'), findsNothing);
     expect(find.textContaining('UPI'), findsNothing);
     await tester.ensureVisible(find.text('Add Money'));

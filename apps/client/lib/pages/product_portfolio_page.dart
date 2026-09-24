@@ -480,7 +480,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             ]),
             const SizedBox(height: AppSpacing.md),
             AppText(
-              "Day's return unavailable. This product summary does not include a daily P&L field.",
+              _portfolioCopy(
+                'portfolio.day_return_note',
+                "Day's return unavailable. This product summary does not include a daily P&L field.",
+              ),
               style: AppTypography.caption,
             ),
           ],
@@ -690,7 +693,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           ),
         ),
         // DETAIL: Asset Details
-        _heading('Asset Details'),
+        _heading(
+          _portfolioCopy('portfolio.asset_details_heading', 'Asset Details'),
+        ),
         const SizedBox(height: AppSpacing.sm),
         ...categories.map(
           (category) => AppCard(
@@ -756,16 +761,27 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           ),
         ),
         const SizedBox(height: AppSpacing.md),
-        _heading('Holdings and Positions'),
+        _heading(
+          _portfolioCopy(
+            'portfolio.holdings_heading',
+            'Holdings and Positions',
+          ),
+        ),
         AppText(
-          'Product holdings from the current portfolio response. Equity positions remain under Trade.',
+          _portfolioCopy(
+            'portfolio.holdings_caption',
+            'Product holdings from the current portfolio response. Equity positions remain under Trade.',
+          ),
           style: AppTypography.caption,
         ),
         const SizedBox(height: AppSpacing.sm),
         ..._productHoldings(categories, data['asOf']),
         const SizedBox(height: AppSpacing.md),
         // DETAIL: Performance
-        _heading('Performance', action: () => _showPerformance(data, history)),
+        _heading(
+          _portfolioCopy('portfolio.performance_heading', 'Performance'),
+          action: () => _showPerformance(data, history),
+        ),
         const SizedBox(height: AppSpacing.md),
         AppCard(
           padding: const EdgeInsets.symmetric(
@@ -826,10 +842,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
     ];
     if (positions.isEmpty) {
       return [
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
           child: AppText(
-            'No product holdings in the current response.',
+            _portfolioCopy(
+              'portfolio.no_holdings',
+              'No product holdings in the current response.',
+            ),
             style: AppTypography.bodyMedium,
           ),
         ),
@@ -1131,7 +1150,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             title: AppText(
               categories.length == 1
                   ? categories.first['category'].toString()
-                  : 'Asset Details',
+                  : _portfolioCopy(
+                      'portfolio.asset_details_heading',
+                      'Asset Details',
+                    ),
             ),
           ),
           body: ListView(
@@ -1297,7 +1319,10 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppText('Performance', style: AppTypography.headline),
+            AppText(
+              _portfolioCopy('portfolio.performance_heading', 'Performance'),
+              style: AppTypography.headline,
+            ),
             const SizedBox(height: AppSpacing.lg),
             _metrics([
               ('Unrealized P&L', data['unrealizedPnl']),

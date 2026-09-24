@@ -28,12 +28,13 @@ class HomeActionButton extends StatelessWidget {
     return Semantics(
       button: true,
       child: AppCard(
-        radius: AppRadius.sm,
+        radius: AppRadius.md,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
           vertical: AppSpacing.md,
         ),
         onTap: onTap,
+        borderColor: color.withValues(alpha: 0.16),
         child: ConstrainedBox(
           constraints: const BoxConstraints(minHeight: 58),
           child: LayoutBuilder(

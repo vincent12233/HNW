@@ -1916,7 +1916,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           ),
           const SizedBox(height: AppSpacing.md + 2),
           _profileHeader(),
-          const SizedBox(height: AppSpacing.xl - 2),
+          const SizedBox(height: AppSpacing.lg),
           AppText(
             _appContent.text(
               'home',
@@ -1928,6 +1928,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           const SizedBox(height: AppSpacing.md),
           _accountDataStatus(),
           AppCard(
+            radius: AppRadius.md,
             child: AccountMetrics(
               items: [
                 AccountMetric(

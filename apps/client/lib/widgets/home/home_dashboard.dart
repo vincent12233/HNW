@@ -9,6 +9,7 @@ import '../../theme/app_colors.dart';
 import '../../theme/app_motion.dart';
 import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
+import '../../theme/app_shadows.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
 import '../account_metrics.dart';
@@ -329,8 +330,13 @@ class _AssetPanel extends StatelessWidget {
         AppSpacing.lg,
       ),
       decoration: BoxDecoration(
-        color: AppColors.brandPrimary,
-        borderRadius: AppRadius.borderSm,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.brandPrimary, AppColors.brandGradientEnd],
+        ),
+        borderRadius: AppRadius.borderMd,
+        boxShadow: AppShadows.brandHero,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

@@ -737,6 +737,17 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                           (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
                       ? AppColors.brandPrimary
                       : AppColors.textSecondary,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  side: BorderSide(
+                    color:
+                        selectedTab == item.$1 ||
+                            (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
+                        ? AppColors.brandPrimary
+                        : Colors.transparent,
+                    width: 2,
+                  ),
                 ),
                 child: AppText(
                   item.$2,

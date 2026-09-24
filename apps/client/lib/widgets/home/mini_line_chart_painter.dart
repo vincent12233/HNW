@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class MiniLineChartPainter extends CustomPainter {
@@ -57,5 +58,5 @@ class MiniLineChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant MiniLineChartPainter oldDelegate) =>
-      oldDelegate.color != color || oldDelegate.values != values;
+      oldDelegate.color != color || !listEquals(oldDelegate.values, values);
 }

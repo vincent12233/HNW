@@ -4,7 +4,6 @@ import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_motion.dart';
@@ -274,8 +273,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                       ).replaceAll('{count}', '$unreadCount'),
                                 style: AppTypography.caption.copyWith(
                                   color: unreadCount == 0
-                                      ? AppConfig.textSecondaryColor
-                                      : AppConfig.primaryColor,
+                                      ? AppColors.textSecondary
+                                      : AppColors.brandPrimary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -294,6 +293,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.sm),
                     child: AppCard(
+                      borderColor: paymentRequired
+                          ? AppColors.warning.withValues(alpha: 0.24)
+                          : settled
+                          ? AppColors.gain.withValues(alpha: 0.20)
+                          : unread
+                          ? AppColors.brandPrimary.withValues(alpha: 0.18)
+                          : AppColors.divider,
                       backgroundColor: paymentRequired
                           ? AppColors.warningSoft
                           : settled
@@ -308,26 +314,22 @@ class _NotificationsPageState extends State<NotificationsPage> {
                           CircleAvatar(
                             radius: 20,
                             backgroundColor: paymentRequired
-                                ? const Color(
-                                    0xFFB45309,
-                                  ).withValues(alpha: 0.12)
+                                ? AppColors.warning.withValues(alpha: 0.12)
                                 : settled
-                                ? const Color(
-                                    0xFF047857,
-                                  ).withValues(alpha: 0.12)
+                                ? AppColors.gain.withValues(alpha: 0.12)
                                 : unread
-                                ? const Color(0xFFDDEAFF)
-                                : const Color(0xFFF1F5F9),
+                                ? AppColors.brandPrimarySoft
+                                : AppColors.surfaceSecondary,
                             child: Icon(
                               _icon(item['type']?.toString()),
                               size: 20,
                               color: paymentRequired
-                                  ? const Color(0xFFB45309)
+                                  ? AppColors.warning
                                   : settled
-                                  ? const Color(0xFF047857)
+                                  ? AppColors.gain
                                   : unread
-                                  ? AppConfig.primaryColor
-                                  : AppConfig.textSecondaryColor,
+                                  ? AppColors.brandPrimary
+                                  : AppColors.textSecondary,
                             ),
                           ),
                           const SizedBox(width: AppSpacing.md),
@@ -338,11 +340,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                 AppText(
                                   item['title']?.toString() ?? '',
                                   style: TextStyle(
+                                    color: AppColors.textPrimary,
                                     fontWeight: unread
-                                        ? FontWeight.w700
+                                        ? FontWeight.w800
                                         : FontWeight.w500,
                                   ),
                                 ),
+                                const SizedBox(height: AppSpacing.xs),
                                 AppText(
                                   _subtitle(item),
                                   maxLines: paymentRequired || settled
@@ -351,6 +355,10 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                   overflow: paymentRequired || settled
                                       ? TextOverflow.visible
                                       : TextOverflow.ellipsis,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                    height: 1.45,
+                                  ),
                                 ),
                               ],
                             ),
@@ -373,7 +381,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                 width: 9,
                                 height: 9,
                                 decoration: const BoxDecoration(
-                                  color: AppConfig.primaryColor,
+                                  color: AppColors.brandPrimary,
                                   shape: BoxShape.circle,
                                 ),
                               ),

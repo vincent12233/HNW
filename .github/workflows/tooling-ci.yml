@@ -22,7 +22,7 @@ jobs:
   android-setup-regression:
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check Android setup failure handling on Windows PowerShell
         shell: powershell
         run: ./scripts/tests/android-e2e.test.ps1

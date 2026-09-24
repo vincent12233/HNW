@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../services/app_content_service.dart';
@@ -1392,7 +1393,7 @@ class _AllocationPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _AllocationPainter old) =>
-      old.values != values || old.colors != colors;
+      !listEquals(old.values, values) || !listEquals(old.colors, colors);
 }
 
 class _ValueHistoryPainter extends CustomPainter {
@@ -1425,5 +1426,5 @@ class _ValueHistoryPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _ValueHistoryPainter old) =>
-      old.values != values;
+      !listEquals(old.values, values);
 }

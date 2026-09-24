@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 
@@ -23,14 +24,17 @@ class AppPageScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: appBar,
-    backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.surface,
+    backgroundColor: backgroundColor ?? AppColors.background,
     body: SafeArea(
       top: appBar == null,
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
           constraints: BoxConstraints(maxWidth: maxWidth),
-          child: SizedBox(width: double.infinity, child: body),
+          child: SizedBox(
+            width: double.infinity,
+            child: AppRouteEntrance(child: body),
+          ),
         ),
       ),
     ),
@@ -42,12 +46,25 @@ class AppPageScaffold extends StatelessWidget {
             ),
             child: SafeArea(
               top: false,
-              child: Align(
-                heightFactor: 1,
-                alignment: Alignment.bottomCenter,
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(maxWidth: maxWidth),
-                  child: bottomNavigationBar,
+              child: DecoratedBox(
+                decoration: const BoxDecoration(
+                  color: AppColors.surface,
+                  border: Border(top: BorderSide(color: AppColors.border)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Color(0x120F2942),
+                      blurRadius: 14,
+                      offset: Offset(0, -3),
+                    ),
+                  ],
+                ),
+                child: Align(
+                  heightFactor: 1,
+                  alignment: Alignment.bottomCenter,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: maxWidth),
+                    child: bottomNavigationBar,
+                  ),
                 ),
               ),
             ),

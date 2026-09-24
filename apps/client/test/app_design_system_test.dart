@@ -9,6 +9,7 @@ import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/theme/app_typography.dart';
 import 'package:india_trading_app/widgets/app_card.dart';
 import 'package:india_trading_app/widgets/app_chip.dart';
+import 'package:india_trading_app/widgets/app_page_scaffold.dart';
 
 void main() {
   test('AppConfig colors delegate to AppColors tokens', () {
@@ -60,6 +61,39 @@ void main() {
     );
     expect(find.text('Pending'), findsOneWidget);
   });
+
+  testWidgets('secondary page shell uses the shared background', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.light(),
+        home: const AppPageScaffold(body: Text('Secondary page')),
+      ),
+    );
+
+    final scaffold = tester.widget<Scaffold>(find.byType(Scaffold));
+    expect(scaffold.backgroundColor, AppColors.background);
+    expect(find.text('Secondary page'), findsOneWidget);
+  });
+
+  testWidgets(
+    'secondary page content is visible immediately with reduced motion',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(disableAnimations: true),
+            child: const AppPageScaffold(body: Text('Reduced motion page')),
+          ),
+        ),
+      );
+
+      final opacity = tester.widget<Opacity>(find.byType(Opacity).first);
+      expect(opacity.opacity, 1);
+      expect(find.text('Reduced motion page'), findsOneWidget);
+    },
+  );
 
   test('spacing and radius scales are monotonic', () {
     expect(AppSpacing.xs, lessThan(AppSpacing.sm));

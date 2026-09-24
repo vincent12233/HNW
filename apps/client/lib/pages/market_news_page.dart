@@ -77,8 +77,9 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) => AppPageScaffold(
     backgroundColor: AppColors.background,
+    maxWidth: 960,
     appBar: AppBar(
       title: AppText(_copy('news.section_title', 'Market News')),
       actions: [
@@ -90,128 +91,114 @@ class _MarketNewsPageState extends State<MarketNewsPage> {
           ),
       ],
     ),
-    body: Align(
-      alignment: Alignment.topCenter,
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 960),
-        child: Column(
-          children: [
-            if (refreshing) const LinearProgressIndicator(minHeight: 2),
-            if (refreshFailed)
-              Padding(
-                padding: const EdgeInsets.all(AppSpacing.md),
-                child: AppText(
-                  _copy(
-                    'news.refresh_error',
-                    'News could not be updated. Please try again.',
-                  ),
-                  textAlign: TextAlign.center,
-                  style: AppTypography.bodySmall.copyWith(
-                    color: AppColors.warning,
-                  ),
-                ),
+    body: Column(
+      children: [
+        if (refreshing) const LinearProgressIndicator(minHeight: 2),
+        if (refreshFailed)
+          Padding(
+            padding: const EdgeInsets.all(AppSpacing.md),
+            child: AppText(
+              _copy(
+                'news.refresh_error',
+                'News could not be updated. Please try again.',
               ),
-            Expanded(
-              child: AppFadeIn(
-                switchKey: '${items.length}:$refreshFailed',
-                child: RefreshIndicator(
-                  onRefresh: refresh,
-                  child: items.isEmpty
-                      ? ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: AppSpacing.page,
-                          children: [
-                            const SizedBox(height: AppSpacing.xxxl),
-                            AppEmptyState(
-                              title: _copy(
-                                'news.page_empty_title',
-                                'Market news is unavailable',
-                              ),
-                              message: _copy(
-                                'news.page_empty_body',
-                                'Headlines will appear when the market news feed is available.',
-                              ),
-                              icon: Icons.newspaper_outlined,
-                              onRetry: widget.onRefresh == null
-                                  ? null
-                                  : refresh,
-                            ),
-                          ],
-                        )
-                      : ListView.separated(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          padding: AppSpacing.page,
-                          itemCount: items.length,
-                          separatorBuilder: (_, _) =>
-                              const SizedBox(height: AppSpacing.sm),
-                          itemBuilder: (context, index) {
-                            final item = items[index];
-                            return AppCard(
-                              radius: AppRadius.sm,
-                              padding: EdgeInsets.zero,
-                              onTap: () => showMarketNewsSheet(
-                                context: context,
-                                item: item,
-                                onOpen: widget.onOpen,
-                              ),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  SizedBox(
-                                    width: 104,
-                                    height: 104,
-                                    child: item.imageUrl?.isNotEmpty == true
-                                        ? Image.network(
-                                            item.imageUrl!,
-                                            fit: BoxFit.cover,
-                                            errorBuilder: (_, _, _) =>
-                                                _fallbackImage,
-                                          )
-                                        : _fallbackImage,
-                                  ),
-                                  Expanded(
-                                    child: Padding(
-                                      padding: const EdgeInsets.all(
-                                        AppSpacing.md,
-                                      ),
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          AppText(
-                                            item.title,
-                                            maxLines: 3,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: AppTypography.titleSmall
-                                                .copyWith(
-                                                  fontWeight: FontWeight.w800,
-                                                  height: 1.3,
-                                                ),
-                                          ),
-                                          const SizedBox(height: AppSpacing.sm),
-                                          AppText(
-                                            '${item.source} · ${_age(item.publishedAt)}',
-                                            style: AppTypography.caption
-                                                .copyWith(
-                                                  color:
-                                                      AppColors.textSecondary,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          },
-                        ),
-                ),
-              ),
+              textAlign: TextAlign.center,
+              style: AppTypography.bodySmall.copyWith(color: AppColors.warning),
             ),
-          ],
+          ),
+        Expanded(
+          child: AppFadeIn(
+            switchKey: '${items.length}:$refreshFailed',
+            child: RefreshIndicator(
+              onRefresh: refresh,
+              child: items.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: AppSpacing.page,
+                      children: [
+                        const SizedBox(height: AppSpacing.xxxl),
+                        AppEmptyState(
+                          title: _copy(
+                            'news.page_empty_title',
+                            'Market news is unavailable',
+                          ),
+                          message: _copy(
+                            'news.page_empty_body',
+                            'Headlines will appear when the market news feed is available.',
+                          ),
+                          icon: Icons.newspaper_outlined,
+                          onRetry: widget.onRefresh == null ? null : refresh,
+                        ),
+                      ],
+                    )
+                  : ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: AppSpacing.page,
+                      itemCount: items.length,
+                      separatorBuilder: (_, _) =>
+                          const SizedBox(height: AppSpacing.sm),
+                      itemBuilder: (context, index) {
+                        final item = items[index];
+                        return AppCard(
+                          radius: AppRadius.sm,
+                          padding: EdgeInsets.zero,
+                          onTap: () => showMarketNewsSheet(
+                            context: context,
+                            item: item,
+                            onOpen: widget.onOpen,
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SizedBox(
+                                width: 104,
+                                height: 104,
+                                child: item.imageUrl?.isNotEmpty == true
+                                    ? Image.network(
+                                        item.imageUrl!,
+                                        fit: BoxFit.cover,
+                                        errorBuilder: (_, _, _) =>
+                                            _fallbackImage,
+                                      )
+                                    : _fallbackImage,
+                              ),
+                              Expanded(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(AppSpacing.md),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      AppText(
+                                        item.title,
+                                        maxLines: 3,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: AppTypography.titleSmall
+                                            .copyWith(
+                                              fontWeight: FontWeight.w800,
+                                              height: 1.3,
+                                            ),
+                                      ),
+                                      const SizedBox(height: AppSpacing.sm),
+                                      AppText(
+                                        '${item.source} · ${_age(item.publishedAt)}',
+                                        style: AppTypography.caption.copyWith(
+                                          color: AppColors.textSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ),
         ),
-      ),
+      ],
     ),
   );
 

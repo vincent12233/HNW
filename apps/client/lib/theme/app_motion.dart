@@ -95,6 +95,69 @@ class AppPageTransition extends StatelessWidget {
   }
 }
 
+/// A one-shot entrance for nested routes. Rebuilds caused by loading or form
+/// state do not replay the animation.
+class AppRouteEntrance extends StatefulWidget {
+  const AppRouteEntrance({super.key, required this.child});
+
+  final Widget child;
+
+  @override
+  State<AppRouteEntrance> createState() => _AppRouteEntranceState();
+}
+
+class _AppRouteEntranceState extends State<AppRouteEntrance>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  var _configured = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(vsync: this, duration: AppMotion.page);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_configured) return;
+    _configured = true;
+    if (AppMotion.reduce(context)) {
+      _controller.value = 1;
+    } else {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final animation = CurvedAnimation(
+      parent: _controller,
+      curve: AppMotion.ease,
+    );
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, child) {
+        final value = animation.value;
+        return Opacity(
+          opacity: value.clamp(0.0, 1.0),
+          child: Transform.translate(
+            offset: Offset(0, 6 * (1 - value)),
+            child: child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
 class AppStatusSwitch extends StatelessWidget {
   const AppStatusSwitch({
     super.key,

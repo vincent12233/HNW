@@ -4,7 +4,6 @@ import 'package:file_picker/file_picker.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../models/picked_bytes_file.dart';
 import '../services/auth_service.dart';
@@ -47,8 +46,7 @@ class KycUploadDebugHarness {
   final String? existingStatus;
   final String? reviewNote;
   final Future<PickedBytesFile?> Function({required bool back})? pickDocument;
-  final Future<PickedBytesFile?> Function({required ImageSource source})?
-  pickSelfie;
+  final Future<PickedBytesFile?> Function()? pickSelfie;
 }
 
 class KycUploadPage extends StatefulWidget {
@@ -652,17 +650,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
     AuthSubmitButton(
       label: selfieFile == null ? 'Capture Selfie' : 'Retake',
       icon: selfieFile == null ? Icons.camera_alt : Icons.refresh,
-      onPressed: () => _pickSelfie(ImageSource.camera),
-    ),
-    const SizedBox(height: 8),
-    AuthOutlinedButton(
-      label: 'Choose from Gallery',
-      icon: Icons.photo_library,
-      onPressed: () => _pickSelfie(ImageSource.gallery),
+      onPressed: _captureSelfie,
     ),
     const SizedBox(height: 8),
     const AppText(
-      'Maximum 2 MB · Submitted for manual review',
+      'Live camera capture only · Submitted for manual review',
       style: TextStyle(
         fontSize: AuthLayout.helperSize,
         color: AppColors.textSecondary,
@@ -909,11 +901,11 @@ class _KycUploadPageState extends State<KycUploadPage> {
     }
   }
 
-  Future<void> _pickSelfie(ImageSource source) async {
+  Future<void> _captureSelfie() async {
     try {
       final debugPick = widget.debugHarness?.pickSelfie;
       if (debugPick != null) {
-        final file = await debugPick(source: source);
+        final file = await debugPick();
         if (!mounted || file == null) return;
         if (file.bytes.isEmpty || file.size > 2 * 1024 * 1024) {
           setState(() => errorText = 'Choose an image no larger than 2 MB');
@@ -931,46 +923,20 @@ class _KycUploadPageState extends State<KycUploadPage> {
         });
         return;
       }
-      if (source == ImageSource.camera) {
-        final bytes = await Navigator.push<Uint8List>(
-          context,
-          MaterialPageRoute(builder: (_) => const SelfieCameraPage()),
-        );
-        if (bytes != null && mounted) {
-          setState(() {
-            selfieFile = PickedBytesFile(name: 'selfie.png', bytes: bytes);
-            errorText = null;
-          });
-        }
-        return;
-      }
-      final photo = await ImagePicker().pickImage(
-        source: source,
-        preferredCameraDevice: CameraDevice.front,
-        imageQuality: 80,
-        maxWidth: 1200,
+      final bytes = await Navigator.push<Uint8List>(
+        context,
+        MaterialPageRoute(builder: (_) => const SelfieCameraPage()),
       );
-      if (photo == null) return;
-      final bytes = await photo.readAsBytes();
-      if (!mounted) return;
-      if (bytes.isEmpty || bytes.length > 2 * 1024 * 1024) {
-        setState(() => errorText = 'Choose an image no larger than 2 MB');
-        return;
-      }
-      final extension = _imageExtension(bytes);
-      if (extension == null) {
-        setState(() => errorText = 'Choose a JPG, PNG or WebP image');
-        return;
-      }
+      if (bytes == null || !mounted) return;
       setState(() {
-        selfieFile = PickedBytesFile(name: 'selfie.$extension', bytes: bytes);
+        selfieFile = PickedBytesFile(name: 'selfie.png', bytes: bytes);
         errorText = null;
       });
     } catch (_) {
       if (mounted) {
         setState(
           () => errorText =
-              'Unable to open the camera or gallery. Check permission and try again.',
+              'Unable to open the front camera. Check camera permission and try again.',
         );
       }
     }

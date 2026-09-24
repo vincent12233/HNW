@@ -269,7 +269,7 @@ void main() {
           debugHarness: KycUploadDebugHarness(
             step: 2,
             fullName: 'Test Customer',
-            pickSelfie: ({required source}) async {
+            pickSelfie: () async {
               takes += 1;
               return _pngFile(takes == 1 ? 'selfie.png' : 'selfie-retake.png');
             },
@@ -277,7 +277,8 @@ void main() {
         ),
       );
       expect(find.text('Capture Selfie'), findsOneWidget);
-      expect(find.text('Choose from Gallery'), findsOneWidget);
+      expect(find.text('Choose from Gallery'), findsNothing);
+      expect(find.textContaining('Live camera capture only'), findsOneWidget);
       await tester.tap(find.text('Capture Selfie'));
       await tester.pumpAndSettle();
       expect(find.text('Selfie captured'), findsOneWidget);

@@ -12,7 +12,6 @@ import '../utils/client_error_message.dart';
 import '../utils/number_formatters.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_page_scaffold.dart';
-import '../widgets/record_detail_sheet.dart';
 
 class ProductPortfolioPage extends StatefulWidget {
   const ProductPortfolioPage({
@@ -1093,8 +1092,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   void _showHoldings(List<Map<String, dynamic>> categories) {
     Navigator.of(context).push(
       MaterialPageRoute<void>(
-        builder: (_) => AppPageScaffold(
-          maxWidth: 960,
+        builder: (_) => Scaffold(
           appBar: AppBar(
             title: AppText(
               categories.length == 1
@@ -1111,11 +1109,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                   style: AppTypography.titleLarge,
                 ),
                 if (_rows(category['positions']).isEmpty)
-                  const AppEmptyState(
-                    title: 'No holdings',
-                    message: 'Holdings will appear here when available.',
-                    icon: Icons.inventory_2_outlined,
-                    compact: true,
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                    child: Center(
+                      child: AppText(
+                        'No holdings',
+                        style: AppTypography.bodyMedium,
+                      ),
+                    ),
                   ),
                 for (final position in _rows(category['positions']))
                   AppCard(
@@ -1181,46 +1182,67 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       style: AppTypography.caption,
     ),
     trailing: const Icon(Icons.chevron_right, size: 18),
-    onTap: () {
-      showRecordDetailSheet(
-        context,
-        title: activity['symbol'].toString(),
-        rows: [
-          (tr('Status'), tr(activity['status'].toString())),
-          (tr('Quantity'), _quantity(activity['quantity'])),
-          (tr('Filled / allocated'), _quantity(activity['filledQuantity'])),
-          (tr('Amount'), _money(activity['amount'])),
-          (tr('Date'), _date(activity['at'])),
-          (tr('Reference'), activity['reference'].toString()),
-        ],
-      );
-    },
-  );
-
-  void _showActivity(
-    List<Map<String, dynamic>> rows,
-  ) => Navigator.of(context).push(
-    MaterialPageRoute<void>(
-      builder: (_) => AppPageScaffold(
-        appBar: AppBar(
-          title: AppText(
-            _portfolioCopy('portfolio.recent_activity', 'Recent Activity'),
+    onTap: () => showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: AppText(activity['symbol'].toString()),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppText('${tr('Status')}: ${tr(activity['status'].toString())}'),
+              const SizedBox(height: AppSpacing.sm),
+              AppText('${tr('Quantity')}: ${_quantity(activity['quantity'])}'),
+              AppText(
+                '${tr('Filled / allocated')}: ${_quantity(activity['filledQuantity'])}',
+              ),
+              AppText('${tr('Amount')}: ${_money(activity['amount'])}'),
+              const SizedBox(height: AppSpacing.sm),
+              AppText(_date(activity['at'])),
+              const SizedBox(height: AppSpacing.sm),
+              SelectableText(activity['reference'].toString()),
+            ],
           ),
         ),
-        body: rows.isEmpty
-            ? const AppEmptyState(
-                title: 'No product activity yet',
-                message:
-                    'Orders and allocations will appear here when available.',
-                icon: Icons.history_rounded,
-              )
-            : ListView(
-                padding: const EdgeInsets.all(AppSpacing.xl),
-                children: rows.map(_activityTile).toList(),
-              ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: AppText(_portfolioCopy('portfolio.close', 'Close')),
+          ),
+        ],
       ),
     ),
   );
+
+  void _showActivity(List<Map<String, dynamic>> rows) =>
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            appBar: AppBar(
+              title: AppText(
+                _portfolioCopy('portfolio.recent_activity', 'Recent Activity'),
+              ),
+            ),
+            body: ListView(
+              padding: const EdgeInsets.all(AppSpacing.xl),
+              children: rows.isEmpty
+                  ? [
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: AppSpacing.xxl),
+                        child: Center(
+                          child: AppText(
+                            'No product activity yet',
+                            style: AppTypography.bodyMedium,
+                          ),
+                        ),
+                      ),
+                    ]
+                  : rows.map(_activityTile).toList(),
+            ),
+          ),
+        ),
+      );
 
   void _showPerformance(
     Map<String, dynamic> data,

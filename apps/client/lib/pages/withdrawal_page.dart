@@ -288,13 +288,16 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
 
   Widget _summaryCard() {
     return AppCard(
+      backgroundColor: AppColors.brandDark,
+      bordered: false,
+      shadow: AppCardShadow.medium,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           AppText(
             'Available Funds',
             style: AppTypography.caption.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.textInverse.withValues(alpha: 0.72),
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -302,13 +305,16 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
             formatPrice(_available),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.display,
+            style: AppTypography.display.copyWith(
+              color: AppColors.textInverse,
+              fontFeatures: AppTypography.tabularFeatures,
+            ),
           ),
           const SizedBox(height: AppSpacing.xs),
           AppText(
             'Total frozen: ${formatPrice(_frozen)}',
             style: AppTypography.bodySmall.copyWith(
-              color: AppColors.textSecondary,
+              color: AppColors.textInverse.withValues(alpha: 0.72),
             ),
           ),
         ],
@@ -365,7 +371,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           const SizedBox(height: AppSpacing.xs),
           const AppText(
             'Minimum withdrawal: ₹100',
-            style: TextStyle(color: Color(0xFF64748B), fontSize: 11),
+            style: AppTypography.caption,
           ),
           const SizedBox(height: AppSpacing.md),
           TextField(
@@ -447,7 +453,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               const Expanded(
                 child: AppText(
                   'Withdrawal Records',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  style: AppTypography.titleMedium,
                 ),
               ),
               IconButton(
@@ -521,6 +527,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           request.orderNo ?? request.id,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
+          style: AppTypography.titleSmall,
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -550,17 +557,14 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
       padding: const EdgeInsets.only(top: AppSpacing.sm),
       child: Row(
         children: [
-          Expanded(
-            child: AppText(
-              label,
-              style: const TextStyle(color: Colors.black54, fontSize: 12),
-            ),
-          ),
+          Expanded(child: AppText(label, style: AppTypography.caption)),
           Flexible(
             child: AppText(
               value.isEmpty ? 'Unavailable' : value,
               textAlign: TextAlign.right,
-              style: const TextStyle(fontWeight: FontWeight.w600),
+              style: AppTypography.bodyMedium.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],

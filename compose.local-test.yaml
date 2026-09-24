@@ -49,7 +49,7 @@ services:
       PRIVATE_OBJECT_ROOT: /app/private-objects
       CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007
       MARKET_DATA_STREAMING_ENABLED: "false"
-    ports: ["127.0.0.1:3100:3100"]
+    ports: ["${HNW_E2E_BIND_IP:-127.0.0.1}:3100:3100"]
     volumes: ["private-objects:/app/private-objects"]
     depends_on:
       postgres:

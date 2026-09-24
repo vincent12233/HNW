@@ -44,6 +44,40 @@ Example:
 flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://192.168.1.20:3000
 ```
 
+### Same-Wi-Fi local API
+
+The local Docker test API listens on port `3100`. It defaults to `127.0.0.1`
+for safety. To let a physical phone reach it over the same Wi-Fi, bind it to the
+PC's Wi-Fi address (the example below uses `192.168.1.88`). Set the bind IP
+whenever starting/recreating the API container:
+
+```sh
+: "${HNW_E2E_DB_PASSWORD:?Export the local test database password first}"
+HNW_E2E_BIND_IP=192.168.1.88 docker compose -f compose.local-test.yaml up -d api
+curl --fail http://192.168.1.88:3100/health/ready
+```
+
+Keep the phone and PC on the same Wi-Fi, then configure the Android app with
+that same address:
+
+```sh
+cd apps/client
+flutter run -d <android-device-id> --dart-define=API_BASE_URL=http://192.168.1.88:3100
+```
+
+To build and install a debug APK instead, use the same `API_BASE_URL` value
+with these commands:
+
+```sh
+cd apps/client
+flutter build apk --debug --dart-define=API_BASE_URL=http://192.168.1.88:3100
+adb -s <android-device-id> install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Make sure the phone remains on the same trusted Wi-Fi as the PC. Release
+builds must use a public HTTPS API URL; do not expose the local test API to
+untrusted networks.
+
 The Android debug manifest permits cleartext HTTP for local development. Release builds do not get that debug-only cleartext setting. Prefer HTTPS for deployed environments.
 
 ## iPhone physical device

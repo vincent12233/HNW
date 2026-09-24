@@ -12,6 +12,7 @@ import {
   firstYahooChartResult,
   type YahooChartResponse,
 } from './yahoo-chart.types';
+import { indianIndexBySymbol } from '../indian-indices';
 
 type HistoryWindow = {
   range: '1d' | '5d' | '1mo' | '3mo' | '6mo' | '1y';
@@ -30,17 +31,10 @@ export class YahooProvider implements MarketDataProvider {
 
   private readonly logger = new Logger(YahooProvider.name);
 
-  private readonly symbols: Record<string, string> = {
-    NIFTY50: '^NSEI',
-    SENSEX: '^BSESN',
-    BANKNIFTY: '^NSEBANK',
-    INDIAVIX: '^INDIAVIX',
-  };
-
   async getQuote(symbol: string, exchange = 'NSE'): Promise<MarketQuoteResult> {
     const normalizedSymbol = symbol.toUpperCase();
     const yahooSymbol =
-      this.symbols[normalizedSymbol] ??
+      indianIndexBySymbol(normalizedSymbol)?.providerSymbol ??
       `${normalizedSymbol}.${exchange.toUpperCase() === 'BSE' ? 'BO' : 'NS'}`;
 
     try {
@@ -104,7 +98,7 @@ export class YahooProvider implements MarketDataProvider {
     const normalizedSymbol = symbol.trim().toUpperCase();
     const normalizedExchange = exchange.trim().toUpperCase();
     const yahooSymbol =
-      this.symbols[normalizedSymbol] ??
+      indianIndexBySymbol(normalizedSymbol)?.providerSymbol ??
       `${normalizedSymbol}.${normalizedExchange === 'BSE' ? 'BO' : 'NS'}`;
     try {
       const response = await axios.get<YahooChartResponse>(

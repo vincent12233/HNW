@@ -5,6 +5,7 @@ import { OrderStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
+import { INDIAN_INDICES } from './indian-indices';
 
 type PollingCandidate = {
   symbol: string;
@@ -20,12 +21,6 @@ const PRIORITY_CATEGORIES = new Set(['INSTITUTIONAL', 'INST', 'OTC', 'IPO']);
 @Injectable()
 export class NseSyncService {
   private readonly logger = new Logger(NseSyncService.name);
-  private readonly indices = [
-    { symbol: 'NIFTY50', exchange: 'NSE' },
-    { symbol: 'SENSEX', exchange: 'BSE' },
-    { symbol: 'BANKNIFTY', exchange: 'NSE' },
-    { symbol: 'INDIAVIX', exchange: 'NSE' },
-  ] as const;
   private readonly lastPollingAttempt = new Map<string, number>();
   private syncing = false;
 
@@ -180,7 +175,7 @@ export class NseSyncService {
 
   private async syncIndices() {
     await Promise.allSettled(
-      this.indices.map(async ({ symbol, exchange }) => {
+      INDIAN_INDICES.map(async ({ symbol, exchange }) => {
         try {
           const quote = await this.provider.getQuote(symbol, exchange);
           await this.ingestion.ingest(exchange, quote, 'INDEX');

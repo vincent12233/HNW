@@ -7,6 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketHistoryResult } from './providers/market-data-provider.interface';
 import { MarketDataProviderService } from './providers/market-data-provider.service';
+import { indianIndexBySymbol } from './indian-indices';
 
 type HistoryRange = MarketHistoryResult['range'];
 
@@ -36,17 +37,23 @@ export class HistoricalMarketDataService {
 
     const normalizedRange = this.normalizeRange(range);
     const normalizedExchange = this.normalizeExchange(exchange);
-    const instrument = await this.prisma.instrument.findFirst({
-      where: {
-        symbol: normalizedSymbol,
-        isActive: true,
-        exchange: normalizedExchange ?? { in: ['NSE', 'BSE'] },
-        type: 'EQUITY',
-      },
-      select: { symbol: true, exchange: true },
-      orderBy: { exchange: 'desc' },
-    });
-    if (!instrument) throw new NotFoundException('Stock not found');
+    const index = indianIndexBySymbol(normalizedSymbol);
+    if (index && normalizedExchange && normalizedExchange !== index.exchange) {
+      throw new NotFoundException('Index not found on this exchange');
+    }
+    const instrument =
+      index ??
+      (await this.prisma.instrument.findFirst({
+        where: {
+          symbol: normalizedSymbol,
+          isActive: true,
+          exchange: normalizedExchange ?? { in: ['NSE', 'BSE'] },
+          type: 'EQUITY',
+        },
+        select: { symbol: true, exchange: true },
+        orderBy: { exchange: 'desc' },
+      }));
+    if (!instrument) throw new NotFoundException('Instrument not found');
 
     const cacheKey = `${instrument.exchange}:${instrument.symbol}:${normalizedRange}`;
     const cached = this.cache.get(cacheKey);

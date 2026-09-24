@@ -118,6 +118,33 @@ describe('HistoricalMarketDataService', () => {
     );
   });
 
+  it.each([
+    ['NIFTY50', 'NSE'],
+    ['SENSEX', 'BSE'],
+    ['BANKNIFTY', 'NSE'],
+    ['INDIAVIX', 'NSE'],
+  ] as const)(
+    'loads %s history without requiring an equity row',
+    async (symbol, exchange) => {
+      const { service, prisma, provider } = createService();
+
+      await service.getHistory(symbol, '1D', exchange);
+
+      expect(prisma.instrument.findFirst).not.toHaveBeenCalled();
+      expect(provider.getHistory).toHaveBeenCalledWith(symbol, exchange, '1D');
+    },
+  );
+
+  it('rejects an index on the wrong exchange', async () => {
+    const { service, prisma, provider } = createService();
+
+    await expect(service.getHistory('SENSEX', '1D', 'NSE')).rejects.toThrow(
+      'Index not found on this exchange',
+    );
+    expect(prisma.instrument.findFirst).not.toHaveBeenCalled();
+    expect(provider.getHistory).not.toHaveBeenCalled();
+  });
+
   it('rejects unsupported history ranges before requesting market data', async () => {
     const { service, provider } = createService();
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../l10n/app_language.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_colors.dart';
 import 'support_ui_metrics.dart';
 
 /// Compact right-edge support tab that scales with phone size.
@@ -75,7 +76,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
           child: Material(
             color: Colors.transparent,
             elevation: 6,
-            shadowColor: const Color(0x4D000000),
+            shadowColor: AppColors.brandDark.withValues(alpha: 0.24),
             borderRadius: radius,
             child: InkWell(
               borderRadius: radius,
@@ -84,7 +85,14 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                 width: m.fabWidth,
                 height: m.fabHeight,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E88E5),
+                  gradient: const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.brandPrimary,
+                      AppColors.brandGradientEnd,
+                    ],
+                  ),
                   borderRadius: radius,
                 ),
                 child: Column(
@@ -98,7 +106,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                             maxLines: 1,
                             softWrap: false,
                             style: TextStyle(
-                              color: Colors.white,
+                              color: AppColors.textInverse,
                               fontSize: m.fabFontSize,
                               fontWeight: FontWeight.w600,
                               letterSpacing: 0.15,
@@ -117,12 +125,15 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
                             border: Border.fromBorderSide(
-                              BorderSide(color: Colors.white, width: 1),
+                              BorderSide(
+                                color: AppColors.textInverse,
+                                width: 1,
+                              ),
                             ),
                           ),
                           child: Icon(
                             Icons.headset_mic_rounded,
-                            color: Colors.white,
+                            color: AppColors.textInverse,
                             size: m.fabIconSize,
                           ),
                         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../pages/support_chat_page.dart';
+import '../theme/app_colors.dart';
 import 'support_ui_metrics.dart';
 
 /// Opens the in-app support panel that launches SaleSmartly on Android/iOS.
@@ -13,7 +14,7 @@ Future<void> showSupportChatPanel(
     context: context,
     barrierDismissible: true,
     barrierLabel: 'Close support',
-    barrierColor: const Color(0x73071326),
+    barrierColor: AppColors.scrim,
     transitionDuration: const Duration(milliseconds: 260),
     pageBuilder: (dialogContext, animation, secondaryAnimation) {
       return SafeArea(
@@ -35,7 +36,7 @@ Future<void> showSupportChatPanel(
                   child: Material(
                     color: Colors.transparent,
                     elevation: 16,
-                    shadowColor: const Color(0x66071326),
+                    shadowColor: AppColors.brandDark.withValues(alpha: 0.34),
                     borderRadius: BorderRadius.circular(m.panelRadius),
                     clipBehavior: Clip.antiAlias,
                     child: SupportChatPage(initialMessage: initialMessage),

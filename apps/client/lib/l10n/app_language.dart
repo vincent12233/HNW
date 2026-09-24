@@ -55,8 +55,6 @@ const professionalTerms = <String, String>{
   'Today\'s P&L': 'Daily P&L',
   'Total P&L': 'Total Profit & Loss',
   'Inst.': 'Institutional',
-  'Add Money': 'Deposit Funds',
-  'Withdraw': 'Withdraw Funds',
   'No stocks available': 'No instruments available',
   'Explore offers': 'View Investment Offers',
   'Help & Support': 'Customer Support',
@@ -138,6 +136,8 @@ class AppText extends StatelessWidget {
 }
 
 const hindi = <String, String>{
+  'Add Money': 'पैसे जोड़ें',
+  'Withdraw': 'राशि निकालें',
   'Unable to load account': 'खाता लोड नहीं हो सका',
   'Market Breadth': 'बाजार का विस्तार',
   'Open Holdings': 'खुली होल्डिंग्स',

@@ -40,7 +40,7 @@ class HomeActionButton extends StatelessWidget {
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact =
-                  constraints.maxWidth < 190 ||
+                  constraints.maxWidth < 150 ||
                   MediaQuery.textScalerOf(context).scale(13) > 18;
               final iconView = Container(
                 width: 36,
@@ -90,7 +90,7 @@ class HomeActionButton extends StatelessWidget {
                   iconView,
                   const SizedBox(width: AppSpacing.sm + 2),
                   Expanded(child: labels),
-                  arrow,
+                  if (constraints.maxWidth >= 190) arrow,
                 ],
               );
             },

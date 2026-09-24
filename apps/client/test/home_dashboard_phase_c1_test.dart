@@ -7,6 +7,7 @@ import 'package:india_trading_app/theme/app_spacing.dart';
 import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/utils/number_formatters.dart';
 import 'package:india_trading_app/widgets/home/home_dashboard.dart';
+import 'package:india_trading_app/widgets/home/home_action_button.dart';
 import 'package:india_trading_app/widgets/home/home_dashboard_data.dart';
 
 StockQuote quote({
@@ -387,14 +388,30 @@ void main() {
     expect(find.text('Contact support to fund'), findsOneWidget);
     expect(find.textContaining('payment gateway'), findsNothing);
     expect(find.textContaining('UPI'), findsNothing);
-    await tester.ensureVisible(find.text('Add Funds'));
-    await tester.tap(find.text('Add Funds'));
-    await tester.ensureVisible(find.text('Withdraw Funds'));
-    await tester.tap(find.text('Withdraw Funds'));
+    await tester.ensureVisible(find.text('Add Money'));
+    await tester.tap(find.text('Add Money'));
+    await tester.ensureVisible(find.text('Withdraw'));
+    await tester.tap(find.text('Withdraw'));
     expect(deposits, 1);
     expect(withdrawals, 1);
     expectNoUnsupportedProductCtas();
     expect(find.text('Open Trade'), findsOneWidget);
+  });
+
+  testWidgets('home actions fill two equal columns on phone and tablet', (
+    tester,
+  ) async {
+    for (final width in [320.0, 390.0, 768.0]) {
+      await pumpHome(tester, size: Size(width, 844), home: dashboard());
+      final actions = find.byType(HomeActionButton);
+      expect(actions, findsNWidgets(2));
+      await tester.ensureVisible(actions.first);
+      final first = tester.getRect(actions.first);
+      final second = tester.getRect(actions.last);
+      expect(first.width, closeTo(second.width, 0.1));
+      expect(first.top, closeTo(second.top, 0.1));
+      expect(tester.takeException(), isNull);
+    }
   });
 
   testWidgets('pending KYC todo appears only from real status', (tester) async {
@@ -409,7 +426,7 @@ void main() {
 
   testWidgets('reduced motion still shows the full dashboard', (tester) async {
     await pumpHome(tester, reduceMotion: true, home: dashboard());
-    expect(find.text('Total Asset Value'), findsOneWidget);
+    expect(find.text('Total Portfolio Value'), findsOneWidget);
     expect(find.text('Market Indices'), findsOneWidget);
     expect(
       find.byKey(const ValueKey<String>('home-index-chart-NIFTY 50')),

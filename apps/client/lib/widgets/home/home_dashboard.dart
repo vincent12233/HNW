@@ -482,7 +482,7 @@ class _HomeQuickActions extends StatelessWidget {
     final actions = <Widget>[
       HomeActionButton(
         label: 'Add Money',
-        subtitle: 'Instant Deposit',
+        subtitle: 'Contact support to fund',
         icon: Icons.add_card_outlined,
         color: AppColors.brandPrimary,
         onTap: dashboard.onDeposit,
@@ -498,24 +498,14 @@ class _HomeQuickActions extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final columns = constraints.maxWidth >= 600 * scale
-            ? 3
-            : constraints.maxWidth >= 320 * scale
-            ? 2
-            : 1;
+        final columns = constraints.maxWidth >= 280 * scale ? 2 : 1;
         final width =
             (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
         return Wrap(
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [
-            for (var index = 0; index < actions.length; index++)
-              SizedBox(
-                width: columns == 2 && index == 2
-                    ? constraints.maxWidth
-                    : width,
-                child: actions[index],
-              ),
+            for (final action in actions) SizedBox(width: width, child: action),
           ],
         );
       },

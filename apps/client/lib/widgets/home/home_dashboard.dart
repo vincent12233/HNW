@@ -345,7 +345,7 @@ class _AssetPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: AppText(
-                  'Total Asset Value',
+                  'Total Portfolio Value',
                   style: AppTypography.labelLarge.copyWith(color: inverseMuted),
                 ),
               ),
@@ -489,7 +489,7 @@ class _HomeQuickActions extends StatelessWidget {
       ),
       HomeActionButton(
         label: 'Withdraw',
-        subtitle: 'Transfer to Bank',
+        subtitle: 'Withdraw to Bank',
         icon: Icons.call_made_rounded,
         color: AppColors.gain,
         onTap: dashboard.onWithdraw,

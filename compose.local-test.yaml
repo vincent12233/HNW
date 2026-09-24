@@ -23,6 +23,11 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+  private-objects-init:
+    image: alpine:3.22
+    command: ["sh", "-c", "mkdir -p /private-objects/kyc && chown -R 1000:1000 /private-objects"]
+    volumes: ["private-objects:/private-objects"]
+    restart: "no"
   api:
     build:
       context: .
@@ -56,6 +61,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      private-objects-init:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
       interval: 10s

@@ -11,7 +11,6 @@ import 'package:india_trading_app/widgets/trading/holdings_tab.dart';
 import 'package:india_trading_app/widgets/trading/history_tab.dart';
 import 'package:india_trading_app/widgets/trading/pending_center_tab.dart';
 import 'package:india_trading_app/widgets/trading/funds_tab.dart';
-import 'package:india_trading_app/widgets/trading/trade_list.dart';
 
 class EmptyTradingService extends TradingService {
   @override
@@ -118,10 +117,9 @@ void main() {
       }
 
       for (final entry in <(String, int, Type)>[
-        ('Overview', 0, TradeList),
-        ('Positions', 2, HoldingsTab),
         ('Orders', 4, OrdersTab),
         ('Pending', 3, PendingCenterTab),
+        ('Holdings', 2, HoldingsTab),
         ('History', 7, HistoryTab),
       ]) {
         await tapChip(entry.$1, entry.$2);

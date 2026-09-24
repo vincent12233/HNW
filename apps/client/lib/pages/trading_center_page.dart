@@ -734,7 +734,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
             AppContentService.instance.current.text(
               'trading',
               'tab.ins_stock',
-              fallback: 'Ins. Stock',
+              fallback: 'Intr.',
             ),
           ),
           (
@@ -806,22 +806,6 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   Widget _tradingShortcuts() {
     final items = <(int, String)>[
       (
-        0,
-        AppContentService.instance.current.text(
-          'trading',
-          'shortcut.overview',
-          fallback: 'Overview',
-        ),
-      ),
-      (
-        2,
-        AppContentService.instance.current.text(
-          'trading',
-          'tab.holdings',
-          fallback: 'Positions',
-        ),
-      ),
-      (
         4,
         AppContentService.instance.current.text(
           'trading',
@@ -835,6 +819,14 @@ class _TradingCenterPageState extends State<TradingCenterPage>
           'trading',
           'tab.pending',
           fallback: 'Pending',
+        ),
+      ),
+      (
+        2,
+        AppContentService.instance.current.text(
+          'trading',
+          'tab.holdings',
+          fallback: 'Holdings',
         ),
       ),
       (

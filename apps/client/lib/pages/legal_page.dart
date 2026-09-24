@@ -5,6 +5,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
 import '../widgets/app_feedback.dart';
+import '../widgets/app_card.dart';
 import 'package:flutter/material.dart';
 
 class LegalPage extends StatefulWidget {
@@ -80,11 +81,7 @@ class _LegalPageState extends State<LegalPage> {
 
     return AppPageScaffold(
       appBar: AppBar(
-        title: AppText(
-          heading,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
+        title: AppText(heading, maxLines: 1, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
             tooltip: tr('Refresh'),
@@ -107,27 +104,55 @@ class _LegalPageState extends State<LegalPage> {
                     AppSpacing.xxxl + 4,
                   ),
                   children: [
-                    AppText(
-                      heading,
-                      style: AppTypography.headline.copyWith(
-                        fontWeight: FontWeight.w800,
+                    AppCard(
+                      backgroundColor: AppColors.brandPrimarySoft,
+                      borderColor: AppColors.brandPrimary.withValues(
+                        alpha: 0.14,
                       ),
-                    ),
-                    const SizedBox(height: AppSpacing.sm - 2),
-                    AppText(
-                      effective,
-                      style: AppTypography.bodySmall.copyWith(
-                        color: AppColors.textSecondary,
+                      shadow: AppCardShadow.none,
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            _isRisk
+                                ? Icons.warning_amber_rounded
+                                : _isPrivacy
+                                ? Icons.privacy_tip_outlined
+                                : Icons.gavel_outlined,
+                            color: AppColors.brandPrimary,
+                            size: 24,
+                          ),
+                          const SizedBox(width: AppSpacing.md),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                AppText(
+                                  heading,
+                                  style: AppTypography.headline.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: AppSpacing.sm - 2),
+                                AppText(
+                                  effective,
+                                  style: AppTypography.bodySmall.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                     if (!useRemote || _couldNotRefresh) ...[
                       const SizedBox(height: AppSpacing.md),
-                      Container(
+                      AppCard(
                         padding: const EdgeInsets.all(AppSpacing.md),
-                        decoration: BoxDecoration(
-                          color: AppColors.warning.withValues(alpha: 0.08),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        backgroundColor: AppColors.warningSoft,
+                        borderColor: AppColors.warning.withValues(alpha: 0.22),
+                        shadow: AppCardShadow.none,
                         child: AppText(
                           useRemote
                               ? 'Showing a previously loaded document. Updates could not be checked. Please try refreshing again.'

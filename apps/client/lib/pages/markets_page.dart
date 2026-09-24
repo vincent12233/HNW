@@ -436,6 +436,19 @@ class _MarketsPageState extends State<MarketsPage> {
                       ),
                     ),
                   ),
+                  IconButton(
+                    tooltip: tr('Search stocks'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => StockSearchPage(
+                          initialStocks: widget.stocks,
+                          onSelected: widget.onStockTap,
+                          onWatchlistChanged: () {},
+                        ),
+                      ),
+                    ),
+                    icon: const Icon(Icons.search_rounded),
+                  ),
                   Stack(
                     clipBehavior: Clip.none,
                     children: [

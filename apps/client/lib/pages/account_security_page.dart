@@ -6,9 +6,12 @@ import '../services/client_account_service.dart';
 import '../services/auth_service.dart';
 import '../services/session_expiry_service.dart';
 import '../theme/app_motion.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/app_buttons.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 
 class AccountSecurityPage extends StatefulWidget {
@@ -215,47 +218,101 @@ class _AccountSecurityPageState extends State<AccountSecurityPage> {
               )
             : Form(
                 key: _form,
-                child: ListView(
+                child: SingleChildScrollView(
                   padding: AppSpacing.page.add(
                     EdgeInsets.only(bottom: bottomInset),
                   ),
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  children: [
-                    _field(_password, 'Current login password'),
-                    if (widget.withdrawalPin && _configured)
-                      _field(_currentPin, 'Current withdrawal PIN', pin: true),
-                    _field(
-                      _next,
-                      widget.withdrawalPin
-                          ? 'New withdrawal PIN'
-                          : 'New login password',
-                      pin: widget.withdrawalPin,
-                    ),
-                    _field(
-                      _confirm,
-                      widget.withdrawalPin
-                          ? 'Confirm withdrawal PIN'
-                          : 'Confirm new password',
-                      pin: widget.withdrawalPin,
-                      confirmation: true,
-                    ),
-                    if (_error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                        child: AppText(
-                          _error!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      AppCard(
+                        backgroundColor: AppColors.brandPrimarySoft,
+                        borderColor: AppColors.brandPrimary.withValues(
+                          alpha: 0.14,
+                        ),
+                        shadow: AppCardShadow.none,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(
+                              Icons.shield_outlined,
+                              color: AppColors.brandPrimary,
+                            ),
+                            const SizedBox(width: AppSpacing.md),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AppText(
+                                    widget.withdrawalPin
+                                        ? 'Protect fund withdrawals'
+                                        : 'Protect your account',
+                                    style: AppTypography.titleSmall,
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  AppText(
+                                    widget.withdrawalPin
+                                        ? 'Your login password confirms this change. Use a PIN that is difficult to guess.'
+                                        : 'Changing your password signs out the current session after the server accepts it.',
+                                    style: AppTypography.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                    AppPrimaryButton(
-                      label: 'Save changes',
-                      loading: _saving,
-                      onPressed: _saving ? null : _save,
-                    ),
-                  ],
+                      const SizedBox(height: AppSpacing.lg),
+                      AppCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _field(_password, 'Current login password'),
+                            if (widget.withdrawalPin && _configured)
+                              _field(
+                                _currentPin,
+                                'Current withdrawal PIN',
+                                pin: true,
+                              ),
+                            _field(
+                              _next,
+                              widget.withdrawalPin
+                                  ? 'New withdrawal PIN'
+                                  : 'New login password',
+                              pin: widget.withdrawalPin,
+                            ),
+                            _field(
+                              _confirm,
+                              widget.withdrawalPin
+                                  ? 'Confirm withdrawal PIN'
+                                  : 'Confirm new password',
+                              pin: widget.withdrawalPin,
+                              confirmation: true,
+                            ),
+                            if (_error != null)
+                              Padding(
+                                padding: const EdgeInsets.only(
+                                  bottom: AppSpacing.lg,
+                                ),
+                                child: AppText(
+                                  _error!,
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.error,
+                                  ),
+                                ),
+                              ),
+                            AppPrimaryButton(
+                              label: 'Save changes',
+                              loading: _saving,
+                              onPressed: _saving ? null : _save,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
       ),

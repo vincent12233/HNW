@@ -481,46 +481,64 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         ),
         const SizedBox(height: AppSpacing.md),
         for (final entry in labels.entries)
-          SwitchListTile(
-            title: AppText(entry.value),
-            secondary: _savingPreferences.contains(entry.key)
-                ? const SizedBox.square(
-                    dimension: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      semanticsLabel: 'Saving preference',
-                    ),
-                  )
-                : null,
-            value: preferences[entry.key] == true,
-            onChanged: _savingPreferences.contains(entry.key)
-                ? null
-                : (value) async {
-                    if (_savingPreferences.contains(entry.key)) return;
-                    setState(() => _savingPreferences.add(entry.key));
-                    try {
-                      await service.updatePreferences({entry.key: value});
-                      if (mounted) {
-                        setState(
-                          () => data = {
-                            if (data is Map)
-                              ...Map<String, dynamic>.from(data as Map),
-                            entry.key: value,
-                          },
-                        );
+          AppCard(
+            margin: const EdgeInsets.only(bottom: AppSpacing.md),
+            padding: EdgeInsets.zero,
+            child: SwitchListTile(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.xs,
+              ),
+              title: AppText(entry.value, style: AppTypography.titleSmall),
+              subtitle: const AppText(
+                'Receive updates for this activity',
+                style: AppTypography.caption,
+              ),
+              secondary: _savingPreferences.contains(entry.key)
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        semanticsLabel: 'Saving preference',
+                      ),
+                    )
+                  : Icon(switch (entry.key) {
+                      'orderNotifications' => Icons.receipt_long_outlined,
+                      'accountNotifications' => Icons.person_outline,
+                      _ => Icons.support_agent_outlined,
+                    }, color: AppColors.brandPrimary),
+              value: preferences[entry.key] == true,
+              onChanged: _savingPreferences.contains(entry.key)
+                  ? null
+                  : (value) async {
+                      if (_savingPreferences.contains(entry.key)) return;
+                      setState(() => _savingPreferences.add(entry.key));
+                      try {
+                        await service.updatePreferences({entry.key: value});
+                        if (mounted) {
+                          setState(
+                            () => data = {
+                              if (data is Map)
+                                ...Map<String, dynamic>.from(data as Map),
+                              entry.key: value,
+                            },
+                          );
+                        }
+                      } catch (error) {
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: AppText(clientErrorMessage(error)),
+                            ),
+                          );
+                        }
+                      } finally {
+                        if (mounted) {
+                          setState(() => _savingPreferences.remove(entry.key));
+                        }
                       }
-                    } catch (error) {
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: AppText(clientErrorMessage(error))),
-                        );
-                      }
-                    } finally {
-                      if (mounted) {
-                        setState(() => _savingPreferences.remove(entry.key));
-                      }
-                    }
-                  },
+                    },
+            ),
           ),
       ],
     );
@@ -568,7 +586,12 @@ class _AccountSettingsPageState extends State<AccountSettingsPage> {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.verified, color: AppConfig.gainColor),
+            Icon(
+              r['balanced'] == true
+                  ? Icons.verified_outlined
+                  : Icons.warning_amber_rounded,
+              color: r['balanced'] == true ? AppColors.gain : AppColors.warning,
+            ),
             const SizedBox(width: AppSpacing.sm),
             Expanded(
               child: Column(

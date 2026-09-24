@@ -659,14 +659,14 @@ void main() {
       (widget) =>
           widget is ListView && widget.scrollDirection == Axis.horizontal,
     );
-    final positionsChip = find.widgetWithText(ChoiceChip, 'Positions');
+    final positionsTab = find.byKey(const ValueKey('trade-shortcut-2'));
     await tester.dragUntilVisible(
-      positionsChip.first,
+      positionsTab,
       shortcutRow.first,
       const Offset(-60, 0),
     );
     await tester.pumpAndSettle();
-    await tester.tap(positionsChip.first);
+    await tester.tap(positionsTab);
     await tester.pump(const Duration(seconds: 1));
     expect(find.byType(HoldingsTab), findsOneWidget);
     await tester.tap(find.text('RELIANCE'));

@@ -47,7 +47,7 @@ docs/生产部署说明.md
 ./scripts/start-orbstack-stack.sh
 ```
 
-首次使用可通过 `HNW_E2E_DB_PASSWORD` 覆盖本机测试数据库密码。OrbStack 的容器引擎使用标准 `docker compose` 命令，脚本会校验当前 Docker context 为 `orbstack`。
+首次使用可通过 `HNW_E2E_DB_PASSWORD` 覆盖本机测试数据库密码。该密码仅在 PostgreSQL 数据卷首次创建时生效；已有数据卷必须继续使用初始化时的密码，修改环境变量不会同步修改数据库密码。若确认可以删除全部本机测试数据，可运行 `docker compose -f compose.local-test.yaml down -v` 删除数据卷，再使用新密码重新启动。OrbStack 的容器引擎使用标准 `docker compose` 命令，脚本会校验当前 Docker context 为 `orbstack`。
 
 该环境使用独立的 `hnw_e2e` 数据库，不连接生产数据。停止环境：
 

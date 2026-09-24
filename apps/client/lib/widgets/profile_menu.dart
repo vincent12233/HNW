@@ -88,6 +88,8 @@ class ProfileMenuRow extends StatelessWidget {
       ),
       title: AppText(
         title,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
         style: AppTypography.labelLarge.copyWith(
           fontWeight: FontWeight.w700,
           color: destructive ? AppColors.loss : AppColors.textPrimary,
@@ -97,6 +99,8 @@ class ProfileMenuRow extends StatelessWidget {
           ? null
           : AppText(
               subtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: AppTypography.caption.copyWith(
                 color: AppColors.textSecondary,
               ),

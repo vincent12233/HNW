@@ -143,8 +143,11 @@ class ProfileIdentityHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final mutedInverse = AppColors.textInverse.withValues(alpha: 0.70);
     final kycLabel = profileKycLabel(kycStatus);
+    final compact =
+        MediaQuery.sizeOf(context).width >= 350 &&
+        MediaQuery.textScalerOf(context).scale(1) <= 1.15;
     return Container(
-      padding: const EdgeInsets.all(AppSpacing.lg),
+      padding: EdgeInsets.all(compact ? AppSpacing.md + 2 : AppSpacing.lg),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -180,7 +183,7 @@ class ProfileIdentityHeader extends StatelessWidget {
                         shape: BoxShape.circle,
                       ),
                       child: CircleAvatar(
-                        radius: 26,
+                        radius: compact ? 23 : 26,
                         backgroundColor: AppColors.brandPrimarySoft,
                         backgroundImage: avatarBytes == null
                             ? null
@@ -200,7 +203,7 @@ class ProfileIdentityHeader extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.md + 2),
+              SizedBox(width: compact ? AppSpacing.md : AppSpacing.md + 2),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -230,7 +233,9 @@ class ProfileIdentityHeader extends StatelessWidget {
                         fontSize: 11,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.sm + 2),
+                    SizedBox(
+                      height: compact ? AppSpacing.sm : AppSpacing.sm + 2,
+                    ),
                     SizedBox(
                       width: double.infinity,
                       child: Wrap(
@@ -268,7 +273,7 @@ class ProfileIdentityHeader extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xl + 2),
+          SizedBox(height: compact ? AppSpacing.md + 2 : AppSpacing.xl + 2),
           LayoutBuilder(
             builder: (context, constraints) {
               final stacked =

@@ -124,6 +124,8 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         backgroundColor: AppColors.surface,
         foregroundColor: AppColors.textPrimary,
+        titleSpacing: AppSpacing.lg,
+        actionsPadding: const EdgeInsets.only(right: AppSpacing.xs),
       ),
       cardTheme: CardThemeData(
         elevation: 1,
@@ -197,10 +199,14 @@ class AppTheme {
         height: AppSpacing.navHeight,
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.navIndicator,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: AppRadius.borderMd,
+        ),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         elevation: 0,
         shadowColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
+        labelPadding: const EdgeInsets.only(top: 1),
         overlayColor: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.pressed)) {
             return AppColors.brandPrimarySoft.withValues(alpha: 0.5);

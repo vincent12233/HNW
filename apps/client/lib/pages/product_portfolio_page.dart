@@ -1374,7 +1374,6 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             AppText('${tr('Period')}: $_period'),
             AppText('${tr('Since')}: ${_date(history['productFrom'])}'),
             AppText('${tr('As of')}: ${_date(history['to'])}'),
-            const SizedBox(height: AppSpacing.md),
             AppText(
               _portfolioCopy(
                 'portfolio.performance_source_note',

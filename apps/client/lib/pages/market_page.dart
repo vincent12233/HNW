@@ -1983,6 +1983,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 title: 'KYC Verification',
                 subtitle: 'Identity documents and review status',
                 status: profileKycLabel(kycStatus),
+                statusColor: kycStatus == 'APPROVED'
+                    ? AppColors.gain
+                    : kycStatus == 'REJECTED'
+                    ? AppColors.loss
+                    : AppColors.warning,
                 onTap: () => _openAccountSettings('kyc'),
                 color: AppColors.gain,
               ),

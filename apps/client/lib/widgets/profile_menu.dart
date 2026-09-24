@@ -49,6 +49,7 @@ class ProfileMenuRow extends StatelessWidget {
     required this.title,
     this.subtitle = '',
     this.status,
+    this.statusColor = AppColors.textSecondary,
     this.onTap,
     this.color = AppColors.brandDark,
     this.destructive = false,
@@ -59,6 +60,7 @@ class ProfileMenuRow extends StatelessWidget {
   final String title;
   final String subtitle;
   final String? status;
+  final Color statusColor;
   final VoidCallback? onTap;
   final Color color;
   final bool destructive;
@@ -90,39 +92,41 @@ class ProfileMenuRow extends StatelessWidget {
           color: destructive ? AppColors.loss : AppColors.textPrimary,
         ),
       ),
-      subtitle: subtitle.isEmpty && status == null
+      subtitle: subtitle.isEmpty
           ? null
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (subtitle.isNotEmpty)
-                  AppText(
-                    subtitle,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                if (status != null) ...[
-                  const SizedBox(height: AppSpacing.xs),
-                  AppText(
-                    status!,
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.textSecondary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ],
-              ],
+          : AppText(
+              subtitle,
+              style: AppTypography.caption.copyWith(
+                color: AppColors.textSecondary,
+              ),
             ),
       trailing:
           trailing ??
-          (onTap == null || destructive
+          (status == null && (onTap == null || destructive)
               ? null
-              : const Icon(
-                  Icons.chevron_right,
-                  size: 20,
-                  color: AppColors.textTertiary,
+              : Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (status != null)
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 86),
+                        child: AppText(
+                          status!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.caption.copyWith(
+                            color: statusColor,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    if (onTap != null && !destructive)
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: AppColors.textTertiary,
+                      ),
+                  ],
                 )),
       onTap: onTap,
     );

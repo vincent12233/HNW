@@ -126,6 +126,9 @@ void main() {
         ),
       );
       expect(find.text('Verified'), findsOneWidget);
+      final title = tester.getRect(find.text('KYC Verification'));
+      final status = tester.getRect(find.text('Verified'));
+      expect(status.left, greaterThan(title.left));
       expect(tester.takeException(), isNull);
     },
   );

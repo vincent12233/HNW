@@ -9,6 +9,7 @@ import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
 import '../app_feedback.dart';
+import '../app_card.dart';
 import '../app_status_label.dart';
 import '../stock_logo.dart';
 import 'order_card.dart';
@@ -173,13 +174,9 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
         final application = widget.ipoApplications[index];
         final applicationNumber = _applicationNumberFor(application);
 
-        return Container(
+        return AppCard(
           padding: AppSpacing.card,
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: AppRadius.borderLg,
-            border: Border.all(color: AppColors.border),
-          ),
+          radius: AppRadius.lg,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -195,15 +192,12 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                           application.companyName,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
+                          style: AppTypography.titleMedium,
                         ),
                         const SizedBox(height: 3),
                         AppText(
                           application.symbol,
-                          style: const TextStyle(color: Colors.black54),
+                          style: AppTypography.caption,
                         ),
                       ],
                     ),
@@ -230,15 +224,12 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                   vertical: 10,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF7F8FA),
-                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.surfaceSecondary,
+                  borderRadius: AppRadius.borderSm,
                 ),
                 child: Row(
                   children: [
-                    const AppText(
-                      'Application',
-                      style: TextStyle(color: Colors.black54, fontSize: 12),
-                    ),
+                    const AppText('Application', style: AppTypography.caption),
                     const Spacer(),
                     AppText(
                       '#$applicationNumber',
@@ -251,7 +242,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                 const SizedBox(height: 14),
                 const AppText(
                   'Application submitted. Allocation is pending relationship manager review.',
-                  style: TextStyle(color: Colors.black54),
+                  style: AppTypography.bodySmall,
                 ),
               ],
               if (application.needsSubscription) ...[
@@ -263,9 +254,11 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                     vertical: 10,
                   ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFF7ED),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: const Color(0xFFFDBA74)),
+                    color: AppColors.warningSoft,
+                    borderRadius: AppRadius.borderSm,
+                    border: Border.all(
+                      color: AppColors.warning.withValues(alpha: 0.28),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -273,17 +266,15 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                       AppText(
                         'Outstanding Payment: ${formatPrice(application.remainingAmount)}',
                         style: const TextStyle(
-                          color: Color(0xFF9A3412),
+                          color: AppColors.warning,
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const SizedBox(height: 4),
-                      const AppText(
+                      AppText(
                         'Contact support to add funds. Payment is applied automatically after deposit.',
-                        style: TextStyle(
-                          color: Color(0xFF9A3412),
-                          fontSize: 12,
-                          height: 1.35,
+                        style: AppTypography.bodySmall.copyWith(
+                          color: AppColors.warning,
                         ),
                       ),
                     ],
@@ -318,14 +309,14 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                 const SizedBox(height: 14),
                 const AppText(
                   'No shares were allocated for this application.',
-                  style: TextStyle(color: Colors.black54),
+                  style: AppTypography.bodySmall,
                 ),
               ],
               if (application.status == IpoApplicationStatus.cancelled) ...[
                 const SizedBox(height: 14),
                 const AppText(
                   'This application was cancelled.',
-                  style: TextStyle(color: Colors.black54),
+                  style: AppTypography.bodySmall,
                 ),
               ],
             ],
@@ -340,7 +331,6 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Expanded(child: AppText('${application.companyName} IPO Details')),
@@ -391,7 +381,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                 const SizedBox(height: 20),
                 const AppText(
                   'Subscription Details',
-                  style: TextStyle(fontWeight: FontWeight.w700),
+                  style: AppTypography.titleSmall,
                 ),
                 const Divider(height: 24),
                 _value('Allocated Shares', '${application.allocatedQuantity}'),
@@ -429,10 +419,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(
-          label,
-          style: const TextStyle(color: Colors.black45, fontSize: 12),
-        ),
+        AppText(label, style: AppTypography.caption),
         const SizedBox(height: 4),
         AppText(
           value,

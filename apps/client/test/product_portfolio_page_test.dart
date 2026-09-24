@@ -39,6 +39,7 @@ void main() {
   Widget app(
     Future<Map<String, dynamic>> Function(String) loader, {
     VoidCallback? onExplore,
+    VoidCallback? onSearch,
   }) => MaterialApp(
     theme: AppTheme.light(),
     home: Scaffold(
@@ -46,9 +47,22 @@ void main() {
         loader: loader,
         onExplore: onExplore ?? () {},
         onNotifications: () {},
+        onSearch: onSearch,
       ),
     ),
   );
+  testWidgets('portfolio search calls the existing search entry', (
+    tester,
+  ) async {
+    var searches = 0;
+    await tester.pumpWidget(
+      app((_) async => fixture(), onSearch: () => searches++),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Search stocks'));
+    expect(searches, 1);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'empty account shows an actionable empty state without a zero donut',
     (tester) async {

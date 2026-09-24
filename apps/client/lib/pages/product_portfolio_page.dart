@@ -20,10 +20,12 @@ class ProductPortfolioPage extends StatefulWidget {
     super.key,
     required this.onExplore,
     required this.onNotifications,
+    this.onSearch,
     this.loader,
   });
   final VoidCallback onExplore;
   final VoidCallback onNotifications;
+  final VoidCallback? onSearch;
   final Future<Map<String, dynamic>> Function(String period)? loader;
   @override
   State<ProductPortfolioPage> createState() => _ProductPortfolioPageState();
@@ -215,6 +217,12 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                     onPressed: _loading ? null : _load,
                     icon: const Icon(Icons.refresh),
                   ),
+                  if (widget.onSearch != null)
+                    IconButton(
+                      tooltip: tr('Search stocks'),
+                      onPressed: widget.onSearch,
+                      icon: const Icon(Icons.search_rounded),
+                    ),
                   IconButton(
                     tooltip: tr('Notifications'),
                     onPressed: widget.onNotifications,

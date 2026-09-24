@@ -1767,6 +1767,7 @@ class _MarketHomePageState extends State<MarketHomePage>
   Widget _portfolioBody() => ProductPortfolioPage(
     onExplore: () => _onDestinationSelected(2),
     onNotifications: _openNotifications,
+    onSearch: _openStockSearch,
   );
 
   Future<void> _loadPortfolioHistory(String period) async {

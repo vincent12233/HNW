@@ -1027,7 +1027,8 @@ class _MarketsPageState extends State<MarketsPage> {
         child: AppText(
           title,
           style: AppTypography.titleMedium.copyWith(
-            fontWeight: FontWeight.w800,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
           ),
         ),
       ),
@@ -1040,12 +1041,23 @@ class _MarketsPageState extends State<MarketsPage> {
               horizontal: AppSpacing.xs,
               vertical: AppSpacing.xs + 1,
             ),
-            child: AppText(
-              'View All',
-              style: AppTypography.labelMedium.copyWith(
-                color: AppColors.brandPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AppText(
+                  'View All',
+                  style: AppTypography.labelMedium.copyWith(
+                    color: AppColors.brandPrimary,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(width: AppSpacing.xxs),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 17,
+                  color: AppColors.brandPrimary,
+                ),
+              ],
             ),
           ),
         ),

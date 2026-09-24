@@ -1329,7 +1329,8 @@ class _AllocationPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _AllocationPainter old) => old.values != values;
+  bool shouldRepaint(covariant _AllocationPainter old) =>
+      old.values != values || old.colors != colors;
 }
 
 class _ValueHistoryPainter extends CustomPainter {

@@ -5,11 +5,13 @@ class HomeIndexQuote {
     required this.label,
     required this.price,
     required this.changePercent,
+    this.history = const <double>[],
   });
 
   final String label;
   final double price;
   final double changePercent;
+  final List<double> history;
 
   bool get available => price > 0 && price.isFinite && changePercent.isFinite;
 }

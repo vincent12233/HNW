@@ -79,6 +79,7 @@ HomeDashboard dashboard({
             label: 'NIFTY 50',
             price: 24812.4,
             changePercent: 0.42,
+            history: [24680, 24725, 24695, 24812.4],
           ),
           const HomeIndexQuote(
             label: 'SENSEX',
@@ -410,6 +411,10 @@ void main() {
     await pumpHome(tester, reduceMotion: true, home: dashboard());
     expect(find.text('Total Asset Value'), findsOneWidget);
     expect(find.text('Market Indices'), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey<String>('home-index-chart-NIFTY 50')),
+      findsOneWidget,
+    );
     expect(find.text('Market News'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

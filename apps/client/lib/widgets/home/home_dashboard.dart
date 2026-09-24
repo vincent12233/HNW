@@ -695,6 +695,22 @@ class _IndexChip extends StatelessWidget {
                       ),
                     ),
                   ),
+                  if (item.available && item.history.length >= 2) ...[
+                    const SizedBox(width: AppSpacing.sm),
+                    ExcludeSemantics(
+                      child: SizedBox(
+                        key: ValueKey<String>('home-index-chart-${item.label}'),
+                        width: 56,
+                        height: 24,
+                        child: CustomPaint(
+                          painter: MiniLineChartPainter(
+                            color: color,
+                            values: item.history,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ],

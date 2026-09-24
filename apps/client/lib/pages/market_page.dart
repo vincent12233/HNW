@@ -652,6 +652,7 @@ class _MarketHomePageState extends State<MarketHomePage>
       marketDataService.fetchInstitutionalOffers(),
       marketDataService.fetchMarketNews(),
       marketDataService.fetchCompanyShowcase(),
+      _loadHomeIndexHistory(),
     ]);
     if (!mounted) return;
     final refreshedStocks = results[0] as List<StockQuote>;
@@ -1434,21 +1435,25 @@ class _MarketHomePageState extends State<MarketHomePage>
               label: 'NIFTY 50',
               price: nifty50Price,
               changePercent: nifty50Change,
+              history: indexHistory['NIFTY 50'] ?? const <double>[],
             ),
             HomeIndexQuote(
               label: 'SENSEX',
               price: sensexPrice,
               changePercent: sensexChange,
+              history: indexHistory['SENSEX'] ?? const <double>[],
             ),
             HomeIndexQuote(
               label: 'BANK NIFTY',
               price: bankNiftyPrice,
               changePercent: bankNiftyChange,
+              history: indexHistory['BANK NIFTY'] ?? const <double>[],
             ),
             HomeIndexQuote(
               label: 'INDIA VIX',
               price: vix?.$1 ?? 0,
               changePercent: vix?.$2 ?? 0,
+              history: indexHistory['INDIA VIX'] ?? const <double>[],
             ),
           ],
           gainers: homeTopMovers(stocks, gainers: true),

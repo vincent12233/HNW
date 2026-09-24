@@ -4,6 +4,9 @@ import '../services/app_content_service.dart';
 import '../services/insight_articles_service.dart';
 import '../services/insight_list_result.dart';
 import '../theme/app_colors.dart';
+import '../theme/app_spacing.dart';
+import '../theme/app_typography.dart';
+import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/app_page_scaffold.dart';
 
@@ -108,24 +111,25 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
           : RefreshIndicator(
               onRefresh: _refresh,
               child: ListView(
-                padding: const EdgeInsets.only(bottom: 24),
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.lg,
+                  AppSpacing.xxl,
+                ),
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 20, 20, 14),
+                  AppCard(
+                    backgroundColor: AppColors.brandPrimarySoft,
+                    borderColor: AppColors.brandPrimary.withValues(alpha: 0.12),
+                    shadow: AppCardShadow.none,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        AppText(
-                          introTitle,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                        AppText(introTitle, style: AppTypography.titleMedium),
                         const SizedBox(height: 8),
                         AppText(
                           introBody,
-                          style: const TextStyle(
+                          style: AppTypography.bodyMedium.copyWith(
                             color: AppColors.textSecondary,
                             height: 1.5,
                           ),
@@ -133,27 +137,53 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
                       ],
                     ),
                   ),
+                  const SizedBox(height: AppSpacing.lg),
                   for (var index = 0; index < count; index++)
-                    ListTile(
-                      leading: const Icon(Icons.menu_book_outlined),
-                      title: AppText(
-                        _structured[index].title.trim().isNotEmpty
-                            ? _structured[index].title
-                            : 'Article ${index + 1}',
-                      ),
-                      subtitle:
-                          _structured[index].summary?.trim().isNotEmpty == true
-                          ? AppText(
-                              _structured[index].summary!,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            )
-                          : null,
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.of(context).push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => WealthInsightArticlePage(
-                            article: _structured[index],
+                    AppCard(
+                      margin: const EdgeInsets.only(bottom: AppSpacing.md),
+                      padding: EdgeInsets.zero,
+                      child: ListTile(
+                        minTileHeight: 76,
+                        leading: Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: AppColors.brandPrimarySoft,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.menu_book_outlined,
+                            color: AppColors.brandPrimary,
+                            size: 20,
+                          ),
+                        ),
+                        title: AppText(
+                          _structured[index].title.trim().isNotEmpty
+                              ? _structured[index].title
+                              : 'Article ${index + 1}',
+                          style: AppTypography.titleSmall,
+                        ),
+                        subtitle:
+                            _structured[index].summary?.trim().isNotEmpty ==
+                                true
+                            ? Padding(
+                                padding: const EdgeInsets.only(
+                                  top: AppSpacing.xs,
+                                ),
+                                child: AppText(
+                                  _structured[index].summary!,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: AppTypography.bodySmall,
+                                ),
+                              )
+                            : null,
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () => Navigator.of(context).push(
+                          MaterialPageRoute<void>(
+                            builder: (_) => WealthInsightArticlePage(
+                              article: _structured[index],
+                            ),
                           ),
                         ),
                       ),
@@ -175,14 +205,19 @@ class WealthInsightArticlePage extends StatelessWidget {
     return AppPageScaffold(
       appBar: AppBar(title: AppText(article.title)),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.xl,
+          AppSpacing.xxl,
+          AppSpacing.xl,
+          AppSpacing.xxxl,
+        ),
         child: Align(
           alignment: Alignment.topCenter,
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 680),
             child: SelectableText(
               article.body,
-              style: const TextStyle(fontSize: 16, height: 1.7),
+              style: AppTypography.bodyLarge.copyWith(height: 1.75),
             ),
           ),
         ),

@@ -144,7 +144,7 @@ class ProfileIdentityHeader extends StatelessWidget {
     final mutedInverse = AppColors.textInverse.withValues(alpha: 0.70);
     final kycLabel = profileKycLabel(kycStatus);
     final compact =
-        MediaQuery.sizeOf(context).width >= 350 &&
+        MediaQuery.sizeOf(context).width >= 320 &&
         MediaQuery.textScalerOf(context).scale(1) <= 1.15;
     return Container(
       padding: EdgeInsets.all(compact ? AppSpacing.md + 2 : AppSpacing.lg),
@@ -277,7 +277,7 @@ class ProfileIdentityHeader extends StatelessWidget {
           LayoutBuilder(
             builder: (context, constraints) {
               final stacked =
-                  constraints.maxWidth < 300 ||
+                  constraints.maxWidth < 250 ||
                   MediaQuery.textScalerOf(context).scale(1) > 1.2;
               final items = <Widget>[
                 _meta(

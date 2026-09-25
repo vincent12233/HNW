@@ -174,6 +174,38 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('profile header keeps three compact status columns at 320', (
+    tester,
+  ) async {
+    setView(tester, const Size(320, 568));
+    await tester.pumpWidget(
+      host(
+        const Scaffold(
+          body: SingleChildScrollView(
+            child: ProfileIdentityHeader(
+              name: 'Test Client',
+              accountNumber: 'ACCOUNT-123',
+              phone: '9876543210',
+              kycStatus: 'APPROVED',
+              clientTier: 'GOLD',
+              memberSince: '2026-01-01',
+              accountStatus: 'ACTIVE',
+            ),
+          ),
+        ),
+        size: const Size(320, 568),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(ProfileIdentityHeader), findsOneWidget);
+    expect(find.text('KYC APPROVED'), findsOneWidget);
+    expect(
+      tester.getSize(find.byType(ProfileIdentityHeader)).height,
+      lessThan(260),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('profile loading error retry and read-only account id', (
     tester,
   ) async {
@@ -303,7 +335,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('notifications empty error and retry stay honest', (tester) async {
+  testWidgets('notifications empty error and retry stay honest', (
+    tester,
+  ) async {
     setView(tester, const Size(390, 844));
     final service = ProfileFake()..notifyError = Exception('offline');
     await tester.pumpWidget(
@@ -333,7 +367,9 @@ void main() {
     expect(find.text('हिन्दी'), findsOneWidget);
   });
 
-  testWidgets('legal pages do not advertise SMS or Aadhaar OTP', (tester) async {
+  testWidgets('legal pages do not advertise SMS or Aadhaar OTP', (
+    tester,
+  ) async {
     setView(tester, const Size(390, 844));
     await tester.pumpWidget(
       host(const LegalPage(title: 'Privacy'), reduceMotion: true),
@@ -350,10 +386,7 @@ void main() {
     setView(tester, const Size(320, 568));
     await tester.pumpWidget(
       host(
-        AccountSettingsPage(
-          section: 'banks',
-          accountService: ProfileFake(),
-        ),
+        AccountSettingsPage(section: 'banks', accountService: ProfileFake()),
         size: const Size(320, 568),
         textScale: 1.3,
         reduceMotion: true,
@@ -390,16 +423,19 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('support opening failure shows retry without claiming a live agent', (
-    tester,
-  ) async {
-    setView(tester, const Size(390, 844));
-    await tester.pumpWidget(host(const SupportChatPage(), reduceMotion: true));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 80));
-    expect(find.textContaining('SMS OTP'), findsNothing);
-    expect(find.text('Online now'), findsNothing);
-    expect(find.textContaining('Connecting you to an agent'), findsNothing);
-    expect(tester.takeException(), isNull);
-  });
+  testWidgets(
+    'support opening failure shows retry without claiming a live agent',
+    (tester) async {
+      setView(tester, const Size(390, 844));
+      await tester.pumpWidget(
+        host(const SupportChatPage(), reduceMotion: true),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 80));
+      expect(find.textContaining('SMS OTP'), findsNothing);
+      expect(find.text('Online now'), findsNothing);
+      expect(find.textContaining('Connecting you to an agent'), findsNothing);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }

@@ -19,12 +19,25 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
 
       await tester.pumpWidget(
-        MaterialApp(theme: AppTheme.light(), home: const MarketHomePage()),
+        MaterialApp(
+          theme: AppTheme.light(),
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(width == 320 ? 1.3 : 1)),
+            child: child!,
+          ),
+          home: const MarketHomePage(),
+        ),
       );
       await tester.pump(const Duration(seconds: 5));
       expect(
         find.byKey(const ValueKey('profile-settings-button')),
         findsNothing,
+      );
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold).first).endDrawer,
+        isNull,
       );
       for (final index in <int>[1, 2, 3]) {
         await tester.tap(find.byType(NavigationDestination).at(index));
@@ -33,11 +46,19 @@ void main() {
           find.byKey(const ValueKey('profile-settings-button')),
           findsNothing,
         );
+        expect(
+          tester.widget<Scaffold>(find.byType(Scaffold).first).endDrawer,
+          isNull,
+        );
       }
       await tester.tap(find.byType(NavigationDestination).last);
       await tester.pumpAndSettle();
 
       expect(find.text('Account Overview'), findsOneWidget);
+      expect(
+        tester.widget<Scaffold>(find.byType(Scaffold).first).endDrawer,
+        isNotNull,
+      );
       expect(find.text('Change Login Password'), findsNothing);
       await tester.tap(find.byKey(const ValueKey('profile-settings-button')));
       await tester.pumpAndSettle();

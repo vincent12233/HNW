@@ -884,7 +884,7 @@ class _MarketHomePageState extends State<MarketHomePage>
     Localizations.localeOf(context);
     return Scaffold(
       backgroundColor: AppConfig.backgroundColor,
-      endDrawer: _profileSettingsDrawer(),
+      endDrawer: selectedIndex == 4 ? _profileSettingsDrawer() : null,
       endDrawerEnableOpenDragGesture: selectedIndex == 4,
       body: Stack(
         children: [

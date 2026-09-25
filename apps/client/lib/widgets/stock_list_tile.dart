@@ -142,6 +142,7 @@ class StockListTile extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: AppColors.neutralSoft,
                             borderRadius: AppRadius.borderSm,
+                            border: Border.all(color: AppColors.border),
                           ),
                           child: AppText(
                             stock.exchange,

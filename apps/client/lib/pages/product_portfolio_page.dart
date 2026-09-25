@@ -487,16 +487,13 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       ),
       const SizedBox(height: AppSpacing.lg + 2),
       // SECONDARY: Investment Summary metrics in AppCard
-      _heading(
+      _datedHeading(
         AppContentService.instance.current.text(
           'trading',
           'portfolio.summary_heading',
           fallback: 'Investment Summary',
         ),
-      ),
-      AppText(
         '${tr('As of')} ${_date(data['asOf'])}',
-        style: AppTypography.caption,
       ),
       const SizedBox(height: AppSpacing.md),
       AppCard(
@@ -1155,6 +1152,41 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         children: [
           Expanded(child: heading),
           ?button,
+        ],
+      );
+    },
+  );
+
+  Widget _datedHeading(String title, String date) => LayoutBuilder(
+    builder: (context, constraints) {
+      final heading = AppText(
+        title,
+        style: AppTypography.sectionTitle.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+      );
+      final timestamp = AppText(
+        date,
+        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+      );
+      if (constraints.maxWidth < 320 ||
+          MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            heading,
+            const SizedBox(height: AppSpacing.xs),
+            timestamp,
+          ],
+        );
+      }
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Expanded(child: heading),
+          const SizedBox(width: AppSpacing.md),
+          Flexible(child: timestamp),
         ],
       );
     },

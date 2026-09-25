@@ -8,6 +8,7 @@ import 'package:india_trading_app/widgets/market_header.dart';
 import 'package:india_trading_app/widgets/profile_menu.dart';
 import 'package:india_trading_app/widgets/stock_list_tile.dart';
 import 'package:india_trading_app/widgets/floating_support_button.dart';
+import 'package:india_trading_app/theme/app_colors.dart';
 
 Widget host(Widget child, {double textScale = 1, bool reduceMotion = false}) =>
     MaterialApp(
@@ -126,6 +127,10 @@ void main() {
         ),
       );
       expect(find.text('Verified'), findsOneWidget);
+      final icon = tester.widget<Icon>(
+        find.byIcon(Icons.verified_user_outlined),
+      );
+      expect(icon.color, AppColors.textInverse);
       final title = tester.getRect(find.text('KYC Verification'));
       final status = tester.getRect(find.text('Verified'));
       expect(status.left, greaterThan(title.left));

@@ -70,21 +70,22 @@ class ProfileMenuRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final accent = destructive ? AppColors.loss : color;
+    final largeText = MediaQuery.textScalerOf(context).scale(1) > 1.2;
     return ListTile(
-      minTileHeight: 52,
+      minTileHeight: subtitle.isEmpty && !largeText ? 48 : 56,
       visualDensity: VisualDensity.compact,
       contentPadding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.lg,
         vertical: 0,
       ),
       leading: Container(
-        width: 28,
-        height: 28,
+        width: 26,
+        height: 26,
         decoration: BoxDecoration(
-          color: accent.withValues(alpha: 0.10),
-          borderRadius: AppRadius.borderSm,
+          color: accent,
+          borderRadius: BorderRadius.circular(6),
         ),
-        child: Icon(icon, color: accent, size: 18),
+        child: Icon(icon, color: AppColors.textInverse, size: 16),
       ),
       title: AppText(
         title,
@@ -115,13 +116,25 @@ class ProfileMenuRow extends StatelessWidget {
                     if (status != null)
                       ConstrainedBox(
                         constraints: const BoxConstraints(maxWidth: 86),
-                        child: AppText(
-                          status!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: AppTypography.caption.copyWith(
-                            color: statusColor,
-                            fontWeight: FontWeight.w700,
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: statusColor.withValues(alpha: 0.10),
+                            borderRadius: AppRadius.borderSm,
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: AppSpacing.sm,
+                              vertical: AppSpacing.xxs,
+                            ),
+                            child: AppText(
+                              status!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: AppTypography.caption.copyWith(
+                                color: statusColor,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ),
                         ),
                       ),

@@ -40,13 +40,16 @@ void main() {
     Future<Map<String, dynamic>> Function(String) loader, {
     VoidCallback? onExplore,
     VoidCallback? onSearch,
+    VoidCallback? onNotifications,
+    int notificationCount = 0,
   }) => MaterialApp(
     theme: AppTheme.light(),
     home: Scaffold(
       body: ProductPortfolioPage(
         loader: loader,
         onExplore: onExplore ?? () {},
-        onNotifications: () {},
+        onNotifications: onNotifications ?? () {},
+        notificationCount: notificationCount,
         onSearch: onSearch,
       ),
     ),
@@ -61,6 +64,23 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Search stocks'));
     expect(searches, 1);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets('portfolio notification badge preserves the button callback', (
+    tester,
+  ) async {
+    var opened = 0;
+    await tester.pumpWidget(
+      app(
+        (_) async => fixture(),
+        notificationCount: 12,
+        onNotifications: () => opened++,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('9+'), findsOneWidget);
+    await tester.tapAt(tester.getCenter(find.text('9+')));
+    expect(opened, 1);
     expect(tester.takeException(), isNull);
   });
   testWidgets(

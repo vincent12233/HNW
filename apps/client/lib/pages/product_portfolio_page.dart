@@ -20,11 +20,13 @@ class ProductPortfolioPage extends StatefulWidget {
     super.key,
     required this.onExplore,
     required this.onNotifications,
+    this.notificationCount = 0,
     this.onSearch,
     this.loader,
   });
   final VoidCallback onExplore;
   final VoidCallback onNotifications;
+  final int notificationCount;
   final VoidCallback? onSearch;
   final Future<Map<String, dynamic>> Function(String period)? loader;
   @override
@@ -223,10 +225,44 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                       onPressed: widget.onSearch,
                       icon: const Icon(Icons.search_rounded),
                     ),
-                  IconButton(
-                    tooltip: tr('Notifications'),
-                    onPressed: widget.onNotifications,
-                    icon: const Icon(Icons.notifications_none),
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      IconButton(
+                        tooltip: widget.notificationCount > 0
+                            ? '${tr('Notifications')} (${widget.notificationCount})'
+                            : tr('Notifications'),
+                        onPressed: widget.onNotifications,
+                        icon: const Icon(Icons.notifications_none_rounded),
+                      ),
+                      if (widget.notificationCount > 0)
+                        Positioned(
+                          right: 8,
+                          top: 7,
+                          child: IgnorePointer(
+                            child: Container(
+                              width: 17,
+                              height: 17,
+                              alignment: Alignment.center,
+                              decoration: const BoxDecoration(
+                                color: AppColors.loss,
+                                shape: BoxShape.circle,
+                              ),
+                              child: AppText(
+                                widget.notificationCount > 9
+                                    ? '9+'
+                                    : widget.notificationCount.toString(),
+                                textScaler: TextScaler.noScaling,
+                                style: AppTypography.caption.copyWith(
+                                  color: AppColors.textInverse,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),

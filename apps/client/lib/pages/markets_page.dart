@@ -443,7 +443,7 @@ class _MarketsPageState extends State<MarketsPage> {
                         builder: (_) => StockSearchPage(
                           initialStocks: widget.stocks,
                           onSelected: widget.onStockTap,
-                          onWatchlistChanged: () {},
+                          onWatchlistChanged: () => unawaited(_loadWatchlist()),
                         ),
                       ),
                     ),
@@ -524,68 +524,6 @@ class _MarketsPageState extends State<MarketsPage> {
                   ),
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                0,
-                AppSpacing.lg,
-                AppSpacing.md - 2,
-              ),
-              child: Semantics(
-                button: true,
-                label: 'Search stocks',
-                child: Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    onTap: () => Navigator.of(context).push(
-                      MaterialPageRoute<void>(
-                        builder: (_) => StockSearchPage(
-                          initialStocks: widget.stocks,
-                          onSelected: widget.onStockTap,
-                          onWatchlistChanged: () => unawaited(_loadWatchlist()),
-                        ),
-                      ),
-                    ),
-                    borderRadius: AppRadius.borderSm,
-                    child: Ink(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppSpacing.md,
-                        vertical: AppSpacing.sm,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppColors.surface,
-                        borderRadius: AppRadius.borderSm,
-                        border: Border.all(color: AppColors.border),
-                      ),
-                      child: ConstrainedBox(
-                        constraints: const BoxConstraints(
-                          minHeight: AppMotion.tapTarget,
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(
-                              Icons.search_rounded,
-                              size: AppMotion.iconField,
-                              color: AppColors.textTertiary,
-                            ),
-                            const SizedBox(width: AppSpacing.sm),
-                            Expanded(
-                              child: AppText(
-                                'Search stocks…',
-                                style: AppTypography.labelLarge.copyWith(
-                                  color: AppColors.textTertiary,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
             SizedBox(
               height: AppMotion.tapTarget + 4,
               child: ListView.separated(

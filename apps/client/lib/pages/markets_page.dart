@@ -1118,7 +1118,11 @@ class _MarketsPageState extends State<MarketsPage> {
                           ? AppColors.brandPrimarySoft
                           : AppColors.surface,
                       borderRadius: AppRadius.borderSm,
-                      border: Border.all(color: AppColors.border),
+                      border: Border.all(
+                        color: entry.key == selectedMoverFilter
+                            ? AppColors.brandPrimary.withValues(alpha: 0.28)
+                            : AppColors.border,
+                      ),
                     ),
                     child: AppText(
                       entry.value,

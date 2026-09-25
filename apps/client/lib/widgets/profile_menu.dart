@@ -41,7 +41,8 @@ class ProfileSection extends StatelessWidget {
           child: Column(
             children: [
               for (var i = 0; i < children.length; i++) ...[
-                if (i > 0) const Divider(height: 1, indent: 56),
+                if (i > 0)
+                  const Divider(height: 1, indent: 56, color: AppColors.border),
                 children[i],
               ],
             ],

@@ -575,7 +575,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                             onTap: () => _showHoldings([category]),
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
-                                vertical: AppSpacing.md - 2,
+                                vertical: AppSpacing.sm + 2,
                               ),
                               child: Row(
                                 children: [
@@ -606,19 +606,24 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                                   category['allocationPercent'],
                                                 ) !=
                                                 null)
-                                          LinearProgressIndicator(
-                                            value:
-                                                (_number(
-                                                          category['allocationPercent'],
-                                                        ) /
-                                                        100)
-                                                    .clamp(0.0, 1.0),
-                                            minHeight: 2,
-                                            color: _categoryColor(
-                                              category['category'],
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              3,
                                             ),
-                                            backgroundColor:
-                                                AppColors.surfaceSecondary,
+                                            child: LinearProgressIndicator(
+                                              value:
+                                                  (_number(
+                                                            category['allocationPercent'],
+                                                          ) /
+                                                          100)
+                                                      .clamp(0.0, 1.0),
+                                              minHeight: 3,
+                                              color: _categoryColor(
+                                                category['category'],
+                                              ),
+                                              backgroundColor:
+                                                  AppColors.surfaceSecondary,
+                                            ),
                                           ),
                                       ],
                                     ),
@@ -770,14 +775,15 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                     _availableNumber(category['allocationPercent']) !=
                         null) ...[
                   const SizedBox(height: AppSpacing.md - 2),
-                  LinearProgressIndicator(
-                    value: (_number(category['allocationPercent']) / 100).clamp(
-                      0.0,
-                      1.0,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(3),
+                    child: LinearProgressIndicator(
+                      value: (_number(category['allocationPercent']) / 100)
+                          .clamp(0.0, 1.0),
+                      minHeight: 4,
+                      color: _categoryColor(category['category']),
+                      backgroundColor: AppColors.surfaceSecondary,
                     ),
-                    minHeight: 3,
-                    color: _categoryColor(category['category']),
-                    backgroundColor: AppColors.surfaceSecondary,
                   ),
                 ],
               ],
@@ -841,12 +847,32 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxl),
             child: Center(
-              child: AppText(
-                _portfolioCopy(
-                  'portfolio.no_activity',
-                  'No product activity yet',
-                ),
-                style: AppTypography.bodyMedium,
+              child: Column(
+                children: [
+                  Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: AppColors.brandPrimarySoft,
+                      borderRadius: AppRadius.borderSm,
+                    ),
+                    child: const Icon(
+                      Icons.history_rounded,
+                      color: AppColors.brandPrimary,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  AppText(
+                    _portfolioCopy(
+                      'portfolio.no_activity',
+                      'No product activity yet',
+                    ),
+                    style: AppTypography.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
               ),
             ),
           )

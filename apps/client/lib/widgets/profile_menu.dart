@@ -28,8 +28,8 @@ class ProfileSection extends StatelessWidget {
           child: AppText(
             title,
             style: AppTypography.titleSmall.copyWith(
-              color: AppColors.textSecondary,
-              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+              fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
             ),
           ),

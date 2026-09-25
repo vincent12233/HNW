@@ -170,6 +170,7 @@ class _OtcTabState extends State<OtcTab> {
     final submitted = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: AppText('Buy ${item.symbol}'),
         content: Column(
           mainAxisSize: MainAxisSize.min,

@@ -207,7 +207,7 @@ class _IpoTabState extends State<IpoTab> {
           'trading',
           'ipo.confirm_template',
           fallback:
-              'Submit IPO application {current} of {max}?\n\n'
+              'Submit IPO application {current} of {max}?\\n\\n'
               'You will be notified when your allotment is announced. '
               'Payment is automatic after allotment. If more funds are '
               'needed, we will show the amount to add.',
@@ -216,6 +216,9 @@ class _IpoTabState extends State<IpoTab> {
             .replaceAll('{current}', '${currentCount + 1}')
             .replaceAll('{max}', '5');
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
           title: const AppText('IPO Application'),
           content: Column(
             mainAxisSize: MainAxisSize.min,

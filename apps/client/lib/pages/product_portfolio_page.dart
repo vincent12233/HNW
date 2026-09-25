@@ -1152,8 +1152,15 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 ),
               ),
               onPressed: action,
-              child: AppText(
-                _portfolioCopy('portfolio.view_details', 'View Details'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  AppText(
+                    _portfolioCopy('portfolio.view_details', 'View Details'),
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                  const Icon(Icons.chevron_right_rounded, size: 17),
+                ],
               ),
             );
       if (constraints.maxWidth < 320 ||

@@ -971,39 +971,21 @@ class _MarketsPageState extends State<MarketsPage> {
         ),
       ),
       if (showViewAll && onViewAll != null)
-        InkWell(
-          borderRadius: AppRadius.borderSm,
-          onTap: onViewAll,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.xs,
-              vertical: AppSpacing.xs + 1,
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                AppText(
-                  'View All',
-                  style: AppTypography.labelMedium.copyWith(
-                    color: AppColors.brandPrimary,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(width: AppSpacing.xxs),
-                const Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  size: 11,
-                  color: AppColors.brandPrimary,
-                ),
-                const SizedBox(width: AppSpacing.xxs),
-                const Icon(
-                  Icons.chevron_right_rounded,
-                  size: 17,
-                  color: AppColors.brandPrimary,
-                ),
-              ],
+        TextButton.icon(
+          onPressed: onViewAll,
+          style: TextButton.styleFrom(
+            minimumSize: const Size(44, 44),
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          ),
+          label: AppText(
+            'View All',
+            style: AppTypography.labelMedium.copyWith(
+              color: AppColors.brandPrimary,
+              fontWeight: FontWeight.w700,
             ),
           ),
+          iconAlignment: IconAlignment.end,
+          icon: const Icon(Icons.chevron_right_rounded, size: 17),
         ),
     ],
   );

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_language.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_radius.dart';
-import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../app_card.dart';
 import '../stock_logo.dart';
@@ -47,25 +46,27 @@ class ProductOfferCard extends StatelessWidget {
         ? (marketPrice - offerPrice) / offerPrice * 100
         : null;
     return AppCard(
-      padding: const EdgeInsets.all(AppSpacing.lg + 2),
-      radius: AppRadius.lg,
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      radius: AppRadius.md,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              StockLogo(symbol: symbol, size: 44),
-              const SizedBox(width: 12),
+              StockLogo(symbol: symbol, size: 38),
+              const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     AppText(
                       name,
-                      maxLines: 2,
+                      maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTypography.titleMedium,
+                      style: AppTypography.titleMedium.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                     const SizedBox(height: 6),
                     Wrap(
@@ -79,10 +80,16 @@ class ProductOfferCard extends StatelessWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: AppColors.surfaceSecondary,
+                            color: AppColors.brandPrimarySoft,
                             borderRadius: AppRadius.borderSm,
                           ),
-                          child: AppText(type, style: AppTypography.labelSmall),
+                          child: AppText(
+                            type,
+                            style: AppTypography.labelSmall.copyWith(
+                              color: AppColors.brandPrimary,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                         ),
                         if (status != null)
                           AppText(status!, style: AppTypography.caption),
@@ -93,7 +100,7 @@ class ProductOfferCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
           Row(
             children: [
               Flexible(
@@ -105,7 +112,7 @@ class ProductOfferCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: (expected ?? 0) < 0
                         ? AppColors.lossSoft
-                        : AppColors.gainSoft,
+                        : const Color(0xFF10B981),
                     borderRadius: AppRadius.borderSm,
                   ),
                   child: AppText(
@@ -113,11 +120,9 @@ class ProductOfferCard extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                      fontSize: 17,
+                      fontSize: 16,
                       fontWeight: FontWeight.w800,
-                      color: (expected ?? 0) < 0
-                          ? AppColors.loss
-                          : AppColors.gain,
+                      color: AppColors.textInverse,
                     ),
                   ),
                 ),
@@ -131,10 +136,15 @@ class ProductOfferCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.brandPrimary,
+                minimumSize: const Size.fromHeight(40),
+                shape: const StadiumBorder(),
+              ),
               onPressed: onTrade,
               child: AppText(actionLabel),
             ),

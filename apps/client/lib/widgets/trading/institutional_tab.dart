@@ -102,6 +102,9 @@ class InstitutionalTab extends StatelessWidget {
                       showDialog<void>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
                           title: AppText(stock.companyName),
                           content: Column(
                             mainAxisSize: MainAxisSize.min,

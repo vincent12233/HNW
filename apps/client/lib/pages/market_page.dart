@@ -1991,14 +1991,12 @@ class _MarketHomePageState extends State<MarketHomePage>
               ProfileMenuRow(
                 icon: Icons.person_outline_rounded,
                 title: 'Personal Information',
-                subtitle: 'Account ID and full name',
                 onTap: _editProfile,
                 color: AppColors.brandPrimary,
               ),
               ProfileMenuRow(
                 icon: Icons.verified_user_outlined,
                 title: 'KYC Verification',
-                subtitle: 'Identity documents and review status',
                 status: profileKycLabel(kycStatus),
                 statusColor: kycStatus == 'APPROVED'
                     ? AppColors.gain
@@ -2011,7 +2009,6 @@ class _MarketHomePageState extends State<MarketHomePage>
               ProfileMenuRow(
                 icon: Icons.account_balance_outlined,
                 title: 'Bank Accounts',
-                subtitle: 'Linked bank account for withdrawals',
                 onTap: () => _openAccountSettings('banks'),
                 color: AppColors.warning,
               ),
@@ -2028,7 +2025,6 @@ class _MarketHomePageState extends State<MarketHomePage>
               ProfileMenuRow(
                 icon: Icons.request_quote_outlined,
                 title: 'Loan Applications',
-                subtitle: 'Application status',
                 color: AppColors.gain,
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(builder: (_) => const LoanPage()),
@@ -2051,11 +2047,6 @@ class _MarketHomePageState extends State<MarketHomePage>
                   'profile.tile.help.title',
                   fallback: 'Help & Support',
                 ),
-                subtitle: _appContent.text(
-                  'home',
-                  'profile.tile.help.subtitle',
-                  fallback: 'FAQs and contact support',
-                ),
                 onTap: () => unawaited(
                   showSupportChatPanel(
                     context,
@@ -2074,11 +2065,6 @@ class _MarketHomePageState extends State<MarketHomePage>
                   'home',
                   'profile.tile.insights.title',
                   fallback: 'Wealth Insights',
-                ),
-                subtitle: _appContent.text(
-                  'home',
-                  'profile.tile.insights.subtitle',
-                  fallback: 'Knowledge for informed investment decisions',
                 ),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(

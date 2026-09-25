@@ -22,6 +22,18 @@ void main() {
         MaterialApp(theme: AppTheme.light(), home: const MarketHomePage()),
       );
       await tester.pump(const Duration(seconds: 5));
+      expect(
+        find.byKey(const ValueKey('profile-settings-button')),
+        findsNothing,
+      );
+      for (final index in <int>[1, 2, 3]) {
+        await tester.tap(find.byType(NavigationDestination).at(index));
+        await tester.pumpAndSettle();
+        expect(
+          find.byKey(const ValueKey('profile-settings-button')),
+          findsNothing,
+        );
+      }
       await tester.tap(find.byType(NavigationDestination).last);
       await tester.pumpAndSettle();
 

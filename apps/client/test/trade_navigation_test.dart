@@ -35,6 +35,12 @@ void main() {
       tester.view.devicePixelRatio = 1;
       await tester.pumpWidget(
         MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(width == 320 ? 1.3 : 1)),
+            child: child!,
+          ),
           home: TradingCenterPage(
             tradingService: EmptyTradingService(),
             stocks: const [],

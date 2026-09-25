@@ -5,7 +5,6 @@ import '../../models/stock_quote.dart';
 import '../../models/portfolio_position.dart';
 import '../../services/trading_service.dart';
 import '../../theme/app_colors.dart';
-import '../../theme/app_radius.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_typography.dart';
 import '../../utils/number_formatters.dart';
@@ -67,17 +66,22 @@ class TradeList extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Card(
+          DecoratedBox(
+            decoration: const BoxDecoration(
+              border: Border(bottom: BorderSide(color: AppColors.divider)),
+            ),
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.md + 2),
+              padding: const EdgeInsets.fromLTRB(
+                0,
+                AppSpacing.xs,
+                0,
+                AppSpacing.lg,
+              ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(
-                    'Trading Summary',
-                    style: AppTypography.titleMedium.copyWith(fontSize: 17),
-                  ),
-                  const SizedBox(height: AppSpacing.lg + 2),
+                  AppText('Trading Summary', style: AppTypography.sectionTitle),
+                  const SizedBox(height: AppSpacing.md),
                   LayoutBuilder(
                     builder: (context, constraints) {
                       final compact = constraints.maxWidth < 380;
@@ -102,7 +106,7 @@ class TradeList extends StatelessWidget {
                                 ),
                               ],
                             ),
-                            const SizedBox(height: AppSpacing.lg + 2),
+                            const SizedBox(height: AppSpacing.md),
                             Row(
                               children: [
                                 Expanded(
@@ -173,7 +177,7 @@ class TradeList extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: AppSpacing.lg),
+          const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
               Expanded(
@@ -204,17 +208,19 @@ class TradeList extends StatelessWidget {
               ),
             )
           else
-            ...orders.take(4).map(
-              (order) => Padding(
-                padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-                child: OrderCard(
-                  order: order,
-                  compact: true,
-                  onCancel: onCancel,
+            ...orders
+                .take(4)
+                .map(
+                  (order) => Padding(
+                    padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+                    child: OrderCard(
+                      order: order,
+                      compact: true,
+                      onCancel: onCancel,
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          const Divider(height: 28),
+          const Divider(height: AppSpacing.lg),
           Row(
             children: [
               Expanded(
@@ -245,10 +251,12 @@ class TradeList extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm + 1),
           Container(
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               color: AppColors.surface,
-              borderRadius: AppRadius.borderSm,
-              border: Border.all(color: AppColors.divider),
+              border: Border(
+                top: BorderSide(color: AppColors.divider),
+                bottom: BorderSide(color: AppColors.divider),
+              ),
             ),
             child: positions.isEmpty
                 ? Padding(
@@ -433,12 +441,12 @@ class TradeList extends StatelessWidget {
   }
 
   Widget _summary(String label, String value, Color color) => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 7),
+    padding: const EdgeInsets.only(right: AppSpacing.xs),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppText(label, maxLines: 2, style: AppTypography.caption),
-        const SizedBox(height: 7),
+        const SizedBox(height: AppSpacing.xs),
         FittedBox(
           fit: BoxFit.scaleDown,
           alignment: Alignment.centerLeft,

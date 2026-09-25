@@ -1922,14 +1922,14 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
               ),
               IconButton(
-                tooltip: 'Search stocks',
+                tooltip: tr('Search stocks'),
                 onPressed: _openStockSearch,
                 icon: const Icon(Icons.search_rounded, size: 22),
               ),
               Builder(
                 builder: (scaffoldContext) => IconButton(
                   key: const ValueKey('profile-settings-button'),
-                  tooltip: 'Settings',
+                  tooltip: tr('Settings'),
                   onPressed: () => Scaffold.of(scaffoldContext).openEndDrawer(),
                   icon: const Icon(Icons.settings_outlined, size: 22),
                 ),
@@ -2140,7 +2140,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
                 IconButton(
                   key: const ValueKey('close-profile-settings'),
-                  tooltip: 'Close settings',
+                  tooltip: tr('Close settings'),
                   onPressed: () => Navigator.of(context).pop(),
                   icon: const Icon(Icons.close_rounded),
                 ),

@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   Input,
+  Select,
   Space,
   Table,
   Typography,
@@ -36,6 +37,7 @@ type InstitutionalStock = {
 export default function BusinessInstitutionalPage() {
   const [items, setItems] = useState<InstitutionalStock[]>([]);
   const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -62,8 +64,9 @@ export default function BusinessInstitutionalPage() {
 
   const filtered = useMemo(() => {
     const value = keyword.trim().toLowerCase();
-    if (!value) return items;
-    return items.filter((item) =>
+    const source = statusFilter === "ALL" ? items : items.filter((item) => item.status === statusFilter);
+    if (!value) return source;
+    return source.filter((item) =>
       [
         item.symbol,
         item.name,
@@ -77,7 +80,7 @@ export default function BusinessInstitutionalPage() {
           .includes(value),
       ),
     );
-  }, [items, keyword]);
+  }, [items, keyword, statusFilter]);
 
   const columns: ColumnsType<InstitutionalStock> = [
     {
@@ -139,6 +142,18 @@ export default function BusinessInstitutionalPage() {
               marginBottom: 16,
             }}
           >
+                        <Select
+              value={statusFilter}
+              onChange={setStatusFilter}
+              aria-label="按状态筛选机构股票"
+              style={{ width: 160 }}
+              options={[
+                { value: "ALL", label: `全部状态（${items.length}）` },
+                { value: "ACTIVE", label: `已启用（${items.filter((item) => item.status === "ACTIVE").length}）` },
+                { value: "INACTIVE", label: `已停用（${items.filter((item) => item.status !== "ACTIVE").length}）` },
+              ]}
+            />
+
             <Input
               allowClear
               prefix={<SearchOutlined />}

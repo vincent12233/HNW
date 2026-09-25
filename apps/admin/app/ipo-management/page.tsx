@@ -78,6 +78,7 @@ export default function IpoManagementPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [keyword, setKeyword] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [open, setOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Ipo | null>(null);
@@ -188,13 +189,13 @@ export default function IpoManagementPage() {
 
   const filtered = useMemo(
     () =>
-      filterLoadedRows(items, keyword, (item) => [
+      filterLoadedRows(items.filter((item) => statusFilter === "ALL" || item.status === statusFilter), keyword, (item) => [
         item.symbol,
         item.companyName,
         item.exchange,
         item.status,
       ]),
-    [items, keyword],
+    [items, keyword, statusFilter],
   );
 
   return (
@@ -214,6 +215,19 @@ export default function IpoManagementPage() {
             </Space>
           }
         >
+          <Select
+            value={statusFilter}
+            onChange={setStatusFilter}
+            aria-label="按状态筛选 IPO"
+            style={{ width: 170 }}
+            options={[
+              { value: "ALL", label: `全部状态（${items.length}）` },
+              { value: "DRAFT", label: `草稿（${items.filter((item) => item.status === "DRAFT").length}）` },
+              { value: "PUBLISHED", label: `已上架（${items.filter((item) => item.status === "PUBLISHED").length}）` },
+              { value: "OPEN", label: `开放认购（${items.filter((item) => item.status === "OPEN").length}）` },
+              { value: "CLOSED", label: `已关闭（${items.filter((item) => item.status === "CLOSED").length}）` },
+            ]}
+          />
           <Input allowClear prefix={<SearchOutlined aria-hidden />} placeholder="搜索已加载的代码、公司或状态" value={keyword} onChange={(event) => setKeyword(event.target.value)} aria-label="搜索已加载的 IPO" style={{ width: 360, maxWidth: "100%" }} />
         </OpsToolbar>
         <Text type="secondary">{PRODUCT_COPY.loadedFilter}</Text>

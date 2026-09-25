@@ -191,6 +191,7 @@ export default function CustomersPage() {
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [tierFilter, setTierFilter] = useState<string>("ALL");
   const [businessFilter, setBusinessFilter] = useState<string>("ALL");
+  const [accountFilter, setAccountFilter] = useState<string>("ALL");
   const [error, setError] = useState("");
   const [detailError, setDetailError] = useState("");
   const debouncedKeyword = useDebouncedValue(keyword);
@@ -306,6 +307,8 @@ export default function CustomersPage() {
         if (businessFilter !== "ALL" && customer.assignedBusiness?.id !== businessFilter) {
           return false;
         }
+        if (accountFilter === "WITH_ACCOUNT" && !customer.account?.accountNumber) return false;
+        if (accountFilter === "WITHOUT_ACCOUNT" && customer.account?.accountNumber) return false;
         return true;
       }),
       debouncedKeyword,
@@ -321,19 +324,21 @@ export default function CustomersPage() {
         customer.clientTier,
       ],
     );
-  }, [businessFilter, customers, debouncedKeyword, statusFilter, tierFilter]);
+  }, [accountFilter, businessFilter, customers, debouncedKeyword, statusFilter, tierFilter]);
 
   const hasFilters =
     keyword.trim() !== "" ||
     statusFilter !== "ALL" ||
     tierFilter !== "ALL" ||
-    businessFilter !== "ALL";
+    businessFilter !== "ALL" ||
+    accountFilter !== "ALL";
 
   function clearFilters() {
     setKeyword("");
     setStatusFilter("ALL");
     setTierFilter("ALL");
     setBusinessFilter("ALL");
+    setAccountFilter("ALL");
   }
 
   const columns: ColumnsType<Customer> = [

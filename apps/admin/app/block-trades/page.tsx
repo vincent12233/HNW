@@ -6,6 +6,7 @@ import {
   Card,
   DatePicker,
   Form,
+  Input,
   InputNumber,
   Modal,
   Select,
@@ -58,6 +59,8 @@ export default function OtcOffersPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [editing, setEditing] = useState<Offer | null>(null);
   const [loading, setLoading] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
+  const [keyword, setKeyword] = useState("");
   const [form] = Form.useForm();
   const [editForm] = Form.useForm();
   const selectedInstrumentId = Form.useWatch("instrumentId", form);
@@ -80,6 +83,18 @@ export default function OtcOffersPage() {
   const listedInstrumentIds = useMemo(
     () => new Set(offers.map((offer) => offer.instrument.id)),
     [offers],
+  );
+
+  const filteredOffers = useMemo(
+    () => {
+      const query = keyword.trim().toLowerCase();
+      return offers.filter((offer) => {
+        const matchesStatus = statusFilter === "ALL" || (statusFilter === "ACTIVE" ? offer.isActive : !offer.isActive);
+        const matchesKeyword = !query || [offer.instrument.symbol, offer.instrument.name, offer.instrument.exchange].some((value) => value.toLowerCase().includes(query));
+        return matchesStatus && matchesKeyword;
+      });
+    },
+    [offers, statusFilter, keyword],
   );
 
   const creatableInstruments = useMemo(
@@ -239,6 +254,26 @@ export default function OtcOffersPage() {
             <Button icon={<ReloadOutlined />} onClick={() => void load()} aria-label="刷新 OTC 上架">
               刷新
             </Button>
+            <Input
+              allowClear
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+              placeholder="搜索股票代码、公司名称或交易所"
+              aria-label="搜索 OTC 股票"
+              style={{ width: 260, maxWidth: "100%" }}
+            />
+            <Select
+              value={statusFilter}
+              onChange={setStatusFilter}
+              aria-label="筛选 OTC 状态"
+              options={[
+                { value: "ALL", label: `全部（${offers.length}）` },
+                { value: "ACTIVE", label: `已上架（${offers.filter((offer) => offer.isActive).length}）` },
+                { value: "INACTIVE", label: `已下架（${offers.filter((offer) => !offer.isActive).length}）` },
+              ]}
+              style={{ minWidth: 150 }}
+            />
+
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -254,7 +289,7 @@ export default function OtcOffersPage() {
             rowKey="id"
             className="ops-directory-table"
             loading={loading}
-            dataSource={offers}
+            dataSource={filteredOffers}
             scroll={{ x: 1100 }}
             columns={[
               {

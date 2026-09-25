@@ -736,19 +736,21 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 16,
-                      backgroundColor: _categoryColor(
-                        category['category'],
-                      ).withValues(alpha: .1),
+                    Container(
+                      width: 30,
+                      height: 30,
+                      decoration: BoxDecoration(
+                        color: _categoryColor(category['category']),
+                        borderRadius: BorderRadius.circular(7),
+                      ),
                       child: Icon(
                         category['category'] == 'OTC'
                             ? Icons.verified_user_outlined
                             : category['category'] == 'IPO'
                             ? Icons.rocket_launch_outlined
                             : Icons.account_balance_outlined,
-                        color: _categoryColor(category['category']),
-                        size: 19,
+                        color: AppColors.textInverse,
+                        size: 17,
                       ),
                     ),
                     const SizedBox(width: AppSpacing.md - 2),

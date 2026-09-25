@@ -228,6 +228,16 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('asset details use high-contrast category icons', (tester) async {
+    await tester.pumpWidget(portfolioApp((_) async => portfolioFixture()));
+    await tester.pumpAndSettle();
+    final icon = tester.widget<Icon>(
+      find.byIcon(Icons.account_balance_outlined).first,
+    );
+    expect(icon.color, AppColors.textInverse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('missing history does not draw a fake curve', (tester) async {
     setView(tester, const Size(390, 844));
     await tester.pumpWidget(

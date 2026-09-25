@@ -1226,33 +1226,28 @@ class _MarketsPageState extends State<MarketsPage> {
             ),
           ),
           const SizedBox(height: AppSpacing.sm - 1),
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            spacing: AppSpacing.md,
-            runSpacing: AppSpacing.xs + 1,
-            children: [
-              AppText(
-                'Advances  $advances',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.gain,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              AppText(
-                'Declines  $declines',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.loss,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              AppText(
-                'Unchanged  $unchanged',
-                style: AppTypography.labelMedium.copyWith(
-                  color: AppColors.neutral,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final metrics = [
+                _breadthMetric('Advances', advances, AppColors.gain),
+                _breadthMetric('Declines', declines, AppColors.loss),
+                _breadthMetric('Unchanged', unchanged, AppColors.neutral),
+              ];
+              if (constraints.maxWidth < 280 ||
+                  MediaQuery.textScalerOf(context).scale(1) > 1.3) {
+                return Wrap(
+                  spacing: AppSpacing.xl,
+                  runSpacing: AppSpacing.md,
+                  children: metrics,
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final metric in metrics) Expanded(child: metric),
+                ],
+              );
+            },
           ),
           const SizedBox(height: AppSpacing.md - 2),
           ClipRRect(
@@ -1287,6 +1282,25 @@ class _MarketsPageState extends State<MarketsPage> {
       ),
     );
   }
+
+  Widget _breadthMetric(String label, int count, Color color) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      AppText(
+        label,
+        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+      ),
+      const SizedBox(height: AppSpacing.xxs),
+      AppText(
+        count.toString(),
+        style: AppTypography.numericSmall.copyWith(
+          color: color,
+          fontWeight: FontWeight.w800,
+        ),
+      ),
+    ],
+  );
 
   Widget _marketBanner() {
     return ListenableBuilder(

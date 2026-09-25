@@ -409,7 +409,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             const SizedBox(height: AppSpacing.lg),
             if (!empty && !_hidden)
               SizedBox(
-                height: 64,
+                height: 68,
                 width: double.infinity,
                 child: AppStatusSwitch(
                   switchKey: '$_period|$hasHistory|$_loading',

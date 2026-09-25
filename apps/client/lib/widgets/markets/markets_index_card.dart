@@ -78,6 +78,7 @@ class MarketsIndexCard extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: AppColors.surfaceSecondary,
                     borderRadius: AppRadius.borderSm,
+                    border: Border.all(color: AppColors.border),
                   ),
                   child: AppText(
                     venue,
@@ -128,7 +129,7 @@ class MarketsIndexCard extends StatelessWidget {
             ),
             const SizedBox(height: AppSpacing.sm - 2),
             SizedBox(
-              height: 24,
+              height: 28,
               width: double.infinity,
               child: available && history.length >= 2
                   ? ExcludeSemantics(

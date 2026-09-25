@@ -555,6 +555,12 @@ class _MarketsPageState extends State<MarketsPage> {
                           horizontal: AppSpacing.md,
                         ),
                         decoration: BoxDecoration(
+                          color: selected
+                              ? AppColors.brandPrimarySoft
+                              : Colors.transparent,
+                          borderRadius: const BorderRadius.vertical(
+                            top: Radius.circular(AppRadius.sm),
+                          ),
                           border: Border(
                             bottom: BorderSide(
                               color: selected

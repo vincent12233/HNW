@@ -32,6 +32,10 @@ void main() {
       );
       await tester.pump(const Duration(seconds: 5));
       expect(
+        tester.getSize(find.byType(NavigationBar)).height,
+        width == 320 ? 76 : 68,
+      );
+      expect(
         find.byKey(const ValueKey('profile-settings-button')),
         findsNothing,
       );

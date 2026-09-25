@@ -882,6 +882,9 @@ class _MarketHomePageState extends State<MarketHomePage>
   @override
   Widget build(BuildContext context) {
     Localizations.localeOf(context);
+    final navHeight = MediaQuery.textScalerOf(context).scale(1) > 1.2
+        ? AppSpacing.navHeight + 8
+        : AppSpacing.navHeight;
     return Scaffold(
       backgroundColor: AppConfig.backgroundColor,
       endDrawer: selectedIndex == 4 ? _profileSettingsDrawer() : null,
@@ -937,7 +940,7 @@ class _MarketHomePageState extends State<MarketHomePage>
               constraints: const BoxConstraints(maxWidth: 760),
               child: NavigationBarTheme(
                 data: NavigationBarThemeData(
-                  height: AppSpacing.navHeight,
+                  height: navHeight,
                   elevation: 0,
                   backgroundColor: AppColors.surface,
                   surfaceTintColor: Colors.transparent,
@@ -966,7 +969,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   }),
                 ),
                 child: NavigationBar(
-                  height: AppSpacing.navHeight,
+                  height: navHeight,
                   elevation: 0,
                   backgroundColor: AppColors.surface,
                   surfaceTintColor: Colors.transparent,
@@ -1517,7 +1520,10 @@ class _MarketHomePageState extends State<MarketHomePage>
           companyCard: companyShowcases.isEmpty
               ? null
               : _companyShowcaseCard(companyShowcases.first),
-          bottomPadding: SupportUiMetrics.of(context).fabBottom + AppSpacing.lg,
+          bottomPadding:
+              SupportUiMetrics.of(context).fabBottom +
+              AppSpacing.lg +
+              (MediaQuery.textScalerOf(context).scale(1) > 1.2 ? 8 : 0),
         ),
       ),
     );

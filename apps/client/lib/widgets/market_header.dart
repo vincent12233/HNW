@@ -32,6 +32,13 @@ class MarketHeader extends StatelessWidget {
     return 'Good Evening';
   }
 
+  IconData get greetingIcon {
+    final hour = DateTime.now().hour;
+    if (hour < 6 || hour >= 18) return Icons.nights_stay_outlined;
+    if (hour < 12) return Icons.wb_sunny_outlined;
+    return Icons.light_mode_outlined;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -79,11 +86,21 @@ class MarketHeader extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  AppText(
-                    greeting,
-                    style: AppTypography.labelSmall.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
+                  Row(
+                    children: [
+                      Icon(greetingIcon, size: 12, color: AppColors.warning),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: AppText(
+                          greeting,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: AppTypography.labelSmall.copyWith(
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   AppText(

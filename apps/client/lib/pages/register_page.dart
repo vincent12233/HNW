@@ -2,6 +2,7 @@ import '../l10n/app_language.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
@@ -428,6 +429,13 @@ class _RegisterPageState extends State<RegisterPage> {
                       focusNode: inviteFocus,
                       enabled: !busy && !succeeded,
                       textCapitalization: TextCapitalization.characters,
+                      inputFormatters: [
+                        TextInputFormatter.withFunction((oldValue, newValue) {
+                          return newValue.copyWith(
+                            text: newValue.text.toUpperCase(),
+                          );
+                        }),
+                      ],
                       textInputAction: TextInputAction.done,
                       onSubmitted: (_) => _submit(),
                       decoration:

@@ -171,7 +171,7 @@ void main() {
     expect(find.text('+1'), findsOneWidget);
     expect(find.text('9876543210'), findsOneWidget);
     expect(find.text('password1'), findsNWidgets(2));
-    expect(find.text('invite99'), findsOneWidget);
+    expect(find.text('INVITE99'), findsOneWidget);
     expect(find.text('Invite Code is Mandatory'), findsOneWidget);
     await disposeTree(tester);
   });

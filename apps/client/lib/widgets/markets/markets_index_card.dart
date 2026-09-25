@@ -47,7 +47,7 @@ class MarketsIndexCard extends StatelessWidget {
       label: label,
       child: AppCard(
         radius: AppRadius.md,
-        padding: const EdgeInsets.all(AppSpacing.md + 2),
+        padding: const EdgeInsets.all(AppSpacing.md),
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,6 +65,37 @@ class MarketsIndexCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.xs,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceSecondary,
+                    borderRadius: AppRadius.borderSm,
+                  ),
+                  child: AppText(
+                    venue,
+                    style: AppTypography.caption.copyWith(
+                      color: AppColors.textTertiary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppText(
+              available ? formatIndex(price) : '--',
+              style: AppTypography.numericSmall.copyWith(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Row(
+              children: [
                 Icon(
                   !available
                       ? Icons.schedule_rounded
@@ -76,49 +107,35 @@ class MarketsIndexCard extends StatelessWidget {
                   size: AppMotion.iconInline,
                   color: color,
                 ),
-              ],
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            AppText(
-              venue,
-              style: AppTypography.caption.copyWith(
-                color: AppColors.textTertiary,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            AppText(
-              available ? formatIndex(price) : '--',
-              style: AppTypography.numericSmall.copyWith(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            AppText(
-              available ? signed : 'Awaiting live quote',
-              maxLines: 2,
-              style: AppTypography.labelSmall.copyWith(
-                color: color,
-                fontWeight: FontWeight.w800,
-                fontFeatures: AppTypography.tabularFeatures,
-              ),
-            ),
-            if (available && history.length >= 2) ...[
-              const SizedBox(height: AppSpacing.sm),
-              ExcludeSemantics(
-                child: SizedBox(
-                  height: 24,
-                  width: double.infinity,
-                  child: CustomPaint(
-                    painter: MiniLineChartPainter(
+                Expanded(
+                  child: AppText(
+                    available ? signed : 'Awaiting live quote',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelSmall.copyWith(
                       color: color,
-                      values: history,
+                      fontWeight: FontWeight.w800,
+                      fontFeatures: AppTypography.tabularFeatures,
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            SizedBox(
+              height: 24,
+              width: double.infinity,
+              child: available && history.length >= 2
+                  ? ExcludeSemantics(
+                      child: CustomPaint(
+                        painter: MiniLineChartPainter(
+                          color: color,
+                          values: history,
+                        ),
+                      ),
+                    )
+                  : const SizedBox.shrink(),
+            ),
           ],
         ),
       ),

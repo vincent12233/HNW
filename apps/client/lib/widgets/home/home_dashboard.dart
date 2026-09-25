@@ -1220,16 +1220,21 @@ class _NewsThumbnail extends StatelessWidget {
         ),
       ),
     );
-    return SizedBox(
-      width: width,
-      height: height,
-      child: imageUrl?.isNotEmpty == true
-          ? Image.network(
-              imageUrl!,
-              fit: BoxFit.cover,
-              errorBuilder: (_, _, _) => fallback,
-            )
-          : fallback,
+    return ClipRRect(
+      borderRadius: const BorderRadius.horizontal(
+        left: Radius.circular(AppRadius.sm),
+      ),
+      child: SizedBox(
+        width: width,
+        height: height,
+        child: imageUrl?.isNotEmpty == true
+            ? Image.network(
+                imageUrl!,
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => fallback,
+              )
+            : fallback,
+      ),
     );
   }
 }

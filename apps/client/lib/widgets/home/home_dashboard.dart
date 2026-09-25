@@ -595,26 +595,7 @@ class _IndicesGrid extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        if (constraints.maxWidth < 520 && scale <= 1.2) {
-          return SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                for (var index = 0; index < indices.length; index++) ...[
-                  if (index > 0) const SizedBox(width: AppSpacing.sm),
-                  SizedBox(
-                    width: 116,
-                    child: _IndexChip(
-                      item: indices[index],
-                      onOpen: onOpenIndex,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          );
-        }
-        final columns = constraints.maxWidth >= 520
+        final columns = constraints.maxWidth >= 360 && scale <= 1.2
             ? 4
             : constraints.maxWidth < 300 ||
                   scale > 1.2 && constraints.maxWidth < 360
@@ -662,10 +643,14 @@ class _IndexChip extends StatelessWidget {
         constraints: const BoxConstraints(minHeight: AppMotion.tapTarget),
         child: AppCard(
           radius: AppRadius.md,
-          padding: const EdgeInsets.fromLTRB(
-            AppSpacing.md,
+          padding: EdgeInsets.fromLTRB(
+            MediaQuery.sizeOf(context).width >= 360
+                ? AppSpacing.sm
+                : AppSpacing.md,
             AppSpacing.sm + 2,
-            AppSpacing.md,
+            MediaQuery.sizeOf(context).width >= 360
+                ? AppSpacing.sm
+                : AppSpacing.md,
             AppSpacing.sm + 2,
           ),
           onTap: onOpen == null ? null : () => onOpen!(item),
@@ -715,24 +700,24 @@ class _IndexChip extends StatelessWidget {
                       ),
                     ),
                   ),
-                  if (item.available && item.history.length >= 2) ...[
-                    const SizedBox(width: AppSpacing.sm),
-                    ExcludeSemantics(
-                      child: SizedBox(
-                        key: ValueKey<String>('home-index-chart-${item.label}'),
-                        width: 56,
-                        height: 24,
-                        child: CustomPaint(
-                          painter: MiniLineChartPainter(
-                            color: color,
-                            values: item.history,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
                 ],
               ),
+              if (item.available && item.history.length >= 2) ...[
+                const SizedBox(height: AppSpacing.xs),
+                ExcludeSemantics(
+                  child: SizedBox(
+                    key: ValueKey<String>('home-index-chart-${item.label}'),
+                    width: double.infinity,
+                    height: 22,
+                    child: CustomPaint(
+                      painter: MiniLineChartPainter(
+                        color: color,
+                        values: item.history,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

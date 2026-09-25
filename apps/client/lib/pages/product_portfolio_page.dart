@@ -1136,12 +1136,20 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
         title,
         style: AppTypography.sectionTitle.copyWith(
           fontSize: 14,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.1,
         ),
       );
       final button = action == null
           ? null
           : TextButton(
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+                minimumSize: const Size(
+                  AppMotion.tapTarget,
+                  AppMotion.tapTarget,
+                ),
+              ),
               onPressed: action,
               child: AppText(
                 _portfolioCopy('portfolio.view_details', 'View Details'),

@@ -23,7 +23,17 @@ class ProfileSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppText(title, style: AppTypography.titleSmall),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs),
+          child: AppText(
+            title,
+            style: AppTypography.titleSmall.copyWith(
+              color: AppColors.textSecondary,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.2,
+            ),
+          ),
+        ),
         const SizedBox(height: AppSpacing.sm + 2),
         AppCard(
           padding: EdgeInsets.zero,

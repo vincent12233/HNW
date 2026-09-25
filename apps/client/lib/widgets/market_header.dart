@@ -53,10 +53,10 @@ class MarketHeader extends StatelessWidget {
                 onTap: onAvatarTap,
                 customBorder: const CircleBorder(),
                 child: Padding(
-                  padding: const EdgeInsets.all(4),
+                  padding: const EdgeInsets.all(3),
                   child: ExcludeSemantics(
                     child: CircleAvatar(
-                      radius: 20,
+                      radius: 19,
                       backgroundColor: AppColors.brandPrimarySoft,
                       backgroundImage: avatarBytes == null
                           ? null

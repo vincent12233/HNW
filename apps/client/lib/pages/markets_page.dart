@@ -524,67 +524,74 @@ class _MarketsPageState extends State<MarketsPage> {
                   ),
                 ),
               ),
-            SizedBox(
-              height: AppMotion.tapTarget + 4,
-              child: ListView.separated(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                scrollDirection: Axis.horizontal,
-                itemCount: visibleTabs.length,
-                separatorBuilder: (_, _) =>
-                    const SizedBox(width: AppSpacing.sm),
-                itemBuilder: (context, index) {
-                  final tab = visibleTabs[index];
-                  final contentIndex = tab.$1;
-                  final selected = effectiveTab == contentIndex;
+            DecoratedBox(
+              decoration: const BoxDecoration(
+                border: Border(bottom: BorderSide(color: AppColors.border)),
+              ),
+              child: SizedBox(
+                height: AppMotion.tapTarget + 4,
+                child: ListView.separated(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.lg,
+                  ),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: visibleTabs.length,
+                  separatorBuilder: (_, _) =>
+                      const SizedBox(width: AppSpacing.sm),
+                  itemBuilder: (context, index) {
+                    final tab = visibleTabs[index];
+                    final contentIndex = tab.$1;
+                    final selected = effectiveTab == contentIndex;
 
-                  return Semantics(
-                    button: true,
-                    selected: selected,
-                    child: InkWell(
-                      onTap: () {
-                        setState(() {
-                          selectedTab = contentIndex;
-                        });
-                      },
-                      child: Container(
-                        alignment: Alignment.center,
-                        constraints: const BoxConstraints(
-                          minHeight: AppMotion.tapTarget,
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.md,
-                        ),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? AppColors.brandPrimarySoft
-                              : Colors.transparent,
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(AppRadius.sm),
+                    return Semantics(
+                      button: true,
+                      selected: selected,
+                      child: InkWell(
+                        onTap: () {
+                          setState(() {
+                            selectedTab = contentIndex;
+                          });
+                        },
+                        child: Container(
+                          alignment: Alignment.center,
+                          constraints: const BoxConstraints(
+                            minHeight: AppMotion.tapTarget,
                           ),
-                          border: Border(
-                            bottom: BorderSide(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.md,
+                          ),
+                          decoration: BoxDecoration(
+                            color: selected
+                                ? AppColors.brandPrimarySoft
+                                : Colors.transparent,
+                            borderRadius: const BorderRadius.vertical(
+                              top: Radius.circular(AppRadius.sm),
+                            ),
+                            border: Border(
+                              bottom: BorderSide(
+                                color: selected
+                                    ? AppColors.brandPrimary
+                                    : Colors.transparent,
+                                width: 2,
+                              ),
+                            ),
+                          ),
+                          child: AppText(
+                            tab.$2,
+                            style: AppTypography.labelSmall.copyWith(
                               color: selected
                                   ? AppColors.brandPrimary
-                                  : Colors.transparent,
-                              width: 2,
+                                  : AppColors.textSecondary,
+                              fontWeight: selected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
                             ),
                           ),
                         ),
-                        child: AppText(
-                          tab.$2,
-                          style: AppTypography.labelSmall.copyWith(
-                            color: selected
-                                ? AppColors.brandPrimary
-                                : AppColors.textSecondary,
-                            fontWeight: selected
-                                ? FontWeight.w700
-                                : FontWeight.w500,
-                          ),
-                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ),
             const SizedBox(height: AppSpacing.md),

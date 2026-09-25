@@ -15,6 +15,7 @@ class HomeActionButton extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.onTap,
+    this.showChevron = true,
   });
 
   final String label;
@@ -22,6 +23,7 @@ class HomeActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
+  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
@@ -31,20 +33,20 @@ class HomeActionButton extends StatelessWidget {
         radius: AppRadius.md,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.md,
+          vertical: AppSpacing.sm + 2,
         ),
         onTap: onTap,
         borderColor: color.withValues(alpha: 0.16),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 58),
+          constraints: const BoxConstraints(minHeight: 48),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact =
                   constraints.maxWidth < 150 ||
                   MediaQuery.textScalerOf(context).scale(13) > 18;
               final iconView = Container(
-                width: 36,
-                height: 36,
+                width: 34,
+                height: 34,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: AppRadius.borderSm,
@@ -79,7 +81,12 @@ class HomeActionButton extends StatelessWidget {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(children: [iconView, const Spacer(), arrow]),
+                    Row(
+                      children: [
+                        iconView,
+                        if (showChevron) ...[const Spacer(), arrow],
+                      ],
+                    ),
                     const SizedBox(height: AppSpacing.md),
                     labels,
                   ],
@@ -90,7 +97,7 @@ class HomeActionButton extends StatelessWidget {
                   iconView,
                   const SizedBox(width: AppSpacing.sm + 2),
                   Expanded(child: labels),
-                  if (constraints.maxWidth >= 190) arrow,
+                  if (showChevron && constraints.maxWidth >= 190) arrow,
                 ],
               );
             },

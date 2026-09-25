@@ -486,6 +486,7 @@ class _HomeQuickActions extends StatelessWidget {
         icon: Icons.add_card_outlined,
         color: AppColors.brandPrimary,
         onTap: dashboard.onDeposit,
+        showChevron: false,
       ),
       HomeActionButton(
         label: 'Withdraw',

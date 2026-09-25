@@ -10,8 +10,8 @@ void main() {
       const MaterialApp(home: Scaffold(body: MarketStatusCard())),
     );
     expect(find.text('Market status unavailable'), findsOneWidget);
-    expect(find.text('NSE Open'), findsNothing);
-    expect(find.text('NSE Closed'), findsNothing);
+    expect(find.text('NSE & BSE Open'), findsNothing);
+    expect(find.text('NSE & BSE Closed'), findsNothing);
   });
 
   testWidgets('server session and quote connection are distinct states', (
@@ -24,7 +24,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('NSE Open'), findsOneWidget);
+    expect(find.text('NSE & BSE Open'), findsOneWidget);
     expect(
       find.text('Live quotes reconnecting. Prices may be delayed.'),
       findsOneWidget,
@@ -36,7 +36,7 @@ void main() {
         ),
       ),
     );
-    expect(find.text('NSE Closed'), findsOneWidget);
+    expect(find.text('NSE & BSE Closed'), findsOneWidget);
     expect(
       find.text('Live quotes reconnecting. Prices may be delayed.'),
       findsNothing,

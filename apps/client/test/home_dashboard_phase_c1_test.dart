@@ -256,7 +256,7 @@ void main() {
     expect(find.byType(LinearProgressIndicator), findsWidgets);
     expect(find.text(formatPrice(999999)), findsNothing);
     expect(find.text(formatSignedPrice(8888)), findsNothing);
-    expect(find.textContaining('NSE Open'), findsOneWidget);
+    expect(find.textContaining('NSE & BSE Open'), findsOneWidget);
     expectNoUnsupportedProductCtas();
   });
 
@@ -339,12 +339,12 @@ void main() {
         quoteUpdatedAt: DateTime(2026, 9, 19, 9),
       ),
     );
-    expect(find.text('NSE Closed'), findsOneWidget);
+    expect(find.text('NSE & BSE Closed'), findsOneWidget);
     expect(
       find.text('Live quotes reconnecting. Prices may be delayed.'),
       findsWidgets,
     );
-    expect(find.text('NSE Open'), findsNothing);
+    expect(find.text('NSE & BSE Open'), findsNothing);
   });
 
   testWidgets('formats assets, frozen funds and signed daily pnl', (

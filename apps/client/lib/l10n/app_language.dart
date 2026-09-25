@@ -287,8 +287,8 @@ const hindi = <String, String>{
       'पहले लोड किया गया दस्तावेज़ दिखाया जा रहा है। अपडेट जाँचे नहीं जा सके। कृपया फिर रीफ़्रेश करें।',
   'Showing the bundled document. Connect and refresh to check the latest published version.':
       'ऐप के साथ दिया गया दस्तावेज़ दिखाया जा रहा है। नवीनतम प्रकाशित संस्करण देखने के लिए कनेक्ट करके रीफ़्रेश करें।',
-  'NSE Open': 'एनएसई खुला है',
-  'NSE Closed': 'एनएसई बंद है',
+  'NSE & BSE Open': 'एनएसई और बीएसई खुले हैं',
+  'NSE & BSE Closed': 'एनएसई और बीएसई बंद हैं',
   'Market status unavailable': 'बाज़ार की स्थिति उपलब्ध नहीं है',
   'Live quotes reconnecting. Prices may be delayed.':
       'लाइव भाव फिर से जुड़ रहे हैं। कीमतों में देरी हो सकती है।',

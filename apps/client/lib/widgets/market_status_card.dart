@@ -30,8 +30,8 @@ class MarketStatusCard extends StatelessWidget {
       null => AppColors.warning,
     };
     final statusText = switch (isOpen) {
-      true => 'NSE Open',
-      false => 'NSE Closed',
+      true => 'NSE & BSE Open',
+      false => 'NSE & BSE Closed',
       null => 'Market status unavailable',
     };
     final tint = statusColor.withValues(alpha: 0.08);

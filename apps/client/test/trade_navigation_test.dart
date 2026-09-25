@@ -25,7 +25,7 @@ class EmptyTradingService extends TradingService {
 }
 
 void main() {
-  testWidgets('trade actions and product tabs fit phone widths', (
+  testWidgets('trade overview omits buy and sell shortcuts on phone widths', (
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
@@ -53,8 +53,8 @@ void main() {
         ),
       );
       await tester.pump(const Duration(seconds: 1));
-      expect(find.byIcon(Icons.shopping_cart_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.sell_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.shopping_cart_outlined), findsNothing);
+      expect(find.byIcon(Icons.sell_outlined), findsNothing);
       expect(find.widgetWithText(TextButton, 'Overview'), findsWidgets);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());

@@ -332,7 +332,7 @@ void main() {
     await tester.pumpWidget(
       host(const MarketStatusCard(isOpen: false, hours: '09:15 - 15:30 IST')),
     );
-    expect(find.text('NSE Closed'), findsOneWidget);
+    expect(find.text('NSE & BSE Closed'), findsOneWidget);
     expect(find.text('09:15 - 15:30 IST'), findsOneWidget);
   });
 

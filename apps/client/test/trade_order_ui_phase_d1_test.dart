@@ -214,14 +214,15 @@ void main() {
     StockDetailPage.debugNextConfirmedOrder = null;
   });
 
-  testWidgets('trade overview shows real empty states and Buy/Sell', (
+  testWidgets('trade overview shows real empty states without shortcuts', (
     tester,
   ) async {
     await pumpTrade(tester, size: const Size(390, 844));
     expect(find.text('Available Funds'), findsWidgets);
-    expect(find.text('Frozen Funds'), findsOneWidget);
-    expect(find.text('Buy'), findsWidgets);
-    expect(find.text('Sell'), findsWidgets);
+    expect(find.text('Realized P&L'), findsOneWidget);
+    expect(find.text('Unrealized P&L'), findsWidgets);
+    expect(find.widgetWithText(FilledButton, 'Buy'), findsNothing);
+    expect(find.widgetWithText(FilledButton, 'Sell'), findsNothing);
     expect(find.text('No orders yet'), findsOneWidget);
     await reveal(
       tester,
@@ -230,41 +231,6 @@ void main() {
     );
     expect(find.textContaining('No open positions'), findsOneWidget);
     expect(tester.takeException(), isNull);
-    await disposeTree(tester);
-  });
-
-  testWidgets('unsupported products are omitted from the trade picker', (
-    tester,
-  ) async {
-    await pumpTrade(
-      tester,
-      stocks: [
-        equity(symbol: 'NIFTYFUT', name: 'Nifty Future', category: 'F&O'),
-        equity(),
-      ],
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Buy'));
-    await pumpFrames(tester);
-    expect(find.text('RELIANCE'), findsOneWidget);
-    expect(find.text('NIFTYFUT'), findsNothing);
-    await disposeTree(tester);
-  });
-
-  testWidgets('empty picker stays honest when nothing is tradable', (
-    tester,
-  ) async {
-    await pumpTrade(
-      tester,
-      stocks: [
-        equity(symbol: 'NIFTYFUT', name: 'Nifty Future', category: 'F&O'),
-      ],
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Sell'));
-    await pumpFrames(tester);
-    expect(
-      find.textContaining('Unsupported products cannot be ordered'),
-      findsOneWidget,
-    );
     await disposeTree(tester);
   });
 
@@ -443,7 +409,7 @@ void main() {
       ),
     );
     await pumpFrames(tester);
-    expect(find.text('NSE Closed'), findsWidgets);
+    expect(find.text('NSE & BSE Closed'), findsWidgets);
     await tester.tap(find.text('BUY'));
     await pumpFrames(tester);
     expect(find.text('Confirm Buy'), findsOneWidget);
@@ -675,21 +641,6 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Sell'));
     await pumpFrames(tester);
     expect(sides, [false]);
-    await disposeTree(tester);
-  });
-
-  testWidgets('generic Buy picker still defaults to buy', (tester) async {
-    final sides = <bool>[];
-    await pumpTrade(
-      tester,
-      stocks: [equity()],
-      onOpen: (stock, {required bool isBuy}) => sides.add(isBuy),
-    );
-    await tester.tap(find.widgetWithText(FilledButton, 'Buy'));
-    await pumpFrames(tester);
-    await tester.tap(find.text('RELIANCE'));
-    await pumpFrames(tester);
-    expect(sides, [true]);
     await disposeTree(tester);
   });
 

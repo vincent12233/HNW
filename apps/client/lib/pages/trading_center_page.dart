@@ -24,7 +24,6 @@ import '../widgets/trading/institutional_tab.dart';
 import '../widgets/trading/ipo_tab.dart';
 import '../widgets/trading/orders_tab.dart';
 import '../widgets/trading/otc_tab.dart';
-import '../widgets/markets/instrument_browse.dart';
 import '../widgets/market_status_card.dart';
 import '../widgets/trading/pending_center_tab.dart';
 import '../widgets/trading/trade_list.dart';
@@ -511,16 +510,20 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             _balanceMetric(
-                              'Frozen Funds',
-                              _accountSnapshot?.frozenBalance,
-                            ),
-                            const SizedBox(height: AppSpacing.md),
-                            _balanceMetric(
                               'Realized P&L',
                               _accountSnapshot?.realizedProfitLoss,
                               valueColor:
                                   (_accountSnapshot?.realizedProfitLoss ?? 0) >=
                                       0
+                                  ? AppColors.chartGain
+                                  : AppColors.loss,
+                            ),
+                            const SizedBox(height: AppSpacing.md),
+                            _balanceMetric(
+                              'Unrealized P&L',
+                              _accountSnapshot?.unrealizedPnl,
+                              valueColor:
+                                  (_accountSnapshot?.unrealizedPnl ?? 0) >= 0
                                   ? AppColors.chartGain
                                   : AppColors.loss,
                             ),
@@ -532,81 +535,6 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                 ),
                 _productTabs(),
                 if (![1, 5, 6].contains(selectedTab)) _tradingShortcuts(),
-                if (selectedTab == 0)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppSpacing.lg,
-                      AppSpacing.sm,
-                      AppSpacing.lg,
-                      0,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: SizedBox(
-                            height: AppSpacing.buttonHeight,
-                            child: FilledButton(
-                              onPressed: () => _openTicket(isBuy: true),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.buySoft,
-                                foregroundColor: AppColors.buy,
-                                elevation: 0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.shopping_cart_outlined,
-                                    size: 19,
-                                  ),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Flexible(
-                                    child: AppText(
-                                      AppContentService.instance.current.text(
-                                        'trading',
-                                        'action.buy',
-                                        fallback: 'Buy',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: AppSpacing.sm),
-                        Expanded(
-                          child: SizedBox(
-                            height: AppSpacing.buttonHeight,
-                            child: FilledButton(
-                              onPressed: () => _openTicket(isBuy: false),
-                              style: FilledButton.styleFrom(
-                                backgroundColor: AppColors.sellSoft,
-                                foregroundColor: AppColors.sell,
-                                elevation: 0,
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.sell_outlined, size: 19),
-                                  const SizedBox(width: AppSpacing.sm),
-                                  Flexible(
-                                    child: AppText(
-                                      AppContentService.instance.current.text(
-                                        'trading',
-                                        'action.sell',
-                                        fallback: 'Sell',
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 const SizedBox(height: AppSpacing.sm),
                 if (_ordersFailed || _accountFailed)
                   Padding(
@@ -652,68 +580,6 @@ class _TradingCenterPageState extends State<TradingCenterPage>
   void _selectTab(int index) {
     setState(() => selectedTab = index);
     if (index >= 2) unawaited(_refreshTradingData());
-  }
-
-  void _openTicket({required bool isBuy}) {
-    final tradable = widget.stocks
-        .where((item) => !isBrowseOnlyInstrument(item))
-        .toList();
-    showModalBottomSheet<void>(
-      context: context,
-      showDragHandle: true,
-      builder: (sheetContext) {
-        return SafeArea(
-          child: tradable.isEmpty
-              ? const Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppSpacing.lg,
-                    AppSpacing.sm,
-                    AppSpacing.lg,
-                    AppSpacing.xl,
-                  ),
-                  child: AppText(
-                    'No supported stocks are available to trade. Unsupported products cannot be ordered.',
-                  ),
-                )
-              : ListView(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppSpacing.lg,
-                        0,
-                        AppSpacing.lg,
-                        AppSpacing.sm,
-                      ),
-                      child: AppText(
-                        isBuy ? 'Buy' : 'Sell',
-                        style: AppTypography.titleLarge.copyWith(
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ),
-                    for (final stock in tradable)
-                      ListTile(
-                        title: AppText(stock.symbol),
-                        subtitle: AppText(
-                          stock.name.isEmpty ? stock.exchange : stock.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        onTap: () {
-                          Navigator.pop(sheetContext);
-                          final open = widget.onOpenOrderTicket;
-                          if (open != null) {
-                            open(stock, isBuy: isBuy);
-                          } else {
-                            widget.onTrade(stock);
-                          }
-                        },
-                      ),
-                  ],
-                ),
-        );
-      },
-    );
   }
 
   Widget _productTabs() => Padding(

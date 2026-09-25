@@ -998,24 +998,8 @@ class _MarketsPageState extends State<MarketsPage> {
   Widget _indexGrid(List<(String, double, double)> values) => LayoutBuilder(
     builder: (context, constraints) {
       final scale = MediaQuery.textScalerOf(context).scale(1);
-      final gap = constraints.maxWidth < 360 ? 8.0 : 10.0;
-      if (constraints.maxWidth >= 350 &&
-          constraints.maxWidth < 600 &&
-          scale <= 1.15) {
-        final cardWidth = (constraints.maxWidth - gap * 2) / 3;
-        return SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            children: [
-              for (var index = 0; index < values.length; index++) ...[
-                if (index > 0) SizedBox(width: gap),
-                SizedBox(width: cardWidth, child: _indexCard(values[index])),
-              ],
-            ],
-          ),
-        );
-      }
-      final columns = constraints.maxWidth >= 600 && scale <= 1.15 ? 4 : 2;
+      final gap = constraints.maxWidth < 360 ? 8.0 : 6.0;
+      final columns = constraints.maxWidth >= 360 && scale <= 1.15 ? 4 : 2;
       final width = (constraints.maxWidth - gap * (columns - 1)) / columns;
       return Wrap(
         spacing: gap,

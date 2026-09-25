@@ -47,7 +47,12 @@ class MarketsIndexCard extends StatelessWidget {
       label: label,
       child: AppCard(
         radius: AppRadius.md,
-        padding: const EdgeInsets.all(AppSpacing.md),
+        padding: EdgeInsets.all(
+          MediaQuery.sizeOf(context).width >= 360 &&
+                  MediaQuery.textScalerOf(context).scale(1) <= 1.15
+              ? AppSpacing.sm
+              : AppSpacing.md,
+        ),
         onTap: onTap,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -85,11 +90,11 @@ class MarketsIndexCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.sm - 2),
             AppText(
               available ? formatIndex(price) : '--',
               style: AppTypography.numericSmall.copyWith(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -121,7 +126,7 @@ class MarketsIndexCard extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.sm),
+            const SizedBox(height: AppSpacing.sm - 2),
             SizedBox(
               height: 24,
               width: double.infinity,

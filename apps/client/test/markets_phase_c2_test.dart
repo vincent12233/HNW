@@ -464,4 +464,25 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.text(formatPrice(1234567.89)), findsOneWidget);
   });
+
+  testWidgets('market index cards stay compact at standard phone width', (
+    tester,
+  ) async {
+    setView(tester, const Size(390, 844));
+    await tester.pumpWidget(
+      host(
+        const SizedBox(
+          width: 82,
+          child: MarketsIndexCard(
+            label: 'BANK NIFTY',
+            price: 51356.8,
+            changePercent: -0.21,
+          ),
+        ),
+      ),
+    );
+    expect(find.text('BANK NIFTY'), findsOneWidget);
+    expect(find.text('-0.21%'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 }

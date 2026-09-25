@@ -469,9 +469,9 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                 ),
                 Container(
                   margin: const EdgeInsets.fromLTRB(
-                    AppSpacing.md,
+                    AppSpacing.lg,
                     AppSpacing.sm - 2,
-                    AppSpacing.md,
+                    AppSpacing.lg,
                     AppSpacing.md,
                   ),
                   padding: const EdgeInsets.all(AppSpacing.md + 2),
@@ -484,7 +484,7 @@ class _TradingCenterPageState extends State<TradingCenterPage>
                         AppColors.brandGradientEnd,
                       ],
                     ),
-                    borderRadius: AppRadius.borderSm,
+                    borderRadius: AppRadius.borderMd,
                   ),
                   child: Row(
                     children: [

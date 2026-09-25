@@ -177,13 +177,13 @@ class ProfileIdentityHeader extends StatelessWidget {
                     button: true,
                     label: tr('Edit profile photo'),
                     child: Container(
-                      padding: const EdgeInsets.all(2),
+                      padding: const EdgeInsets.all(2.5),
                       decoration: const BoxDecoration(
                         color: Colors.white,
                         shape: BoxShape.circle,
                       ),
                       child: CircleAvatar(
-                        radius: compact ? 23 : 26,
+                        radius: compact ? 24 : 27,
                         backgroundColor: AppColors.brandPrimarySoft,
                         backgroundImage: avatarBytes == null
                             ? null

@@ -130,7 +130,7 @@ void main() {
       final icon = tester.widget<Icon>(
         find.byIcon(Icons.verified_user_outlined),
       );
-      expect(icon.color, AppColors.textInverse);
+      expect(icon.color, AppColors.brandDark);
       final title = tester.getRect(find.text('KYC Verification'));
       final status = tester.getRect(find.text('Verified'));
       expect(status.left, greaterThan(title.left));

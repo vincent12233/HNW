@@ -372,8 +372,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                       'portfolio.value_label',
                       'Total Portfolio Value',
                     ),
-                    style: AppTypography.bodyMedium.copyWith(
+                    style: AppTypography.labelLarge.copyWith(
                       color: inverseMuted,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                 ),
@@ -392,7 +393,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             ),
             AppText(
               _money(data['currentValue']),
-              style: AppTypography.numericInverse.copyWith(fontSize: 24),
+              style: AppTypography.numericInverse.copyWith(fontSize: 28),
             ),
             const SizedBox(height: AppSpacing.sm),
             AppText(

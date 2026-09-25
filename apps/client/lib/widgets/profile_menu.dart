@@ -93,10 +93,10 @@ class ProfileMenuRow extends StatelessWidget {
         width: 26,
         height: 26,
         decoration: BoxDecoration(
-          color: accent,
+          color: accent.withValues(alpha: 0.11),
           borderRadius: AppRadius.borderSm,
         ),
-        child: Icon(icon, color: AppColors.textInverse, size: 16),
+        child: Icon(icon, color: accent, size: 16),
       ),
       title: AppText(
         title,

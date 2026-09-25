@@ -187,12 +187,6 @@ class _HomeDashboardState extends State<HomeDashboard> {
             onNotificationTap: widget.onNotifications,
             notificationCount: widget.notificationCount,
           ),
-          const SizedBox(height: AppSpacing.sm + 2),
-          MarketStatusCard(
-            isOpen: widget.marketOpen,
-            hours: widget.marketHours,
-            quotesConnected: widget.quotesConnected,
-          ),
           if (widget.announcement != null) ...[
             const SizedBox(height: AppSpacing.sm + 2),
             widget.announcement!,
@@ -207,6 +201,12 @@ class _HomeDashboardState extends State<HomeDashboard> {
             child: loading
                 ? const _HomeSkeleton()
                 : _AssetPanel(dashboard: widget, money: _money),
+          ),
+          const SizedBox(height: AppSpacing.sm + 2),
+          MarketStatusCard(
+            isOpen: widget.marketOpen,
+            hours: widget.marketHours,
+            quotesConnected: widget.quotesConnected,
           ),
           if (!loading) ...[
             const SizedBox(height: AppSpacing.sm),

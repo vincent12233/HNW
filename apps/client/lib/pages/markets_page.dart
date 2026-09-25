@@ -991,6 +991,12 @@ class _MarketsPageState extends State<MarketsPage> {
                 ),
                 const SizedBox(width: AppSpacing.xxs),
                 const Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 11,
+                  color: AppColors.brandPrimary,
+                ),
+                const SizedBox(width: AppSpacing.xxs),
+                const Icon(
                   Icons.chevron_right_rounded,
                   size: 17,
                   color: AppColors.brandPrimary,

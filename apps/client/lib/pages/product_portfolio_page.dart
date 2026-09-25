@@ -580,7 +580,7 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                 children: [
                                   Icon(
                                     Icons.circle,
-                                    size: 9,
+                                    size: 10,
                                     color: _categoryColor(category['category']),
                                   ),
                                   const SizedBox(width: AppSpacing.sm),
@@ -629,7 +629,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                                   ),
                                   AppText(
                                     _percent(category['allocationPercent']),
-                                    style: AppTypography.numericSmall,
+                                    style: AppTypography.numericSmall.copyWith(
+                                      fontWeight: FontWeight.w700,
+                                    ),
                                   ),
                                   const SizedBox(width: AppSpacing.xs),
                                   const Icon(Icons.chevron_right, size: 18),

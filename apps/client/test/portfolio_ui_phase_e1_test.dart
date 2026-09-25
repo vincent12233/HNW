@@ -221,15 +221,6 @@ void main() {
     expect(find.textContaining('Gain'), findsWidgets);
     await revealPortfolio(
       tester,
-      find.textContaining("Day's return unavailable"),
-    );
-    expect(find.textContaining("Day's return unavailable"), findsOneWidget);
-    expect(
-      find.textContaining('Source: product valuation snapshots'),
-      findsOneWidget,
-    );
-    await revealPortfolio(
-      tester,
       find.byKey(const ValueKey('product-holding-INSTCO')),
     );
     expect(find.textContaining('INSTCO · NSE'), findsOneWidget);
@@ -244,10 +235,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Insufficient history'), findsOneWidget);
-    expect(
-      find.textContaining('No curve until two snapshot points exist'),
-      findsOneWidget,
-    );
+    expect(find.byKey(const ValueKey('portfolio-history-chart')), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

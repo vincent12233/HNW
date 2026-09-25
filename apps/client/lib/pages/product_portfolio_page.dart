@@ -191,33 +191,14 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               Row(
                 children: [
                   Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppText(
-                          AppContentService.instance.current.text(
-                            'trading',
-                            'portfolio.page_title',
-                            fallback: 'Portfolio',
-                          ),
-                          style: AppTypography.headline.copyWith(fontSize: 20),
-                        ),
-                        const SizedBox(height: AppSpacing.xxs),
-                        AppText(
-                          AppContentService.instance.current.text(
-                            'trading',
-                            'portfolio.page_subtitle',
-                            fallback: 'Institutional · OTC · IPO',
-                          ),
-                          style: AppTypography.caption,
-                        ),
-                      ],
+                    child: AppText(
+                      AppContentService.instance.current.text(
+                        'trading',
+                        'portfolio.page_title',
+                        fallback: 'Portfolio',
+                      ),
+                      style: AppTypography.headline.copyWith(fontSize: 20),
                     ),
-                  ),
-                  IconButton(
-                    tooltip: tr('Refresh'),
-                    onPressed: _loading ? null : _load,
-                    icon: const Icon(Icons.refresh),
                   ),
                   if (widget.onSearch != null)
                     IconButton(
@@ -501,12 +482,6 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                 ],
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            AppText(
-              'Source: product valuation snapshots · Range: $_period · Updated ${_date(data['asOf'])}'
-              '${hasHistory ? '' : ' · No curve until two snapshot points exist.'}',
-              style: AppTypography.caption.copyWith(color: inverseMuted),
-            ),
           ],
         ),
       ),
@@ -537,14 +512,6 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
               ('Current Value', data['currentValue']),
               ('Total Returns', data['totalPnl']),
             ]),
-            const SizedBox(height: AppSpacing.md),
-            AppText(
-              _portfolioCopy(
-                'portfolio.day_return_note',
-                "Day's return unavailable. This product summary does not include a daily P&L field.",
-              ),
-              style: AppTypography.caption,
-            ),
           ],
         ),
       ),
@@ -589,10 +556,6 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
             fallback: 'Asset Allocation',
           ),
           action: () => _showHoldings(categories),
-        ),
-        AppText(
-          'Source: product holdings · Range: $_period · Updated ${_date(data['asOf'])}',
-          style: AppTypography.caption,
         ),
         Padding(
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),

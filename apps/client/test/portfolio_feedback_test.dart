@@ -48,7 +48,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Total Portfolio Value'), findsOneWidget);
-    await tester.tap(find.byTooltip('Refresh'));
+    await tester
+        .widget<RefreshIndicator>(find.byType(RefreshIndicator))
+        .onRefresh();
     await tester.pumpAndSettle();
     expect(find.text('Total Portfolio Value'), findsOneWidget);
     expect(

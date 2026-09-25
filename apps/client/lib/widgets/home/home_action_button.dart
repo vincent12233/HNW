@@ -33,25 +33,25 @@ class HomeActionButton extends StatelessWidget {
         radius: AppRadius.md,
         padding: const EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm + 2,
+          vertical: AppSpacing.sm + 4,
         ),
         onTap: onTap,
         borderColor: color.withValues(alpha: 0.16),
         child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 48),
+          constraints: const BoxConstraints(minHeight: 56),
           child: LayoutBuilder(
             builder: (context, constraints) {
               final compact =
                   constraints.maxWidth < 150 ||
                   MediaQuery.textScalerOf(context).scale(13) > 18;
               final iconView = Container(
-                width: 34,
-                height: 34,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.12),
                   borderRadius: AppRadius.borderSm,
                 ),
-                child: Icon(icon, color: color, size: 18),
+                child: Icon(icon, color: color, size: 19),
               );
               final labels = Column(
                 mainAxisAlignment: MainAxisAlignment.center,

@@ -41,7 +41,7 @@ class MarketStatusCard extends StatelessWidget {
         width: double.infinity,
         padding: EdgeInsets.symmetric(
           horizontal: AppSpacing.md,
-          vertical: AppSpacing.sm,
+          vertical: AppSpacing.sm - 1,
         ),
         decoration: BoxDecoration(
           color: tint,
@@ -59,8 +59,8 @@ class MarketStatusCard extends StatelessWidget {
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.circle, size: 8, color: statusColor),
-                    const SizedBox(width: 8),
+                    Icon(Icons.circle, size: 7, color: statusColor),
+                    const SizedBox(width: AppSpacing.sm - 1),
                     Flexible(
                       child: AppText(
                         statusText,

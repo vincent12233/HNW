@@ -1142,26 +1142,45 @@ class _NewsSection extends StatelessWidget {
                     radius: AppRadius.sm,
                     padding: EdgeInsets.zero,
                     onTap: () => onOpen(item),
-                    child: Padding(
-                      padding: const EdgeInsets.all(AppSpacing.sm + 3),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    child: SizedBox(
+                      height: 96,
+                      child: Row(
                         children: [
-                          AppText(
-                            item.title,
-                            maxLines: 3,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.labelMedium.copyWith(
-                              fontWeight: FontWeight.w800,
-                              height: 1.28,
-                            ),
+                          _NewsThumbnail(
+                            imageUrl: item.imageUrl,
+                            width: oneColumn ? 92 : 62,
                           ),
-                          const SizedBox(height: AppSpacing.sm),
-                          AppText(
-                            '${item.source}  ·  ${homeRelativeTime(item.publishedAt)}',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: AppTypography.caption.copyWith(fontSize: 10),
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: AppSpacing.sm + 2,
+                                vertical: AppSpacing.xs,
+                              ),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  AppText(
+                                    item.title,
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.labelMedium.copyWith(
+                                      fontWeight: FontWeight.w800,
+                                      height: 1.28,
+                                    ),
+                                  ),
+                                  const SizedBox(height: AppSpacing.xs),
+                                  AppText(
+                                    '${item.source} · ${homeRelativeTime(item.publishedAt)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: AppTypography.caption.copyWith(
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -1172,6 +1191,38 @@ class _NewsSection extends StatelessWidget {
               .toList(),
         );
       },
+    );
+  }
+}
+
+class _NewsThumbnail extends StatelessWidget {
+  const _NewsThumbnail({required this.imageUrl, required this.width});
+
+  final String? imageUrl;
+  final double width;
+
+  @override
+  Widget build(BuildContext context) {
+    final fallback = ColoredBox(
+      color: AppColors.brandPrimarySoft,
+      child: const Center(
+        child: Icon(
+          Icons.newspaper_outlined,
+          color: AppColors.brandPrimary,
+          size: 24,
+        ),
+      ),
+    );
+    return SizedBox(
+      width: width,
+      height: 96,
+      child: imageUrl?.isNotEmpty == true
+          ? Image.network(
+              imageUrl!,
+              fit: BoxFit.cover,
+              errorBuilder: (_, _, _) => fallback,
+            )
+          : fallback,
     );
   }
 }

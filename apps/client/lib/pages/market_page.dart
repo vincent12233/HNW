@@ -2125,11 +2125,25 @@ class _MarketHomePageState extends State<MarketHomePage>
             Row(
               children: [
                 Expanded(
-                  child: AppText(
-                    'Settings',
-                    style: AppTypography.titleLarge.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AppText(
+                        'Settings',
+                        style: AppTypography.titleLarge.copyWith(
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      AppText(
+                        'Manage security, preferences and account policies',
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
                 IconButton(
@@ -2140,7 +2154,11 @@ class _MarketHomePageState extends State<MarketHomePage>
                 ),
               ],
             ),
-            const SizedBox(height: AppSpacing.md),
+            const Padding(
+              padding: EdgeInsets.only(top: AppSpacing.md),
+              child: Divider(height: 1),
+            ),
+            const SizedBox(height: AppSpacing.lg),
             ProfileSection(
               title: _appContent.text(
                 'home',

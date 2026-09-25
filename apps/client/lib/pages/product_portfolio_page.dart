@@ -476,7 +476,9 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                         labelPadding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.sm,
                         ),
-                        shape: const StadiumBorder(),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(6),
+                        ),
                       ),
                     ),
                 ],

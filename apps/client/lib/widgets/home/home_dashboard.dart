@@ -764,7 +764,9 @@ class _MoversSection extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final stacked = constraints.maxWidth < 300;
+        final stacked =
+            constraints.maxWidth < 300 ||
+            MediaQuery.textScalerOf(context).scale(1) > 1.5;
         if (stacked) {
           return Column(
             children: [
@@ -1126,7 +1128,13 @@ class _NewsSection extends StatelessWidget {
     }
     return LayoutBuilder(
       builder: (context, constraints) {
-        final oneColumn = constraints.maxWidth < 340;
+        final textScale = MediaQuery.textScalerOf(context).scale(1);
+        final oneColumn = constraints.maxWidth < 340 || textScale > 1.2;
+        final cardHeight = textScale > 1.7
+            ? 144.0
+            : textScale > 1.2
+            ? 120.0
+            : 96.0;
         final width = oneColumn
             ? constraints.maxWidth
             : (constraints.maxWidth - AppSpacing.sm - 2) / 2;
@@ -1143,12 +1151,13 @@ class _NewsSection extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     onTap: () => onOpen(item),
                     child: SizedBox(
-                      height: 96,
+                      height: cardHeight,
                       child: Row(
                         children: [
                           _NewsThumbnail(
                             imageUrl: item.imageUrl,
                             width: oneColumn ? 92 : 62,
+                            height: cardHeight,
                           ),
                           Expanded(
                             child: Padding(
@@ -1196,10 +1205,15 @@ class _NewsSection extends StatelessWidget {
 }
 
 class _NewsThumbnail extends StatelessWidget {
-  const _NewsThumbnail({required this.imageUrl, required this.width});
+  const _NewsThumbnail({
+    required this.imageUrl,
+    required this.width,
+    required this.height,
+  });
 
   final String? imageUrl;
   final double width;
+  final double height;
 
   @override
   Widget build(BuildContext context) {
@@ -1215,7 +1229,7 @@ class _NewsThumbnail extends StatelessWidget {
     );
     return SizedBox(
       width: width,
-      height: 96,
+      height: height,
       child: imageUrl?.isNotEmpty == true
           ? Image.network(
               imageUrl!,

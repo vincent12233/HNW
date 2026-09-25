@@ -58,6 +58,7 @@ HomeDashboard dashboard({
   VoidCallback? onWithdraw,
   VoidCallback? onTrade,
   VoidCallback? onToggleHide,
+  ValueChanged<MarketNewsItem>? onOpenNews,
 }) {
   return HomeDashboard(
     accountName: 'Priya Sharmaji With A Very Long Client Name',
@@ -141,7 +142,7 @@ HomeDashboard dashboard({
     onRetryNews: onRetryNews ?? () {},
     onRetryQuotes: onRetryQuotes ?? () {},
     onOpenMarkets: () {},
-    onOpenNews: (_) {},
+    onOpenNews: onOpenNews ?? (_) {},
     onOpenStock: (_) {},
     onOpenKyc: () {},
     bottomPadding: AppSpacing.navHeight + AppSpacing.lg,
@@ -434,6 +435,36 @@ void main() {
     );
     expect(find.text('Market News'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('large text stacks news cards without clipping their actions', (
+    tester,
+  ) async {
+    var opened = '';
+    final articles = [
+      for (var index = 0; index < 2; index++)
+        MarketNewsItem(
+          id: 'news-$index',
+          title: 'Market update $index with a long headline about trading',
+          source: 'Exchange Desk',
+          url: 'https://example.com/$index',
+          publishedAt: DateTime(2026, 9, 19),
+        ),
+    ];
+    await pumpHome(
+      tester,
+      size: const Size(390, 844),
+      textScale: 2,
+      home: dashboard(news: articles, onOpenNews: (item) => opened = item.id),
+    );
+    await tester.ensureVisible(find.textContaining('Market update 0'));
+    await tester.pump();
+    final first = tester.getRect(find.textContaining('Market update 0'));
+    final second = tester.getRect(find.textContaining('Market update 1'));
+    expect(second.top, greaterThan(first.bottom));
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.textContaining('Market update 0'));
+    expect(opened, 'news-0');
   });
 
   testWidgets('phone market indices stay in one horizontal row', (

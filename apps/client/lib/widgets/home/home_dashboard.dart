@@ -416,7 +416,7 @@ class _AssetPanel extends StatelessWidget {
               child: ExcludeSemantics(
                 child: SizedBox(
                   width: double.infinity,
-                  height: 36,
+                  height: 42,
                   child: CustomPaint(
                     painter: MiniLineChartPainter(
                       color: (pnl ?? 0) < 0

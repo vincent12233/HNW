@@ -524,7 +524,15 @@ class _SectionTitle extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: AppText(title, style: AppTypography.sectionTitle)),
+        Expanded(
+          child: AppText(
+            title,
+            style: AppTypography.sectionTitle.copyWith(
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.1,
+            ),
+          ),
+        ),
         if (onViewAll != null)
           TextButton(
             style: TextButton.styleFrom(
@@ -545,7 +553,7 @@ class _SectionTitle extends StatelessWidget {
                 const SizedBox(width: AppSpacing.xxs),
                 const Icon(
                   Icons.chevron_right_rounded,
-                  size: 17,
+                  size: 16,
                   color: AppColors.brandPrimary,
                 ),
               ],

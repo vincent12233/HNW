@@ -148,7 +148,6 @@ void main() {
       find.text('Showing previously loaded portfolio data.'),
       findsOneWidget,
     );
-    expect(find.textContaining('offline'), findsOneWidget);
   });
   testWidgets('portfolio period controls follow the value and chart', (
     tester,

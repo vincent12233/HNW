@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ConflictException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
@@ -38,6 +39,7 @@ export class WithdrawalService {
     upiId?: string,
     note?: string,
     withdrawalPin?: string,
+    clientRequestId?: string,
   ) {
     assertAtMostTwoDecimals(amountInput, 'Withdrawal amount');
     const amount = moneyDecimal(amountInput);
@@ -65,6 +67,32 @@ export class WithdrawalService {
           throw new NotFoundException('Account not found');
         }
 
+        if (clientRequestId) {
+          const lockScope = `withdrawal:${account.id}:${clientRequestId}`;
+          await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${lockScope}, 0))`;
+          const existing = await tx.withdrawalRequest.findFirst({
+            where: { accountId: account.id, clientRequestId },
+          });
+          if (existing) {
+            const matchesOriginalRequest =
+              moneyDecimal(existing.amount).eq(amount) &&
+              (existing.bankName ?? '') === (bankName?.trim() ?? '') &&
+              (existing.accountNumber ?? '') ===
+                (accountNumber?.trim() ?? '') &&
+              (existing.ifscCode ?? '') ===
+                (ifscCode?.trim().toUpperCase() ?? '') &&
+              (existing.upiId ?? '') === (upiId?.trim() ?? '');
+            if (!matchesOriginalRequest) {
+              throw new ConflictException({
+                code: 'IDEMPOTENCY_KEY_REUSED',
+                message:
+                  'Idempotency-Key was already used for a different withdrawal request',
+              });
+            }
+            return existing;
+          }
+        }
+
         if (
           moneyDecimal(account.buyingPower).lt(amount) ||
           availableCash(account).lt(amount)
@@ -75,6 +103,7 @@ export class WithdrawalService {
         const request = await tx.withdrawalRequest.create({
           data: {
             orderNo: this.generateOrderNo(),
+            clientRequestId: clientRequestId ?? null,
             accountId: account.id,
             amount,
             frozenAmount: amount,
@@ -102,6 +131,19 @@ export class WithdrawalService {
             referenceId: request.id,
           },
         });
+        await this.audit.createLog(
+          {
+            actorId: userId,
+            action: 'WITHDRAWAL_REQUESTED',
+            resource: 'withdrawal',
+            resourceId: request.id,
+            metadata: {
+              amount: amount.toFixed(2),
+              idempotencyKey: clientRequestId ?? null,
+            },
+          },
+          tx,
+        );
         return request;
       },
       { isolationLevel: 'Serializable' },

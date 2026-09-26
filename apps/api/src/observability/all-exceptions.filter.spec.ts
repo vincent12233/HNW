@@ -50,6 +50,23 @@ describe('Authentication error response contracts', () => {
         .kycToken,
     ).toBe('onboarding');
   });
+  it('returns stable generic and business error codes with the request id', () => {
+    expect(responseFor(new UnauthorizedException())).toMatchObject({
+      code: 'UNAUTHORIZED',
+      requestId: 'request',
+    });
+    expect(
+      responseFor(
+        new HttpException(
+          { code: 'WITHDRAWAL_ALREADY_REVIEWED', message: 'Already reviewed' },
+          409,
+        ),
+      ),
+    ).toMatchObject({
+      code: 'WITHDRAWAL_ALREADY_REVIEWED',
+      message: 'Already reviewed',
+    });
+  });
   it('never passes challenge fields through internal errors', () => {
     const result = responseFor(
       new HttpException(

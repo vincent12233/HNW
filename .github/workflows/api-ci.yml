@@ -140,7 +140,15 @@ jobs:
       - name: Run unit tests
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
-        run: npm test -- --runInBand
+        run: npm run test:cov -- --runInBand
+
+      - name: Upload API coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: api-coverage
+          path: apps/api/coverage
+          if-no-files-found: ignore
 
       - name: Seed integration administrator
         env:

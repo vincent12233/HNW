@@ -13,6 +13,14 @@ import 'session_expiry_service.dart';
 import 'salesmartly_service.dart';
 
 class AuthService {
+  static String createClientRequestId(String operation) {
+    final normalized = operation.trim().toUpperCase().replaceAll(
+      RegExp(r'[^A-Z0-9_-]'),
+      '-',
+    );
+    return 'APP-$normalized-${DateTime.now().microsecondsSinceEpoch}';
+  }
+
   static const String _sessionKey = 'auth_session';
   static const String _biometricSessionKey = 'biometric_auth_session';
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
@@ -377,6 +385,7 @@ class AuthService {
     required String accountNumber,
     required String ifscCode,
     String? note,
+    String? idempotencyKey,
   }) async {
     if (!amount.isFinite || amount < 100) {
       throw AuthException('Minimum withdrawal amount is ₹100');
@@ -393,6 +402,8 @@ class AuthService {
           headers: {
             'Authorization': 'Bearer ${session.accessToken}',
             'Content-Type': 'application/json',
+            if (idempotencyKey != null && idempotencyKey.isNotEmpty)
+              'Idempotency-Key': idempotencyKey,
           },
           body: jsonEncode({
             'amount': amount,
@@ -671,9 +682,11 @@ class TwoFactorRequiredException implements Exception {
 }
 
 class AuthException implements Exception {
-  const AuthException(this._message);
+  const AuthException(this._message, {this.code, this.requestId});
 
   final String _message;
+  final String? code;
+  final String? requestId;
   String get message => RegExp(r'[\u3400-\u9fff]').hasMatch(_message)
       ? 'Unable to complete this request. Please try again.'
       : _message;

@@ -61,8 +61,26 @@ export class AllExceptionsFilter implements ExceptionFilter {
       typeof raw === 'object'
         ? (raw as Record<string, unknown>)
         : {};
+    const code =
+      raw &&
+      typeof raw === 'object' &&
+      'code' in raw &&
+      typeof (raw as { code?: unknown }).code === 'string'
+        ? (raw as { code: string }).code
+        : status === HttpStatus.UNAUTHORIZED
+          ? 'UNAUTHORIZED'
+          : status === HttpStatus.FORBIDDEN
+            ? 'FORBIDDEN'
+            : status === HttpStatus.NOT_FOUND
+              ? 'NOT_FOUND'
+              : status === HttpStatus.CONFLICT
+                ? 'CONFLICT'
+                : status >= 500
+                  ? 'INTERNAL_ERROR'
+                  : 'REQUEST_FAILED';
     response.status(status).json({
       statusCode: status,
+      code,
       message,
       requestId,
       timestamp: new Date().toISOString(),

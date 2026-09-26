@@ -75,7 +75,15 @@ class ClientAccountService {
         : jsonDecode(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded is Map ? decoded['message']?.toString() : null;
-      throw AuthException(message ?? 'Unable to complete request');
+      final code = decoded is Map ? decoded['code']?.toString() : null;
+      final requestId = decoded is Map
+          ? decoded['requestId']?.toString()
+          : null;
+      throw AuthException(
+        message ?? 'Unable to complete request',
+        code: code,
+        requestId: requestId,
+      );
     }
     return decoded;
   }

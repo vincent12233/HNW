@@ -50,6 +50,7 @@ describe('Current withdrawal HTTP role boundaries', () => {
     withdrawals.createRequest.mockResolvedValue({ id: 'w1' });
     await request(clientApp.getHttpServer())
       .post('/withdrawal/request')
+      .set('Idempotency-Key', 'APP-WITHDRAWAL-1234')
       .send({
         amount: '10.00',
         bankName: 'HDFC',
@@ -58,6 +59,17 @@ describe('Current withdrawal HTTP role boundaries', () => {
         withdrawalPin: '123456',
       })
       .expect(201);
+    expect(withdrawals.createRequest).toHaveBeenCalledWith(
+      'client-1',
+      '10.00',
+      'HDFC',
+      '123456789',
+      'HDFC0000001',
+      undefined,
+      undefined,
+      '123456',
+      'APP-WITHDRAWAL-1234',
+    );
     await clientApp.close();
 
     const businessApp = await build(UserRole.BUSINESS);
@@ -83,8 +95,13 @@ describe('Current withdrawal HTTP role boundaries', () => {
       role: UserRole.FINANCE,
       status: UserStatus.ACTIVE,
     });
-    withdrawals.approveWithdrawal.mockResolvedValue({ id: 'w1', status: 'APPROVED' });
-    await request(app.getHttpServer()).patch('/withdrawal/w1/approve').expect(200);
+    withdrawals.approveWithdrawal.mockResolvedValue({
+      id: 'w1',
+      status: 'APPROVED',
+    });
+    await request(app.getHttpServer())
+      .patch('/withdrawal/w1/approve')
+      .expect(200);
     expect(withdrawals.approveWithdrawal).toHaveBeenCalledWith(
       'w1',
       'finance-1',

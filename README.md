@@ -180,3 +180,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 - `docs/交付验收清单.md`
 - `docs/上线准备与验收.md`（发布门槛与待补验证）
 - `docs/项目交付总览.md`
+
+## 当前状态
+
+项目当前完成项、持续改进队列和验证规则统一记录在 `docs/STATUS.md`。

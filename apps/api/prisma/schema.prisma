@@ -596,6 +596,7 @@ model DepositRequest {
 model WithdrawalRequest {
   id            String           @id @default(uuid())
   orderNo       String?          @unique
+  clientRequestId String?
   accountId     String
   amount        Decimal          @db.Decimal(18, 2)
   frozenAmount  Decimal          @default(0) @db.Decimal(18, 2)
@@ -612,6 +613,7 @@ model WithdrawalRequest {
   @@index([accountId])
   @@index([status])
   @@index([orderNo])
+  @@unique([accountId, clientRequestId])
   @@map("withdrawal_requests")
 }
 
@@ -1136,5 +1138,3 @@ model UserWatchlistItem {
   @@index([userId, createdAt])
   @@map("user_watchlist_items")
 }
-
-

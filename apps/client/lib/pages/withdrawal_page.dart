@@ -70,6 +70,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   String? _formError;
   int _generation = 0;
   Future<void>? _inFlight;
+  String? _submissionId;
   late double _available = widget.availableBalance;
   late double _frozen = widget.frozenBalance;
 
@@ -163,6 +164,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
       return;
     }
 
+    _submissionId ??= AuthService.createClientRequestId('withdrawal');
     setState(() {
       _submitting = true;
       _formError = null;
@@ -175,6 +177,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         accountNumber: bank['accountNumber']?.toString() ?? '',
         ifscCode: bank['ifscCode']?.toString() ?? '',
         note: 'App withdrawal request',
+        idempotencyKey: _submissionId,
       );
       TradingAccountSnapshot? snapshot;
       try {
@@ -188,6 +191,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         _available = snapshot.availableBalance;
         _frozen = snapshot.frozenBalance;
       }
+      _submissionId = null;
       _pinController.clear();
       _amountController.clear();
       ScaffoldMessenger.of(context).showSnackBar(

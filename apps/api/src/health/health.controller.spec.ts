@@ -31,6 +31,18 @@ describe('health probe HTTP contracts', () => {
     expect(query).not.toHaveBeenCalled();
   });
 
+  it('exposes build identity without probing the database', async () => {
+    process.env.GIT_COMMIT = 'test-commit';
+    process.env.BUILD_TIME = '2026-09-26T00:00:00.000Z';
+    await request(app.getHttpServer())
+      .get('/health/version')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body.commit).toBe('test-commit');
+        expect(body.builtAt).toBe('2026-09-26T00:00:00.000Z');
+      });
+    expect(query).not.toHaveBeenCalled();
+  });
   it('reports ready only after a successful database probe', async () => {
     query.mockResolvedValue([{ '?column?': 1 }]);
     await request(app.getHttpServer())

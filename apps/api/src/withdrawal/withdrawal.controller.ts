@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -16,6 +17,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { WithdrawalService } from './withdrawal.service';
 import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
+import { optionalIdempotencyKey } from '../common/idempotency-key';
 
 @Controller('withdrawal')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -28,6 +30,7 @@ export class WithdrawalController {
     @Req() req: AuthenticatedRequest,
     @Body()
     body: CreateWithdrawalRequestDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
     return this.withdrawalService.createRequest(
       req.user.userId,
@@ -38,6 +41,7 @@ export class WithdrawalController {
       body.upiId,
       body.note,
       body.withdrawalPin,
+      optionalIdempotencyKey(idempotencyKey),
     );
   }
 

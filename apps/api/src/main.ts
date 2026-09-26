@@ -102,10 +102,20 @@ function validateProductionEnvironment() {
   for (const origin of origins) {
     assertPublicHttpsUrl('CORS_ORIGINS entry', origin);
   }
-  assertPublicHttpsUrl(
-    'VIRUS_SCAN_URL',
-    process.env.VIRUS_SCAN_URL?.trim() ?? '',
-  );
+  const marketDataProvider =
+    process.env.MARKET_DATA_PROVIDER?.trim().toUpperCase() ?? '';
+  if (!marketDataProvider || marketDataProvider === 'YAHOO') {
+    throw new Error(
+      'MARKET_DATA_PROVIDER must be a configured commercial provider in production',
+    );
+  }
+  const virusScanUrl = process.env.VIRUS_SCAN_URL?.trim() ?? '';
+  assertPublicHttpsUrl('VIRUS_SCAN_URL', virusScanUrl);
+  if (/virus-scan-stub|127\.0\.0\.1|localhost/i.test(virusScanUrl)) {
+    throw new Error(
+      'VIRUS_SCAN_URL must not point to the local development stub',
+    );
+  }
   const privateRoot = process.env.PRIVATE_OBJECT_ROOT?.trim() ?? '';
   if (!privateRoot || !privateRoot.startsWith('/')) {
     throw new Error(

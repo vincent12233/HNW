@@ -102,7 +102,15 @@
     "testEnvironment": "node",
     "setupFiles": [
       "<rootDir>/test-environment.ts"
-    ]
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 40,
+        "functions": 38,
+        "lines": 48,
+        "statements": 48
+      }
+    }
   },
   "overrides": {
     "multer": "2.4.0",

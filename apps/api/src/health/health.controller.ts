@@ -19,6 +19,15 @@ export class HealthController {
     return { status: 'ok', timestamp: new Date().toISOString() };
   }
 
+  @Get('version')
+  version() {
+    return {
+      version: process.env.npm_package_version ?? 'unknown',
+      commit: process.env.GIT_COMMIT ?? 'unknown',
+      builtAt: process.env.BUILD_TIME ?? 'unknown',
+    };
+  }
+
   @Get('ready')
   async ready() {
     try {

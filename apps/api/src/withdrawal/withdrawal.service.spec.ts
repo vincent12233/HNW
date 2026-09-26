@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { WithdrawalService } from './withdrawal.service';
 import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
+import { AuditService } from '../audit/audit.service';
 
 describe('WithdrawalService', () => {
   let service: WithdrawalService;
@@ -12,7 +13,9 @@ describe('WithdrawalService', () => {
       .useMocker((token) =>
         token === WithdrawalPinService
           ? { verify: jest.fn().mockResolvedValue(undefined) }
-          : {},
+          : token === AuditService
+            ? { createLog: jest.fn().mockResolvedValue({ id: 'audit-1' }) }
+            : {},
       )
       .compile();
 
@@ -96,6 +99,117 @@ describe('WithdrawalService', () => {
     expect(createUpdate.where).toEqual({ id: 'account-1' });
     expect(Number(createUpdate.data.buyingPower.decrement)).toBe(100);
     expect(Number(createUpdate.data.frozenBalance.increment)).toBe(100);
+  });
+
+  it('replays an existing withdrawal for the same client idempotency key', async () => {
+    const existing = {
+      id: 'withdrawal-existing',
+      orderNo: 'WD-EXISTING',
+      amount: 100,
+      bankName: 'Test Bank',
+      accountNumber: '1234567890',
+      ifscCode: 'TEST0001234',
+      upiId: null,
+    };
+    const transaction = {
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          cashBalance: 1000,
+          buyingPower: 1000,
+          frozenBalance: 0,
+        }),
+        update: jest.fn(),
+      },
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      withdrawalRequest: {
+        findFirst: jest.fn().mockResolvedValue(existing),
+        create: jest.fn(),
+      },
+      notification: { create: jest.fn() },
+    };
+    (service as any).prisma = {
+      $transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(transaction),
+      ),
+    };
+
+    await expect(
+      service.createRequest(
+        'user-1',
+        100,
+        'Test Bank',
+        '1234567890',
+        'TEST0001234',
+        undefined,
+        undefined,
+        '123456',
+        'APP-WITHDRAWAL-1234',
+      ),
+    ).resolves.toBe(existing);
+    expect(transaction.withdrawalRequest.findFirst).toHaveBeenCalledWith({
+      where: {
+        accountId: 'account-1',
+        clientRequestId: 'APP-WITHDRAWAL-1234',
+      },
+    });
+    expect(transaction.withdrawalRequest.create).not.toHaveBeenCalled();
+    expect(transaction.account.update).not.toHaveBeenCalled();
+    expect(transaction.notification.create).not.toHaveBeenCalled();
+  });
+
+  it('rejects reuse of an idempotency key with a different payload', async () => {
+    const transaction = {
+      account: {
+        findUnique: jest
+          .fn()
+          .mockResolvedValue({
+            id: 'account-1',
+            cashBalance: 1000,
+            buyingPower: 1000,
+            frozenBalance: 0,
+          }),
+        update: jest.fn(),
+      },
+      $executeRaw: jest.fn().mockResolvedValue(1),
+      withdrawalRequest: {
+        findFirst: jest
+          .fn()
+          .mockResolvedValue({
+            id: 'withdrawal-existing',
+            amount: 200,
+            bankName: 'Other Bank',
+            accountNumber: '9999999999',
+            ifscCode: 'OTHER000001',
+            upiId: null,
+          }),
+        create: jest.fn(),
+      },
+      notification: { create: jest.fn() },
+    };
+    (service as any).prisma = {
+      $transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(transaction),
+      ),
+    };
+
+    await expect(
+      service.createRequest(
+        'user-1',
+        100,
+        'Test Bank',
+        '1234567890',
+        'TEST0001234',
+        undefined,
+        undefined,
+        '123456',
+        'APP-WITHDRAWAL-1234',
+      ),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({ code: 'IDEMPOTENCY_KEY_REUSED' }),
+    });
+    expect(transaction.withdrawalRequest.create).not.toHaveBeenCalled();
+    expect(transaction.account.update).not.toHaveBeenCalled();
   });
 
   it('rejects amounts with more than two decimal places', async () => {
@@ -260,7 +374,10 @@ describe('WithdrawalService', () => {
         }),
         update: jest.fn(),
       },
-      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
+      accountTransaction: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
       notification: { create: jest.fn() },
     };
     (service as any).prisma = {

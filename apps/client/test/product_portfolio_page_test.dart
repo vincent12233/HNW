@@ -123,6 +123,33 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
     expect(find.text('Total Portfolio Value'), findsNothing);
   });
+  testWidgets('refresh failure keeps the last successful portfolio visible', (
+    tester,
+  ) async {
+    var failRefresh = false;
+    await tester.pumpWidget(
+      app((_) async {
+        if (failRefresh) throw Exception('offline');
+        return fixture();
+      }),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Total Portfolio Value'), findsOneWidget);
+
+    failRefresh = true;
+    final refresh = tester.widget<RefreshIndicator>(
+      find.byType(RefreshIndicator),
+    );
+    await refresh.onRefresh();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Total Portfolio Value'), findsOneWidget);
+    expect(
+      find.text('Showing previously loaded portfolio data.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('offline'), findsOneWidget);
+  });
   testWidgets('portfolio period controls follow the value and chart', (
     tester,
   ) async {

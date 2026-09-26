@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../l10n/app_language.dart';
+import '../models/async_data_state.dart';
 import '../services/app_content_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_colors.dart';
@@ -39,13 +40,16 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       .current
       .text('trading', key, fallback: fallback);
 
-  Map<String, dynamic>? _data;
-  String? _error;
+  AsyncDataState<Map<String, dynamic>> _loadState =
+      const AsyncDataState.initial();
   String _period = '1M';
-  bool _loading = false;
   bool _hidden = false;
   int _request = 0;
   String _productView = 'HOLDINGS';
+
+  Map<String, dynamic>? get _data => _loadState.data;
+  String? get _error => _loadState.message;
+  bool get _loading => _loadState.isLoading;
 
   static Color _categoryColor(Object? category) {
     switch ('$category') {
@@ -80,24 +84,37 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
   Future<void> _load([String? period]) async {
     if (_loading && (period == null || period == _period)) return;
     final request = ++_request;
+    final previousState = _loadState;
+    final periodChanged = period != null && period != _period;
     setState(() {
-      if (period != null && period != _period) _data = null;
       _period = period ?? _period;
-      _loading = true;
-      _error = null;
+      _loadState = AsyncDataState.loading(
+        data: periodChanged ? null : previousState.data,
+        updatedAt: periodChanged ? null : previousState.updatedAt,
+      );
     });
     try {
       final data =
           await (widget.loader ?? ClientAccountService().productPortfolio)(
             _period,
           );
-      if (mounted && request == _request) setState(() => _data = data);
+      if (mounted && request == _request) {
+        setState(() => _loadState = AsyncDataState.success(data));
+      }
     } catch (error) {
       if (mounted && request == _request) {
-        setState(() => _error = clientErrorMessage(error));
+        final message = clientErrorMessage(error);
+        setState(() {
+          final previousData = _loadState.data;
+          _loadState = previousData == null
+              ? AsyncDataState.error(message)
+              : AsyncDataState.stale(
+                  previousData,
+                  updatedAt: _loadState.updatedAt ?? DateTime.now(),
+                  message: message,
+                );
+        });
       }
-    } finally {
-      if (mounted && request == _request) setState(() => _loading = false);
     }
   }
 

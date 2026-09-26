@@ -14,6 +14,7 @@ import '../app_status_label.dart';
 import '../record_detail_sheet.dart';
 import '../app_page_scaffold.dart';
 import 'product_offer_card.dart';
+import 'product_risk_notice.dart';
 import 'trading_guide_card.dart';
 
 class OtcTab extends StatefulWidget {
@@ -214,6 +215,8 @@ class _OtcTabState extends State<OtcTab> {
                 labelText: '4-digit transaction PIN',
               ),
             ),
+            const SizedBox(height: 12),
+            const ProductRiskNotice(),
           ],
         ),
         actions: [

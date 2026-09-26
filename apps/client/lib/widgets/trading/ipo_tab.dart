@@ -10,6 +10,7 @@ import '../../utils/number_formatters.dart';
 import '../app_feedback.dart';
 import '../app_page_scaffold.dart';
 import 'product_offer_card.dart';
+import 'product_risk_notice.dart';
 import 'trading_guide_card.dart';
 
 class IpoTab extends StatefulWidget {
@@ -244,6 +245,8 @@ class _IpoTabState extends State<IpoTab> {
               AppText('Lot Size: ${ipo.lotSize} Shares'),
               const SizedBox(height: 12),
               AppText(message),
+              const SizedBox(height: 12),
+              const ProductRiskNotice(),
             ],
           ),
           actions: [

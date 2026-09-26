@@ -711,6 +711,7 @@ export default function BusinessCustomersPage() {
         width={480}
       >
         {selectedCustomer ? (
+          <>
           <Descriptions size="small" column={1} bordered>
             <Descriptions.Item label="客户编号">
               <span className="ops-id">{selectedCustomer.customerNo || selectedCustomer.id}</span>
@@ -750,6 +751,18 @@ export default function BusinessCustomersPage() {
               当前客户列表接口未返回 KYC，不在本页伪装审核入口。
             </Descriptions.Item>
           </Descriptions>
+          <div className="ops-drawer-section">
+            <h3>相关业务模块</h3>
+            <Typography.Paragraph type="secondary">以下入口打开模块列表，不会自动按当前客户筛选，请在目标页面核对客户和账号。</Typography.Paragraph>
+            <Space wrap>
+              <Button href="/business-orders">订单模块</Button>
+              <Button href="/business-trades">成交模块</Button>
+              <Button href="/business-deposits">入金模块</Button>
+              <Button href="/business-withdrawals">提现模块</Button>
+              <Button href="/business-positions">持仓模块</Button>
+            </Space>
+          </div>
+          </>
         ) : null}
       </OpsDrawer>
 

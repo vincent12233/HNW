@@ -676,6 +676,17 @@ export default function CustomersPage() {
               </Descriptions.Item>
             </Descriptions>
             <div className="ops-drawer-section">
+              <h3>相关业务模块</h3>
+              <Paragraph type="secondary">以下入口打开模块列表，不会自动按当前客户筛选，请在目标页面核对客户和账号。</Paragraph>
+              <Space wrap>
+                <Button href="/orders">订单模块</Button>
+                <Button href="/transactions">流水模块</Button>
+                <Button href="/deposits">入金模块</Button>
+                <Button href="/withdrawals">提现模块</Button>
+                <Button href="/audit-logs">审计记录</Button>
+              </Space>
+            </div>
+            <div className="ops-drawer-section">
               <h3>最近入金</h3>
               <Table
                 rowKey="id"

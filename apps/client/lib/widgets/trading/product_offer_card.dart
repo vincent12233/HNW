@@ -128,9 +128,9 @@ class ProductOfferCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              const Flexible(
+              Flexible(
                 child: AppText(
-                  'Expected\nreturn',
+                  tr('Expected return'),
                   style: AppTypography.caption,
                 ),
               ),
@@ -146,7 +146,7 @@ class ProductOfferCard extends StatelessWidget {
                 shape: const StadiumBorder(),
               ),
               onPressed: onTrade,
-              child: AppText(actionLabel),
+              child: AppText(tr(actionLabel)),
             ),
           ),
         ],

@@ -7,6 +7,7 @@ import '../../services/app_content_service.dart';
 import '../../utils/number_formatters.dart';
 import '../app_page_scaffold.dart';
 import 'product_offer_card.dart';
+import 'product_risk_notice.dart';
 import 'trading_guide_card.dart';
 
 class InstitutionalTab extends StatelessWidget {
@@ -117,6 +118,8 @@ class InstitutionalTab extends StatelessWidget {
                               ),
                               if (!live && settlementPrice <= 0)
                                 const AppText('Live quote unavailable'),
+                              const SizedBox(height: 16),
+                              const ProductRiskNotice(),
                             ],
                           ),
                           actions: [

@@ -138,6 +138,30 @@ describe('IPO automatic payment from approved deposits', () => {
     expect(tx.notification.create).not.toHaveBeenCalled();
     expect(audit.createLog).not.toHaveBeenCalled();
   });
+  it('replays the winner after a concurrent approval claim is lost', async () => {
+    const { service, tx, audit } = setup(150);
+    tx.depositRequest.updateMany.mockResolvedValue({ count: 0 });
+    audit.findReplayResult.mockResolvedValue({
+      message: 'Deposit approved',
+      depositId: 'deposit',
+      depositAmount: '150',
+      ipoRepayment: '100.00',
+      creditedAmount: '50.00',
+    });
+
+    await expect(
+      service.approveDeposit('deposit', 'finance', 'FINANCE'),
+    ).resolves.toEqual({
+      message: 'Deposit approved',
+      depositId: 'deposit',
+      depositAmount: '150',
+      ipoRepayment: '100.00',
+      creditedAmount: '50.00',
+    });
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(audit.createLog).not.toHaveBeenCalled();
+  });
   it('duplicate approval does not repay or create holdings again', async () => {
     const { service, tx } = setup(150);
     tx.depositRequest.updateMany.mockResolvedValue({ count: 0 });

@@ -438,6 +438,126 @@ describe('WithdrawalService', () => {
     expect(transaction.notification.create).not.toHaveBeenCalled();
     expect((service as any).audit.createLog).not.toHaveBeenCalled();
   });
+  it('replays the winner after a concurrent withdrawal approval claim is lost', async () => {
+    const transaction = {
+      withdrawalRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'withdrawal-1',
+          accountId: 'account-1',
+          amount: 200,
+          frozenAmount: 200,
+          status: 'PENDING',
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          userId: 'user-1',
+          cashBalance: 1000,
+          buyingPower: 800,
+          frozenBalance: 200,
+        }),
+        update: jest.fn(),
+      },
+      accountTransaction: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
+      notification: { create: jest.fn() },
+    };
+    const replayResult = {
+      message: 'Withdrawal approved',
+      withdrawalId: 'withdrawal-1',
+      amount: '200',
+      balanceBefore: '1000.00',
+      balanceAfter: '800.00',
+      frozenBalanceAfter: '0.00',
+    };
+    (service as any).prisma = {
+      withdrawalRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'withdrawal-1',
+          accountId: 'account-1',
+          status: 'APPROVED',
+        }),
+      },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          userId: 'user-1',
+        }),
+      },
+      $transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(transaction),
+      ),
+    };
+    (service as any).audit.findReplayResult.mockResolvedValue(replayResult);
+
+    await expect(service.approveWithdrawal('withdrawal-1')).resolves.toEqual(
+      replayResult,
+    );
+    expect(transaction.account.update).not.toHaveBeenCalled();
+    expect(transaction.notification.create).not.toHaveBeenCalled();
+    expect((service as any).audit.createLog).not.toHaveBeenCalled();
+  });
+
+  it('replays the winner after a concurrent withdrawal rejection claim is lost', async () => {
+    const transaction = {
+      withdrawalRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'withdrawal-1',
+          accountId: 'account-1',
+          amount: 200,
+          frozenAmount: 200,
+          status: 'PENDING',
+          note: null,
+        }),
+        updateMany: jest.fn().mockResolvedValue({ count: 0 }),
+      },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          userId: 'user-1',
+          frozenBalance: 200,
+        }),
+        update: jest.fn(),
+      },
+      notification: { create: jest.fn() },
+    };
+    const replayResult = {
+      id: 'withdrawal-1',
+      accountId: 'account-1',
+      status: 'REJECTED',
+      frozenAmount: '0',
+    };
+    (service as any).prisma = {
+      withdrawalRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'withdrawal-1',
+          accountId: 'account-1',
+          status: 'REJECTED',
+        }),
+      },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          userId: 'user-1',
+        }),
+      },
+      $transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(transaction),
+      ),
+    };
+    (service as any).audit.findReplayResult.mockResolvedValue(replayResult);
+
+    await expect(service.rejectWithdrawal('withdrawal-1')).resolves.toEqual(
+      replayResult,
+    );
+    expect(transaction.account.update).not.toHaveBeenCalled();
+    expect(transaction.notification.create).not.toHaveBeenCalled();
+    expect((service as any).audit.createLog).not.toHaveBeenCalled();
+  });
   it('does not deduct funds when another reviewer already processed it', async () => {
     const transaction = {
       withdrawalRequest: {

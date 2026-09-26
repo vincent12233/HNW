@@ -263,109 +263,132 @@ export class DepositService {
 
     let availableAmount = moneyDecimal(deposit.amount);
 
-    await this.prisma.$transaction(
-      async (tx) => {
-        const claimed = await tx.depositRequest.updateMany({
-          where: { id: depositId, status: 'PENDING' },
-          data: { status: 'APPROVED' },
-        });
-        if (claimed.count !== 1) {
-          throw new BadRequestException('Deposit already processed');
-        }
-        const account = await tx.account.findUnique({
-          where: {
-            id: deposit.accountId,
-          },
-        });
-
-        if (!account) {
-          throw new NotFoundException('Account not found');
-        }
-        await this.assertDepositVisible(account.userId, role, actorId, tx);
-
-        const balanceBefore = moneyDecimal(account.cashBalance);
-        const { repayAmount: applied, remainingAmount } =
-          await applyIncomingFundsToIpoDebts(tx, {
-            accountId: deposit.accountId,
-            userId: account.userId,
-            amount: availableAmount,
-            balanceBefore,
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          const claimed = await tx.depositRequest.updateMany({
+            where: { id: depositId, status: 'PENDING' },
+            data: { status: 'APPROVED' },
           });
-        repayAmount = applied;
-        availableAmount = remainingAmount;
-
-        if (availableAmount.gt(0)) {
-          await tx.account.update({
+          if (claimed.count !== 1) {
+            throw new BadRequestException('Deposit already processed');
+          }
+          const account = await tx.account.findUnique({
             where: {
               id: deposit.accountId,
             },
+          });
 
+          if (!account) {
+            throw new NotFoundException('Account not found');
+          }
+          await this.assertDepositVisible(account.userId, role, actorId, tx);
+
+          const balanceBefore = moneyDecimal(account.cashBalance);
+          const { repayAmount: applied, remainingAmount } =
+            await applyIncomingFundsToIpoDebts(tx, {
+              accountId: deposit.accountId,
+              userId: account.userId,
+              amount: availableAmount,
+              balanceBefore,
+            });
+          repayAmount = applied;
+          availableAmount = remainingAmount;
+
+          if (availableAmount.gt(0)) {
+            await tx.account.update({
+              where: {
+                id: deposit.accountId,
+              },
+
+              data: {
+                cashBalance: {
+                  increment: availableAmount,
+                },
+
+                buyingPower: {
+                  increment: availableAmount,
+                },
+              },
+            });
+          }
+          await createLedgerEntryIdempotent(tx, {
+            accountId: deposit.accountId,
+            type: 'DEPOSIT',
+            status: 'COMPLETED',
+            amount: availableAmount,
+            balanceBefore,
+            balanceAfter: balanceBefore.add(availableAmount),
+            referenceId: depositId,
+            note: repayAmount.gt(0)
+              ? `Deposit approved; ${repayAmount.toFixed(2)} applied to IPO debt`
+              : 'Deposit approved',
+            idempotencyKey: `DEPOSIT:${depositId}`,
+          });
+          await tx.notification.create({
             data: {
-              cashBalance: {
-                increment: availableAmount,
-              },
-
-              buyingPower: {
-                increment: availableAmount,
-              },
+              userId: account.userId,
+              type: 'DEPOSIT',
+              title: 'Deposit approved',
+              body: repayAmount.gt(0)
+                ? availableAmount.gt(0)
+                  ? `${availableAmount.toFixed(2)} added to available balance; ${repayAmount.toFixed(2)} applied to IPO debt.`
+                  : `${repayAmount.toFixed(2)} applied to IPO debt; no surplus credited to cash.`
+                : `${availableAmount.toFixed(2)} has been added to your available balance.`,
+              referenceId: depositId,
             },
           });
-        }
-        await createLedgerEntryIdempotent(tx, {
-          accountId: deposit.accountId,
-          type: 'DEPOSIT',
-          status: 'COMPLETED',
-          amount: availableAmount,
-          balanceBefore,
-          balanceAfter: balanceBefore.add(availableAmount),
-          referenceId: depositId,
-          note: repayAmount.gt(0)
-            ? `Deposit approved; ${repayAmount.toFixed(2)} applied to IPO debt`
-            : 'Deposit approved',
-          idempotencyKey: `DEPOSIT:${depositId}`,
-        });
-        await tx.notification.create({
-          data: {
-            userId: account.userId,
-            type: 'DEPOSIT',
-            title: 'Deposit approved',
-            body: repayAmount.gt(0)
-              ? availableAmount.gt(0)
-                ? `${availableAmount.toFixed(2)} added to available balance; ${repayAmount.toFixed(2)} applied to IPO debt.`
-                : `${repayAmount.toFixed(2)} applied to IPO debt; no surplus credited to cash.`
-              : `${availableAmount.toFixed(2)} has been added to your available balance.`,
-            referenceId: depositId,
-          },
-        });
-        if (actorId)
-          await this.audit.createLog(
-            {
-              actorId,
-              action: 'DEPOSIT_APPROVED',
-              resource: 'deposit',
-              resourceId: depositId,
-              description: 'Deposit approved by finance operator',
-              idempotencyKey,
-              result: 'APPROVED',
-              statusVersion: 1,
-              metadata: {
-                depositAmount: String(deposit.amount),
-                ipoRepayment: repayAmount.toFixed(2),
-                creditedAmount: availableAmount.toFixed(2),
-                replayResult: {
-                  message: 'Deposit approved',
-                  depositId,
+          if (actorId)
+            await this.audit.createLog(
+              {
+                actorId,
+                action: 'DEPOSIT_APPROVED',
+                resource: 'deposit',
+                resourceId: depositId,
+                description: 'Deposit approved by finance operator',
+                idempotencyKey,
+                result: 'APPROVED',
+                statusVersion: 1,
+                metadata: {
                   depositAmount: String(deposit.amount),
                   ipoRepayment: repayAmount.toFixed(2),
                   creditedAmount: availableAmount.toFixed(2),
+                  replayResult: {
+                    message: 'Deposit approved',
+                    depositId,
+                    depositAmount: String(deposit.amount),
+                    ipoRepayment: repayAmount.toFixed(2),
+                    creditedAmount: availableAmount.toFixed(2),
+                  },
                 },
               },
-            },
-            tx,
-          );
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+              tx,
+            );
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (
+        error instanceof BadRequestException &&
+        error.message.includes('already processed')
+      ) {
+        await this.assertDepositVisible(
+          deposit.account.userId,
+          role,
+          actorId,
+          this.prisma,
+        );
+        const replay = await this.audit.findReplayResult<{
+          message: string;
+          depositId: string;
+          depositAmount: string;
+          ipoRepayment: string;
+          creditedAmount: string;
+        }>(idempotencyKey);
+        if (replay) return replay;
+      }
+      throw error;
+    }
 
     const result = {
       message: 'Deposit approved',
@@ -387,73 +410,100 @@ export class DepositService {
     actorId: string,
     role: string,
   ) {
-    await this.prisma.$transaction(
-      async (tx) => {
-        const deposit = await tx.depositRequest.findUnique({
+    try {
+      await this.prisma.$transaction(
+        async (tx) => {
+          const deposit = await tx.depositRequest.findUnique({
+            where: { id: depositId },
+            include: { account: true },
+          });
+          if (!deposit)
+            throw new NotFoundException('Deposit request not found');
+          await this.assertDepositVisible(
+            deposit.account.userId,
+            role,
+            actorId,
+            tx,
+          );
+          const idempotencyKey = `DEPOSIT:${depositId}:REJECT`;
+          if (deposit.status === 'REJECTED') {
+            const replay = await this.audit.findReplayResult<{
+              message: string;
+              depositId: string;
+            }>(idempotencyKey, tx);
+            if (replay) return replay;
+          }
+          if (deposit.status !== 'PENDING') {
+            throw new BadRequestException('Deposit already processed');
+          }
+          const updated = await tx.depositRequest.updateMany({
+            where: { id: depositId, status: 'PENDING' },
+            data: { status: 'REJECTED', note: note?.trim() || null },
+          });
+          if (updated.count !== 1) {
+            throw new BadRequestException('Deposit already processed');
+          }
+          await tx.notification.create({
+            data: {
+              userId: deposit.account.userId,
+              type: 'DEPOSIT',
+              title: 'Deposit rejected',
+              body:
+                note?.trim() ||
+                'Your deposit could not be confirmed. Please contact support.',
+              referenceId: depositId,
+            },
+          });
+          if (actorId)
+            await this.audit.createLog(
+              {
+                actorId,
+                action: 'DEPOSIT_REJECTED',
+                resource: 'deposit',
+                resourceId: depositId,
+                description:
+                  note?.trim() || 'Deposit rejected by finance operator',
+
+                idempotencyKey,
+                result: 'REJECTED',
+                statusVersion: 1,
+                metadata: {
+                  replayResult: {
+                    message: 'Deposit rejected',
+                    depositId,
+                  },
+                },
+              },
+              tx,
+            );
+        },
+        { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+      );
+    } catch (error) {
+      if (
+        error instanceof BadRequestException &&
+        error.message.includes('already processed')
+      ) {
+        const current = await this.prisma.depositRequest.findUnique({
           where: { id: depositId },
           include: { account: true },
         });
-        if (!deposit) throw new NotFoundException('Deposit request not found');
-        await this.assertDepositVisible(
-          deposit.account.userId,
-          role,
-          actorId,
-          tx,
-        );
-        const idempotencyKey = `DEPOSIT:${depositId}:REJECT`;
-        if (deposit.status === 'REJECTED') {
+        if (current?.status === 'REJECTED') {
+          await this.assertDepositVisible(
+            current.account.userId,
+            role,
+            actorId,
+            this.prisma,
+          );
           const replay = await this.audit.findReplayResult<{
             message: string;
             depositId: string;
-          }>(idempotencyKey, tx);
+          }>(`DEPOSIT:${depositId}:REJECT`);
           if (replay) return replay;
         }
-        if (deposit.status !== 'PENDING') {
-          throw new BadRequestException('Deposit already processed');
-        }
-        const updated = await tx.depositRequest.updateMany({
-          where: { id: depositId, status: 'PENDING' },
-          data: { status: 'REJECTED', note: note?.trim() || null },
-        });
-        if (updated.count !== 1) {
-          throw new BadRequestException('Deposit already processed');
-        }
-        await tx.notification.create({
-          data: {
-            userId: deposit.account.userId,
-            type: 'DEPOSIT',
-            title: 'Deposit rejected',
-            body:
-              note?.trim() ||
-              'Your deposit could not be confirmed. Please contact support.',
-            referenceId: depositId,
-          },
-        });
-        if (actorId)
-          await this.audit.createLog(
-            {
-              actorId,
-              action: 'DEPOSIT_REJECTED',
-              resource: 'deposit',
-              resourceId: depositId,
-              description:
-                note?.trim() || 'Deposit rejected by finance operator',
-
-              idempotencyKey,
-              result: 'REJECTED',
-              statusVersion: 1,
-              metadata: {
-                replayResult: {
-                  message: 'Deposit rejected',
-                  depositId,
-                },
-              },
-            },
-            tx,
-          );
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
+      }
+      throw error;
+    }
 
     return {
       message: 'Deposit rejected',

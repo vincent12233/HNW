@@ -64,6 +64,7 @@ class HomeDashboard extends StatefulWidget {
     this.periodLoading = false,
     this.historyError,
     this.historyFrom,
+    this.historyUpdatedAt,
     this.portfolioSeries = const [],
     this.outstandingIpo = 0,
     this.quoteUpdatedAt,
@@ -107,6 +108,7 @@ class HomeDashboard extends StatefulWidget {
   final bool periodLoading;
   final String? historyError;
   final String? historyFrom;
+  final DateTime? historyUpdatedAt;
   final List<double> portfolioSeries;
   final double outstandingIpo;
   final DateTime? quoteUpdatedAt;
@@ -447,11 +449,17 @@ class _AssetPanel extends StatelessWidget {
               fontFeatures: AppTypography.tabularFeatures,
             ),
           ),
-          if (dashboard.historyError != null)
+          if (dashboard.historyError != null) ...[
             AppText(
               dashboard.historyError!,
               style: AppTypography.caption.copyWith(color: inverseMuted),
             ),
+            if (dashboard.historyUpdatedAt case final updatedAt?)
+              AppText(
+                'Last updated ${formatIstDateTime(updatedAt)}',
+                style: AppTypography.caption.copyWith(color: inverseMuted),
+              ),
+          ],
           if (dashboard.historyFrom != null && !dashboard.hideBalances)
             AppText(
               'Since ${dashboard.historyFrom}',

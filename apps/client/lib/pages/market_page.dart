@@ -88,13 +88,17 @@ class _MarketHomePageState extends State<MarketHomePage>
   int selectedIndex = 0;
   int _previousSelectedIndex = 0;
   String _portfolioPeriod = '1D';
-  List<double> _portfolioSeries = const <double>[];
-  bool _portfolioHistoryLoading = false;
+  AsyncDataState<_PortfolioHistoryData> _portfolioHistoryState =
+      const AsyncDataState.initial();
   int _portfolioHistoryRequest = 0;
   bool _amountsHidden = false;
-  double? _periodProfit;
-  String? _historyFrom;
-  String? _historyError;
+
+  List<double> get _portfolioSeries =>
+      _portfolioHistoryState.data?.series ?? const <double>[];
+  bool get _portfolioHistoryLoading => _portfolioHistoryState.isLoading;
+  double? get _periodProfit => _portfolioHistoryState.data?.profit;
+  String? get _historyFrom => _portfolioHistoryState.data?.from;
+  String? get _historyError => _portfolioHistoryState.message;
   Map<String, dynamic> _profileData = {};
   DeviceBiometric? _biometricCapability;
   bool _biometricEnabled = false;
@@ -1482,6 +1486,7 @@ class _MarketHomePageState extends State<MarketHomePage>
           periodLoading: _portfolioHistoryLoading,
           historyError: _historyError,
           historyFrom: _historyFrom,
+          historyUpdatedAt: _portfolioHistoryState.updatedAt,
           portfolioSeries: _portfolioSeries,
           outstandingIpo: outstandingIpo,
           onSelectPeriod: (period) => unawaited(_loadPortfolioHistory(period)),
@@ -1800,13 +1805,14 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Future<void> _loadPortfolioHistory(String period) async {
     final requestId = ++_portfolioHistoryRequest;
+    final previousState = _portfolioHistoryState;
+    final periodChanged = period != _portfolioPeriod;
     setState(() {
       _portfolioPeriod = period;
-      _portfolioHistoryLoading = true;
-      _portfolioSeries = const [];
-      _periodProfit = null;
-      _historyFrom = null;
-      _historyError = null;
+      _portfolioHistoryState = AsyncDataState.loading(
+        data: periodChanged ? null : previousState.data,
+        updatedAt: periodChanged ? null : previousState.updatedAt,
+      );
     });
     try {
       final result = await ClientAccountService().assetHistory(period);
@@ -1814,22 +1820,30 @@ class _MarketHomePageState extends State<MarketHomePage>
       final points = (result['points'] as List? ?? [])
           .whereType<Map>()
           .toList();
+      final from = DateTime.tryParse(result['from']?.toString() ?? '');
+      final history = _PortfolioHistoryData(
+        series: points
+            .map((point) => (point['totalValue'] as num).toDouble())
+            .toList(),
+        profit: (result['profitChange'] as num?)?.toDouble(),
+        from: from?.toLocal().toString().substring(0, 16),
+      );
       setState(() {
-        _portfolioSeries = points
-            .map((p) => (p['totalValue'] as num).toDouble())
-            .toList();
-        _periodProfit = (result['profitChange'] as num?)?.toDouble();
-        final from = DateTime.tryParse(result['from']?.toString() ?? '');
-        _historyFrom = from?.toLocal().toString().substring(0, 16);
+        _portfolioHistoryState = AsyncDataState.success(history);
       });
-    } catch (_) {
-      if (mounted && requestId == _portfolioHistoryRequest) {
-        setState(() => _historyError = 'History unavailable. Try again later.');
-      }
-    } finally {
-      if (mounted && requestId == _portfolioHistoryRequest) {
-        setState(() => _portfolioHistoryLoading = false);
-      }
+    } catch (error) {
+      if (!mounted || requestId != _portfolioHistoryRequest) return;
+      const message = 'History unavailable. Try again later.';
+      setState(() {
+        final previousHistory = _portfolioHistoryState.data;
+        _portfolioHistoryState = previousHistory == null
+            ? const AsyncDataState.error(message)
+            : AsyncDataState.stale(
+                previousHistory,
+                updatedAt: _portfolioHistoryState.updatedAt ?? DateTime.now(),
+                message: message,
+              );
+      });
     }
   }
 
@@ -2586,4 +2600,16 @@ class _MarketHomePageState extends State<MarketHomePage>
       ),
     );
   }
+}
+
+class _PortfolioHistoryData {
+  const _PortfolioHistoryData({
+    required this.series,
+    required this.profit,
+    required this.from,
+  });
+
+  final List<double> series;
+  final double? profit;
+  final String? from;
 }

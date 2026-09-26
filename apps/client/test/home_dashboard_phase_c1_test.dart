@@ -51,6 +51,9 @@ HomeDashboard dashboard({
   List<MarketNewsItem>? news,
   DateTime? quoteUpdatedAt,
   bool quotesStale = false,
+  String? historyError,
+  DateTime? historyUpdatedAt,
+  List<double> portfolioSeries = const [],
   VoidCallback? onRetryAccount,
   VoidCallback? onRetryNews,
   VoidCallback? onRetryQuotes,
@@ -132,6 +135,9 @@ HomeDashboard dashboard({
     kycStatus: kycStatus,
     quoteUpdatedAt: quoteUpdatedAt ?? DateTime(2026, 9, 19, 10, 28),
     quotesStale: quotesStale,
+    historyError: historyError,
+    historyUpdatedAt: historyUpdatedAt,
+    portfolioSeries: portfolioSeries,
     onSearch: () {},
     onNotifications: () {},
     onToggleHideBalances: onToggleHide ?? () {},
@@ -240,6 +246,26 @@ void main() {
     expect(homeKycTodo('APPROVED', available: true), HomeKycTodo.hidden);
     expect(homeKycTodo('PENDING', available: true), HomeKycTodo.pending);
     expect(homeKycTodo('UNKNOWN', available: false), HomeKycTodo.hidden);
+  });
+
+  testWidgets('stale portfolio history shows its last successful update', (
+    tester,
+  ) async {
+    final updatedAt = DateTime(2026, 9, 26, 10, 30);
+    await pumpHome(
+      tester,
+      home: dashboard(
+        historyError: 'History unavailable. Try again later.',
+        historyUpdatedAt: updatedAt,
+        portfolioSeries: const [100, 105],
+      ),
+    );
+
+    expect(find.text('History unavailable. Try again later.'), findsOneWidget);
+    expect(
+      find.text('Last updated ${formatIstDateTime(updatedAt)}'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('loading hides amounts and does not claim a rally', (

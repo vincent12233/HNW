@@ -19,5 +19,6 @@ void main() {
     expect(state.status, AsyncDataStatus.offline);
     expect(state.requiresNotice, isTrue);
     expect(state.updatedAt, timestamp);
+    expect(state.message, isNull);
   });
 }

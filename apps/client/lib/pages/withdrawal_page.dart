@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../l10n/app_language.dart';
+import '../models/async_data_state.dart';
 import '../models/withdrawal_request.dart';
 import '../pages/account_security_page.dart';
 import '../pages/account_settings_page.dart';
@@ -63,10 +64,10 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   List<WithdrawalRequest> _history = const [];
   List<Map<String, dynamic>> _banks = const [];
   Map<String, dynamic>? _selectedBank;
-  bool _loading = true;
+  AsyncDataState<List<WithdrawalRequest>> _loadState =
+      const AsyncDataState.initial();
   bool _submitting = false;
   bool _hasPin = false;
-  String? _error;
   String? _formError;
   int _generation = 0;
   Future<void>? _inFlight;
@@ -102,7 +103,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   Future<void> _loadOnce(int request) async {
     if (mounted) {
       setState(() {
-        _loading = true;
+        _loadState = const AsyncDataState.loading();
       });
     }
     try {
@@ -122,23 +123,30 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         _banks = banks;
         _selectedBank = selected;
         _history = history;
-        _loading = false;
-        _error = null;
+        _loadState = AsyncDataState.success(history);
       });
     } catch (error) {
       if (!mounted || request != _generation) return;
+      final message = clientErrorMessage(
+        error,
+        fallback: 'Unable to load withdrawals. Please try again.',
+      );
       setState(() {
-        _loading = false;
-        _error = clientErrorMessage(
-          error,
-          fallback: 'Unable to load withdrawals. Please try again.',
-        );
+        if (_history.isNotEmpty || _banks.isNotEmpty) {
+          _loadState = AsyncDataState.stale(
+            _history,
+            updatedAt: _loadState.updatedAt ?? DateTime.now(),
+            message: message,
+          );
+        } else {
+          _loadState = AsyncDataState.error(message);
+        }
       });
     }
   }
 
   Future<void> _submit() async {
-    if (_submitting || _loading) return;
+    if (_submitting || _loadState.isLoading) return;
     final amount = double.tryParse(
       _amountController.text.trim().replaceAll(',', ''),
     );
@@ -219,22 +227,26 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   @override
   Widget build(BuildContext context) {
     final Widget body;
-    if (_loading && _history.isEmpty && _error == null && _banks.isEmpty) {
+    if (_loadState.isLoading && _history.isEmpty && _banks.isEmpty) {
       body = const AppLoadingView(message: 'Loading withdrawals');
-    } else if (_error != null && _history.isEmpty && _banks.isEmpty) {
+    } else if (_loadState.status == AsyncDataStatus.error &&
+        _history.isEmpty &&
+        _banks.isEmpty) {
       body = AppErrorView(
         title: 'Unable to load withdrawals',
-        message: _error,
+        message: _loadState.message,
         onRetry: () => unawaited(_load()),
       );
     } else {
       body = RefreshIndicator(
-        onRefresh: _loading ? () async {} : _load,
+        onRefresh: _loadState.isLoading ? () async {} : _load,
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
           padding: AppSpacing.page,
           children: [
-            if (_loading) const LinearProgressIndicator(minHeight: 2),
+            if (_loadState.isLoading)
+              const LinearProgressIndicator(minHeight: 2),
+            if (_loadState.requiresNotice) _staleDataNotice(),
             _summaryCard(),
             const SizedBox(height: AppSpacing.lg),
             _historyCard(),
@@ -287,6 +299,35 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         ),
       ),
       body: body,
+    );
+  }
+
+  Widget _staleDataNotice() {
+    final updatedAt = _loadState.updatedAt;
+    final timestamp = updatedAt == null
+        ? 'an earlier update'
+        : '${updatedAt.hour.toString().padLeft(2, '0')}:${updatedAt.minute.toString().padLeft(2, '0')}';
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.md),
+      child: AppCard(
+        backgroundColor: AppColors.warningSoft,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Icon(Icons.cloud_off_outlined, color: AppColors.warning),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: AppText(
+                'Showing previously loaded data from $timestamp. '
+                '${_loadState.message ?? 'Refresh when your connection returns.'}',
+                style: AppTypography.bodySmall.copyWith(
+                  color: AppColors.textPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -440,7 +481,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           AppPrimaryButton(
             label: 'Submit Request',
             loading: _submitting,
-            onPressed: _submitting || _loading ? null : _submit,
+            onPressed: _submitting || _loadState.isLoading ? null : _submit,
           ),
         ],
       ),
@@ -462,26 +503,28 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               ),
               IconButton(
                 tooltip: tr('Refresh withdrawal history'),
-                onPressed: _loading ? null : () => unawaited(_load()),
+                onPressed: _loadState.isLoading
+                    ? null
+                    : () => unawaited(_load()),
                 icon: const Icon(Icons.refresh_rounded),
               ),
             ],
           ),
-          if (_error != null && _history.isNotEmpty)
+          if (_loadState.message != null && _history.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-              child: AppText(_error!),
+              child: AppText(_loadState.message!),
             ),
-          if (_history.isEmpty && _error == null)
+          if (_history.isEmpty && _loadState.message == null)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
               child: AppText('No withdrawal records yet.'),
             )
-          else if (_history.isEmpty && _error != null)
+          else if (_history.isEmpty && _loadState.message != null)
             AppErrorView(
               compact: true,
               title: 'Unable to load withdrawals',
-              message: _error,
+              message: _loadState.message,
               onRetry: () => unawaited(_load()),
             )
           else

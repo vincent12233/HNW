@@ -20,11 +20,24 @@ class AsyncDataState<T> {
         updatedAt: updatedAt ?? DateTime.now(),
       );
 
-  AsyncDataState.stale(T value, {required DateTime updatedAt})
-    : this._(AsyncDataStatus.stale, data: value, updatedAt: updatedAt);
+  AsyncDataState.stale(T value, {required DateTime updatedAt, String? message})
+    : this._(
+        AsyncDataStatus.stale,
+        data: value,
+        updatedAt: updatedAt,
+        message: message,
+      );
 
-  AsyncDataState.offline(T value, {required DateTime updatedAt})
-    : this._(AsyncDataStatus.offline, data: value, updatedAt: updatedAt);
+  AsyncDataState.offline(
+    T value, {
+    required DateTime updatedAt,
+    String? message,
+  }) : this._(
+         AsyncDataStatus.offline,
+         data: value,
+         updatedAt: updatedAt,
+         message: message,
+       );
 
   final AsyncDataStatus status;
   final T? data;

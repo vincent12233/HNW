@@ -213,6 +213,41 @@ void main() {
     expect(find.text('WD0'), findsOneWidget);
   });
 
+  testWidgets('refresh failure keeps prior data and shows stale notice', (
+    tester,
+  ) async {
+    var failRefresh = false;
+    final auth = FakeAuth(
+      listFn: () async {
+        if (failRefresh) throw const AuthException('offline');
+        return [sample()];
+      },
+    );
+    await tester.pumpWidget(
+      host(
+        WithdrawalPage(
+          availableBalance: 1000,
+          frozenBalance: 0,
+          authService: auth,
+          accountService: FakeAccount(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('WD0'), findsOneWidget);
+
+    failRefresh = true;
+    await tester.tap(find.byTooltip('Refresh withdrawal history'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('WD0'), findsOneWidget);
+    expect(
+      find.textContaining('Showing previously loaded data'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('offline'), findsOneWidget);
+  });
+
   testWidgets('submit keeps input on failure and only succeeds after server', (
     tester,
   ) async {

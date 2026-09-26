@@ -115,13 +115,41 @@ export class AdminAccountService {
           throw new NotFoundException(
             'Dedicated operator customer account not found',
           );
+        const idempotencyKey = `ADJUSTMENT:${referenceId}`;
         const duplicate = await tx.accountTransaction.findFirst({
-          where: { idempotencyKey: `ADJUSTMENT:${referenceId}` },
+          where: { idempotencyKey },
         });
-        if (duplicate)
+        if (duplicate) {
+          const expectedType =
+            direction === 'CREDIT' ? 'ADMIN_CREDIT' : 'ADMIN_DEBIT';
+          if (
+            duplicate.accountId !== account.id ||
+            duplicate.type !== expectedType
+          ) {
+            throw new ConflictException(
+              'Reference number has already been processed',
+            );
+          }
+          const replay = await this.auditService.findReplayResult<{
+            accountNumber: string;
+            direction: AdjustmentDirection;
+            amount: string;
+            ipoRepayment: string;
+            creditedAmount: string;
+            balance: string;
+          }>(idempotencyKey, tx);
+          if (
+            replay &&
+            replay.accountNumber === normalizedAccountNumber &&
+            replay.direction === direction &&
+            moneyDecimal(replay.amount).eq(amount)
+          ) {
+            return replay;
+          }
           throw new ConflictException(
             'Reference number has already been processed',
           );
+        }
         if (
           direction === 'DEBIT' &&
           (account.buyingPower.lt(amount) || availableCash(account).lt(amount))
@@ -182,7 +210,7 @@ export class AdminAccountService {
             return base;
           })(),
           createdById: operatorId,
-          idempotencyKey: `ADJUSTMENT:${referenceId}`,
+          idempotencyKey,
         });
         if (!ledger.created) {
           throw new ConflictException(
@@ -203,26 +231,7 @@ export class AdminAccountService {
             referenceId,
           },
         });
-        await this.auditService.createLog(
-          {
-            actorId: operatorId,
-            action: `${role === 'FINANCE' ? 'FINANCE' : 'DEDICATED'}_${direction}`,
-            resource: 'ACCOUNT_BALANCE',
-            resourceId: normalizedAccountNumber,
-            description: `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} directly adjusted customer funds`,
-            idempotencyKey: `ADJUSTMENT:${referenceId}`,
-            result: 'COMPLETED',
-            statusVersion: 1,
-            metadata: {
-              referenceId,
-              amount: amount.toFixed(2),
-              ipoRepayment: ipoRepayment.toFixed(2),
-              creditedAmount: creditedAmount.toFixed(2),
-            },
-          },
-          tx,
-        );
-        return {
+        const operationResult = {
           accountNumber: normalizedAccountNumber,
           direction,
           amount: amount.toFixed(2),
@@ -230,6 +239,27 @@ export class AdminAccountService {
           creditedAmount: creditedAmount.toFixed(2),
           balance: balanceAfter.toFixed(2),
         };
+        await this.auditService.createLog(
+          {
+            actorId: operatorId,
+            action: `${role === 'FINANCE' ? 'FINANCE' : 'DEDICATED'}_${direction}`,
+            resource: 'ACCOUNT_BALANCE',
+            resourceId: normalizedAccountNumber,
+            description: `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} directly adjusted customer funds`,
+            idempotencyKey,
+            result: 'COMPLETED',
+            statusVersion: 1,
+            metadata: {
+              referenceId,
+              amount: amount.toFixed(2),
+              ipoRepayment: ipoRepayment.toFixed(2),
+              creditedAmount: creditedAmount.toFixed(2),
+              replayResult: operationResult,
+            },
+          },
+          tx,
+        );
+        return operationResult;
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );

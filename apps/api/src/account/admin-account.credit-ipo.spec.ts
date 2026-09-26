@@ -60,12 +60,16 @@ describe('AdminAccountService credit applies IPO debt', () => {
     const prisma = {
       $transaction: (fn: any) => fn(tx),
     };
+    const audit = {
+      createLog: jest.fn(),
+      findReplayResult: jest.fn(),
+    };
     const service = new AdminAccountService(
       prisma as any,
-      { createLog: jest.fn() } as any,
+      audit as any,
       {} as any,
     );
-    return { service, tx, creditAmount };
+    return { service, tx, audit, creditAmount };
   }
 
   function moneyAdd(base: Prisma.Decimal, delta: Prisma.Decimal | number) {
@@ -130,5 +134,74 @@ describe('AdminAccountService credit applies IPO debt', () => {
     expect(result.ipoRepayment).toBe('0.00');
     expect(result.creditedAmount).toBe('80.00');
     expect(tx.account.update).toHaveBeenCalled();
+  });
+
+  it('replays a matching adjustment without crediting or notifying twice', async () => {
+    const { service, tx, audit } = setup(80);
+    tx.accountTransaction.findFirst.mockResolvedValue({
+      accountId: 'account',
+      type: 'ADMIN_CREDIT',
+      amount: new Prisma.Decimal(80),
+      idempotencyKey: 'ADJUSTMENT:REF-REPLAY',
+    });
+    audit.findReplayResult.mockResolvedValue({
+      accountNumber: 'ACC1',
+      direction: 'CREDIT',
+      amount: '80.00',
+      ipoRepayment: '0.00',
+      creditedAmount: '80.00',
+      balance: '80.00',
+    });
+
+    await expect(
+      service.credit(
+        'ACC1',
+        { amount: '80', referenceId: 'REF-REPLAY' },
+        'finance-1',
+        'FINANCE',
+      ),
+    ).resolves.toEqual({
+      message: 'Funds credited',
+      accountNumber: 'ACC1',
+      direction: 'CREDIT',
+      amount: '80.00',
+      ipoRepayment: '0.00',
+      creditedAmount: '80.00',
+      balance: '80.00',
+    });
+    expect(tx.ipoDebt.findMany).not.toHaveBeenCalled();
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(tx.accountTransaction.create).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(audit.createLog).not.toHaveBeenCalled();
+  });
+
+  it('rejects reuse of an adjustment reference with a changed amount', async () => {
+    const { service, tx, audit } = setup(80);
+    tx.accountTransaction.findFirst.mockResolvedValue({
+      accountId: 'account',
+      type: 'ADMIN_CREDIT',
+      amount: new Prisma.Decimal(80),
+      idempotencyKey: 'ADJUSTMENT:REF-REUSED',
+    });
+    audit.findReplayResult.mockResolvedValue({
+      accountNumber: 'ACC1',
+      direction: 'CREDIT',
+      amount: '50.00',
+      ipoRepayment: '0.00',
+      creditedAmount: '50.00',
+      balance: '50.00',
+    });
+
+    await expect(
+      service.credit(
+        'ACC1',
+        { amount: '80', referenceId: 'REF-REUSED' },
+        'finance-1',
+        'FINANCE',
+      ),
+    ).rejects.toThrow('Reference number has already been processed');
+    expect(tx.account.update).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
   });
 });

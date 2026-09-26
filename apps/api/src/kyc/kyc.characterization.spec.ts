@@ -48,9 +48,11 @@ describe('Current KYC HTTP and review behavior', () => {
         ],
       });
       if (role) {
-        builder.overrideGuard(JwtAuthGuard).useValue(
-          stubAuthenticatedUser({ userId: `${role.toLowerCase()}-1`, role }),
-        );
+        builder
+          .overrideGuard(JwtAuthGuard)
+          .useValue(
+            stubAuthenticatedUser({ userId: `${role.toLowerCase()}-1`, role }),
+          );
         builder.overrideGuard(KycAccessGuard).useValue(
           stubAuthenticatedUser({
             userId: `${role.toLowerCase()}-1`,
@@ -71,7 +73,10 @@ describe('Current KYC HTTP and review behavior', () => {
       app = await build(null);
       const logging = jest.spyOn(console, 'error').mockImplementation(() => {});
       try {
-        await request(app.getHttpServer()).post('/kyc/submit').send({}).expect(401);
+        await request(app.getHttpServer())
+          .post('/kyc/submit')
+          .send({})
+          .expect(401);
         expect(kycService.submit).not.toHaveBeenCalled();
       } finally {
         logging.mockRestore();
@@ -90,9 +95,11 @@ describe('Current KYC HTTP and review behavior', () => {
         .post('/kyc/submit')
         .send({ documentType: 'PAN' })
         .expect(201);
-      expect(kycService.submit).toHaveBeenCalledWith('client-1', {
-        documentType: 'PAN',
-      });
+      expect(kycService.submit).toHaveBeenCalledWith(
+        'client-1',
+        { documentType: 'PAN' },
+        undefined,
+      );
       await request(app.getHttpServer()).get('/kyc/status').expect(200);
     });
 
@@ -104,7 +111,9 @@ describe('Current KYC HTTP and review behavior', () => {
       });
       const logging = jest.spyOn(console, 'error').mockImplementation(() => {});
       try {
-        await request(app.getHttpServer()).get('/kyc/business/pending').expect(403);
+        await request(app.getHttpServer())
+          .get('/kyc/business/pending')
+          .expect(403);
         await request(app.getHttpServer())
           .patch('/kyc/business/review')
           .send({ submissionId: 's1', decision: 'APPROVED' })
@@ -123,7 +132,9 @@ describe('Current KYC HTTP and review behavior', () => {
           role,
           status: UserStatus.ACTIVE,
         });
-        const logging = jest.spyOn(console, 'error').mockImplementation(() => {});
+        const logging = jest
+          .spyOn(console, 'error')
+          .mockImplementation(() => {});
         try {
           await request(app.getHttpServer())
             .patch('/kyc/business/review')
@@ -160,7 +171,10 @@ describe('Current KYC HTTP and review behavior', () => {
         role: UserRole.BUSINESS,
         status: UserStatus.ACTIVE,
       });
-      kycService.review.mockResolvedValue({ reviewed: true, status: 'APPROVED' });
+      kycService.review.mockResolvedValue({
+        reviewed: true,
+        status: 'APPROVED',
+      });
       await request(app.getHttpServer())
         .patch('/kyc/business/review')
         .send({
@@ -239,9 +253,9 @@ describe('Current KYC HTTP and review behavior', () => {
         status: UserStatus.SUSPENDED,
         authVersion: 1,
       });
-      await expect(guard.canActivate(context('Bearer session'))).rejects.toBeInstanceOf(
-        UnauthorizedException,
-      );
+      await expect(
+        guard.canActivate(context('Bearer session')),
+      ).rejects.toBeInstanceOf(UnauthorizedException);
     });
   });
 
@@ -263,8 +277,8 @@ describe('Current KYC HTTP and review behavior', () => {
 
     beforeEach(() => {
       jest.resetAllMocks();
-      prisma.$transaction.mockImplementation(async (fn: (tx: typeof prisma) => unknown) =>
-        fn(prisma),
+      prisma.$transaction.mockImplementation(
+        async (fn: (tx: typeof prisma) => unknown) => fn(prisma),
       );
     });
 
@@ -293,14 +307,21 @@ describe('Current KYC HTTP and review behavior', () => {
           note: 'Blurry PAN',
         }),
       ).resolves.toEqual({ reviewed: true, status: 'REJECTED' });
-      expect(JSON.stringify(prisma.$executeRaw.mock.calls)).toContain('Blurry PAN');
-      expect(JSON.stringify(prisma.$executeRaw.mock.calls)).not.toContain('ACTIVE');
+      expect(JSON.stringify(prisma.$executeRaw.mock.calls)).toContain(
+        'Blurry PAN',
+      );
+      expect(JSON.stringify(prisma.$executeRaw.mock.calls)).not.toContain(
+        'ACTIVE',
+      );
     });
 
     it('does not let another business user review the submission', async () => {
       prisma.$queryRaw.mockResolvedValue([]);
       await expect(
-        service.review('other-biz', { submissionId: 's1', decision: 'APPROVED' }),
+        service.review('other-biz', {
+          submissionId: 's1',
+          decision: 'APPROVED',
+        }),
       ).rejects.toBeInstanceOf(NotFoundException);
     });
 

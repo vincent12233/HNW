@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -28,10 +29,11 @@ export class KycController {
   @UseGuards(KycAccessGuard)
   submit(
     @Req() req: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body()
     body: KycSubmissionInput,
   ) {
-    return this.kycService.submit(req.user.userId, body);
+    return this.kycService.submit(req.user.userId, body, idempotencyKey);
   }
 
   @Get('business/pending')
@@ -69,6 +71,7 @@ export class KycController {
   @Roles(UserRole.BUSINESS, UserRole.SUPPORT)
   review(
     @Req() req: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey: string | undefined,
     @Body()
     body: {
       submissionId: string;

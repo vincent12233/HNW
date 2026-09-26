@@ -3,10 +3,13 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { extname } from 'path';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { PrivateObjectStorageService } from '../storage/private-object-storage.service';
+import { BUSINESS_ERROR_CODES } from '../common/business-error-codes';
+import { optionalIdempotencyKey } from '../common/idempotency-key';
 
 export type KycSubmissionInput = {
   fullName?: string;
@@ -70,7 +73,11 @@ export class KycService {
     private readonly objects: PrivateObjectStorageService,
   ) {}
 
-  async submit(userId: string, input: KycSubmissionInput) {
+  async submit(
+    userId: string,
+    input: KycSubmissionInput,
+    requestedIdempotencyKey?: string,
+  ) {
     const fullName =
       typeof input.fullName === 'string' ? input.fullName.trim() : '';
     const bank = input.bankDetails;
@@ -107,6 +114,57 @@ export class KycService {
 
     if (!user || !user.assignedBusinessId) {
       throw new NotFoundException('Registered customer not found');
+    }
+
+    const requestFingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          fullName,
+          bankDetails: bank,
+          documentType: input.documentType,
+          fileName: input.fileName,
+          mimeType: input.mimeType ?? null,
+          contentBase64: input.contentBase64,
+          backFileName: input.backFileName ?? null,
+          backMimeType: input.backMimeType ?? null,
+          backContentBase64: input.backContentBase64 ?? null,
+          selfieMimeType: input.selfieMimeType,
+          selfieContentBase64: input.selfieContentBase64,
+          signatureContentBase64: input.signatureContentBase64,
+        }),
+      )
+      .digest('hex');
+    const idempotencyKey =
+      optionalIdempotencyKey(requestedIdempotencyKey) ??
+      `KYC:${requestFingerprint}`;
+    const existingReplay = await this.prisma.$queryRaw<
+      {
+        userId: string;
+        status: string;
+        recognizedType: string | null;
+        requestFingerprint: string | null;
+      }[]
+    >`SELECT "userId", status, "recognizedType", "requestFingerprint"
+      FROM "kyc_submissions"
+      WHERE "idempotencyKey" = ${idempotencyKey}
+      LIMIT 1`;
+    if (existingReplay.length) {
+      const existing = existingReplay[0];
+      if (
+        existing.userId !== user.id ||
+        existing.requestFingerprint !== requestFingerprint
+      ) {
+        throw new BadRequestException({
+          code: BUSINESS_ERROR_CODES.IDEMPOTENCY_KEY_REUSED,
+          message:
+            'Idempotency-Key was already used for another KYC submission',
+        });
+      }
+      return {
+        message: 'KYC submitted for review',
+        status: 'PENDING',
+        recognizedType: existing.recognizedType,
+      };
     }
 
     const fileBuffer = this.decodeBase64(input.contentBase64, 'KYC front file');
@@ -201,9 +259,9 @@ export class KycService {
           throw new BadRequestException('KYC is already submitted or approved');
         await tx.$executeRaw`
       INSERT INTO "kyc_submissions"
-        ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "selfieFilePath", "selfieMimeType", "signatureFilePath", "fullName", "bankDetails", "updatedAt")
+        ("userId", "businessUserId", "documentType", "status", "fileName", "filePath", "mimeType", "backFileName", "backFilePath", "backMimeType", "recognizedType", "recognizedText", "selfieFilePath", "selfieMimeType", "signatureFilePath", "fullName", "bankDetails", "idempotencyKey", "requestFingerprint", "updatedAt")
       VALUES
-        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${frontObject.mime}, ${input.backFileName ?? null}, ${backFilePath}, ${backMimeType}, ${recognizedType}, ${`Selected document: ${recognizedType}`}, ${selfieObject.key}, ${selfieObject.mime}, ${signatureObject.key}, ${fullName}, ${JSON.stringify(bank)}::jsonb, CURRENT_TIMESTAMP)
+        (${user.id}, ${user.assignedBusinessId}, ${input.documentType}, 'PENDING', ${input.fileName}, ${filePath}, ${frontObject.mime}, ${input.backFileName ?? null}, ${backFilePath}, ${backMimeType}, ${recognizedType}, ${`Selected document: ${recognizedType}`}, ${selfieObject.key}, ${selfieObject.mime}, ${signatureObject.key}, ${fullName}, ${JSON.stringify(bank)}::jsonb, ${idempotencyKey}, ${requestFingerprint}, CURRENT_TIMESTAMP)
     `;
       });
 
@@ -218,6 +276,27 @@ export class KycService {
       await Promise.allSettled(
         storedKeys.map((key) => this.objects.remove(key)),
       );
+      const replayAfterConflict = await this.prisma.$queryRaw<
+        {
+          userId: string;
+          recognizedType: string | null;
+          requestFingerprint: string | null;
+        }[]
+      >`SELECT "userId", "recognizedType", "requestFingerprint"
+        FROM "kyc_submissions"
+        WHERE "idempotencyKey" = ${idempotencyKey}
+        LIMIT 1`;
+      const replay = replayAfterConflict[0];
+      if (
+        replay?.userId === user.id &&
+        replay.requestFingerprint === requestFingerprint
+      ) {
+        return {
+          message: 'KYC submitted for review',
+          status: 'PENDING',
+          recognizedType: replay.recognizedType,
+        };
+      }
       throw error;
     }
   }

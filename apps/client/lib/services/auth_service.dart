@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -245,6 +246,25 @@ class AuthService {
     final token = accessToken ?? session?.accessToken ?? '';
     if (token.isEmpty) throw AuthException('Please sign in again');
 
+    final payload = <String, dynamic>{
+      'documentType': documentType,
+      'fullName': ?fullName,
+      'bankDetails': ?bankDetails,
+      'selfieContentBase64': base64Encode(selfieFile.bytes),
+      'selfieMimeType': _mimeTypeForFile(selfieFile.name),
+      'signatureContentBase64': base64Encode(signatureFile.bytes),
+      'fileName': file.name,
+      'mimeType': _mimeTypeForFile(file.name),
+      'contentBase64': base64Encode(bytes),
+      if (backFile != null && backBytes != null && backBytes.isNotEmpty) ...{
+        'backFileName': backFile.name,
+        'backMimeType': _mimeTypeForFile(backFile.name),
+        'backContentBase64': base64Encode(backBytes),
+      },
+    };
+    final encodedPayload = jsonEncode(payload);
+    final idempotencyKey =
+        'KYC:${sha256.convert(utf8.encode(encodedPayload))}';
     final http.Response response;
 
     try {
@@ -254,25 +274,9 @@ class AuthService {
             headers: {
               'Content-Type': 'application/json',
               'Authorization': 'Bearer $token',
+              'Idempotency-Key': idempotencyKey,
             },
-            body: jsonEncode({
-              'documentType': documentType,
-              'fullName': ?fullName,
-              'bankDetails': ?bankDetails,
-              'selfieContentBase64': base64Encode(selfieFile.bytes),
-              'selfieMimeType': _mimeTypeForFile(selfieFile.name),
-              'signatureContentBase64': base64Encode(signatureFile.bytes),
-              'fileName': file.name,
-              'mimeType': _mimeTypeForFile(file.name),
-              'contentBase64': base64Encode(bytes),
-              if (backFile != null &&
-                  backBytes != null &&
-                  backBytes.isNotEmpty) ...{
-                'backFileName': backFile.name,
-                'backMimeType': _mimeTypeForFile(backFile.name),
-                'backContentBase64': base64Encode(backBytes),
-              },
-            }),
+            body: encodedPayload,
           )
           .timeout(const Duration(seconds: 90));
     } catch (_) {

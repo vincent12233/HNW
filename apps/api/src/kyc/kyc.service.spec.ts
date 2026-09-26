@@ -1,4 +1,5 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { createHash } from 'crypto';
 import { KycService, type KycSubmissionInput } from './kyc.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { PrivateObjectStorageService } from '../storage/private-object-storage.service';
@@ -91,6 +92,60 @@ describe('KYC evidence', () => {
     expect(objects.putKyc).not.toHaveBeenCalled();
   });
 
+  it('replays the first KYC result before storing files again', async () => {
+    const fingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          fullName: 'Test Customer',
+          bankDetails: submission.bankDetails,
+          documentType: submission.documentType,
+          fileName: submission.fileName,
+          mimeType: submission.mimeType ?? null,
+          contentBase64: submission.contentBase64,
+          backFileName: null,
+          backMimeType: null,
+          backContentBase64: null,
+          selfieMimeType: submission.selfieMimeType,
+          selfieContentBase64: submission.selfieContentBase64,
+          signatureContentBase64: submission.signatureContentBase64,
+        }),
+      )
+      .digest('hex');
+    prisma.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: 'customer',
+        status: 'PENDING',
+        recognizedType: 'PAN',
+        requestFingerprint: fingerprint,
+      },
+    ]);
+
+    await expect(
+      service.submit('customer', submission, 'KYC:retry-123'),
+    ).resolves.toEqual({
+      message: 'KYC submitted for review',
+      status: 'PENDING',
+      recognizedType: 'PAN',
+    });
+    expect(objects.putKyc).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it('rejects a reused KYC key when the request body changed', async () => {
+    prisma.$queryRaw.mockResolvedValueOnce([
+      {
+        userId: 'customer',
+        status: 'PENDING',
+        recognizedType: 'PAN',
+        requestFingerprint: 'different-fingerprint',
+      },
+    ]);
+
+    await expect(
+      service.submit('customer', submission, 'KYC:retry-123'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(objects.putKyc).not.toHaveBeenCalled();
+  });
   it('persists three private objects together with a pending submission', async () => {
     await expect(service.submit('customer', submission)).resolves.toMatchObject(
       { status: 'PENDING' },
@@ -102,6 +157,51 @@ describe('KYC evidence', () => {
     );
   });
 
+  it('cleans concurrent uploads and replays the committed submission', async () => {
+    const fingerprint = createHash('sha256')
+      .update(
+        JSON.stringify({
+          fullName: 'Test Customer',
+          bankDetails: submission.bankDetails,
+          documentType: submission.documentType,
+          fileName: submission.fileName,
+          mimeType: submission.mimeType ?? null,
+          contentBase64: submission.contentBase64,
+          backFileName: null,
+          backMimeType: null,
+          backContentBase64: null,
+          selfieMimeType: submission.selfieMimeType,
+          selfieContentBase64: submission.selfieContentBase64,
+          signatureContentBase64: submission.signatureContentBase64,
+        }),
+      )
+      .digest('hex');
+    prisma.$queryRaw
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'already-created' }])
+      .mockResolvedValueOnce([
+        {
+          userId: 'customer',
+          recognizedType: 'PAN',
+          requestFingerprint: fingerprint,
+        },
+      ]);
+
+    await expect(
+      service.submit('customer', submission, 'KYC:concurrent-123'),
+    ).resolves.toEqual({
+      message: 'KYC submitted for review',
+      status: 'PENDING',
+      recognizedType: 'PAN',
+    });
+    expect(objects.remove.mock.calls.map(([key]) => key)).toEqual([
+      'private/1',
+      'private/2',
+      'private/3',
+    ]);
+    expect(prisma.$executeRaw).not.toHaveBeenCalled();
+  });
   it('removes uploaded evidence if saving the submission fails', async () => {
     prisma.$executeRaw.mockRejectedValueOnce(new Error('database unavailable'));
     await expect(service.submit('customer', submission)).rejects.toThrow(

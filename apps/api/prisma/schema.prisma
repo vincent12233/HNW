@@ -1081,6 +1081,8 @@ model KycSubmission {
   signatureFilePath String?
   fullName          String?
   bankDetails       Json?
+  idempotencyKey    String?   @unique
+  requestFingerprint String?
 
   @@index([userId])
   @@index([businessUserId, status])

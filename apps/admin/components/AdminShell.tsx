@@ -298,6 +298,24 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem("hnw-sidebar-collapsed") === "true");
+    } catch {
+      // Navigation remains usable when browser storage is unavailable.
+    }
+  }, []);
+
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem("hnw-sidebar-collapsed", String(next));
+    } catch {
+      // Persisting a display preference must never block navigation.
+    }
+  }
+
+  useEffect(() => {
     const sync = () => setMobile(window.innerWidth < 900);
     sync();
     window.addEventListener("resize", sync);
@@ -438,6 +456,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         const count = item.badge ? pending[item.badge] || 0 : 0;
         return {
           key: item.key,
+          title: item.label,
           icon: item.icon,
           label:
             count > 0 ? (
@@ -465,6 +484,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     <Menu
       theme="dark"
       mode="inline"
+      inlineCollapsed={!mobile && collapsed}
       selectedKeys={[selectedItem?.key || activeKey]}
       items={menuItems}
       onClick={onMenuClick}
@@ -548,6 +568,22 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         <Sider width={264} collapsedWidth={78} collapsed={collapsed} trigger={null} className="ops-sider">
           {brand}
           <nav id="ops-desktop-navigation" className="ops-navigation" aria-label="后台导航">{menu}</nav>
+          <div className="ops-sidebar-footer">
+            <Tooltip title={collapsed ? "展开侧边栏" : "收起侧边栏"} placement="right">
+              <Button
+                type="text"
+                block
+                className="ops-sidebar-collapse"
+                aria-label={collapsed ? "展开侧边栏" : "收起侧边栏"}
+                aria-expanded={!collapsed}
+                aria-controls="ops-desktop-navigation"
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                onClick={toggleSidebar}
+              >
+                {collapsed ? null : "收起侧边栏"}
+              </Button>
+            </Tooltip>
+          </div>
         </Sider>
       )}
 
@@ -581,7 +617,7 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 aria-controls={mobile ? "ops-mobile-navigation" : "ops-desktop-navigation"}
                 className="ops-nav-toggle"
                 icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                onClick={() => (mobile ? setDrawerOpen(true) : setCollapsed((value) => !value))}
+                onClick={() => (mobile ? setDrawerOpen((value) => !value) : toggleSidebar())}
               />
             </Tooltip>
             <div className="ops-title">

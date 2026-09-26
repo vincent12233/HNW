@@ -74,6 +74,32 @@ body {
   scrollbar-color: #6484a6 transparent;
 }
 
+.ops-sidebar-footer {
+  flex: 0 0 auto;
+  padding: 12px;
+  border-top: 1px solid #ffffff20;
+}
+
+.ops-sidebar-collapse.ant-btn {
+  color: #dbeafe;
+  min-height: 40px;
+}
+
+.ops-sidebar-collapse.ant-btn:hover,
+.ops-sidebar-collapse.ant-btn:focus-visible {
+  color: #fff !important;
+  background: #ffffff18 !important;
+}
+
+.ops-sider.ant-layout-sider-collapsed .ant-menu-item-group-title {
+  display: none;
+}
+
+.ops-sider.ant-layout-sider-collapsed .ops-menu {
+  width: 100%;
+  padding-inline: 4px;
+}
+
 .ops-nav-drawer .ant-drawer-content-wrapper {
   max-width: calc(100vw - 24px) !important;
 }

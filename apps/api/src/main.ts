@@ -2,6 +2,7 @@ import 'dotenv/config';
 import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { randomUUID } from 'crypto';
+import { runWithRequestContext } from './common/request-context';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './observability/all-exceptions.filter';
@@ -301,7 +302,7 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
         .json({ statusCode: 429, message: 'Too many requests', requestId });
       return;
     }
-    next();
+    runWithRequestContext(requestId, next);
   };
 }
 

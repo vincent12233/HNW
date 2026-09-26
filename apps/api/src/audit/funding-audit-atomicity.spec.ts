@@ -285,7 +285,7 @@ describe.each(operations)('$action audit transaction', (operation) => {
         action: operation.action,
         resourceId: operation.resourceId,
         ...(operation.expectedMetadata
-          ? { metadata: operation.expectedMetadata }
+          ? { metadata: expect.objectContaining(operation.expectedMetadata) }
           : {}),
       }),
     });

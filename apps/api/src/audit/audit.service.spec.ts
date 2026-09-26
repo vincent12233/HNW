@@ -1,5 +1,6 @@
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { runWithRequestContext } from '../common/request-context';
 import { AuditService } from './audit.service';
 
 describe('AuditService write client selection', () => {
@@ -17,11 +18,20 @@ describe('AuditService write client selection', () => {
       auditLog: { create },
     } as unknown as PrismaService);
 
-    await expect(service.createLog(entry)).resolves.toEqual({
-      id: 'audit-1',
-    });
+    await expect(
+      runWithRequestContext('request-123', () => service.createLog(entry)),
+    ).resolves.toEqual({ id: 'audit-1' });
     expect(create).toHaveBeenCalledWith({
-      data: expect.objectContaining(entry),
+      data: expect.objectContaining({
+        ...entry,
+        metadata: expect.objectContaining({
+          creditedAmount: '200.00',
+          requestId: 'request-123',
+          idempotencyKey: null,
+          result: 'SUCCESS',
+          statusVersion: 1,
+        }),
+      }),
     });
   });
 
@@ -39,7 +49,10 @@ describe('AuditService write client selection', () => {
     await expect(service.createLog(entry, tx)).rejects.toBe(failure);
     expect(transactionCreate).toHaveBeenCalledTimes(1);
     expect(transactionCreate).toHaveBeenCalledWith({
-      data: expect.objectContaining(entry),
+      data: expect.objectContaining({
+        ...entry,
+        metadata: expect.objectContaining(entry.metadata),
+      }),
     });
     expect(standaloneCreate).not.toHaveBeenCalled();
   });

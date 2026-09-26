@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { currentRequestId } from '../common/request-context';
 import { PrismaService } from '../prisma/prisma.service';
 
 interface CreateAuditLogInput {
@@ -11,6 +12,9 @@ interface CreateAuditLogInput {
   ipAddress?: string;
   userAgent?: string;
   metadata?: Prisma.InputJsonValue;
+  idempotencyKey?: string | null;
+  result?: string;
+  statusVersion?: number | string;
 }
 
 @Injectable()
@@ -27,7 +31,17 @@ export class AuditService {
         description: input.description,
         ipAddress: input.ipAddress,
         userAgent: input.userAgent,
-        metadata: input.metadata,
+        metadata: {
+          ...(input.metadata &&
+          typeof input.metadata === 'object' &&
+          !Array.isArray(input.metadata)
+            ? input.metadata
+            : {}),
+          requestId: currentRequestId() ?? null,
+          idempotencyKey: input.idempotencyKey ?? null,
+          result: input.result ?? 'SUCCESS',
+          statusVersion: input.statusVersion ?? 1,
+        },
       },
     });
   }

@@ -40,11 +40,40 @@ export class AuditService {
       action?: string;
       resource?: string;
       resourceId?: string;
+      requestId?: string;
+      idempotencyKey?: string;
+      result?: string;
       dateFrom?: string;
       dateTo?: string;
     },
   ) {
     const where: Prisma.AuditLogWhereInput = {
+      AND: [
+        ...(filters?.requestId
+          ? [
+              {
+                metadata: {
+                  path: ['requestId'],
+                  equals: filters.requestId.trim(),
+                },
+              },
+            ]
+          : []),
+        ...(filters?.idempotencyKey
+          ? [
+              {
+                metadata: {
+                  path: ['idempotencyKey'],
+                  equals: filters.idempotencyKey.trim(),
+                },
+              },
+            ]
+          : []),
+        ...(filters?.result
+          ? [{ metadata: { path: ['result'], equals: filters.result.trim() } }]
+          : []),
+      ],
+
       ...(filters?.actorId
         ? {
             actorId: filters.actorId,
@@ -69,6 +98,30 @@ export class AuditService {
       ...(filters?.resourceId
         ? {
             resourceId: filters.resourceId.trim(),
+          }
+        : {}),
+      ...(filters?.requestId
+        ? {
+            metadata: {
+              path: ['requestId'],
+              equals: filters.requestId.trim(),
+            },
+          }
+        : {}),
+      ...(filters?.idempotencyKey
+        ? {
+            metadata: {
+              path: ['idempotencyKey'],
+              equals: filters.idempotencyKey.trim(),
+            },
+          }
+        : {}),
+      ...(filters?.result
+        ? {
+            metadata: {
+              path: ['result'],
+              equals: filters.result.trim(),
+            },
           }
         : {}),
       ...(filters?.dateFrom || filters?.dateTo
@@ -125,6 +178,9 @@ export class AuditService {
         action: filters?.action ?? null,
         resource: filters?.resource ?? null,
         resourceId: filters?.resourceId ?? null,
+        requestId: filters?.requestId ?? null,
+        idempotencyKey: filters?.idempotencyKey ?? null,
+        result: filters?.result ?? null,
         dateFrom: filters?.dateFrom ?? null,
         dateTo: filters?.dateTo ?? null,
       },

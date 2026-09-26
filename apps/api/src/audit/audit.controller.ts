@@ -34,6 +34,9 @@ export class AuditController {
       action: query.action,
       resource: query.resource,
       resourceId: query.resourceId,
+      requestId: query.requestId,
+      idempotencyKey: query.idempotencyKey,
+      result: query.result,
       dateFrom: query.dateFrom,
       dateTo: query.dateTo,
     });

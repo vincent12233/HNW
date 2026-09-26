@@ -26,6 +26,18 @@ export class ListAuditLogsQueryDto {
   resourceId?: string;
 
   @IsOptional()
+  @IsString()
+  requestId?: string;
+
+  @IsOptional()
+  @IsString()
+  idempotencyKey?: string;
+
+  @IsOptional()
+  @IsString()
+  result?: string;
+
+  @IsOptional()
   @IsDateString()
   dateFrom?: string;
 

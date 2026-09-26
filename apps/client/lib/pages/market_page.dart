@@ -2254,9 +2254,7 @@ class _MarketHomePageState extends State<MarketHomePage>
                   icon: Icons.language_rounded,
                   title: 'Language',
                   subtitle: 'Choose your preferred language',
-                  status: AppLanguage.instance.code == 'hi'
-                      ? 'हिन्दी'
-                      : 'English',
+                  status: appLanguageName(AppLanguage.instance.code),
                   onTap: () => _closeSettingsAnd(
                     () => Navigator.of(context).push(
                       MaterialPageRoute<void>(

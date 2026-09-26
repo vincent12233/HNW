@@ -49,41 +49,38 @@ class _LanguagePageState extends State<LanguagePage> {
           style: AppTypography.bodySmall,
         ),
         const SizedBox(height: AppSpacing.lg),
-        for (final entry in const [
-          ('en', 'English', 'EN'),
-          ('hi', 'हिन्दी', 'हि'),
-        ])
+        if (_saving) const LinearProgressIndicator(),
+        if (_error != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: AppErrorView(title: _error!, compact: true),
+          ),
+        for (final entry in appLanguageOptions)
           AppCard(
             margin: const EdgeInsets.only(bottom: AppSpacing.md),
             padding: EdgeInsets.zero,
-            borderColor: AppLanguage.instance.code == entry.$1
+            borderColor: AppLanguage.instance.code == entry.code
                 ? AppColors.brandPrimary
                 : AppColors.divider,
             child: ListTile(
               minTileHeight: 64,
               enabled: !_saving,
-              onTap: () => _select(entry.$1),
+              onTap: () => _select(entry.code),
               leading: CircleAvatar(
                 backgroundColor: AppColors.brandPrimarySoft,
                 foregroundColor: AppColors.brandPrimary,
                 child: Text(
-                  entry.$3,
+                  entry.badge,
                   style: AppTypography.labelMedium.copyWith(
                     color: AppColors.brandPrimary,
                   ),
                 ),
               ),
-              title: AppText(entry.$2, style: AppTypography.titleSmall),
-              trailing: AppLanguage.instance.code == entry.$1
+              title: Text(entry.nativeName, style: AppTypography.titleSmall),
+              trailing: AppLanguage.instance.code == entry.code
                   ? const Icon(Icons.check_circle, color: AppColors.gain)
                   : null,
             ),
-          ),
-        if (_saving) const LinearProgressIndicator(),
-        if (_error != null)
-          Padding(
-            padding: const EdgeInsets.only(top: AppSpacing.sm),
-            child: AppErrorView(title: _error!, compact: true),
           ),
       ],
     ),

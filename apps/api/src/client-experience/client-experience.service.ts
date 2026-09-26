@@ -224,7 +224,7 @@ export class ClientExperienceService {
     if (
       body.language !== undefined &&
       (typeof body.language !== 'string' ||
-        !['en', 'hi'].includes(body.language))
+        !['en', 'hi', 'ta', 'te', 'kn', 'gu', 'ml'].includes(body.language))
     )
       throw new BadRequestException('Unsupported language');
     const data = {
@@ -374,7 +374,12 @@ export class ClientExperienceService {
     });
   }
 
-  async updateTier(actorId: string, userId: string, tier: unknown, reason?: unknown) {
+  async updateTier(
+    actorId: string,
+    userId: string,
+    tier: unknown,
+    reason?: unknown,
+  ) {
     return this.prisma.$transaction(
       (tx) =>
         applyManualVipTierChange(tx, {

@@ -19,6 +19,39 @@ void main() {
     expect(tr('Portfolio'), 'पोर्टफोलियो');
     await AppLanguage.instance.select('en');
   });
+  test(
+    'regional language selection survives reload and translates core UI',
+    () async {
+      for (final entry in const {
+        'ta': 'முகப்பு',
+        'te': 'హోమ్',
+        'kn': 'ಮುಖಪುಟ',
+        'gu': 'હોમ',
+        'ml': 'ഹോം',
+      }.entries) {
+        await AppLanguage.instance.select(entry.key);
+        await AppLanguage.instance.load();
+        expect(AppLanguage.instance.code, entry.key);
+        expect(tr('Home'), entry.value);
+        expect(tr('Terms & Conditions'), 'Terms & Conditions');
+      }
+      await AppLanguage.instance.select('en');
+    },
+  );
+
+  test('language catalogue exposes seven supported Indian app locales', () {
+    expect(appLanguageOptions.map((option) => option.code), [
+      'en',
+      'hi',
+      'ta',
+      'te',
+      'kn',
+      'gu',
+      'ml',
+    ]);
+    expect(appLanguageName('te'), 'తెలుగు');
+    expect(appLanguageName('unknown'), 'English');
+  });
   test('remote UI copy overrides local copy for the active locale', () async {
     await AppLanguage.instance.select('en');
     AppLanguage.instance.replaceRemoteCopy({'Retry': 'Try this again'});

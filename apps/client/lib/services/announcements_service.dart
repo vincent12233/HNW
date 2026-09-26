@@ -54,7 +54,7 @@ class AnnouncementsService {
   static final AnnouncementsService instance = AnnouncementsService._();
 
   Future<List<AnnouncementItem>> list({String? locale}) async {
-    final code = locale ?? (AppLanguage.instance.code == 'hi' ? 'hi' : 'en');
+    final code = locale ?? AppLanguage.instance.code;
     try {
       final response = await http
           .get(Uri.parse('${AppConfig.apiBaseUrl}/announcements?locale=$code'))

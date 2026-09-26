@@ -52,7 +52,7 @@ class InsightArticlesService {
   static final InsightArticlesService instance = InsightArticlesService._();
 
   Future<List<InsightArticle>> list({String? locale}) async {
-    final code = locale ?? (AppLanguage.instance.code == 'hi' ? 'hi' : 'en');
+    final code = locale ?? AppLanguage.instance.code;
     try {
       final response = await http
           .get(Uri.parse('${AppConfig.apiBaseUrl}/insights?locale=$code'))
@@ -73,7 +73,7 @@ class InsightArticlesService {
   }
 
   Future<InsightArticle?> bySlug(String slug, {String? locale}) async {
-    final code = locale ?? (AppLanguage.instance.code == 'hi' ? 'hi' : 'en');
+    final code = locale ?? AppLanguage.instance.code;
     try {
       final response = await http
           .get(

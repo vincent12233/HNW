@@ -82,6 +82,23 @@ describe('Client profile and asset history', () => {
       service.updatePreferences('client', { theme: 'fake' }),
     ).rejects.toThrow('Unsupported theme');
   });
+  it.each(['en', 'hi', 'ta', 'te', 'kn', 'gu', 'ml'])(
+    'accepts supported app language %s',
+    async (language) => {
+      const upsert = jest.fn().mockResolvedValue({ language });
+      const service = new ClientExperienceService({
+        userPreference: { upsert },
+      } as any);
+      await expect(
+        service.updatePreferences('client', { language }),
+      ).resolves.toEqual({ language });
+      expect(upsert).toHaveBeenCalledWith({
+        where: { userId: 'client' },
+        create: { userId: 'client', language },
+        update: { language },
+      });
+    },
+  );
   it('updates only the name and never requires or changes email', async () => {
     const update = jest.fn().mockResolvedValue({ fullName: 'Asha Kumar' });
     const service = new ClientExperienceService({ user: { update } } as any);

@@ -210,7 +210,7 @@ class AppContentService extends ChangeNotifier {
   bool get lastFetchFailed => _lastFetchFailed;
 
   Future<AppContentBundle> load({bool force = false}) async {
-    final locale = AppLanguage.instance.code == 'hi' ? 'hi' : 'en';
+    final locale = AppLanguage.instance.code;
     if (!force &&
         _loadedAt != null &&
         _loadedLocale == locale &&
@@ -252,7 +252,12 @@ class AppContentService extends ChangeNotifier {
         return _bundle;
       }
       _bundle = AppContentBundle.fromJson(Map<String, dynamic>.from(decoded));
-      AppLanguage.instance.replaceRemoteCopy(_bundle.uiCopy());
+      // English CMS fallback must not override the selected regional UI copy.
+      AppLanguage.instance.replaceRemoteCopy(
+        _bundle.home['ui.copy']?.locale == locale
+            ? _bundle.uiCopy()
+            : const {},
+      );
       _loadedAt = DateTime.now();
       _loadedLocale = locale;
       _lastFetchFailed = false;

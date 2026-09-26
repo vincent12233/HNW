@@ -1,6 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show mapEquals;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'regional_languages.dart';
+
+typedef AppLanguageOption = ({String code, String nativeName, String badge});
+
+const appLanguageOptions = <AppLanguageOption>[
+  (code: 'en', nativeName: 'English', badge: 'EN'),
+  (code: 'hi', nativeName: 'हिन्दी', badge: 'हि'),
+  (code: 'ta', nativeName: 'தமிழ்', badge: 'த'),
+  (code: 'te', nativeName: 'తెలుగు', badge: 'తె'),
+  (code: 'kn', nativeName: 'ಕನ್ನಡ', badge: 'ಕ'),
+  (code: 'gu', nativeName: 'ગુજરાતી', badge: 'ગુ'),
+  (code: 'ml', nativeName: 'മലയാളം', badge: 'മ'),
+];
+
+const supportedAppLanguageCodes = {'en', 'hi', 'ta', 'te', 'kn', 'gu', 'ml'};
+
+String appLanguageName(String code) {
+  for (final option in appLanguageOptions) {
+    if (option.code == code) return option.nativeName;
+  }
+  return 'English';
+}
 
 class AppLanguage extends ChangeNotifier {
   static final instance = AppLanguage();
@@ -19,11 +41,11 @@ class AppLanguage extends ChangeNotifier {
     final saved = (await SharedPreferences.getInstance()).getString(
       'app_language',
     );
-    code = saved == 'hi' ? 'hi' : 'en';
+    code = supportedAppLanguageCodes.contains(saved) ? saved! : 'en';
   }
 
   Future<void> select(String value) async {
-    if (!['en', 'hi'].contains(value)) throw ArgumentError(value);
+    if (!supportedAppLanguageCodes.contains(value)) throw ArgumentError(value);
     final saved = await (await SharedPreferences.getInstance()).setString(
       'app_language',
       value,
@@ -73,12 +95,14 @@ const professionalTerms = <String, String>{
 
 String tr(String value) =>
     AppLanguage.instance.remoteCopy(value) ??
-    (AppLanguage.instance.code == 'hi'
-        ? hindi[value] ??
-              hindi[professionalTerms[value]] ??
-              professionalTerms[value] ??
-              value
-        : professionalTerms[value] ?? value);
+    _localTranslation(AppLanguage.instance.code, value);
+
+String _localTranslation(String code, String value) {
+  final alias = professionalTerms[value];
+  if (code == 'hi') return hindi[value] ?? hindi[alias] ?? alias ?? value;
+  final regional = regionalTranslations[code];
+  return regional?[value] ?? regional?[alias] ?? alias ?? value;
+}
 
 // Retains const text declarations while reacting to locale changes, including open routes.
 class AppText extends StatelessWidget {

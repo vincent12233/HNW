@@ -128,7 +128,9 @@ class _IndiaTradingAppState extends State<IndiaTradingApp>
   Widget build(BuildContext context) {
     return MaterialApp(
       locale: Locale(AppLanguage.instance.code),
-      supportedLocales: const [Locale('en'), Locale('hi')],
+      supportedLocales: appLanguageOptions
+          .map((option) => Locale(option.code))
+          .toList(growable: false),
       localizationsDelegates: GlobalMaterialLocalizations.delegates,
       navigatorKey: appNavigatorKey,
       debugShowCheckedModeBanner: false,

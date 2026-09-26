@@ -12,7 +12,7 @@ extension InsightArticlesFetch on InsightArticlesService {
   Future<({bool ok, List<InsightArticle> articles})> listResult({
     String? locale,
   }) async {
-    final code = locale ?? (AppLanguage.instance.code == 'hi' ? 'hi' : 'en');
+    final code = locale ?? AppLanguage.instance.code;
     try {
       final response = await http
           .get(Uri.parse('${AppConfig.apiBaseUrl}/insights?locale=$code'))

@@ -210,6 +210,9 @@ export class AdminAccountService {
             resource: 'ACCOUNT_BALANCE',
             resourceId: normalizedAccountNumber,
             description: `${role === 'FINANCE' ? 'Finance' : 'Dedicated operator'} directly adjusted customer funds`,
+            idempotencyKey: `ADJUSTMENT:${referenceId}`,
+            result: 'COMPLETED',
+            statusVersion: 1,
             metadata: {
               referenceId,
               amount: amount.toFixed(2),

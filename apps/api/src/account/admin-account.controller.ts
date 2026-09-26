@@ -1,7 +1,9 @@
 ﻿import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Query,
@@ -9,6 +11,8 @@
   UseGuards,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { BUSINESS_ERROR_CODES } from '../common/business-error-codes';
+import { optionalIdempotencyKey } from '../common/idempotency-key';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
 import { AdminAccountService } from './admin-account.service';
@@ -68,7 +72,9 @@ export class AdminAccountController {
     @Param('accountNumber') accountNumber: string,
     @Body() dto: AdjustBalanceDto,
     @Req() request: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
+    this.assertAdjustmentKey(dto.referenceId, idempotencyKey);
     return this.adminAccountService.credit(
       accountNumber,
       dto,
@@ -83,12 +89,25 @@ export class AdminAccountController {
     @Param('accountNumber') accountNumber: string,
     @Body() dto: AdjustBalanceDto,
     @Req() request: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
+    this.assertAdjustmentKey(dto.referenceId, idempotencyKey);
     return this.adminAccountService.debit(
       accountNumber,
       dto,
       request.user.userId,
       request.user.role,
     );
+  }
+
+  private assertAdjustmentKey(referenceId: string, header?: string) {
+    const normalizedKey = optionalIdempotencyKey(header);
+    if (normalizedKey && normalizedKey !== referenceId.trim()) {
+      throw new BadRequestException({
+        code: BUSINESS_ERROR_CODES.IDEMPOTENCY_KEY_REUSED,
+        message:
+          'Idempotency-Key must match referenceId for balance adjustments',
+      });
+    }
   }
 }

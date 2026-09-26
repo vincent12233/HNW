@@ -11,8 +11,16 @@ import { AdminAccountController } from './admin-account.controller';
 import { AdminAccountService } from './admin-account.service';
 
 describe('Current admin credit HTTP role boundary', () => {
-  const accounts = { credit: jest.fn(), debit: jest.fn(), listAccounts: jest.fn() };
+  const accounts = {
+    credit: jest.fn(),
+    debit: jest.fn(),
+    listAccounts: jest.fn(),
+  };
   const prisma = { user: { findUnique: jest.fn() } };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
 
   async function build(role: UserRole) {
     const module = await Test.createTestingModule({
@@ -30,6 +38,30 @@ describe('Current admin credit HTTP role boundary', () => {
       .compile();
     return createCharacterizationHttpApp(await module);
   }
+
+  it('requires adjustment Idempotency-Key to match referenceId', async () => {
+    const app = await build(UserRole.FINANCE);
+    prisma.user.findUnique.mockResolvedValue({
+      role: UserRole.FINANCE,
+      status: UserStatus.ACTIVE,
+    });
+    accounts.credit.mockResolvedValue({ credited: true });
+
+    await request(app.getHttpServer())
+      .post('/admin/accounts/ACC1/credit')
+      .set('Idempotency-Key', 'credit-01')
+      .send({ amount: '10.00', referenceId: 'credit-01' })
+      .expect(201);
+    await request(app.getHttpServer())
+      .post('/admin/accounts/ACC1/debit')
+      .set('Idempotency-Key', 'different-key')
+      .send({ amount: '10.00', referenceId: 'debit-01' })
+      .expect(400);
+
+    expect(accounts.credit).toHaveBeenCalledTimes(1);
+    expect(accounts.debit).not.toHaveBeenCalled();
+    await app.close();
+  });
 
   it('lets FINANCE credit and forbids BUSINESS from the current credit endpoint', async () => {
     const financeApp: INestApplication = await build(UserRole.FINANCE);

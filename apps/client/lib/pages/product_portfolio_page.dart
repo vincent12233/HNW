@@ -322,6 +322,15 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
+                          if (_loadState.updatedAt case final updatedAt?) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            AppText(
+                              'Last updated ${formatIstDateTime(updatedAt)}',
+                              style: AppTypography.caption.copyWith(
+                                color: AppColors.textSecondary,
+                              ),
+                            ),
+                          ],
                           const SizedBox(height: AppSpacing.xs),
                           AppText(_error!, style: AppTypography.bodySmall),
                           TextButton.icon(

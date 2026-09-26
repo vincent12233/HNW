@@ -3,6 +3,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../models/async_data_state.dart';
 import '../models/stock_quote.dart';
 import '../services/app_content_service.dart';
 import '../services/featured_instruments_service.dart';
@@ -15,6 +16,8 @@ import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
+import '../utils/client_error_message.dart';
+import '../utils/number_formatters.dart';
 import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/home/home_dashboard_data.dart';
@@ -80,13 +83,12 @@ class _MarketsPageState extends State<MarketsPage> {
   int selectedMoverFilter = 0;
   String query = '';
   List<StockQuote> _remoteSearchResults = <StockQuote>[];
-  List<StockQuote> _watchlistStocks = <StockQuote>[];
+  AsyncDataState<List<StockQuote>> _watchlistState =
+      const AsyncDataState.loading();
   bool _searchLoading = false;
   bool _searchFailed = false;
   bool _failedSearchWasReset = true;
   bool _searchHasMore = false;
-  bool _watchlistLoading = true;
-  bool _watchlistFailed = false;
   final Map<String, List<double>> _indexHistory = <String, List<double>>{};
   final List<StockQuote> _marketsFeatured = <StockQuote>[];
   final Map<String, (double, double)> _yearRanges =
@@ -94,6 +96,13 @@ class _MarketsPageState extends State<MarketsPage> {
   bool _yearRangesLoading = false;
   int _searchPage = 1;
   int _searchGeneration = 0;
+
+  List<StockQuote> get _watchlistStocks =>
+      _watchlistState.data ?? const <StockQuote>[];
+  bool get _watchlistLoading => _watchlistState.isLoading;
+  bool get _watchlistFailed =>
+      _watchlistState.status == AsyncDataStatus.error ||
+      _watchlistState.requiresNotice;
 
   static const _foKeywords = ['F&O', 'FUTURE', 'OPTION', 'DERIVATIVE'];
   static const _commodityKeywords = ['COMMODITY', 'MCX', 'METAL', 'ENERGY'];
@@ -278,9 +287,13 @@ class _MarketsPageState extends State<MarketsPage> {
   }
 
   Future<void> _loadWatchlist() async {
+    final previousState = _watchlistState;
     if (mounted) {
       setState(() {
-        _watchlistLoading = true;
+        _watchlistState = AsyncDataState.loading(
+          data: previousState.data,
+          updatedAt: previousState.updatedAt,
+        );
       });
     }
     try {
@@ -305,15 +318,20 @@ class _MarketsPageState extends State<MarketsPage> {
 
       if (!mounted) return;
       setState(() {
-        _watchlistStocks = stocks;
-        _watchlistLoading = false;
-        _watchlistFailed = false;
+        _watchlistState = AsyncDataState.success(stocks);
       });
-    } catch (_) {
+    } catch (error) {
       if (!mounted) return;
+      final message = clientErrorMessage(error);
       setState(() {
-        _watchlistLoading = false;
-        _watchlistFailed = true;
+        final previousStocks = _watchlistState.data;
+        _watchlistState = previousStocks == null
+            ? AsyncDataState.error(message)
+            : AsyncDataState.stale(
+                previousStocks,
+                updatedAt: _watchlistState.updatedAt ?? DateTime.now(),
+                message: message,
+              );
       });
     }
   }
@@ -807,11 +825,23 @@ class _MarketsPageState extends State<MarketsPage> {
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
-                child: AppText(
-                  'Watchlist could not be refreshed. Showing previously loaded stocks.',
-                  style: AppTypography.labelSmall.copyWith(
-                    color: AppColors.warning,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    AppText(
+                      'Watchlist could not be refreshed. Showing previously loaded stocks.',
+                      style: AppTypography.labelSmall.copyWith(
+                        color: AppColors.warning,
+                      ),
+                    ),
+                    if (_watchlistState.updatedAt case final updatedAt?)
+                      AppText(
+                        'Last updated ${formatIstDateTime(updatedAt)}',
+                        style: AppTypography.caption.copyWith(
+                          color: AppColors.textSecondary,
+                        ),
+                      ),
+                  ],
                 ),
               ),
               TextButton(

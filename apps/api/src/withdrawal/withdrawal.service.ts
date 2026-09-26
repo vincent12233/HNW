@@ -255,6 +255,25 @@ export class WithdrawalService {
           throw new NotFoundException('Withdrawal request not found');
         }
 
+        const idempotencyKey = `WITHDRAWAL:${withdrawalId}:APPROVE`;
+        if (withdrawal.status === 'APPROVED') {
+          const account = await tx.account.findUnique({
+            where: { id: withdrawal.accountId },
+          });
+          if (!account) throw new NotFoundException('Account not found');
+          if (role === 'FINANCE') {
+            await this.assertFinanceAccount(account.userId, tx);
+          }
+          const replay = await this.audit.findReplayResult<{
+            message: string;
+            withdrawalId: string;
+            amount: string;
+            balanceBefore: string;
+            balanceAfter: string;
+            frozenBalanceAfter: string;
+          }>(idempotencyKey, tx);
+          if (replay) return replay;
+        }
         if (withdrawal.status !== 'PENDING') {
           throw new BadRequestException('Withdrawal already processed');
         }
@@ -344,10 +363,20 @@ export class WithdrawalService {
               resourceId: withdrawalId,
               description: 'Withdrawal approved by finance operator',
 
-              idempotencyKey: `WITHDRAWAL:${withdrawalId}:APPROVE`,
+              idempotencyKey,
               result: 'APPROVED',
               statusVersion: 1,
-              metadata: { amount: String(withdrawal.amount) },
+              metadata: {
+                amount: String(withdrawal.amount),
+                replayResult: {
+                  message: 'Withdrawal approved',
+                  withdrawalId,
+                  amount: String(withdrawal.amount),
+                  balanceBefore: cashBalance.toFixed(2),
+                  balanceAfter: balanceAfter.toFixed(2),
+                  frozenBalanceAfter: frozenBalanceAfter.toFixed(2),
+                },
+              },
             },
             tx,
           );
@@ -379,6 +408,21 @@ export class WithdrawalService {
         });
         if (!withdrawal) {
           throw new NotFoundException('Withdrawal request not found');
+        }
+        const idempotencyKey = `WITHDRAWAL:${withdrawalId}:REJECT`;
+        if (withdrawal.status === 'REJECTED') {
+          const account = await tx.account.findUnique({
+            where: { id: withdrawal.accountId },
+          });
+          if (!account) throw new NotFoundException('Account not found');
+          if (role === 'FINANCE') {
+            await this.assertFinanceAccount(account.userId, tx);
+          }
+          const replay = await this.audit.findReplayResult<unknown>(
+            idempotencyKey,
+            tx,
+          );
+          if (replay) return replay;
         }
         if (withdrawal.status !== 'PENDING') {
           throw new BadRequestException('Withdrawal already processed');
@@ -434,6 +478,9 @@ export class WithdrawalService {
             referenceId: withdrawalId,
           },
         });
+        const replayResult = await tx.withdrawalRequest.findUnique({
+          where: { id: withdrawalId },
+        });
         if (actorId)
           await this.audit.createLog(
             {
@@ -444,15 +491,16 @@ export class WithdrawalService {
               description:
                 note?.trim() || 'Withdrawal rejected by finance operator',
 
-              idempotencyKey: `WITHDRAWAL:${withdrawalId}:REJECT`,
+              idempotencyKey,
               result: 'REJECTED',
               statusVersion: 1,
+              metadata: {
+                replayResult: JSON.parse(JSON.stringify(replayResult)),
+              },
             },
             tx,
           );
-        return tx.withdrawalRequest.findUnique({
-          where: { id: withdrawalId },
-        });
+        return replayResult;
       },
       { isolationLevel: 'Serializable' },
     );

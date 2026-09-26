@@ -400,6 +400,17 @@ export class DepositService {
           actorId,
           tx,
         );
+        const idempotencyKey = `DEPOSIT:${depositId}:REJECT`;
+        if (deposit.status === 'REJECTED') {
+          const replay = await this.audit.findReplayResult<{
+            message: string;
+            depositId: string;
+          }>(idempotencyKey, tx);
+          if (replay) return replay;
+        }
+        if (deposit.status !== 'PENDING') {
+          throw new BadRequestException('Deposit already processed');
+        }
         const updated = await tx.depositRequest.updateMany({
           where: { id: depositId, status: 'PENDING' },
           data: { status: 'REJECTED', note: note?.trim() || null },
@@ -428,9 +439,15 @@ export class DepositService {
               description:
                 note?.trim() || 'Deposit rejected by finance operator',
 
-              idempotencyKey: `DEPOSIT:${depositId}:REJECT`,
+              idempotencyKey,
               result: 'REJECTED',
               statusVersion: 1,
+              metadata: {
+                replayResult: {
+                  message: 'Deposit rejected',
+                  depositId,
+                },
+              },
             },
             tx,
           );

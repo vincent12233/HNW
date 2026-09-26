@@ -14,7 +14,10 @@ describe('WithdrawalService', () => {
         token === WithdrawalPinService
           ? { verify: jest.fn().mockResolvedValue(undefined) }
           : token === AuditService
-            ? { createLog: jest.fn().mockResolvedValue({ id: 'audit-1' }) }
+            ? {
+                createLog: jest.fn().mockResolvedValue({ id: 'audit-1' }),
+                findReplayResult: jest.fn(),
+              }
             : {},
       )
       .compile();
@@ -161,28 +164,24 @@ describe('WithdrawalService', () => {
   it('rejects reuse of an idempotency key with a different payload', async () => {
     const transaction = {
       account: {
-        findUnique: jest
-          .fn()
-          .mockResolvedValue({
-            id: 'account-1',
-            cashBalance: 1000,
-            buyingPower: 1000,
-            frozenBalance: 0,
-          }),
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          cashBalance: 1000,
+          buyingPower: 1000,
+          frozenBalance: 0,
+        }),
         update: jest.fn(),
       },
       $executeRaw: jest.fn().mockResolvedValue(1),
       withdrawalRequest: {
-        findFirst: jest
-          .fn()
-          .mockResolvedValue({
-            id: 'withdrawal-existing',
-            amount: 200,
-            bankName: 'Other Bank',
-            accountNumber: '9999999999',
-            ifscCode: 'OTHER000001',
-            upiId: null,
-          }),
+        findFirst: jest.fn().mockResolvedValue({
+          id: 'withdrawal-existing',
+          amount: 200,
+          bankName: 'Other Bank',
+          accountNumber: '9999999999',
+          ifscCode: 'OTHER000001',
+          upiId: null,
+        }),
         create: jest.fn(),
       },
       notification: { create: jest.fn() },
@@ -353,6 +352,92 @@ describe('WithdrawalService', () => {
     });
   });
 
+  it('replays an approved withdrawal without repeating financial side effects', async () => {
+    const transaction = {
+      withdrawalRequest: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'withdrawal-1',
+          accountId: 'account-1',
+          amount: 200,
+          status: 'APPROVED',
+        }),
+        updateMany: jest.fn(),
+      },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          userId: 'user-1',
+        }),
+        update: jest.fn(),
+      },
+      notification: { create: jest.fn() },
+    };
+    (service as any).prisma = {
+      $transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(transaction),
+      ),
+    };
+    (service as any).audit.findReplayResult.mockResolvedValue({
+      message: 'Withdrawal approved',
+      withdrawalId: 'withdrawal-1',
+      amount: '200',
+      balanceBefore: '1000.00',
+      balanceAfter: '800.00',
+      frozenBalanceAfter: '0.00',
+    });
+
+    await expect(service.approveWithdrawal('withdrawal-1')).resolves.toEqual({
+      message: 'Withdrawal approved',
+      withdrawalId: 'withdrawal-1',
+      amount: '200',
+      balanceBefore: '1000.00',
+      balanceAfter: '800.00',
+      frozenBalanceAfter: '0.00',
+    });
+    expect(transaction.withdrawalRequest.updateMany).not.toHaveBeenCalled();
+    expect(transaction.account.update).not.toHaveBeenCalled();
+    expect(transaction.notification.create).not.toHaveBeenCalled();
+    expect((service as any).audit.createLog).not.toHaveBeenCalled();
+  });
+
+  it('replays a rejected withdrawal without releasing funds twice', async () => {
+    const replayResult = {
+      id: 'withdrawal-1',
+      accountId: 'account-1',
+      amount: '200',
+      frozenAmount: '0',
+      status: 'REJECTED',
+      note: 'Bank verification failed',
+    };
+    const transaction = {
+      withdrawalRequest: {
+        findUnique: jest.fn().mockResolvedValue(replayResult),
+        updateMany: jest.fn(),
+      },
+      account: {
+        findUnique: jest.fn().mockResolvedValue({
+          id: 'account-1',
+          userId: 'user-1',
+        }),
+        update: jest.fn(),
+      },
+      notification: { create: jest.fn() },
+    };
+    (service as any).prisma = {
+      $transaction: jest.fn((callback: (tx: any) => unknown) =>
+        callback(transaction),
+      ),
+    };
+    (service as any).audit.findReplayResult.mockResolvedValue(replayResult);
+
+    await expect(
+      service.rejectWithdrawal('withdrawal-1', 'different note'),
+    ).resolves.toEqual(replayResult);
+    expect(transaction.withdrawalRequest.updateMany).not.toHaveBeenCalled();
+    expect(transaction.account.update).not.toHaveBeenCalled();
+    expect(transaction.notification.create).not.toHaveBeenCalled();
+    expect((service as any).audit.createLog).not.toHaveBeenCalled();
+  });
   it('does not deduct funds when another reviewer already processed it', async () => {
     const transaction = {
       withdrawalRequest: {

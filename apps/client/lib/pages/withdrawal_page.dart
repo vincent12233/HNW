@@ -101,9 +101,14 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   }
 
   Future<void> _loadOnce(int request) async {
+    final previousState = _loadState;
     if (mounted) {
       setState(() {
-        _loadState = const AsyncDataState.loading();
+        _loadState = AsyncDataState.loading(
+          data: previousState.data,
+          message: previousState.message,
+          updatedAt: previousState.updatedAt,
+        );
       });
     }
     try {
@@ -227,9 +232,13 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
   @override
   Widget build(BuildContext context) {
     final Widget body;
-    if (_loadState.isLoading && _history.isEmpty && _banks.isEmpty) {
+    if (_loadState.isLoading &&
+        _loadState.message == null &&
+        _history.isEmpty &&
+        _banks.isEmpty) {
       body = const AppLoadingView(message: 'Loading withdrawals');
-    } else if (_loadState.status == AsyncDataStatus.error &&
+    } else if ((_loadState.status == AsyncDataStatus.error ||
+            (_loadState.isLoading && _loadState.message != null)) &&
         _history.isEmpty &&
         _banks.isEmpty) {
       body = AppErrorView(

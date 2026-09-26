@@ -9,7 +9,13 @@ class AsyncDataState<T> {
   });
 
   const AsyncDataState.initial() : this._(AsyncDataStatus.initial);
-  const AsyncDataState.loading() : this._(AsyncDataStatus.loading);
+  const AsyncDataState.loading({T? data, String? message, DateTime? updatedAt})
+    : this._(
+        AsyncDataStatus.loading,
+        data: data,
+        message: message,
+        updatedAt: updatedAt,
+      );
   const AsyncDataState.error(String message)
     : this._(AsyncDataStatus.error, message: message);
 

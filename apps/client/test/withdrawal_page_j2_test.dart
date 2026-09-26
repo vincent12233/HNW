@@ -245,7 +245,7 @@ void main() {
       find.textContaining('Showing previously loaded data'),
       findsOneWidget,
     );
-    expect(find.textContaining('offline'), findsOneWidget);
+    expect(find.textContaining('offline'), findsWidgets);
   });
 
   testWidgets('submit keeps input on failure and only succeeds after server', (

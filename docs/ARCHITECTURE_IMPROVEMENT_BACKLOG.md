@@ -6,15 +6,15 @@
 
 ## P1：客户端状态迁移
 
-- [ ] 将 `market_page.dart` 的加载、空、错误、过期和离线状态迁移到 `AsyncDataState`。
-- [ ] 将 `markets_page.dart`、`product_portfolio_page.dart` 和 `home_dashboard.dart` 迁移到同一状态模型。
-- [ ] 所有缓存展示必须包含更新时间；余额、持仓和订单不得把失败转换为零值或空列表。
-- [ ] 为网络切换、前后台恢复、旧请求覆盖新请求和页面销毁增加回归测试。
+- [x] 将 `market_page.dart` 的加载、空、错误、过期和离线状态迁移到 `AsyncDataState`。
+- [x] 将 `markets_page.dart`、`product_portfolio_page.dart` 和 `home_dashboard.dart` 迁移到同一状态模型。
+- [x] 所有缓存展示必须包含更新时间；余额、持仓和订单不得把失败转换为零值或空列表。
+- [x] 为网络切换、前后台恢复、旧请求覆盖新请求和页面销毁增加回归测试。
 
 ## P1：外部请求幂等
 
 - [x] 提现申请支持 `Idempotency-Key`、数据库唯一约束和事务级 advisory lock。
-- [ ] 下单接口复用现有 client order id，并统一 `Idempotency-Key` 响应语义。
+- [x] 下单接口复用现有 client order id，并统一 `Idempotency-Key` 响应语义。
 - [ ] 入金确认、提现审核、KYC 提交和管理员资金调整采用同一键格式与重放规则。
 - [ ] 重放必须返回首次业务结果，不能再次冻结、扣款、通知或写审计记录。
 

@@ -56,4 +56,33 @@ describe('AuditService write client selection', () => {
     });
     expect(standaloneCreate).not.toHaveBeenCalled();
   });
+
+  it('returns the persisted first business result for idempotent replay', async () => {
+    const findFirst = jest.fn().mockResolvedValue({
+      metadata: {
+        idempotencyKey: 'DEPOSIT:deposit-1:APPROVE',
+        replayResult: { message: 'Deposit approved', depositId: 'deposit-1' },
+      },
+    });
+    const service = new AuditService({
+      auditLog: { findFirst },
+    } as unknown as PrismaService);
+
+    await expect(
+      service.findReplayResult('DEPOSIT:deposit-1:APPROVE'),
+    ).resolves.toEqual({
+      message: 'Deposit approved',
+      depositId: 'deposit-1',
+    });
+    expect(findFirst).toHaveBeenCalledWith({
+      where: {
+        metadata: {
+          path: ['idempotencyKey'],
+          equals: 'DEPOSIT:deposit-1:APPROVE',
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { metadata: true },
+    });
+  });
 });

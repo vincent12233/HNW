@@ -343,12 +343,11 @@ export class WithdrawalService {
               resource: 'withdrawal',
               resourceId: withdrawalId,
               description: 'Withdrawal approved by finance operator',
-              metadata: {
-                amount: String(withdrawal.amount),
-                idempotencyKey: `WITHDRAWAL:${withdrawalId}:APPROVE`,
-                result: 'APPROVED',
-                statusVersion: 1,
-              },
+
+              idempotencyKey: `WITHDRAWAL:${withdrawalId}:APPROVE`,
+              result: 'APPROVED',
+              statusVersion: 1,
+              metadata: { amount: String(withdrawal.amount) },
             },
             tx,
           );
@@ -444,11 +443,10 @@ export class WithdrawalService {
               resourceId: withdrawalId,
               description:
                 note?.trim() || 'Withdrawal rejected by finance operator',
-              metadata: {
-                idempotencyKey: `WITHDRAWAL:${withdrawalId}:REJECT`,
-                result: 'REJECTED',
-                statusVersion: 1,
-              },
+
+              idempotencyKey: `WITHDRAWAL:${withdrawalId}:REJECT`,
+              result: 'REJECTED',
+              statusVersion: 1,
             },
             tx,
           );

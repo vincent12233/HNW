@@ -33,7 +33,10 @@ describe('IPO automatic payment from approved deposits', () => {
         update: jest.fn(),
       },
       ipoApplication: { update: jest.fn() },
-      accountTransaction: { findUnique: jest.fn().mockResolvedValue(null), create: jest.fn() },
+      accountTransaction: {
+        findUnique: jest.fn().mockResolvedValue(null),
+        create: jest.fn(),
+      },
       notification: { create: jest.fn() },
       order: {
         findUnique: jest.fn().mockResolvedValue(null),
@@ -46,22 +49,23 @@ describe('IPO automatic payment from approved deposits', () => {
       },
     };
     const prisma = {
+      user: { count: jest.fn().mockResolvedValue(1) },
       depositRequest: {
         findUnique: jest.fn().mockResolvedValue({
           status: 'PENDING',
           amount,
           accountId: 'account',
+          account: { userId: 'client' },
         }),
       },
       $transaction: (fn: any) => fn(tx),
     };
-    const service = new DepositService(
-      prisma as any,
-      {
-        createLog: jest.fn(),
-      } as any,
-    );
-    return { service, tx };
+    const audit = {
+      createLog: jest.fn(),
+      findReplayResult: jest.fn(),
+    };
+    const service = new DepositService(prisma as any, audit as any);
+    return { service, tx, prisma, audit };
   }
 
   it('partial deposit reduces debt without generating holdings', async () => {
@@ -102,6 +106,38 @@ describe('IPO automatic payment from approved deposits', () => {
     );
   });
 
+  it('returns the first approval result without repeating side effects', async () => {
+    const { service, tx, prisma, audit } = setup(150);
+    prisma.depositRequest.findUnique.mockResolvedValue({
+      status: 'APPROVED',
+      amount: 150,
+      accountId: 'account',
+      account: { userId: 'client' },
+    });
+    audit.findReplayResult.mockResolvedValue({
+      message: 'Deposit approved',
+      depositId: 'deposit',
+      depositAmount: '150',
+      ipoRepayment: '100.00',
+      creditedAmount: '50.00',
+    });
+
+    await expect(
+      service.approveDeposit('deposit', 'finance', 'FINANCE'),
+    ).resolves.toEqual({
+      message: 'Deposit approved',
+      depositId: 'deposit',
+      depositAmount: '150',
+      ipoRepayment: '100.00',
+      creditedAmount: '50.00',
+    });
+    expect(audit.findReplayResult).toHaveBeenCalledWith(
+      'DEPOSIT:deposit:APPROVE',
+    );
+    expect(tx.depositRequest.updateMany).not.toHaveBeenCalled();
+    expect(tx.notification.create).not.toHaveBeenCalled();
+    expect(audit.createLog).not.toHaveBeenCalled();
+  });
   it('duplicate approval does not repay or create holdings again', async () => {
     const { service, tx } = setup(150);
     tx.depositRequest.updateMany.mockResolvedValue({ count: 0 });

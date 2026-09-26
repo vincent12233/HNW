@@ -46,6 +46,26 @@ export class AuditService {
     });
   }
 
+  async findReplayResult<T>(
+    idempotencyKey: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<T | undefined> {
+    const log = await (tx ?? this.prisma).auditLog.findFirst({
+      where: {
+        metadata: {
+          path: ['idempotencyKey'],
+          equals: idempotencyKey,
+        },
+      },
+      orderBy: { createdAt: 'asc' },
+      select: { metadata: true },
+    });
+    const metadata = log?.metadata;
+    if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+      return undefined;
+    }
+    return (metadata as Record<string, unknown>).replayResult as T | undefined;
+  }
   async listLogs(
     page: number,
     pageSize: number,

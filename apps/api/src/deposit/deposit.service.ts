@@ -238,6 +238,23 @@ export class DepositService {
       throw new NotFoundException('Deposit request not found');
     }
 
+    const idempotencyKey = `DEPOSIT:${depositId}:APPROVE`;
+    if (deposit.status === 'APPROVED') {
+      await this.assertDepositVisible(
+        deposit.account.userId,
+        role,
+        actorId,
+        this.prisma,
+      );
+      const replay = await this.audit.findReplayResult<{
+        message: string;
+        depositId: string;
+        depositAmount: string;
+        ipoRepayment: string;
+        creditedAmount: string;
+      }>(idempotencyKey);
+      if (replay) return replay;
+    }
     if (deposit.status !== 'PENDING') {
       throw new BadRequestException('Deposit already processed');
     }
@@ -328,13 +345,20 @@ export class DepositService {
               resource: 'deposit',
               resourceId: depositId,
               description: 'Deposit approved by finance operator',
+              idempotencyKey,
+              result: 'APPROVED',
+              statusVersion: 1,
               metadata: {
                 depositAmount: String(deposit.amount),
                 ipoRepayment: repayAmount.toFixed(2),
                 creditedAmount: availableAmount.toFixed(2),
-                idempotencyKey: `DEPOSIT:${depositId}:APPROVE`,
-                result: 'APPROVED',
-                statusVersion: 1,
+                replayResult: {
+                  message: 'Deposit approved',
+                  depositId,
+                  depositAmount: String(deposit.amount),
+                  ipoRepayment: repayAmount.toFixed(2),
+                  creditedAmount: availableAmount.toFixed(2),
+                },
               },
             },
             tx,
@@ -403,11 +427,10 @@ export class DepositService {
               resourceId: depositId,
               description:
                 note?.trim() || 'Deposit rejected by finance operator',
-              metadata: {
-                idempotencyKey: `DEPOSIT:${depositId}:REJECT`,
-                result: 'REJECTED',
-                statusVersion: 1,
-              },
+
+              idempotencyKey: `DEPOSIT:${depositId}:REJECT`,
+              result: 'REJECTED',
+              statusVersion: 1,
             },
             tx,
           );
@@ -440,7 +463,7 @@ export class DepositService {
     userId: string,
     role: string,
     actorId: string,
-    tx: Prisma.TransactionClient,
+    tx: Pick<Prisma.TransactionClient, 'user'> = this.prisma,
   ) {
     const visible = await tx.user.count({
       where: { id: userId, ...this.depositCustomerScope(role, actorId) },

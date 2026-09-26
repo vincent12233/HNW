@@ -21,6 +21,7 @@ import '../widgets/home/home_dashboard_data.dart';
 import '../theme/app_motion.dart';
 import '../widgets/profile_identity.dart';
 import '../widgets/profile_menu.dart';
+import '../models/async_data_state.dart';
 import '../models/institutional_opportunity.dart';
 import '../models/company_showcase.dart';
 import '../models/ipo.dart';
@@ -100,10 +101,15 @@ class _MarketHomePageState extends State<MarketHomePage>
   bool _biometricBusy = false;
   bool _signingOut = false;
   bool isLoading = true;
-  bool _accountSnapshotLoaded = false;
-  bool _accountSnapshotFailed = false;
-  bool _accountSnapshotRefreshing = true;
+  AsyncDataState<TradingAccountSnapshot> _accountSnapshotState =
+      const AsyncDataState.loading();
   Future<void>? _accountRefreshInFlight;
+
+  bool get _accountSnapshotLoaded => _accountSnapshotState.hasData;
+  bool get _accountSnapshotFailed =>
+      _accountSnapshotState.status == AsyncDataStatus.error ||
+      _accountSnapshotState.requiresNotice;
+  bool get _accountSnapshotRefreshing => _accountSnapshotState.isLoading;
   bool _ipoAllocationDialogOpen = false;
   final Set<String> _shownIpoAllotments = {};
   bool _iposFailed = false;
@@ -602,7 +608,13 @@ class _MarketHomePageState extends State<MarketHomePage>
 
   Future<void> _performAccountRefresh() async {
     if (!mounted) return;
-    setState(() => _accountSnapshotRefreshing = true);
+    final previousState = _accountSnapshotState;
+    setState(() {
+      _accountSnapshotState = AsyncDataState.loading(
+        data: previousState.data,
+        updatedAt: previousState.updatedAt,
+      );
+    });
     try {
       final snapshot = await tradingService.fetchAccountSnapshot(
         allowCached: false,
@@ -610,14 +622,21 @@ class _MarketHomePageState extends State<MarketHomePage>
       if (!mounted) return;
       if (snapshot == null) throw StateError('Account snapshot unavailable');
       setState(() {
-        _accountSnapshotLoaded = true;
-        _accountSnapshotFailed = false;
+        _accountSnapshotState = AsyncDataState.success(snapshot);
         _applyAccountSnapshot(snapshot);
       });
-    } catch (_) {
-      if (mounted) setState(() => _accountSnapshotFailed = true);
-    } finally {
-      if (mounted) setState(() => _accountSnapshotRefreshing = false);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        final previousSnapshot = _accountSnapshotState.data;
+        _accountSnapshotState = previousSnapshot == null
+            ? AsyncDataState.error(clientErrorMessage(error))
+            : AsyncDataState.stale(
+                previousSnapshot,
+                updatedAt: _accountSnapshotState.updatedAt ?? DateTime.now(),
+                message: clientErrorMessage(error),
+              );
+      });
     }
   }
 

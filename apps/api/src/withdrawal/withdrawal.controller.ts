@@ -18,6 +18,7 @@ import { WithdrawalService } from './withdrawal.service';
 import { CreateWithdrawalRequestDto } from './dto/create-withdrawal-request.dto';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { optionalIdempotencyKey } from '../common/idempotency-key';
+import { assertOperationIdempotencyKey } from '../common/operation-idempotency-key';
 
 @Controller('withdrawal')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -68,7 +69,12 @@ export class WithdrawalController {
 
   @Patch(':id/approve')
   @Roles(UserRole.ADMIN, UserRole.FINANCE)
-  approve(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  approve(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    assertOperationIdempotencyKey(idempotencyKey, `WITHDRAWAL:${id}:APPROVE`);
     return this.withdrawalService.approveWithdrawal(
       id,
       req.user.userId,
@@ -82,7 +88,9 @@ export class WithdrawalController {
     @Param('id') id: string,
     @Body() body: { note?: string },
     @Req() req: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
+    assertOperationIdempotencyKey(idempotencyKey, `WITHDRAWAL:${id}:REJECT`);
     return this.withdrawalService.rejectWithdrawal(
       id,
       body.note,

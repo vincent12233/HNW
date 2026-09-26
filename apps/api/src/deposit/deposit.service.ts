@@ -332,6 +332,9 @@ export class DepositService {
                 depositAmount: String(deposit.amount),
                 ipoRepayment: repayAmount.toFixed(2),
                 creditedAmount: availableAmount.toFixed(2),
+                idempotencyKey: `DEPOSIT:${depositId}:APPROVE`,
+                result: 'APPROVED',
+                statusVersion: 1,
               },
             },
             tx,
@@ -400,6 +403,11 @@ export class DepositService {
               resourceId: depositId,
               description:
                 note?.trim() || 'Deposit rejected by finance operator',
+              metadata: {
+                idempotencyKey: `DEPOSIT:${depositId}:REJECT`,
+                result: 'REJECTED',
+                statusVersion: 1,
+              },
             },
             tx,
           );

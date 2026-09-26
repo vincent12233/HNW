@@ -3,6 +3,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -17,6 +18,7 @@ import { RolesGuard } from '../auth/roles.guard';
 import { UserRole } from '../generated/prisma/enums';
 import { DedicatedOperatorScopeGuard } from '../business/dedicated-operator-scope.guard';
 import { AppContentService } from '../app-content/app-content.service';
+import { assertOperationIdempotencyKey } from '../common/operation-idempotency-key';
 import { DepositService } from './deposit.service';
 import { SupportDepositSubmitDto } from './dto/support-deposit-submit.dto';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
@@ -81,7 +83,12 @@ export class DepositController {
 
   @Patch(':id/approve')
   @Roles(UserRole.FINANCE, UserRole.SUPPORT)
-  approve(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+  approve(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey?: string,
+  ) {
+    assertOperationIdempotencyKey(idempotencyKey, `DEPOSIT:${id}:APPROVE`);
     return this.depositService.approveDeposit(
       id,
       req.user.userId,
@@ -95,7 +102,9 @@ export class DepositController {
     @Param('id') id: string,
     @Body() body: { note?: string },
     @Req() req: AuthenticatedRequest,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
+    assertOperationIdempotencyKey(idempotencyKey, `DEPOSIT:${id}:REJECT`);
     return this.depositService.rejectDeposit(
       id,
       body.note,

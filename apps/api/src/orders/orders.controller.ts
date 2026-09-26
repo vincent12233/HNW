@@ -1,13 +1,16 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Post,
   Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { optionalIdempotencyKey } from '../common/idempotency-key';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -29,8 +32,18 @@ export class OrdersController {
   createOrder(
     @Req() request: AuthenticatedRequest,
     @Body() dto: CreateOrderDto,
+    @Headers('idempotency-key') idempotencyKey?: string,
   ) {
-    return this.ordersService.createOrder(request.user.userId, dto);
+    const normalizedKey = optionalIdempotencyKey(idempotencyKey);
+    if (normalizedKey && normalizedKey !== dto.clientOrderId) {
+      throw new BadRequestException(
+        'Idempotency-Key must match clientOrderId for order submission',
+      );
+    }
+    return this.ordersService.createOrder(request.user.userId, {
+      ...dto,
+      clientOrderId: normalizedKey ?? dto.clientOrderId,
+    });
   }
 
   @Get()

@@ -126,6 +126,38 @@ describe('Current client order HTTP and ownership behavior', () => {
       );
     });
 
+    it('accepts a matching Idempotency-Key and forwards the client order id', async () => {
+      app = await build(UserRole.CLIENT);
+      prisma.user.findUnique.mockResolvedValue({
+        role: UserRole.CLIENT,
+        status: UserStatus.ACTIVE,
+      });
+      tradingOrders.createOrder.mockResolvedValue({ id: 'o-idem', status: 'FILLED' });
+      await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', validOrder.clientOrderId)
+        .send(validOrder)
+        .expect(201);
+      expect(tradingOrders.createOrder).toHaveBeenCalledWith(
+        'client-1',
+        expect.objectContaining({ clientOrderId: validOrder.clientOrderId }),
+      );
+    });
+
+    it('rejects a mismatched Idempotency-Key before submission', async () => {
+      app = await build(UserRole.CLIENT);
+      prisma.user.findUnique.mockResolvedValue({
+        role: UserRole.CLIENT,
+        status: UserStatus.ACTIVE,
+      });
+      await request(app.getHttpServer())
+        .post('/orders')
+        .set('Idempotency-Key', 'different-order-key')
+        .send(validOrder)
+        .expect(400);
+      expect(tradingOrders.createOrder).not.toHaveBeenCalled();
+    });
+
     it('rejects an unsupported GTT order type on the current DTO', async () => {
       app = await build(UserRole.CLIENT);
       prisma.user.findUnique.mockResolvedValue({

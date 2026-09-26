@@ -8,6 +8,7 @@ import { randomBytes } from 'crypto';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
+import { BUSINESS_ERROR_CODES } from '../common/business-error-codes';
 import { WithdrawalPinService } from '../client-experience/withdrawal-pin.service';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
@@ -84,7 +85,7 @@ export class WithdrawalService {
               (existing.upiId ?? '') === (upiId?.trim() ?? '');
             if (!matchesOriginalRequest) {
               throw new ConflictException({
-                code: 'IDEMPOTENCY_KEY_REUSED',
+                code: BUSINESS_ERROR_CODES.IDEMPOTENCY_KEY_REUSED,
                 message:
                   'Idempotency-Key was already used for a different withdrawal request',
               });

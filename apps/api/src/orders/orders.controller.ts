@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { BUSINESS_ERROR_CODES } from '../common/business-error-codes';
 import { optionalIdempotencyKey } from '../common/idempotency-key';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
@@ -36,9 +37,11 @@ export class OrdersController {
   ) {
     const normalizedKey = optionalIdempotencyKey(idempotencyKey);
     if (normalizedKey && normalizedKey !== dto.clientOrderId) {
-      throw new BadRequestException(
-        'Idempotency-Key must match clientOrderId for order submission',
-      );
+      throw new BadRequestException({
+        code: BUSINESS_ERROR_CODES.ORDER_IDEMPOTENCY_CONFLICT,
+        message:
+          'Idempotency-Key must match clientOrderId for order submission',
+      });
     }
     return this.ordersService.createOrder(request.user.userId, {
       ...dto,

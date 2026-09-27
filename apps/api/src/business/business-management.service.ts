@@ -1,0 +1,421 @@
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
+
+import {
+  InviteCodeStatus,
+  UserRole,
+  UserStatus,
+} from '../generated/prisma/enums';
+import { PrismaService } from '../prisma/prisma.service';
+
+export type CreateBusinessInput = {
+  password: string;
+  fullName: string;
+  phone?: string;
+  employeeNo: string;
+  department?: string;
+};
+
+export class BusinessManagementService {
+  constructor(private readonly prisma: PrismaService) {}
+
+  private generateInviteCode() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    return Array.from({ length: 7 }, () => chars[randomInt(chars.length)]).join(
+      '',
+    );
+  }
+
+  async createBusiness(input: CreateBusinessInput) {
+    const employeeNo = input.employeeNo.trim().toUpperCase();
+    const email = `${employeeNo.toLowerCase()}@internal.hnw.local`;
+
+    if (!input.password || input.password.length < 12) {
+      throw new BadRequestException('密码至少需要 12 个字符');
+    }
+
+    if (!input.fullName?.trim()) {
+      throw new BadRequestException('请输入业务员姓名');
+    }
+
+    if (!employeeNo) {
+      throw new BadRequestException('请输入员工编号');
+    }
+
+    const existingEmployee = await this.prisma.businessProfile.findUnique({
+      where: {
+        employeeNo,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingEmployee) {
+      throw new ConflictException('该员工编号已经存在');
+    }
+
+    const existingUser = await this.prisma.user.findUnique({
+      where: {
+        email,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (existingUser) {
+      throw new ConflictException('该员工编号已经存在');
+    }
+
+    const passwordHash = await bcrypt.hash(input.password, 12);
+
+    return this.prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email,
+          passwordHash,
+          fullName: input.fullName.trim(),
+          phone: input.phone?.trim() || null,
+          role: UserRole.BUSINESS,
+          status: UserStatus.ACTIVE,
+        },
+      });
+
+      const businessProfile = await tx.businessProfile.create({
+        data: {
+          userId: user.id,
+          employeeNo,
+          department: input.department?.trim() || null,
+          isActive: true,
+        },
+      });
+
+      return {
+        message: '业务员创建成功',
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          phone: user.phone,
+          role: user.role,
+          status: user.status,
+        },
+        businessProfile,
+      };
+    });
+  }
+
+  async listBusinesses() {
+    return this.prisma.businessProfile.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            role: true,
+            status: true,
+            createdAt: true,
+
+            _count: {
+              select: {
+                assignedCustomers: true,
+              },
+            },
+          },
+        },
+
+        inviteCodes: {
+          where: {
+            status: InviteCodeStatus.UNUSED,
+          },
+          select: {
+            id: true,
+          },
+        },
+
+        _count: {
+          select: {
+            inviteCodes: true,
+          },
+        },
+      },
+
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async generateInviteCodes(
+    businessUserId: string,
+    count: number,
+    expiresAt?: Date,
+  ) {
+    if (!Number.isInteger(count) || count < 1 || count > 100) {
+      throw new BadRequestException('每次只能生成 1 到 100 个邀请码');
+    }
+
+    if (expiresAt && Number.isNaN(expiresAt.getTime())) {
+      throw new BadRequestException('邀请码有效期格式不正确');
+    }
+
+    if (expiresAt && expiresAt.getTime() <= Date.now()) {
+      throw new BadRequestException('邀请码有效期必须晚于当前时间');
+    }
+
+    const profile = await this.prisma.businessProfile.findUnique({
+      where: {
+        userId: businessUserId,
+      },
+      select: {
+        id: true,
+        isActive: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('未找到业务员资料');
+    }
+
+    if (!profile.isActive) {
+      throw new BadRequestException('该业务员账号已停用');
+    }
+
+    const codes: string[] = [];
+
+    while (codes.length < count) {
+      const code = this.generateInviteCode();
+
+      const exists = await this.prisma.inviteCode.findUnique({
+        where: {
+          code,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!exists && !codes.includes(code)) {
+        codes.push(code);
+      }
+    }
+
+    await this.prisma.inviteCode.createMany({
+      data: codes.map((code) => ({
+        code,
+        businessProfileId: profile.id,
+        expiresAt: expiresAt ?? null,
+        status: InviteCodeStatus.UNUSED,
+      })),
+    });
+
+    return this.prisma.inviteCode.findMany({
+      where: {
+        businessProfileId: profile.id,
+        code: {
+          in: codes,
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+  }
+
+  async currentInviteCode(businessUserId: string, previousId?: string) {
+    const where = {
+      businessProfile: {
+        userId: businessUserId,
+        isActive: true,
+        user: { role: UserRole.BUSINESS, status: UserStatus.ACTIVE },
+      },
+      status: InviteCodeStatus.UNUSED,
+      OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+    };
+    const select = { id: true, code: true, expiresAt: true };
+    const next = await this.prisma.inviteCode.findFirst({
+      where: { ...where, ...(previousId ? { id: { not: previousId } } : {}) },
+      select,
+      orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+    });
+    const code =
+      next ??
+      (previousId
+        ? await this.prisma.inviteCode.findFirst({
+            where: { ...where, id: previousId },
+            select,
+          })
+        : null);
+    return { code };
+  }
+
+  async listInviteCodes(
+    currentUserId: string,
+    currentRole: UserRole,
+    businessUserId?: string,
+  ) {
+    let targetBusinessUserId = currentUserId;
+
+    if (currentRole === UserRole.ADMIN || currentRole === UserRole.FINANCE) {
+      if (!businessUserId) {
+        throw new BadRequestException('请选择业务员');
+      }
+
+      targetBusinessUserId = businessUserId;
+    }
+
+    const profile = await this.prisma.businessProfile.findUnique({
+      where: {
+        userId: targetBusinessUserId,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('未找到业务员资料');
+    }
+
+    const inviteCodes = await this.prisma.inviteCode.findMany({
+      where: {
+        businessProfileId: profile.id,
+      },
+      include: {
+        customers: {
+          select: {
+            id: true,
+            fullName: true,
+            phone: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return inviteCodes.map(({ customers, ...code }) => ({
+      ...code,
+      customer: customers[0] ?? null,
+      customers,
+    }));
+  }
+
+  async setBusinessActive(businessUserId: string, isActive: boolean) {
+    const profile = await this.prisma.businessProfile.findUnique({
+      where: {
+        userId: businessUserId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        isActive: true,
+      },
+    });
+
+    if (!profile) {
+      throw new NotFoundException('未找到业务员');
+    }
+
+    const businessProfile = await this.prisma.businessProfile.update({
+      where: {
+        userId: businessUserId,
+      },
+      data: {
+        isActive,
+      },
+    });
+
+    return {
+      message: isActive ? '业务员已启用' : '业务员已停用',
+      businessProfile,
+    };
+  }
+
+  async resetBusinessPassword(businessUserId: string, newPassword: string) {
+    if (!newPassword || newPassword.length < 12) {
+      throw new BadRequestException('新密码至少需要 12 个字符');
+    }
+
+    const business = await this.prisma.user.findFirst({
+      where: {
+        id: businessUserId,
+        role: UserRole.BUSINESS,
+      },
+      select: {
+        id: true,
+      },
+    });
+
+    if (!business) {
+      throw new NotFoundException('未找到业务员');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+
+    await this.prisma.user.update({
+      where: {
+        id: businessUserId,
+      },
+      data: {
+        passwordHash,
+      },
+    });
+
+    return {
+      message: '业务员密码已重置',
+    };
+  }
+
+  async disableInviteCode(
+    codeId: string,
+    currentUserId: string,
+    currentRole: UserRole,
+  ) {
+    const inviteCode = await this.prisma.inviteCode.findUnique({
+      where: {
+        id: codeId,
+      },
+      include: {
+        businessProfile: {
+          select: {
+            userId: true,
+          },
+        },
+      },
+    });
+
+    if (!inviteCode) {
+      throw new NotFoundException('未找到邀请码');
+    }
+
+    if (
+      currentRole === UserRole.BUSINESS &&
+      inviteCode.businessProfile.userId !== currentUserId
+    ) {
+      throw new NotFoundException('未找到邀请码');
+    }
+
+    if (inviteCode.status !== InviteCodeStatus.UNUSED) {
+      throw new BadRequestException('只有未使用的邀请码可以作废');
+    }
+
+    return this.prisma.inviteCode.update({
+      where: {
+        id: codeId,
+      },
+      data: {
+        status: InviteCodeStatus.DISABLED,
+        disabledAt: new Date(),
+      },
+    });
+  }
+}

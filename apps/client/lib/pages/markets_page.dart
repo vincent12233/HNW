@@ -37,6 +37,7 @@ part 'markets_page_content_section.dart';
 part 'markets_page_banner_section.dart';
 part 'markets_page_stock_list_section.dart';
 part 'markets_page_sector_section.dart';
+part 'markets_page_catalog_section.dart';
 
 class MarketsPage extends StatefulWidget {
   const MarketsPage({
@@ -636,40 +637,6 @@ class _MarketsPageState extends State<MarketsPage> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _etfList() {
-    final etfs = _filteredStocks.where((stock) {
-      final category = stock.category?.toUpperCase() ?? '';
-      return category.contains('ETF') || stock.symbol.endsWith('BEES');
-    }).toList();
-    return _stockList(
-      etfs,
-      emptyTitle: 'ETF data unavailable',
-      emptySubtitle:
-          'ETF quotes will appear when enabled by the market catalog.',
-      allowPagination: query.trim().isNotEmpty,
-      browseOnlyLabel: 'ETFs',
-    );
-  }
-
-  Widget _categoryList(
-    List<String> keywords, {
-    required String emptyTitle,
-    required String emptySubtitle,
-    String? browseOnlyLabel,
-  }) {
-    final instruments = _filteredStocks.where((stock) {
-      final category = stock.category?.trim().toUpperCase() ?? '';
-      return keywords.any(category.contains);
-    }).toList();
-    return _stockList(
-      instruments,
-      emptyTitle: emptyTitle,
-      emptySubtitle: emptySubtitle,
-      allowPagination: query.trim().isNotEmpty,
-      browseOnlyLabel: browseOnlyLabel,
     );
   }
 

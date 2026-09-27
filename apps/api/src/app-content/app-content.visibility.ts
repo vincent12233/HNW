@@ -29,10 +29,7 @@ export function isAdminOnlySupportKey(key: string): boolean {
   return ADMIN_ONLY_SUPPORT_KEYS.has(key);
 }
 
-export function isDeprecatedContentKey(
-  module: AppContentModule | string,
-  key: string,
-): boolean {
+export function isDeprecatedContentKey(module: string, key: string): boolean {
   return DEPRECATED_CONTENT_KEYS.some(
     (row) => row.module === module && row.key === key,
   );

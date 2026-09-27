@@ -18,6 +18,7 @@ import {
   availableCash,
   moneyDecimal,
 } from '../common/money';
+import { recordOperationalCounter } from '../observability/metrics';
 
 @Injectable()
 export class WithdrawalService {
@@ -132,6 +133,7 @@ export class WithdrawalService {
             referenceId: request.id,
           },
         });
+        recordOperationalCounter('withdrawal_requested');
         await this.audit.createLog(
           {
             actorId: userId,
@@ -382,6 +384,7 @@ export class WithdrawalService {
               tx,
             );
 
+          recordOperationalCounter('withdrawal_approved');
           return {
             message: 'Withdrawal approved',
             withdrawalId,
@@ -526,11 +529,14 @@ export class WithdrawalService {
                 result: 'REJECTED',
                 statusVersion: 1,
                 metadata: {
-                  replayResult: JSON.parse(JSON.stringify(replayResult)),
+                  replayResult: JSON.parse(
+                    JSON.stringify(replayResult),
+                  ) as Prisma.InputJsonValue,
                 },
               },
               tx,
             );
+          recordOperationalCounter('withdrawal_rejected');
           return replayResult;
         },
         { isolationLevel: 'Serializable' },

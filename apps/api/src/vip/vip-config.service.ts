@@ -7,10 +7,7 @@ import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { moneyDecimal } from '../common/money';
-import {
-  isVipTierCode,
-  VIP_CONFIG_LOCK_KEY,
-} from './vip.constants';
+import { isVipTierCode, VIP_CONFIG_LOCK_KEY } from './vip.constants';
 import { assertStrictlyIncreasingActiveThresholds } from './vip-recommendation';
 
 export type UpdateVipTierInput = {
@@ -92,7 +89,9 @@ export class VipConfigService {
       }
     }
     if (input.description !== undefined && input.description.length > 240) {
-      throw new BadRequestException('Description must be at most 240 characters');
+      throw new BadRequestException(
+        'Description must be at most 240 characters',
+      );
     }
     if (
       input.displayOrder !== undefined &&
@@ -100,7 +99,9 @@ export class VipConfigService {
         input.displayOrder < 1 ||
         input.displayOrder > 40)
     ) {
-      throw new BadRequestException('Display order must be an integer from 1 to 40');
+      throw new BadRequestException(
+        'Display order must be an integer from 1 to 40',
+      );
     }
 
     return this.prisma.$transaction(

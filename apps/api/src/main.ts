@@ -6,7 +6,11 @@ import { runWithRequestContext } from './common/request-context';
 import { json, NextFunction, Request, Response, urlencoded } from 'express';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './observability/all-exceptions.filter';
-import { businessFailureEvent } from './observability/business-events';
+import { buildErrorReport } from './observability/error-report';
+import {
+  businessFailureEvent,
+  businessSuccessEvent,
+} from './observability/business-events';
 import { isLocalDevelopmentOrigin } from './common/local-development-origin';
 import {
   createRateLimitStore,
@@ -14,8 +18,20 @@ import {
   type RateLimitStore,
 } from './common/rate-limit-store';
 import { resolveTrustProxyHops } from './common/trust-proxy';
+import {
+  recordBusinessEvent,
+  recordBusinessFailure,
+  recordHttpMetric,
+} from './observability/metrics';
 
 const httpLogger = new Logger('HttpAudit');
+
+function requestIdFrom(value?: string) {
+  const candidate = value?.trim() ?? '';
+  return /^(?:[a-f0-9]{16,64}|[a-f0-9]{8}-[a-f0-9-]{27,})$/i.test(candidate)
+    ? candidate
+    : randomUUID();
+}
 
 function isLoopbackOrPrivateHostname(hostname: string) {
   const host = hostname.toLowerCase().replace(/^\[|\]$/g, '');
@@ -156,11 +172,13 @@ function requestLimit(path: string) {
 function securityMiddleware(rateLimitStore: RateLimitStore) {
   return async (req: Request, res: Response, next: NextFunction) => {
     const startedAt = Date.now();
-    const requestId = req.header('x-request-id')?.slice(0, 100) || randomUUID();
+    const requestId = requestIdFrom(req.header('x-request-id'));
     res.setHeader('x-request-id', requestId);
     res.on('finish', () => {
       const durationMs = Date.now() - startedAt;
       const timestamp = new Date().toISOString();
+      recordHttpMetric(res.statusCode, durationMs);
+
       const payload = JSON.stringify({
         level:
           res.statusCode >= 500
@@ -174,16 +192,22 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
         path: req.path,
         statusCode: res.statusCode,
         durationMs,
-        ip: req.ip,
-        userAgent: req.header('user-agent')?.slice(0, 200),
         timestamp,
       });
       if (res.statusCode >= 500) httpLogger.error(payload);
       else if (res.statusCode >= 400) httpLogger.warn(payload);
       else httpLogger.log(payload);
 
+      const successEvent = businessSuccessEvent(
+        req.method,
+        req.path,
+        res.statusCode,
+      );
+      if (successEvent) recordBusinessEvent(successEvent);
+
       const event = businessFailureEvent(req.method, req.path, res.statusCode);
       if (event) {
+        recordBusinessFailure(event);
         httpLogger.warn(
           JSON.stringify({
             level: 'warn',
@@ -266,7 +290,14 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
       entry = await rateLimitStore.consume(key, windowMs);
     } catch (error) {
       httpLogger.error(
-        JSON.stringify({ event: 'rate_limit_store_error', requestId, error }),
+        JSON.stringify(
+          buildErrorReport(error, {
+            requestId,
+            method: req.method,
+            path: req.path,
+            statusCode: 503,
+          }),
+        ),
       );
       res.status(503).json({
         statusCode: 503,

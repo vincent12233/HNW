@@ -142,6 +142,9 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_fresh?schema=public
         run: npm run test:cov -- --runInBand
 
+      - name: Enforce critical directory coverage
+        run: npm run test:coverage:directories
+
       - name: Upload API coverage
         if: always()
         uses: actions/upload-artifact@v7

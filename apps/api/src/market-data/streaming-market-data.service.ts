@@ -10,6 +10,10 @@ import { MarketDataHealthService } from './market-data-health.service';
 import { QuoteIngestionService } from './quote-ingestion.service';
 import { StreamingProviderRegistryService } from './providers/streaming-provider-registry.service';
 import {
+  recordOperationalCounter,
+  setOperationalGauge,
+} from '../observability/metrics';
+import {
   MarketSubscription,
   StreamingMarketDataProvider,
 } from './providers/streaming-market-data-provider.interface';
@@ -102,6 +106,8 @@ export class StreamingMarketDataService
           provider.providerSymbolCount ?? subscriptions.length,
         lastConnectionError: null,
       });
+      recordOperationalCounter('streaming_connected');
+      setOperationalGauge('streaming_subscriptions', subscriptions.length);
       this.logger.log(`Streaming market data connected via ${provider.name}`);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : String(error);
@@ -109,6 +115,7 @@ export class StreamingMarketDataService
         providerSymbolCount: provider.providerSymbolCount ?? 0,
         lastConnectionError: message,
       });
+      recordOperationalCounter('streaming_connection_failed');
       this.logger.error(`Streaming market data connection failed: ${message}`);
       if (failFast) throw error;
       this.scheduleReconnect();
@@ -130,11 +137,13 @@ export class StreamingMarketDataService
 
   private bindQuotes(provider: StreamingMarketDataProvider) {
     provider.onQuote((quote) => {
+      recordOperationalCounter('market_quote_received');
       void this.ingestion
         .ingest(quote.exchange, quote, 'STOCK')
         .catch((error: unknown) => {
           const message =
             error instanceof Error ? error.message : String(error);
+          recordOperationalCounter('market_quote_ingestion_failed');
           this.logger.error(
             `Streaming quote ingestion failed for ${quote.exchange}:${quote.symbol}: ${message}`,
           );

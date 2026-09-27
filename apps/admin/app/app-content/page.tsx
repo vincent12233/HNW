@@ -159,6 +159,10 @@ type ContentEntry = {
   isActive: boolean;
   sortOrder: number;
   updatedAt?: string;
+  publicationStatus: "DRAFT" | "SCHEDULED" | "PUBLISHED" | "EXPIRED";
+  publishAt?: string | null;
+  expiresAt?: string | null;
+  version: number;
 };
 
 type ContentRevision = {
@@ -303,6 +307,45 @@ export default function AppOpsContentPage() {
   const [history, setHistory] = useState<ContentRevision[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
   const [restoring, setRestoring] = useState(false);
+  const [publicationEntryId, setPublicationEntryId] = useState<string>();
+  const [publicationStatus, setPublicationStatus] = useState<ContentEntry["publicationStatus"]>("DRAFT");
+  const [publishAt, setPublishAt] = useState("");
+  const [expiresAt, setExpiresAt] = useState("");
+
+  function openPublication(entryId: string) {
+    const entry = entries.find((item) => item.id === entryId);
+    setPublicationEntryId(entryId);
+    setPublicationStatus(entry?.publicationStatus || "DRAFT");
+    setPublishAt(entry?.publishAt ? entry.publishAt.slice(0, 16) : "");
+    setExpiresAt(entry?.expiresAt ? entry.expiresAt.slice(0, 16) : "");
+  }
+
+  async function savePublication() {
+    const entry = entries.find((item) => item.id === publicationEntryId);
+    if (!entry || saving) return;
+    setSaving(true);
+    try {
+      await api.put("/admin/app-content", {
+        module: entry.module,
+        key: entry.key,
+        title: entry.title,
+        body: entry.body,
+        locale: entry.locale,
+        isActive: entry.isActive,
+        sortOrder: entry.sortOrder,
+        publicationStatus,
+        publishAt: publishAt ? new Date(publishAt).toISOString() : null,
+        expiresAt: expiresAt ? new Date(expiresAt).toISOString() : null,
+      });
+      setPublicationEntryId(undefined);
+      await loadAll();
+      message.success("发布状态已保存");
+    } catch (requestError: unknown) {
+      message.error(apiError(requestError, "发布状态保存失败"));
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function openHistory(id: string) {
     setHistoryEntryId(id);
@@ -637,6 +680,43 @@ export default function AppOpsContentPage() {
         />
 
         {error && <Alert type="error" title={error} showIcon />}
+
+        <Modal
+          title="草稿、定时发布与失效"
+          open={publicationEntryId !== undefined}
+          onCancel={() => setPublicationEntryId(undefined)}
+          onOk={() => void savePublication()}
+          confirmLoading={saving}
+          okText="保存发布设置"
+        >
+          <Space orientation="vertical" style={{ width: "100%" }}>
+            <Select
+              showSearch
+              optionFilterProp="label"
+              style={{ width: "100%" }}
+              value={publicationEntryId}
+              onChange={openPublication}
+              options={entries.map((entry) => ({
+                value: entry.id,
+                label: `${entry.module} / ${entry.key} / ${entry.locale.toUpperCase()} / v${entry.version}`,
+              }))}
+            />
+            <Select
+              style={{ width: "100%" }}
+              value={publicationStatus}
+              onChange={setPublicationStatus}
+              options={[
+                { value: "DRAFT", label: "草稿" },
+                { value: "SCHEDULED", label: "定时发布" },
+                { value: "PUBLISHED", label: "立即发布" },
+                { value: "EXPIRED", label: "已失效" },
+              ]}
+            />
+            <Input type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} addonBefore="发布时间" />
+            <Input type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} addonBefore="失效时间" />
+            <Text type="secondary">定时发布必须设置发布时间；到达失效时间后客户端会自动停止展示。英文必填法律文档不能保存为草稿或删除。</Text>
+          </Space>
+        </Modal>
 
         <Modal title="文案历史与恢复" open={historyEntryId !== undefined} onCancel={() => setHistoryEntryId(undefined)} footer={null} width={720} destroyOnHidden>
           <Space orientation="vertical" style={{ width: "100%" }} size="middle">

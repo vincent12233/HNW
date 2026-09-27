@@ -1,0 +1,14 @@
+{
+  "title": "HNW API Operations",
+  "uid": "hnw-api-operations",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "15s",
+  "panels": [
+    {"type":"timeseries","title":"HTTP requests / second","targets":[{"expr":"rate(hnw_http_requests_total[5m])"}],"gridPos":{"h":8,"w":8,"x":0,"y":0}},
+    {"type":"timeseries","title":"HTTP 5xx / second","targets":[{"expr":"rate(hnw_http_errors_total{class=\"5xx\"}[5m])"}],"gridPos":{"h":8,"w":8,"x":8,"y":0}},
+    {"type":"stat","title":"Average latency (ms)","targets":[{"expr":"hnw_http_request_duration_average_ms"}],"gridPos":{"h":8,"w":8,"x":16,"y":0}},
+    {"type":"timeseries","title":"Business successes","targets":[{"expr":"sum by (event) (rate(hnw_business_events_total[5m]))"}],"gridPos":{"h":9,"w":12,"x":0,"y":8}},
+    {"type":"timeseries","title":"Business failures","targets":[{"expr":"sum by (event) (rate(hnw_business_failures_total[5m]))"}],"gridPos":{"h":9,"w":12,"x":12,"y":8}}
+  ]
+}

@@ -33,7 +33,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Build API image
-        run: docker build -f docker/api.Dockerfile -t hnw-api-ci .
+        run: |
+          build_time="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+          docker build \
+            -f docker/api.Dockerfile \
+            --build-arg GIT_COMMIT="${GITHUB_SHA}" \
+            --build-arg BUILD_TIME="${build_time}" \
+            -t hnw-api-ci .
 
       - name: Validate local Compose configuration
         env:
@@ -51,8 +57,12 @@ jobs:
       - name: Assert containers use non-root users
         run: |
           test "$(docker image inspect hnw-api-ci --format '{{.Config.User}}')" = node
+          test "$(docker image inspect hnw-api-ci --format '{{index .Config.Labels "org.opencontainers.image.revision"}}')" = "${GITHUB_SHA}"
+          test "$(docker image inspect hnw-api-ci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^GIT_COMMIT=')" = "GIT_COMMIT=${GITHUB_SHA}"
+          docker image inspect hnw-api-ci --format '{{index .Config.Labels "org.opencontainers.image.created"}}' | grep -Eq '^[0-9]{4}-[0-9]{2}-[0-9]{2}T'
+          docker image inspect hnw-api-ci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep -Eq '^BUILD_TIME=[0-9]{4}-[0-9]{2}-[0-9]{2}T'
           test "$(docker image inspect hnw-admin-ci --format '{{.Config.User}}')" = node
           test "$(docker image inspect hnw-admin-ci --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^NEXT_PUBLIC_BACKEND_ROLE=')" = NEXT_PUBLIC_BACKEND_ROLE=ADMIN
           test "$(docker image inspect hnw-admin-ci --format '{{json .Config.Cmd}}')" = '["node","server.js"]'
           docker run --rm --entrypoint sh hnw-admin-ci -c 'test -w /app/.next/static && test ! -e /app/node_modules/typescript'
-          docker run --rm --entrypoint sh hnw-api-ci -c 'test -w /app/private-objects'
+          docker run --rm --entrypoint sh hnw-api-ci -c 'test -w /app/private-objects && test ! -e /app/node_modules/@nestjs/cli && test ! -e /app/node_modules/jest && test ! -e /app/node_modules/eslint'

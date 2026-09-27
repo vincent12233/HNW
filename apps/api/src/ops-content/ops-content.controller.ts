@@ -169,7 +169,8 @@ export class OpsContentController {
     return this.settings.upsert(
       {
         ...body,
-        platform: normalized as import('../generated/prisma/enums').AppClientPlatform,
+        platform:
+          normalized as import('../generated/prisma/enums').AppClientPlatform,
       },
       { userId: request.user.userId, role: request.user.role },
     );

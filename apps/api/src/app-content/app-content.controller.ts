@@ -101,11 +101,19 @@ export class AppContentController {
   @Post('admin/app-content/:id/restore')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  restore(@Req() request: AuthenticatedRequest, @Param('id') id: string,
-    @Body() body: RestoreAppContentDto) {
-    return this.service.restoreEntry(id, body.revisionId, body.expectedUpdatedAt, {
-      userId: request.user.userId,
-      role: request.user.role,
-    });
+  restore(
+    @Req() request: AuthenticatedRequest,
+    @Param('id') id: string,
+    @Body() body: RestoreAppContentDto,
+  ) {
+    return this.service.restoreEntry(
+      id,
+      body.revisionId,
+      body.expectedUpdatedAt,
+      {
+        userId: request.user.userId,
+        role: request.user.role,
+      },
+    );
   }
 }

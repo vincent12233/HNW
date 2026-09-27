@@ -14,7 +14,10 @@ import {
   ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { AnnouncementType, AppClientPlatform } from '../../generated/prisma/enums';
+import {
+  AnnouncementType,
+  AppClientPlatform,
+} from '../../generated/prisma/enums';
 
 const LOCALE = /^(en|hi)$/i;
 const VERSION = /^\d{1,4}(\.\d{1,4}){0,3}$/;

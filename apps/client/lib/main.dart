@@ -12,6 +12,7 @@ import 'pages/register_page.dart';
 import 'pages/splash_page.dart';
 import 'services/app_client_settings_service.dart';
 import 'services/app_content_service.dart';
+import 'services/error_telemetry.dart';
 import 'services/auth_service.dart';
 import 'services/local_data_cache.dart';
 import 'services/session_expiry_service.dart';
@@ -24,6 +25,7 @@ final GlobalKey<NavigatorState> appNavigatorKey = GlobalKey<NavigatorState>();
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  ErrorTelemetry.instance.install();
   await AppLanguage.instance.load();
   await AppearanceSettings.instance.load();
   await AppClientSettingsService.instance.bootstrap();

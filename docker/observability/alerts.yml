@@ -1,0 +1,117 @@
+groups:
+  - name: hnw-api-availability
+    rules:
+      - alert: HnwApiHighServerErrorRate
+        expr: |
+          rate(hnw_http_errors_total{class="5xx"}[5m])
+          /
+          clamp_min(rate(hnw_http_requests_total[5m]), 0.01) > 0.05
+          and rate(hnw_http_requests_total[5m]) > 0.1
+        for: 10m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: HNW API 5xx rate exceeds 5 percent
+          runbook: docs/可观测性与告警.md#api-5xx-告警
+      - alert: HnwRedisRateLimitDisconnected
+        expr: hnw_operational_gauge{metric="redis_rate_limit_connected"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          owner: platform
+        annotations:
+          summary: Redis-backed rate limiting is disconnected
+          runbook: docs/可观测性与告警.md#redis-限流存储告警
+
+  - name: hnw-external-dependencies
+    rules:
+      - alert: HnwExternalProviderRepeatedFailures
+        expr: |
+          sum by (event) (
+            increase(hnw_operational_counters_total{event=~"external_.*_failed"}[10m])
+          ) >= 3
+        for: 5m
+        labels:
+          severity: warning
+          owner: platform
+        annotations:
+          summary: External provider has at least three failures in ten minutes
+          runbook: docs/可观测性与告警.md#外部供应商告警
+      - alert: HnwKycScannerUnavailable
+        expr: |
+          increase(hnw_operational_counters_total{event="kyc_malware_scan_unavailable"}[5m]) >= 1
+        for: 0m
+        labels:
+          severity: critical
+          owner: compliance-platform
+        annotations:
+          summary: KYC malware scanner is unavailable
+          runbook: docs/可观测性与告警.md#kyc-扫描告警
+      - alert: HnwKycMalwareRejected
+        expr: |
+          increase(hnw_operational_counters_total{event="kyc_malware_scan_rejected"}[15m]) >= 1
+        for: 0m
+        labels:
+          severity: warning
+          owner: compliance
+        annotations:
+          summary: A KYC upload failed malware inspection
+          runbook: docs/可观测性与告警.md#kyc-扫描告警
+
+  - name: hnw-market-data
+    rules:
+      - alert: HnwMarketStreamingConnectionFailures
+        expr: |
+          increase(hnw_operational_counters_total{event="streaming_connection_failed"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: critical
+          owner: trading-platform
+        annotations:
+          summary: Market data streaming repeatedly failed to connect
+          runbook: docs/可观测性与告警.md#行情与-websocket-告警
+      - alert: HnwMarketQuoteIngestionFailures
+        expr: |
+          increase(hnw_operational_counters_total{event="market_quote_ingestion_failed"}[10m]) >= 3
+        for: 5m
+        labels:
+          severity: critical
+          owner: trading-platform
+        annotations:
+          summary: Market quote ingestion is repeatedly failing
+          runbook: docs/可观测性与告警.md#行情与-websocket-告警
+
+  - name: hnw-error-reporting
+    rules:
+      - alert: HnwErrorReportForwardingFailures
+        expr: increase(hnw_operational_counters_total{event="error_report_forward_failed"}[10m]) >= 3
+        for: 5m
+        labels: { severity: warning, owner: platform }
+        annotations:
+          summary: Privacy-safe error reports are failing to reach the configured platform
+          runbook: docs/可观测性与告警.md#错误采集接入
+
+  - name: hnw-critical-business
+    rules:
+      - alert: HnwOrderSubmissionFailures
+        expr: increase(hnw_business_failures_total{event="order_submit_rejected"}[10m]) >= 5
+        for: 5m
+        labels: { severity: warning, owner: trading-platform }
+        annotations:
+          summary: Order submissions are being rejected repeatedly
+          runbook: docs/可观测性与告警.md#关键业务告警
+      - alert: HnwWithdrawalRequestFailures
+        expr: increase(hnw_business_failures_total{event="withdrawal_request_rejected"}[10m]) >= 3
+        for: 5m
+        labels: { severity: warning, owner: finance-platform }
+        annotations:
+          summary: Withdrawal requests are being rejected repeatedly
+          runbook: docs/可观测性与告警.md#关键业务告警
+      - alert: HnwKycSubmissionFailures
+        expr: increase(hnw_business_failures_total{event="kyc_submit_rejected"}[15m]) >= 3
+        for: 5m
+        labels: { severity: warning, owner: compliance-platform }
+        annotations:
+          summary: KYC submissions are failing repeatedly
+          runbook: docs/可观测性与告警.md#关键业务告警

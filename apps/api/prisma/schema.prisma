@@ -942,6 +942,13 @@ enum LoanStatus {
   OVERDUE
 }
 
+enum AppContentPublicationStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  EXPIRED
+}
+
 enum AppContentModule {
   HOME
   DEPOSIT
@@ -961,12 +968,17 @@ model AppContentEntry {
   locale    String           @default("en")
   metadata  Json?
   isActive  Boolean          @default(true)
+  publicationStatus AppContentPublicationStatus @default(PUBLISHED)
+  publishAt DateTime?
+  expiresAt DateTime?
+  version Int @default(1)
   sortOrder Int              @default(0)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 
   @@unique([module, key, locale])
   @@index([module, isActive])
+  @@index([publicationStatus, publishAt, expiresAt])
   @@index([module, sortOrder])
   @@map("app_content_entries")
 }

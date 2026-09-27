@@ -8,11 +8,7 @@ import { VipTeamController } from './vip-team.controller';
 
 @Module({
   imports: [PrismaModule],
-  controllers: [
-    VipAdminController,
-    VipTeamController,
-    VipBusinessController,
-  ],
+  controllers: [VipAdminController, VipTeamController, VipBusinessController],
   providers: [VipConfigService, VipClientsService],
   exports: [VipConfigService, VipClientsService],
 })

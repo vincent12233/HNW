@@ -24,9 +24,7 @@ export class MarketService {
     const search = query.search?.trim();
     const featuredFilter =
       query.featuredHome !== undefined || query.featuredMarkets !== undefined;
-    const take = featuredFilter
-      ? (query.limit ?? 40)
-      : query.limit;
+    const take = featuredFilter ? (query.limit ?? 40) : query.limit;
 
     const instruments = await this.prisma.instrument.findMany({
       where: {

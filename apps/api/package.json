@@ -21,7 +21,8 @@
     "test:debug": "node --experimental-vm-modules --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/jest/bin/jest.js --runInBand",
     "db:migrate": "prisma migrate deploy",
     "db:generate": "prisma generate",
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx prisma/seed.ts",
+    "test:coverage:directories": "node ../../scripts/check-directory-coverage.mjs"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

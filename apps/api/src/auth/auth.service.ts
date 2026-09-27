@@ -26,6 +26,7 @@ import { normalizePhone, internationalPhone } from './phone-number';
 import { TwoFactorService } from './two-factor.service';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { SESSION_TTL } from './session-policy';
+import { observeExternalCall } from '../observability/metrics';
 @Injectable()
 export class AuthService {
   private static readonly REFRESH_PURPOSE = 'REFRESH';
@@ -524,9 +525,11 @@ export class AuthService {
       iss?: string;
       email_verified?: boolean | string;
     };
-    const response = await axios.get<GoogleTokenInfo>(
-      'https://oauth2.googleapis.com/tokeninfo',
-      { params: { id_token: idToken }, timeout: 10000 },
+    const response = await observeExternalCall('google', 'tokeninfo', () =>
+      axios.get<GoogleTokenInfo>('https://oauth2.googleapis.com/tokeninfo', {
+        params: { id_token: idToken },
+        timeout: 10000,
+      }),
     );
     const subject = String(response.data?.sub || '');
     const email = String(response.data?.email || '').toLowerCase();

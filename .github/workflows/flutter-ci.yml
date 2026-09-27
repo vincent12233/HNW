@@ -33,7 +33,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.47.4'
+          flutter-version: '3.44.8'
           channel: stable
           cache: true
 
@@ -44,5 +44,13 @@ jobs:
         # Errors and warnings block; infos stay non-fatal.
         run: flutter analyze --no-fatal-infos
 
-      - name: Run tests
-        run: flutter test
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Upload Flutter coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-coverage
+          path: apps/client/coverage/lcov.info
+          if-no-files-found: error

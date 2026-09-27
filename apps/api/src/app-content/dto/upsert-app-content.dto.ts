@@ -15,9 +15,13 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
-import { AppContentModule } from '../../generated/prisma/enums';
+import {
+  AppContentModule,
+  AppContentPublicationStatus,
+} from '../../generated/prisma/enums';
 
 const MODULES = Object.values(AppContentModule);
+const PUBLICATION_STATUSES = Object.values(AppContentPublicationStatus);
 
 /** Client + admin-console locales currently used in this codebase. */
 const LOCALES = ['en', 'hi', 'zh'] as const;
@@ -50,6 +54,18 @@ export class UpsertAppContentDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsIn(PUBLICATION_STATUSES)
+  publicationStatus?: AppContentPublicationStatus;
+
+  @IsOptional()
+  @IsDateString()
+  publishAt?: string | null;
+
+  @IsOptional()
+  @IsDateString()
+  expiresAt?: string | null;
 
   @IsOptional()
   @Type(() => Number)

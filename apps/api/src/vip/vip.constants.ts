@@ -10,11 +10,7 @@ export type VipTierCode = (typeof VIP_TIER_CODES)[number];
 export const VIP_CONFIG_LOCK_KEY = 'hnw.vip_tier_configurations';
 
 export type VipSuggestionStatus =
-  | 'NOT_CONFIGURED'
-  | 'UPGRADE'
-  | 'DOWNGRADE'
-  | 'KEEP'
-  | 'NO_MATCH';
+  'NOT_CONFIGURED' | 'UPGRADE' | 'DOWNGRADE' | 'KEEP' | 'NO_MATCH';
 
 export type VipTierConfigSnapshot = {
   tierCode: string;

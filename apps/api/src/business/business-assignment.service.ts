@@ -73,13 +73,14 @@ export class BusinessAssignmentService {
         orderBy: { createdAt: 'desc' },
       }),
     ]);
-    const counts = await this.clientCounts(
-      businesses.map((row) => row.id),
-    );
+    const counts = await this.clientCounts(businesses.map((row) => row.id));
     const managerMap = new Map(managers.map((row) => [row.id, row]));
     const grouped = new Map<
       string,
-      { manager: StaffRow; businesses: ReturnType<BusinessAssignmentService['toBusinessRow']>[] }
+      {
+        manager: StaffRow;
+        businesses: ReturnType<BusinessAssignmentService['toBusinessRow']>[];
+      }
     >();
     for (const manager of managers) {
       grouped.set(manager.id, { manager, businesses: [] });
@@ -99,13 +100,18 @@ export class BusinessAssignmentService {
         unassigned.push(row);
       }
     }
-    let managerRows = [...grouped.values()].map(({ manager, businesses: team }) => ({
-      ...this.toStaffRow(manager),
-      businessCount: team.length,
-      clientCount: team.reduce((sum, item) => sum + item.clientCount, 0),
-      vipClientCount: team.reduce((sum, item) => sum + item.vipClientCount, 0),
-      businesses: team,
-    }));
+    let managerRows = [...grouped.values()].map(
+      ({ manager, businesses: team }) => ({
+        ...this.toStaffRow(manager),
+        businessCount: team.length,
+        clientCount: team.reduce((sum, item) => sum + item.clientCount, 0),
+        vipClientCount: team.reduce(
+          (sum, item) => sum + item.vipClientCount,
+          0,
+        ),
+        businesses: team,
+      }),
+    );
     let unassignedRows = unassigned;
     if (managerFilter === 'unassigned') {
       managerRows = [];
@@ -141,7 +147,10 @@ export class BusinessAssignmentService {
     };
   }
 
-  async preview(actorId: string, input: { businessUserId: string; newManagerId: string }) {
+  async preview(
+    actorId: string,
+    input: { businessUserId: string; newManagerId: string },
+  ) {
     await this.requireAdmin(actorId);
     const [business, newManager] = await Promise.all([
       this.prisma.user.findFirst({
@@ -163,9 +172,14 @@ export class BusinessAssignmentService {
     ]);
     if (!business) throw new NotFoundException('未找到可分配的业务员');
     if (!newManager) throw new NotFoundException('未找到目标管理员');
-    const currentManager = await this.loadEffectiveManager(business.businessCreatorId);
+    const currentManager = await this.loadEffectiveManager(
+      business.businessCreatorId,
+    );
     const counts = await this.clientCounts([business.id]);
-    const stats = counts.get(business.id) ?? { clientCount: 0, vipClientCount: 0 };
+    const stats = counts.get(business.id) ?? {
+      clientCount: 0,
+      vipClientCount: 0,
+    };
     const warnings = [
       '客户仍归属于该业务员，不会修改 assignedBusinessId',
       '旧管理员将失去该业务员及名下客户的团队可见性',
@@ -174,7 +188,16 @@ export class BusinessAssignmentService {
     if (newManager.status !== UserStatus.ACTIVE) {
       warnings.push('目标管理员当前不是启用状态');
     }
-    if (this.effectiveManagerId(business, currentManager ? new Map([[currentManager.id, currentManager]]) : new Map()) === newManager.id) {
+    const currentManagerById = new Map<
+      string,
+      NonNullable<typeof currentManager>
+    >();
+    if (currentManager) {
+      currentManagerById.set(currentManager.id, currentManager);
+    }
+    if (
+      this.effectiveManagerId(business, currentManagerById) === newManager.id
+    ) {
       warnings.push('业务员已归属该管理员');
     }
     return {
@@ -343,7 +366,8 @@ export class BusinessAssignmentService {
               businessEmployeeNo: business.businessProfile?.employeeNo ?? null,
               previousManagerEmployeeNo:
                 currentManager?.businessProfile?.employeeNo ?? null,
-              newManagerEmployeeNo: newManager.businessProfile?.employeeNo ?? null,
+              newManagerEmployeeNo:
+                newManager.businessProfile?.employeeNo ?? null,
               clientCountAtChange: clientCount,
             },
           });
@@ -446,7 +470,9 @@ export class BusinessAssignmentService {
     };
   }
 
-  private async listHistory(where: Prisma.BusinessManagerAssignmentHistoryWhereInput) {
+  private async listHistory(
+    where: Prisma.BusinessManagerAssignmentHistoryWhereInput,
+  ) {
     const rows = await this.prisma.businessManagerAssignmentHistory.findMany({
       where,
       orderBy: { createdAt: 'desc' },
@@ -489,7 +515,10 @@ export class BusinessAssignmentService {
   }
 
   private async clientCounts(businessIds: string[]) {
-    const empty = new Map<string, { clientCount: number; vipClientCount: number }>();
+    const empty = new Map<
+      string,
+      { clientCount: number; vipClientCount: number }
+    >();
     if (!businessIds.length) return empty;
     const [all, vip] = await Promise.all([
       this.prisma.user.groupBy({
@@ -512,7 +541,10 @@ export class BusinessAssignmentService {
         _count: { _all: true },
       }),
     ]);
-    const result = new Map<string, { clientCount: number; vipClientCount: number }>();
+    const result = new Map<
+      string,
+      { clientCount: number; vipClientCount: number }
+    >();
     for (const id of businessIds) {
       result.set(id, { clientCount: 0, vipClientCount: 0 });
     }

@@ -7,6 +7,7 @@ import {
 import { createHmac, randomUUID, timingSafeEqual } from 'crypto';
 import { mkdir, readFile, writeFile, unlink } from 'fs/promises';
 import { isAbsolute, join, relative, resolve, sep } from 'path';
+import { recordOperationalCounter } from '../observability/metrics';
 
 function resolveObjectSigningSecret() {
   const dedicated = process.env.OBJECT_SIGNING_SECRET?.trim() ?? '';
@@ -145,12 +146,15 @@ export class PrivateObjectStorageService implements OnModuleInit {
   private async scan(bytes: Buffer) {
     const url = process.env.VIRUS_SCAN_URL;
     if (!url) {
+      recordOperationalCounter('kyc_malware_scan_skipped');
       if (process.env.NODE_ENV === 'production')
         throw new ServiceUnavailableException(
           'Virus scanner is not configured',
         );
       return;
     }
+    recordOperationalCounter('kyc_malware_scan_attempted');
+    const startedAt = Date.now();
     const headers: Record<string, string> = {
       'content-type': 'application/octet-stream',
     };
@@ -158,24 +162,37 @@ export class PrivateObjectStorageService implements OnModuleInit {
     if (bearer) {
       headers.authorization = `Bearer ${bearer}`;
     }
-    let response: Response;
     try {
-      response = await fetch(url, {
-        method: 'POST',
-        headers,
-        body: new Uint8Array(bytes),
-        signal: AbortSignal.timeout(15_000),
-      });
-    } catch {
-      throw new ServiceUnavailableException(
-        'Malware inspection service is unavailable',
+      let response: Response;
+      try {
+        response = await fetch(url, {
+          method: 'POST',
+          headers,
+          body: new Uint8Array(bytes),
+          signal: AbortSignal.timeout(15_000),
+        });
+      } catch {
+        recordOperationalCounter('kyc_malware_scan_unavailable');
+        throw new ServiceUnavailableException(
+          'Malware inspection service is unavailable',
+        );
+      }
+      if (!response.ok) {
+        recordOperationalCounter('kyc_malware_scan_unavailable');
+        throw new ServiceUnavailableException(
+          'Malware inspection service is unavailable',
+        );
+      }
+      if ((await response.text()).trim().toUpperCase() !== 'CLEAN') {
+        recordOperationalCounter('kyc_malware_scan_rejected');
+        throw new BadRequestException('File failed malware inspection');
+      }
+      recordOperationalCounter('kyc_malware_scan_clean');
+    } finally {
+      recordOperationalCounter(
+        'kyc_malware_scan_duration_ms_total',
+        Date.now() - startedAt,
       );
     }
-    if (!response.ok)
-      throw new ServiceUnavailableException(
-        'Malware inspection service is unavailable',
-      );
-    if ((await response.text()).trim().toUpperCase() !== 'CLEAN')
-      throw new BadRequestException('File failed malware inspection');
   }
 }

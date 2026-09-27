@@ -1,6 +1,7 @@
 import { Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { createClient, type RedisClientType } from 'redis';
+import { recordOperationalCounter, setOperationalGauge } from '../observability/metrics';
 
 export type RateLimitEntry = { count: number; resetAt: number };
 
@@ -60,13 +61,17 @@ export class RedisRateLimitStore implements RateLimitStore {
             : retries * 250,
       },
     });
-    client.on('error', (error: Error) =>
+    client.on('error', (error: Error) => {
+      recordOperationalCounter('redis_rate_limit_error');
+      setOperationalGauge('redis_rate_limit_connected', 0);
       RedisRateLimitStore.logger.error(
         `Redis rate-limit store error: ${error.message}`,
-      ),
-    );
+      );
+    });
     await client.connect();
     await client.ping();
+    recordOperationalCounter('redis_rate_limit_connected');
+    setOperationalGauge('redis_rate_limit_connected', 1);
     return new RedisRateLimitStore(client);
   }
 
@@ -82,6 +87,7 @@ export class RedisRateLimitStore implements RateLimitStore {
 
   async close() {
     if (this.client.isOpen) await this.client.quit();
+    setOperationalGauge('redis_rate_limit_connected', 0);
   }
 }
 

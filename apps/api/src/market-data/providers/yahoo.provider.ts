@@ -13,6 +13,7 @@ import {
   type YahooChartResponse,
 } from './yahoo-chart.types';
 import { indianIndexBySymbol } from '../indian-indices';
+import { observeExternalCall } from '../../observability/metrics';
 
 type HistoryWindow = {
   range: '1d' | '5d' | '1mo' | '3mo' | '6mo' | '1y';
@@ -39,11 +40,13 @@ export class YahooProvider implements MarketDataProvider {
 
     try {
       const url = `https://query1.finance.yahoo.com/v8/finance/chart/${yahooSymbol}`;
-      const response = await axios.get<YahooChartResponse>(url, {
-        params: { interval: '1m', range: '1d' },
-        headers: { 'User-Agent': 'Mozilla/5.0' },
-        timeout: 10000,
-      });
+      const response = await observeExternalCall('yahoo', 'quote', () =>
+        axios.get<YahooChartResponse>(url, {
+          params: { interval: '1m', range: '1d' },
+          headers: { 'User-Agent': 'Mozilla/5.0' },
+          timeout: 10000,
+        }),
+      );
 
       const result = firstYahooChartResult(response.data);
       if (!result) throw new Error('Quote empty');
@@ -101,18 +104,20 @@ export class YahooProvider implements MarketDataProvider {
       indianIndexBySymbol(normalizedSymbol)?.providerSymbol ??
       `${normalizedSymbol}.${normalizedExchange === 'BSE' ? 'BO' : 'NS'}`;
     try {
-      const response = await axios.get<YahooChartResponse>(
-        `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`,
-        {
-          params: {
-            range: window.range,
-            interval: window.interval,
-            includePrePost: false,
-            events: 'div,splits',
+      const response = await observeExternalCall('yahoo', 'history', () =>
+        axios.get<YahooChartResponse>(
+          `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yahooSymbol)}`,
+          {
+            params: {
+              range: window.range,
+              interval: window.interval,
+              includePrePost: false,
+              events: 'div,splits',
+            },
+            headers: { 'User-Agent': 'Mozilla/5.0' },
+            timeout: 10000,
           },
-          headers: { 'User-Agent': 'Mozilla/5.0' },
-          timeout: 10000,
-        },
+        ),
       );
       const chart = firstYahooChartResult(response.data);
       const timestamps = Array.isArray(chart?.timestamp) ? chart.timestamp : [];

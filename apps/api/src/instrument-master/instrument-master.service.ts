@@ -4,6 +4,7 @@ import { Cron } from '@nestjs/schedule';
 import axios from 'axios';
 import { Exchange, InstrumentType } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
+import { observeExternalCall } from '../observability/metrics';
 
 type NseEquityRow = {
   symbol: string;
@@ -75,22 +76,24 @@ export class InstrumentMasterService {
   }
 
   async syncNseEquities() {
-    const response = await axios.get<string>(this.nseEquityUrl, {
-      responseType: 'text',
-      timeout: 20000,
-      headers: {
-        Accept: 'text/csv,*/*',
-        'User-Agent': 'india-trading-platform/1.0',
-      },
-      transformResponse: [
-        (value: unknown) =>
-          typeof value === 'string'
-            ? value
-            : typeof value === 'number' || typeof value === 'boolean'
-              ? String(value)
-              : '',
-      ],
-    });
+    const response = await observeExternalCall('nse', 'equity_master', () =>
+      axios.get<string>(this.nseEquityUrl, {
+        responseType: 'text',
+        timeout: 20000,
+        headers: {
+          Accept: 'text/csv,*/*',
+          'User-Agent': 'india-trading-platform/1.0',
+        },
+        transformResponse: [
+          (value: unknown) =>
+            typeof value === 'string'
+              ? value
+              : typeof value === 'number' || typeof value === 'boolean'
+                ? String(value)
+                : '',
+        ],
+      }),
+    );
 
     const rows = this.parseNseEquityCsv(response.data).filter(
       (row) => row.series === 'EQ',
@@ -338,19 +341,21 @@ export class InstrumentMasterService {
         'BSE equity master source is not configured (BSE_EQUITY_MASTER_URL)',
       );
     }
-    const response = await axios.get<string>(url, {
-      responseType: 'text',
-      timeout: 20000,
-      maxContentLength: 10 * 1024 * 1024,
-      transformResponse: [
-        (value: unknown) =>
-          typeof value === 'string'
-            ? value
-            : typeof value === 'number' || typeof value === 'boolean'
-              ? String(value)
-              : '',
-      ],
-    });
+    const response = await observeExternalCall('bse', 'equity_master', () =>
+      axios.get<string>(url, {
+        responseType: 'text',
+        timeout: 20000,
+        maxContentLength: 10 * 1024 * 1024,
+        transformResponse: [
+          (value: unknown) =>
+            typeof value === 'string'
+              ? value
+              : typeof value === 'number' || typeof value === 'boolean'
+                ? String(value)
+                : '',
+        ],
+      }),
+    );
     const rows = this.parseBseEquityCsv(response.data);
     if (!rows.length)
       throw new BadRequestException('BSE equity master returned no securities');

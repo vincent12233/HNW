@@ -2,15 +2,17 @@
 $ErrorActionPreference = 'Stop'
 $testRoot = Join-Path ([IO.Path]::GetTempPath()) ("hnw-verify-script-test-" + [Guid]::NewGuid().ToString('N'))
 $testScripts = Join-Path $testRoot 'scripts'
+$testScriptTests = Join-Path $testScripts 'tests'
 $global:hnwVerifyTestSdk = Join-Path $testRoot 'sdk'
 $directories = @(
-  $testScripts, (Join-Path $testRoot 'apps\api\node_modules'),
+  $testScripts, $testScriptTests, (Join-Path $testRoot 'apps\api\node_modules'),
   (Join-Path $testRoot 'apps\admin\node_modules'), (Join-Path $testRoot 'apps\client'),
   (Join-Path $global:hnwVerifyTestSdk 'bin'), (Join-Path $global:hnwVerifyTestSdk '.git')
 )
 New-Item -ItemType Directory -Path $directories -Force | Out-Null
 $testScript = Join-Path $testScripts 'verify-all.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\verify-all.ps1') -Destination $testScript
+Set-Content -LiteralPath (Join-Path $testScriptTests 'recovery-drill.test.ps1') -Value 'Write-Host recovery-test-stub' -Encoding utf8
 
 function Get-Command {
   [CmdletBinding()]

@@ -61,13 +61,7 @@ Invoke-Step "API lint, tests and build" {
     Invoke-Native "npm.cmd" @("run", "db:generate")
     Invoke-Native "npm.cmd" @("run", "lint")
     Invoke-Native "npm.cmd" @("test", "--", "--runInBand")
-    $previousApiUrl = $env:NEXT_PUBLIC_API_URL
-    $env:NEXT_PUBLIC_API_URL = if ($env:HNW_BUILD_API_URL) { $env:HNW_BUILD_API_URL } else { "https://build.invalid" }
-    try {
-      Invoke-Native "npm.cmd" @("run", "build")
-    } finally {
-      $env:NEXT_PUBLIC_API_URL = $previousApiUrl
-    }
+    Invoke-Native "npm.cmd" @("run", "build")
   } finally {
     Pop-Location
   }
@@ -80,7 +74,13 @@ Invoke-Step "Admin lint, tests, typecheck and build" {
     Invoke-Native "npm.cmd" @("run", "lint")
     Invoke-Native "npm.cmd" @("test")
     Invoke-Native "npx.cmd" @("--no-install", "tsc", "--noEmit")
-    Invoke-Native "npm.cmd" @("run", "build")
+    $previousApiUrl = $env:NEXT_PUBLIC_API_URL
+    $env:NEXT_PUBLIC_API_URL = if ($env:HNW_BUILD_API_URL) { $env:HNW_BUILD_API_URL } else { "https://build.invalid" }
+    try {
+      Invoke-Native "npm.cmd" @("run", "build")
+    } finally {
+      $env:NEXT_PUBLIC_API_URL = $previousApiUrl
+    }
   } finally {
     Pop-Location
   }
@@ -111,6 +111,9 @@ Invoke-Step "Client analyze" {
   }
 }
 
+Invoke-Step "Operational script tests" {
+  & (Join-Path $root "scripts/tests/recovery-drill.test.ps1")
+}
 if (-not $SkipVerification) {
   Invoke-Step "Business verification test" {
     & (Join-Path $root "scripts/verification-test.ps1") -BaseUrl $BaseUrl

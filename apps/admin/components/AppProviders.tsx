@@ -14,7 +14,7 @@ export default function AppProviders({ children }: { children: ReactNode }) {
           colorInfo: "#1677ff",
           borderRadius: 8,
           fontFamily:
-            '"DM Sans", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif',
+            '"Noto Sans SC", "PingFang SC", "Microsoft YaHei", "Segoe UI", Arial, sans-serif',
           controlHeight: 36,
         },
         components: {

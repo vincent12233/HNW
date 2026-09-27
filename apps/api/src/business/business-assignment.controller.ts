@@ -1,4 +1,13 @@
-import { Body, Controller, Get, Param, Post, Query, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -46,6 +55,9 @@ export class BusinessAssignmentAdminController {
     @Req() req: AuthenticatedRequest,
     @Body() body: TransferBusinessAssignmentDto,
   ) {
-    return this.assignments.assignOrTransferBusinessToManager(req.user.userId, body);
+    return this.assignments.assignOrTransferBusinessToManager(
+      req.user.userId,
+      body,
+    );
   }
 }

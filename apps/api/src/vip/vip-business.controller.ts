@@ -27,10 +27,7 @@ export class VipBusinessController {
   }
 
   @Get(':userId/history')
-  history(
-    @Req() req: AuthenticatedRequest,
-    @Param('userId') userId: string,
-  ) {
+  history(@Req() req: AuthenticatedRequest, @Param('userId') userId: string) {
     return this.clients.history('BUSINESS', req.user.userId, userId);
   }
 

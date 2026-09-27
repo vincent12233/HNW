@@ -33,7 +33,10 @@ type ClientRow = {
 export class VipClientsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private clientWhere(scope: VipClientScope, actorId: string): Prisma.UserWhereInput {
+  private clientWhere(
+    scope: VipClientScope,
+    actorId: string,
+  ): Prisma.UserWhereInput {
     if (scope === 'ADMIN') {
       return { role: 'CLIENT', deletedAt: null };
     }
@@ -100,11 +103,7 @@ export class VipClientsService {
     };
   }
 
-  async history(
-    scope: VipClientScope,
-    actorId: string,
-    userId: string,
-  ) {
+  async history(scope: VipClientScope, actorId: string, userId: string) {
     await this.assertVisibleClient(scope, actorId, userId);
     const rows = await this.prisma.vipTierHistory.findMany({
       where: { userId },
@@ -130,49 +129,51 @@ export class VipClientsService {
   }
 
   async listRecentHistory(scope: VipClientScope, actorId: string) {
-    return this.prisma.vipTierHistory.findMany({
-      where: { user: this.clientWhere(scope, actorId) },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-      select: {
-        id: true,
-        userId: true,
-        previousTier: true,
-        newTier: true,
-        reason: true,
-        source: true,
-        suggestedTierAtChange: true,
-        cumulativeDepositAtChange: true,
-        createdAt: true,
-        user: {
-          select: {
-            id: true,
-            customerNo: true,
-            fullName: true,
-            phone: true,
+    return this.prisma.vipTierHistory
+      .findMany({
+        where: { user: this.clientWhere(scope, actorId) },
+        orderBy: { createdAt: 'desc' },
+        take: 200,
+        select: {
+          id: true,
+          userId: true,
+          previousTier: true,
+          newTier: true,
+          reason: true,
+          source: true,
+          suggestedTierAtChange: true,
+          cumulativeDepositAtChange: true,
+          createdAt: true,
+          user: {
+            select: {
+              id: true,
+              customerNo: true,
+              fullName: true,
+              phone: true,
+            },
+          },
+          changedBy: {
+            select: { id: true, fullName: true, role: true },
           },
         },
-        changedBy: {
-          select: { id: true, fullName: true, role: true },
-        },
-      },
-    }).then((rows) =>
-      rows.map((row) => ({
-        id: row.id,
-        userId: row.userId,
-        clientId: row.user.customerNo,
-        displayName: row.user.fullName,
-        maskedPhone: maskPhone(row.user.phone),
-        previousTier: row.previousTier,
-        newTier: row.newTier,
-        reason: row.reason,
-        source: row.source,
-        suggestedTierAtChange: row.suggestedTierAtChange,
-        cumulativeDepositAtChange: row.cumulativeDepositAtChange.toFixed(2),
-        changedAt: row.createdAt,
-        changedBy: row.changedBy,
-      })),
-    );
+      })
+      .then((rows) =>
+        rows.map((row) => ({
+          id: row.id,
+          userId: row.userId,
+          clientId: row.user.customerNo,
+          displayName: row.user.fullName,
+          maskedPhone: maskPhone(row.user.phone),
+          previousTier: row.previousTier,
+          newTier: row.newTier,
+          reason: row.reason,
+          source: row.source,
+          suggestedTierAtChange: row.suggestedTierAtChange,
+          cumulativeDepositAtChange: row.cumulativeDepositAtChange.toFixed(2),
+          changedAt: row.createdAt,
+          changedBy: row.changedBy,
+        })),
+      );
   }
 
   adjustOwnedClient(
@@ -228,7 +229,8 @@ export class VipClientsService {
         ? {
             id: client.assignedBusiness.id,
             fullName: client.assignedBusiness.fullName,
-            employeeNo: client.assignedBusiness.businessProfile?.employeeNo ?? null,
+            employeeNo:
+              client.assignedBusiness.businessProfile?.employeeNo ?? null,
           }
         : null,
       currentTier: client.clientTier,

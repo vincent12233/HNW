@@ -27,7 +27,11 @@ export class AnnouncementsService {
           { OR: [{ endsAt: null }, { endsAt: { gte: now } }] },
         ],
       },
-      orderBy: [{ priority: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [
+        { priority: 'desc' },
+        { sortOrder: 'asc' },
+        { createdAt: 'desc' },
+      ],
       select: {
         id: true,
         locale: true,
@@ -45,7 +49,11 @@ export class AnnouncementsService {
 
   listAdmin() {
     return this.prisma.announcement.findMany({
-      orderBy: [{ priority: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'desc' }],
+      orderBy: [
+        { priority: 'desc' },
+        { sortOrder: 'asc' },
+        { createdAt: 'desc' },
+      ],
     });
   }
 
@@ -89,7 +97,9 @@ export class AnnouncementsService {
     dto: UpsertAnnouncementDto,
     actor: { userId: string; role: string },
   ) {
-    const existing = await this.prisma.announcement.findUnique({ where: { id } });
+    const existing = await this.prisma.announcement.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException('Announcement not found');
     this.assertSchedule(
       dto.startsAt === undefined
@@ -145,7 +155,9 @@ export class AnnouncementsService {
   }
 
   async remove(id: string, actor: { userId: string; role: string }) {
-    const existing = await this.prisma.announcement.findUnique({ where: { id } });
+    const existing = await this.prisma.announcement.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException('Announcement not found');
     await this.prisma.announcement.delete({ where: { id } });
     await this.audit.createLog({
@@ -186,17 +198,19 @@ export class AnnouncementsService {
   }
 
   private normalizeLocale(locale?: string) {
-    const value = String(locale || 'en').trim().toLowerCase() || 'en';
+    const value =
+      String(locale || 'en')
+        .trim()
+        .toLowerCase() || 'en';
     if (value !== 'en' && value !== 'hi') {
       throw new BadRequestException('Announcement locale must be en or hi');
     }
     return value;
   }
 
-  private pickLocaleRows<T extends { id: string; locale: string; title: string }>(
-    rows: T[],
-    wanted: string,
-  ) {
+  private pickLocaleRows<
+    T extends { id: string; locale: string; title: string },
+  >(rows: T[], wanted: string) {
     // Prefer requested locale; include en-only items that have no preferred twin by title.
     const preferred = rows.filter((row) => row.locale === wanted);
     const preferredTitles = new Set(preferred.map((row) => row.title));

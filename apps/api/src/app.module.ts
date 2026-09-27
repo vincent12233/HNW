@@ -32,6 +32,8 @@ import { AppContentModule } from './app-content/app-content.module';
 import { CompanyShowcaseModule } from './company-showcase/company-showcase.module';
 import { OpsContentModule } from './ops-content/ops-content.module';
 import { VipModule } from './vip/vip.module';
+import { MetricsController } from './observability/metrics.controller';
+import { ErrorIngestionModule } from './error-ingestion/error-ingestion.module';
 
 @Module({
   imports: [
@@ -71,7 +73,8 @@ import { VipModule } from './vip/vip.module';
     CompanyShowcaseModule,
     OpsContentModule,
     VipModule,
+    ErrorIngestionModule,
   ],
-  controllers: [HealthController],
+  controllers: [HealthController, MetricsController],
 })
 export class AppModule {}

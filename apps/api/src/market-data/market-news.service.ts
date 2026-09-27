@@ -1,4 +1,5 @@
 import { Injectable, ServiceUnavailableException } from '@nestjs/common';
+import { observeExternalCall } from '../observability/metrics';
 
 export type MarketNewsItem = {
   id: string;
@@ -66,14 +67,21 @@ export class MarketNewsService {
   private async fetchFeed(feed: string) {
     const url = new URL(feed);
     if (url.protocol !== 'https:') throw new Error('HTTPS RSS URL required');
-    const response = await fetch(url, {
-      signal: AbortSignal.timeout(7000),
-      headers: {
-        accept: 'application/rss+xml, application/xml;q=0.9',
-        'user-agent': 'IndiaTradingApp/1.0',
+    const response = await observeExternalCall(
+      'market_news_rss',
+      'fetch',
+      async () => {
+        const result = await fetch(url, {
+          signal: AbortSignal.timeout(7000),
+          headers: {
+            accept: 'application/rss+xml, application/xml;q=0.9',
+            'user-agent': 'IndiaTradingApp/1.0',
+          },
+        });
+        if (!result.ok) throw new Error(`RSS responded ${result.status}`);
+        return result;
       },
-    });
-    if (!response.ok) throw new Error(`RSS responded ${response.status}`);
+    );
     const xml = await response.text();
     if (xml.length > 2_000_000) throw new Error('RSS response is too large');
     return [...xml.matchAll(/<item\b[\s\S]*?<\/item>/gi)]
@@ -96,8 +104,17 @@ export class MarketNewsService {
       timespan: '3d',
       sort: 'datedesc',
     }).toString();
-    const response = await fetch(url, { signal: AbortSignal.timeout(5000) });
-    if (!response.ok) throw new Error('News API unavailable');
+    const response = await observeExternalCall(
+      'gdelt',
+      'market_news',
+      async () => {
+        const result = await fetch(url, {
+          signal: AbortSignal.timeout(5000),
+        });
+        if (!result.ok) throw new Error('News API unavailable');
+        return result;
+      },
+    );
     const json = (await response.json()) as {
       articles?: {
         url: string;

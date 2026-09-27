@@ -9,6 +9,10 @@ import { Server, Socket } from 'socket.io';
 
 import { Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  recordOperationalCounter,
+  setOperationalGauge,
+} from '../../../observability/metrics';
 
 @WebSocketGateway({
   cors: {
@@ -72,12 +76,24 @@ export class MarketDataGateway
       if (count >= this.maxConnectionsPerUser)
         throw new Error('Connection limit exceeded');
       this.connections.set(payload.sub, count + 1);
+      recordOperationalCounter('websocket_connected');
+      setOperationalGauge(
+        'websocket_active_connections',
+        this.activeConnectionCount(),
+      );
       (socket.data as { userId?: string }).userId = payload.sub;
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();
     } catch {
       next(new Error('Unauthorized websocket connection'));
     }
+  }
+
+  private activeConnectionCount() {
+    return [...this.connections.values()].reduce(
+      (total, count) => total + count,
+      0,
+    );
   }
 
   private releaseConnection(userId: string) {
@@ -108,6 +124,7 @@ export class MarketDataGateway
     }
 
     this.server.emit('market-update', data);
+    recordOperationalCounter('websocket_quote_broadcast');
 
     this.logger.log(`Broadcast ${data.symbol} ${data.price}`);
   }

@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { getBackendRole } from './backend-role';
+import { reportAdminError } from './error-report';
 
 const configuredApiUrl = process.env.NEXT_PUBLIC_API_URL?.trim();
 if (
@@ -35,6 +36,13 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
+    const method = String(error?.config?.method || 'request').toUpperCase();
+    const rawUrl = String(error?.config?.url || 'unknown');
+    reportAdminError(error, {
+      operation: `${method} ${rawUrl.split('?')[0]}`,
+      statusCode: error?.response?.status,
+      requestId: error?.response?.headers?.['x-request-id'],
+    });
     if (typeof window !== 'undefined' && error?.response?.status === 401 && window.location.pathname !== '/login') {
       localStorage.removeItem('adminUser');
       window.location.replace('/login?session=expired');

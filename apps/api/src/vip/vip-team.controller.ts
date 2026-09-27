@@ -1,10 +1,4 @@
-import {
-  Controller,
-  Get,
-  Param,
-  Req,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Param, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -24,10 +18,7 @@ export class VipTeamController {
   }
 
   @Get(':userId/history')
-  history(
-    @Req() req: AuthenticatedRequest,
-    @Param('userId') userId: string,
-  ) {
+  history(@Req() req: AuthenticatedRequest, @Param('userId') userId: string) {
     return this.clients.history('MANAGER', req.user.userId, userId);
   }
 }

@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { isVipTierCode } from './vip.constants';
 import { suggestVipTier } from './vip-recommendation';
@@ -24,7 +21,9 @@ export async function applyManualVipTierChange(
 ) {
   if (!isVipTierCode(input.tier)) {
     throw new BadRequestException(
-      input.source === 'ADMIN' ? 'Invalid client tier' : 'Invalid membership tier',
+      input.source === 'ADMIN'
+        ? 'Invalid client tier'
+        : 'Invalid membership tier',
     );
   }
   const note = typeof input.reason === 'string' ? input.reason.trim() : '';

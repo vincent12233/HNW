@@ -43,6 +43,16 @@ describe('health probe HTTP contracts', () => {
       });
     expect(query).not.toHaveBeenCalled();
   });
+  it('exposes Prometheus process and HTTP metrics', async () => {
+    const response = await request(app.getHttpServer())
+      .get('/health/metrics')
+      .expect(200);
+    expect(response.headers['content-type']).toContain('text/plain');
+    expect(response.text).toContain('hnw_process_uptime_seconds');
+    expect(response.text).toContain('hnw_http_requests_total');
+    expect(response.text).toContain('hnw_business_failures_total');
+  });
+
   it('reports ready only after a successful database probe', async () => {
     query.mockResolvedValue([{ '?column?': 1 }]);
     await request(app.getHttpServer())

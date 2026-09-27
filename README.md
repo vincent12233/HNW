@@ -2,7 +2,7 @@
 
 面向印度手机号客户注册的交易平台：客户 App、五个分离的运营后台、API 后端。客服通过客户端内 SaleSmartly 原生 SDK 接入。
 
-**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。macOS 本地使用 OrbStack 运行隔离的 Compose 环境，专用于 E2E 和后台联调。
+**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。本地使用 Windows Docker Desktop 或 macOS OrbStack 运行隔离的 Compose 环境，专用于 E2E 和后台联调。
 
 ## 项目组成
 
@@ -39,6 +39,15 @@ docs/生产部署说明.md
 
 服务器上：`npm ci` → 迁移 / seed → `npm run build` → `npm run start:prod`（API 入口为 `dist/main.js`），五个后台分别构建并用 Nginx 反代。
 
+## Windows Docker Desktop E2E 联调
+
+Docker Desktop 使用 WSL 2 Linux 容器引擎。启动 Docker Desktop 后，在 PowerShell 中执行：
+
+```powershell
+.\scripts\start-docker-desktop-stack.ps1
+```
+
+脚本会自动等待 Docker 引擎、验证 Compose 配置、构建镜像，并等待全部服务健康。只需复用现有镜像时可传入 `-SkipBuild`；调整等待时间可使用 `-WaitTimeoutSeconds 900`。
 ## macOS OrbStack E2E 联调（推荐）
 
 启动 OrbStack 后，在仓库根目录执行：

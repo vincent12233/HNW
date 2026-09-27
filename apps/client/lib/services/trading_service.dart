@@ -17,6 +17,7 @@ class TradingService {
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
 
   static TradingOrder? _lastPlacedOrder;
+  static int _lastClientOrderMicros = 0;
   static final ClientOrderSubmissionGuard submissionGuard =
       ClientOrderSubmissionGuard();
 
@@ -36,7 +37,12 @@ class TradingService {
     required String exchange,
     required String symbol,
   }) {
-    return 'APP-${DateTime.now().microsecondsSinceEpoch}-'
+    final currentMicros = DateTime.now().microsecondsSinceEpoch;
+    final uniqueMicros = currentMicros > _lastClientOrderMicros
+        ? currentMicros
+        : _lastClientOrderMicros + 1;
+    _lastClientOrderMicros = uniqueMicros;
+    return 'APP-$uniqueMicros-'
         '${exchange.toUpperCase()}-${symbol.toUpperCase()}';
   }
 

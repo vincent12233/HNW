@@ -75,7 +75,8 @@ export class InsightArticlesService {
       },
     });
     const picked = this.pickLocaleRows(rows, wanted);
-    if (!picked.length) throw new NotFoundException('Insight article not found');
+    if (!picked.length)
+      throw new NotFoundException('Insight article not found');
     return picked[0];
   }
 
@@ -86,7 +87,10 @@ export class InsightArticlesService {
     });
   }
 
-  async create(dto: UpsertInsightArticleDto, actor: { userId: string; role: string }) {
+  async create(
+    dto: UpsertInsightArticleDto,
+    actor: { userId: string; role: string },
+  ) {
     const locale = this.normalizeLocale(dto.locale);
     const isPublished = dto.isPublished ?? false;
     const created = await this.prisma.insightArticle.create({
@@ -128,7 +132,9 @@ export class InsightArticlesService {
     dto: UpsertInsightArticleDto,
     actor: { userId: string; role: string },
   ) {
-    const existing = await this.prisma.insightArticle.findUnique({ where: { id } });
+    const existing = await this.prisma.insightArticle.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException('Insight article not found');
     const locale = this.normalizeLocale(dto.locale ?? existing.locale);
     const isPublished =
@@ -146,7 +152,8 @@ export class InsightArticlesService {
         slug: dto.slug,
         locale,
         title: dto.title.trim(),
-        summary: dto.summary === undefined ? undefined : dto.summary?.trim() || null,
+        summary:
+          dto.summary === undefined ? undefined : dto.summary?.trim() || null,
         body: dto.body,
         imageUrl:
           dto.imageUrl === undefined ? undefined : dto.imageUrl?.trim() || null,
@@ -158,11 +165,12 @@ export class InsightArticlesService {
     });
     await this.audit.createLog({
       actorId: actor.userId,
-      action: isPublished !== existing.isPublished
-        ? isPublished
-          ? 'INSIGHT_ARTICLE_PUBLISH'
-          : 'INSIGHT_ARTICLE_UNPUBLISH'
-        : 'INSIGHT_ARTICLE_UPDATE',
+      action:
+        isPublished !== existing.isPublished
+          ? isPublished
+            ? 'INSIGHT_ARTICLE_PUBLISH'
+            : 'INSIGHT_ARTICLE_UNPUBLISH'
+          : 'INSIGHT_ARTICLE_UPDATE',
       resource: 'insight_article',
       resourceId: id,
       description: `Updated insight ${updated.slug}/${updated.locale}`,
@@ -176,7 +184,9 @@ export class InsightArticlesService {
   }
 
   async remove(id: string, actor: { userId: string; role: string }) {
-    const existing = await this.prisma.insightArticle.findUnique({ where: { id } });
+    const existing = await this.prisma.insightArticle.findUnique({
+      where: { id },
+    });
     if (!existing) throw new NotFoundException('Insight article not found');
     await this.prisma.insightArticle.delete({ where: { id } });
     await this.audit.createLog({
@@ -221,7 +231,10 @@ export class InsightArticlesService {
   }
 
   private normalizeLocale(locale?: string) {
-    const value = String(locale || 'en').trim().toLowerCase() || 'en';
+    const value =
+      String(locale || 'en')
+        .trim()
+        .toLowerCase() || 'en';
     if (value !== 'en' && value !== 'hi') {
       throw new BadRequestException('Insight locale must be en or hi');
     }

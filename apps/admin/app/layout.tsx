@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
 import type { ReactNode } from "react";
 import AppProviders from "@/components/AppProviders";
 import "./globals.css";
-
-const dmSans = DM_Sans({
-  subsets: ["latin"],
-  variable: "--font-admin-sans",
-  display: "swap",
-});
 
 export const metadata: Metadata = {
   title: "India Trading Ops",
@@ -17,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-CN" className={`${dmSans.variable} h-full antialiased`}>
+    <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col">
         <AppProviders>{children}</AppProviders>
       </body>

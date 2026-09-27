@@ -5,14 +5,17 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
-import { AppContentModule } from '../generated/prisma/enums';
+import {
+  AppContentModule,
+  AppContentPublicationStatus,
+} from '../generated/prisma/enums';
 import { AuditService } from '../audit/audit.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { APP_CONTENT_DEFAULTS } from './app-content.defaults';
 import { isAdminOnlySupportKey } from './app-content.visibility';
 
 export type AppContentUpsertInput = {
-  module: AppContentModule | string;
+  module: string;
   key: string;
   title?: string | null;
   body: string;
@@ -20,6 +23,9 @@ export type AppContentUpsertInput = {
   metadata?: Prisma.InputJsonValue | null;
   isActive?: boolean;
   sortOrder?: number;
+  publicationStatus?: AppContentPublicationStatus;
+  publishAt?: string | null;
+  expiresAt?: string | null;
 };
 
 export type AppContentActor = {
@@ -37,6 +43,55 @@ export function normalizeSaleSmartlyScriptUrl(raw: string): string {
 }
 
 const ALLOWED_LOCALES = new Set(['en', 'hi', 'zh']);
+const REQUIRED_LEGAL_KEYS = new Set([
+  'privacy.document',
+  'terms.document',
+  'risk.document',
+]);
+
+function beforePublicationStatus(isActive?: boolean) {
+  return isActive === false
+    ? AppContentPublicationStatus.DRAFT
+    : AppContentPublicationStatus.PUBLISHED;
+}
+
+function parseOptionalDate(value: string | null | undefined, field: string) {
+  if (value == null || value === '') return null;
+  const parsed = new Date(value);
+  if (!Number.isFinite(parsed.getTime())) {
+    throw new BadRequestException(`Valid ${field} is required`);
+  }
+  return parsed;
+}
+
+function validateLegalDocument(key: string, body: string) {
+  if (!REQUIRED_LEGAL_KEYS.has(key)) return;
+  try {
+    const value = JSON.parse(body) as {
+      effective?: unknown;
+      sections?: unknown;
+    };
+    if (typeof value.effective !== 'string' || !value.effective.trim())
+      throw new Error();
+    if (!Array.isArray(value.sections) || !value.sections.length)
+      throw new Error();
+    for (const section of value.sections) {
+      if (
+        !section ||
+        typeof section !== 'object' ||
+        typeof (section as Record<string, unknown>).heading !== 'string' ||
+        !(section as { heading: string }).heading.trim() ||
+        typeof (section as Record<string, unknown>).body !== 'string' ||
+        !(section as { body: string }).body.trim()
+      )
+        throw new Error();
+    }
+  } catch {
+    throw new BadRequestException(
+      'Required legal documents need effective and non-empty heading/body sections',
+    );
+  }
+}
 
 @Injectable()
 export class AppContentService {
@@ -102,6 +157,16 @@ export class AppContentService {
     const entries = await this.prisma.appContentEntry.findMany({
       where: {
         isActive: true,
+        publicationStatus: {
+          in: [
+            AppContentPublicationStatus.PUBLISHED,
+            AppContentPublicationStatus.SCHEDULED,
+          ],
+        },
+        AND: [
+          { OR: [{ publishAt: null }, { publishAt: { lte: new Date() } }] },
+          { OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }] },
+        ],
         // Desk-only SUPPORT keys stay out of the public client bundle.
         NOT: {
           module: AppContentModule.SUPPORT,
@@ -168,7 +233,9 @@ export class AppContentService {
   }
 
   async listHistory(id: string) {
-    const entry = await this.prisma.appContentEntry.findUnique({ where: { id } });
+    const entry = await this.prisma.appContentEntry.findUnique({
+      where: { id },
+    });
     if (!entry) throw new NotFoundException('Content entry not found');
     return this.prisma.auditLog.findMany({
       where: { resource: 'app_content', resourceId: id },
@@ -184,37 +251,59 @@ export class AppContentService {
     });
   }
 
-  async restoreEntry(id: string, revisionId: string, expectedUpdatedAt: string, actor: AppContentActor) {
+  async restoreEntry(
+    id: string,
+    revisionId: string,
+    expectedUpdatedAt: string,
+    actor: AppContentActor,
+  ) {
     if (typeof revisionId !== 'string' || !revisionId.trim()) {
       throw new BadRequestException('Revision ID is required');
     }
     const expected = new Date(expectedUpdatedAt);
-    if (!Number.isFinite(expected.getTime())) throw new BadRequestException('Valid expectedUpdatedAt is required');
+    if (!Number.isFinite(expected.getTime()))
+      throw new BadRequestException('Valid expectedUpdatedAt is required');
     const revision = await this.prisma.auditLog.findFirst({
       where: { id: revisionId, resource: 'app_content', resourceId: id },
     });
     const data = revision?.metadata;
-    const snapshot = data && typeof data === 'object' && !Array.isArray(data)
-      ? (data as Record<string, unknown>).after : null;
-    if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot) ||
-        typeof (snapshot as Record<string, unknown>).body !== 'string') {
+    const snapshot =
+      data && typeof data === 'object' && !Array.isArray(data)
+        ? (data as Record<string, unknown>).after
+        : null;
+    if (
+      !snapshot ||
+      typeof snapshot !== 'object' ||
+      Array.isArray(snapshot) ||
+      typeof (snapshot as Record<string, unknown>).body !== 'string'
+    ) {
       throw new BadRequestException('Revision cannot be restored');
     }
     const prior = snapshot as Record<string, unknown>;
-    if (typeof prior.title !== 'string' && prior.title !== null ||
-        typeof prior.isActive !== 'boolean' ||
-        typeof prior.sortOrder !== 'number' || !Number.isFinite(prior.sortOrder) ||
-        (prior.body as string).length > 200_000) {
+    if (
+      (typeof prior.title !== 'string' && prior.title !== null) ||
+      typeof prior.isActive !== 'boolean' ||
+      typeof prior.sortOrder !== 'number' ||
+      !Number.isFinite(prior.sortOrder) ||
+      (prior.body as string).length > 200_000
+    ) {
       throw new BadRequestException('Revision snapshot is invalid');
     }
     const result = await this.prisma.$transaction(async (tx) => {
       const current = await tx.appContentEntry.findUnique({ where: { id } });
       if (!current) throw new NotFoundException('Content entry not found');
       if (current.updatedAt.getTime() !== expected.getTime()) {
-        throw new ConflictException('Content changed since history was opened; reload and try again');
+        throw new ConflictException(
+          'Content changed since history was opened; reload and try again',
+        );
       }
-      if (current.module === AppContentModule.SUPPORT && current.key === 'salesmartly_script_url') {
-        throw new BadRequestException('Restore the shared support URL through the editor');
+      if (
+        current.module === AppContentModule.SUPPORT &&
+        current.key === 'salesmartly_script_url'
+      ) {
+        throw new BadRequestException(
+          'Restore the shared support URL through the editor',
+        );
       }
       const updated = await tx.appContentEntry.updateMany({
         where: { id, updatedAt: expected },
@@ -223,39 +312,87 @@ export class AppContentService {
           title: prior.title as string | null,
           isActive: prior.isActive as boolean,
           sortOrder: prior.sortOrder as number,
-          ...(Object.hasOwn(prior, 'metadata') ? {
-            metadata: prior.metadata === null ? Prisma.JsonNull : prior.metadata as Prisma.InputJsonValue,
-          } : {}),
+          publicationStatus:
+            (prior.publicationStatus as
+              AppContentPublicationStatus | undefined) ??
+            AppContentPublicationStatus.PUBLISHED,
+          publishAt:
+            typeof prior.publishAt === 'string'
+              ? new Date(prior.publishAt)
+              : null,
+          expiresAt:
+            typeof prior.expiresAt === 'string'
+              ? new Date(prior.expiresAt)
+              : null,
+          version: { increment: 1 },
+          ...(Object.hasOwn(prior, 'metadata')
+            ? {
+                metadata:
+                  prior.metadata === null
+                    ? Prisma.JsonNull
+                    : (prior.metadata as Prisma.InputJsonValue),
+              }
+            : {}),
         },
       });
-      if (updated.count !== 1) throw new ConflictException('Content changed; reload and try again');
-      const restored = await tx.appContentEntry.findUniqueOrThrow({ where: { id } });
-      await this.audit.createLog({
-        actorId: actor.userId,
-        action: 'APP_CONTENT_RESTORE',
-        resource: 'app_content',
-        resourceId: id,
-        description: `Restored ${current.module}/${current.key}/${current.locale}`,
-        metadata: {
-          operatorRole: actor.role,
-          revisionId,
-          module: current.module,
-          key: current.key,
-          locale: current.locale,
-          before: this.snapshot(current),
-          after: this.snapshot(restored),
+      if (updated.count !== 1)
+        throw new ConflictException('Content changed; reload and try again');
+      const restored = await tx.appContentEntry.findUniqueOrThrow({
+        where: { id },
+      });
+      await this.audit.createLog(
+        {
+          actorId: actor.userId,
+          action: 'APP_CONTENT_RESTORE',
+          resource: 'app_content',
+          resourceId: id,
+          description: `Restored ${current.module}/${current.key}/${current.locale}`,
+          metadata: {
+            operatorRole: actor.role,
+            revisionId,
+            module: current.module,
+            key: current.key,
+            locale: current.locale,
+            before: this.snapshot(current),
+            after: this.snapshot(restored),
+          },
         },
-      }, tx);
+        tx,
+      );
       return restored;
     });
     return result;
   }
 
-  private snapshot(row: { title: string | null; body: string; metadata?: Prisma.JsonValue | null; isActive: boolean; sortOrder: number }) {
-    return { title: row.title, body: row.body, metadata: row.metadata ?? null, isActive: row.isActive, sortOrder: row.sortOrder };
+  private snapshot(row: {
+    title: string | null;
+    body: string;
+    metadata?: Prisma.JsonValue | null;
+    isActive: boolean;
+    sortOrder: number;
+    publicationStatus: AppContentPublicationStatus;
+    publishAt: Date | null;
+    expiresAt: Date | null;
+    version: number;
+  }) {
+    return {
+      title: row.title,
+      body: row.body,
+      metadata: row.metadata ?? null,
+      isActive: row.isActive,
+      sortOrder: row.sortOrder,
+      publicationStatus: row.publicationStatus,
+      publishAt: row.publishAt?.toISOString() ?? null,
+      expiresAt: row.expiresAt?.toISOString() ?? null,
+      version: row.version,
+    };
   }
 
-  async upsertEntry(body: AppContentUpsertInput, actor?: AppContentActor, tx?: Prisma.TransactionClient) {
+  async upsertEntry(
+    body: AppContentUpsertInput,
+    actor?: AppContentActor,
+    tx?: Prisma.TransactionClient,
+  ) {
     const db = tx ?? this.prisma;
     const module = this.parseModule(String(body.module));
     const key = String(body.key || '').trim();
@@ -291,6 +428,32 @@ export class AppContentService {
       }
     }
 
+    const publicationStatus =
+      body.publicationStatus ?? beforePublicationStatus(body.isActive);
+    const publishAt = parseOptionalDate(body.publishAt, 'publishAt');
+    const expiresAt = parseOptionalDate(body.expiresAt, 'expiresAt');
+    if (publishAt && expiresAt && expiresAt <= publishAt) {
+      throw new BadRequestException('expiresAt must be later than publishAt');
+    }
+    if (
+      publicationStatus === AppContentPublicationStatus.SCHEDULED &&
+      !publishAt
+    ) {
+      throw new BadRequestException('Scheduled content requires publishAt');
+    }
+    if (module === AppContentModule.LEGAL && locale === 'en') {
+      validateLegalDocument(key, rawBody);
+      if (
+        REQUIRED_LEGAL_KEYS.has(key) &&
+        (body.isActive === false ||
+          publicationStatus === AppContentPublicationStatus.DRAFT)
+      ) {
+        throw new BadRequestException(
+          'Required English legal documents cannot be disabled or left as draft',
+        );
+      }
+    }
+
     const normalizedBody =
       module === AppContentModule.SUPPORT && key === 'salesmartly_script_url'
         ? normalizeSaleSmartlyScriptUrl(rawBody)
@@ -308,6 +471,9 @@ export class AppContentService {
       metadata: body.metadata ?? Prisma.JsonNull,
       isActive: body.isActive ?? true,
       sortOrder: Number(body.sortOrder ?? 0),
+      publicationStatus,
+      publishAt,
+      expiresAt,
       locale,
     };
 
@@ -328,6 +494,10 @@ export class AppContentService {
         isActive: body.isActive === undefined ? undefined : body.isActive,
         sortOrder:
           body.sortOrder === undefined ? undefined : Number(body.sortOrder),
+        publicationStatus: body.publicationStatus,
+        publishAt: body.publishAt === undefined ? undefined : publishAt,
+        expiresAt: body.expiresAt === undefined ? undefined : expiresAt,
+        version: { increment: 1 },
       },
     });
 
@@ -350,11 +520,15 @@ export class AppContentService {
             metadata: createData.metadata,
             isActive: createData.isActive,
             sortOrder: createData.sortOrder,
+            publicationStatus: createData.publicationStatus,
+            publishAt: createData.publishAt,
+            expiresAt: createData.expiresAt,
             locale: otherLocale,
           },
           update: {
             body: normalizedBody,
-            // Do not force isActive on the mirrored locale.
+            version: { increment: 1 },
+            // Do not force publication state on the mirrored locale.
           },
         });
       }
@@ -387,12 +561,17 @@ export class AppContentService {
     if (!Array.isArray(entries) || entries.length === 0) {
       throw new BadRequestException('At least one content entry is required');
     }
-    if (entries.length > 200) throw new BadRequestException('Too many content entries');
-    return this.prisma.$transaction(async (tx) => {
-      const results = [];
-      for (const entry of entries) results.push(await this.upsertEntry(entry, actor, tx));
-      return results;
-    }, { timeout: 30_000 });
+    if (entries.length > 200)
+      throw new BadRequestException('Too many content entries');
+    return this.prisma.$transaction(
+      async (tx) => {
+        const results = [];
+        for (const entry of entries)
+          results.push(await this.upsertEntry(entry, actor, tx));
+        return results;
+      },
+      { timeout: 30_000 },
+    );
   }
 
   async deleteEntry(id: string, actor?: AppContentActor) {
@@ -401,6 +580,15 @@ export class AppContentService {
     });
     if (!existing) {
       throw new NotFoundException('Content entry not found');
+    }
+    if (
+      existing.module === AppContentModule.LEGAL &&
+      existing.locale === 'en' &&
+      REQUIRED_LEGAL_KEYS.has(existing.key)
+    ) {
+      throw new BadRequestException(
+        'Required English legal documents cannot be deleted',
+      );
     }
     await this.prisma.appContentEntry.delete({ where: { id } });
     if (actor) {

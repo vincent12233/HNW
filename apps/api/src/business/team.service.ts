@@ -53,16 +53,13 @@ export class TeamService {
               },
               select: { id: true, businessCreatorId: true },
             })
-          ).reduce(
-            (map, business) => {
-              if (!business.businessCreatorId) return map;
-              const list = map.get(business.businessCreatorId) ?? [];
-              list.push(business.id);
-              map.set(business.businessCreatorId, list);
-              return map;
-            },
-            new Map<string, string[]>(),
-          )
+          ).reduce((map, business) => {
+            if (!business.businessCreatorId) return map;
+            const list = map.get(business.businessCreatorId) ?? [];
+            list.push(business.id);
+            map.set(business.businessCreatorId, list);
+            return map;
+          }, new Map<string, string[]>())
         : new Map(rows.map((row) => [row.id, [row.id]])),
     );
     return rows.map((row) => ({

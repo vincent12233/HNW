@@ -7,6 +7,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { buildErrorReport } from './error-report';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -37,19 +38,14 @@ export class AllExceptionsFilter implements ExceptionFilter {
             : typeof extractedMessage === 'string'
               ? extractedMessage
               : 'Request failed';
-    const auditEntry = JSON.stringify({
-      level: status >= 500 ? 'error' : 'warn',
-      event: 'unhandled_exception',
-      requestId,
-      method: request.method,
-      path: request.path,
-      statusCode: status,
-      error: exception instanceof Error ? exception.name : 'UnknownError',
-      ...(status >= 500 && exception instanceof Error
-        ? { stack: exception.stack }
-        : {}),
-      timestamp: new Date().toISOString(),
-    });
+    const auditEntry = JSON.stringify(
+      buildErrorReport(exception, {
+        requestId,
+        method: request.method,
+        path: request.path,
+        statusCode: status,
+      }),
+    );
     if (status >= 500) {
       this.logger.error(auditEntry);
     } else {
@@ -67,13 +63,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       'code' in raw &&
       typeof (raw as { code?: unknown }).code === 'string'
         ? (raw as { code: string }).code
-        : status === HttpStatus.UNAUTHORIZED
+        : status === Number(HttpStatus.UNAUTHORIZED)
           ? 'UNAUTHORIZED'
-          : status === HttpStatus.FORBIDDEN
+          : status === Number(HttpStatus.FORBIDDEN)
             ? 'FORBIDDEN'
-            : status === HttpStatus.NOT_FOUND
+            : status === Number(HttpStatus.NOT_FOUND)
               ? 'NOT_FOUND'
-              : status === HttpStatus.CONFLICT
+              : status === Number(HttpStatus.CONFLICT)
                 ? 'CONFLICT'
                 : status >= 500
                   ? 'INTERNAL_ERROR'

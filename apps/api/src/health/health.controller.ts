@@ -1,5 +1,11 @@
-import { Controller, Get, ServiceUnavailableException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Header,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { renderPrometheusMetrics } from '../observability/metrics';
 
 @Controller('health')
 export class HealthController {
@@ -26,6 +32,12 @@ export class HealthController {
       commit: process.env.GIT_COMMIT ?? 'unknown',
       builtAt: process.env.BUILD_TIME ?? 'unknown',
     };
+  }
+
+  @Get('metrics')
+  @Header('content-type', 'text/plain; version=0.0.4')
+  metrics() {
+    return renderPrometheusMetrics();
   }
 
   @Get('ready')

@@ -1,7 +1,10 @@
 import { Logger } from '@nestjs/common';
 import { createHash } from 'node:crypto';
 import { createClient, type RedisClientType } from 'redis';
-import { recordOperationalCounter, setOperationalGauge } from '../observability/metrics';
+import {
+  recordOperationalCounter,
+  setOperationalGauge,
+} from '../observability/metrics';
 
 export type RateLimitEntry = { count: number; resetAt: number };
 

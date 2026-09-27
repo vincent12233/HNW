@@ -401,7 +401,7 @@ export class WithdrawalService {
         error instanceof BadRequestException &&
         error.message.includes('already processed')
       ) {
-        if (!(this.prisma as any).withdrawalRequest) throw error;
+        if (!Object.hasOwn(this.prisma, 'withdrawalRequest')) throw error;
         const current = await this.prisma.withdrawalRequest.findUnique({
           where: { id: withdrawalId },
         });
@@ -546,7 +546,7 @@ export class WithdrawalService {
         error instanceof BadRequestException &&
         error.message.includes('already processed')
       ) {
-        if (!(this.prisma as any).withdrawalRequest) throw error;
+        if (!Object.hasOwn(this.prisma, 'withdrawalRequest')) throw error;
         const current = await this.prisma.withdrawalRequest.findUnique({
           where: { id: withdrawalId },
         });

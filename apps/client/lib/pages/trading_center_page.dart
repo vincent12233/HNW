@@ -30,6 +30,7 @@ import '../widgets/trading/trade_list.dart';
 import '../widgets/app_feedback.dart';
 
 part 'trading_center_page_action_section.dart';
+part 'trading_center_page_tabs_section.dart';
 
 class TradingCenterPage extends StatefulWidget {
   const TradingCenterPage({
@@ -583,93 +584,6 @@ class _TradingCenterPageState extends State<TradingCenterPage>
     setState(() => selectedTab = index);
     if (index >= 2) unawaited(_refreshTradingData());
   }
-
-  Widget _productTabs() => Padding(
-    padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-    child: Row(
-      children: [
-        for (final item in <(int, String)>[
-          (
-            0,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.all',
-              fallback: 'Overview',
-            ),
-          ),
-          (
-            1,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.ins_stock',
-              fallback: 'Intr.',
-            ),
-          ),
-          (
-            5,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.otc',
-              fallback: 'OTC',
-            ),
-          ),
-          (
-            6,
-            AppContentService.instance.current.text(
-              'trading',
-              'tab.ipo',
-              fallback: 'IPO',
-            ),
-          ),
-        ])
-          Expanded(
-            child: Semantics(
-              selected:
-                  selectedTab == item.$1 ||
-                  (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab)),
-              child: Container(
-                decoration: BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color:
-                          selectedTab == item.$1 ||
-                              (item.$1 == 0 &&
-                                  [2, 3, 4, 7].contains(selectedTab))
-                          ? AppColors.brandPrimary
-                          : Colors.transparent,
-                      width: 2,
-                    ),
-                  ),
-                ),
-                child: TextButton(
-                  onPressed: () => _selectTab(item.$1),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(horizontal: 3),
-                    minimumSize: const Size(0, 48),
-                    foregroundColor:
-                        selectedTab == item.$1 ||
-                            (item.$1 == 0 && [2, 3, 4, 7].contains(selectedTab))
-                        ? AppColors.brandPrimary
-                        : AppColors.textSecondary,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.zero,
-                    ),
-                  ),
-                  child: AppText(
-                    item.$2,
-                    textAlign: TextAlign.center,
-                    maxLines: 2,
-                    style: AppTypography.labelSmall.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-      ],
-    ),
-  );
 
   Widget _buildContent() {
     final missingOrders = _orders.isEmpty && [0, 4, 7].contains(selectedTab);

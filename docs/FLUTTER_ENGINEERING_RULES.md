@@ -1,6 +1,6 @@
 # Flutter Engineering Rules
 
-Last updated: 2026-09-28
+Last updated: 2026-09-29
 
 This document turns the mobile architecture rules into reviewable engineering
 contracts. The authoritative short form is the repository `AGENTS.md`.
@@ -34,7 +34,7 @@ an English local fallback. API failures should expose stable error codes; the
 client maps those codes to localized presentation copy.
 
 The existing `tr`/`AppText` API remains the compatibility boundary while the
-large catalogue is decomposed. New feature code must not bypass it. Migration
+Hindi fallback catalogue has been separated into `l10n/hindi_language.dart`; `app_language.dart` keeps the locale selection, CMS override and translation API. New feature code must not bypass it. Migration
 must be incremental and test-backed so seven supported locales and CMS override
 behavior remain intact.
 

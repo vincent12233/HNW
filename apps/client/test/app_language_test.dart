@@ -39,6 +39,18 @@ void main() {
     },
   );
 
+  test('Hindi translates profile, order and PIN field guidance', () async {
+    await AppLanguage.instance.select('hi');
+    expect(tr('Withdrawal Amount'), 'निकासी राशि');
+    expect(tr('Search symbol or order ID'), 'सिंबल या ऑर्डर आईडी खोजें');
+    expect(tr('4-digit transaction PIN'), '4 अंकों का लेन-देन पिन');
+    expect(
+      tr('Required. 7 to 20 characters.'),
+      'आवश्यक। 7 से 20 अक्षर दर्ज करें।',
+    );
+    expect(tr('logo'), 'लोगो');
+    await AppLanguage.instance.select('en');
+  });
   test('language catalogue exposes seven supported Indian app locales', () {
     expect(appLanguageOptions.map((option) => option.code), [
       'en',

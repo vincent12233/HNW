@@ -1,0 +1,46 @@
+name: Mobile Release Checks
+
+on:
+  pull_request:
+    paths:
+      - 'apps/client/**'
+      - 'scripts/verify-release-config.ps1'
+      - '.github/workflows/mobile-release-checks.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/client/**'
+      - 'scripts/verify-release-config.ps1'
+      - '.github/workflows/mobile-release-checks.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-release-checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-config:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check Android and iOS release configuration
+        shell: pwsh
+        run: ./scripts/verify-release-config.ps1
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        working-directory: apps/client
+        run: flutter pub get --enforce-lockfile
+      - name: Analyze release source
+        working-directory: apps/client
+        run: flutter analyze --no-fatal-infos
+      - name: Run release regression tests
+        working-directory: apps/client
+        run: flutter test --no-pub

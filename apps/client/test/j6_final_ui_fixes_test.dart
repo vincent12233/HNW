@@ -11,7 +11,8 @@ import 'package:india_trading_app/theme/app_theme.dart';
 import 'package:india_trading_app/utils/number_formatters.dart';
 import 'package:india_trading_app/widgets/profile_identity.dart';
 
-const _captureDir = '/tmp/hnw-j6-final-fixes';
+final _captureDir =
+    '${Directory.systemTemp.path}${Platform.pathSeparator}hnw-j6-final-fixes';
 
 String compactInr(String value) =>
     value.replaceAll(RegExp(r'[\s\u00a0\u202f]'), '');

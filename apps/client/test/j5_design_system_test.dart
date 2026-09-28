@@ -48,7 +48,9 @@ void setView(WidgetTester tester, Size size) {
 }
 
 Future<void> dumpScreenshot(WidgetTester tester, String name) async {
-  final dir = Directory('/tmp/hnw-j5-design-system');
+  final dir = Directory(
+    '${Directory.systemTemp.path}${Platform.pathSeparator}hnw-j5-design-system',
+  );
   dir.createSync(recursive: true);
   await tester.runAsync(() async {
     final boundary = tester.renderObject<RenderRepaintBoundary>(

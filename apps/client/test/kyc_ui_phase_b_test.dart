@@ -345,7 +345,9 @@ void main() {
       (Size(414, 896), 'kyc-414x896.png'),
       (Size(768, 1024), 'kyc-768x1024.png'),
     ];
-    final out = Directory('/tmp/hnw-phase-b1-visual');
+    final out = Directory(
+      '${Directory.systemTemp.path}${Platform.pathSeparator}hnw-phase-b1-visual',
+    );
     out.createSync(recursive: true);
     for (final (size, name) in targets) {
       await pumpOverview(tester, size: size);

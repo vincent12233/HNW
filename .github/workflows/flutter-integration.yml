@@ -4,9 +4,15 @@ on:
   workflow_dispatch:
     inputs:
       api_base_url:
-        description: Public or emulator-reachable API base URL
-        required: true
+        description: Simulator-reachable API base URL
+        required: false
+        default: 'https://api.example.test'
         type: string
+  push:
+    branches: [main]
+    paths:
+      - 'apps/client/**'
+      - '.github/workflows/flutter-integration.yml'
   pull_request:
     paths:
       - 'apps/client/**'
@@ -20,9 +26,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  android-integration:
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+  ios-integration:
+    runs-on: macos-26-intel
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: apps/client
@@ -40,17 +46,20 @@ jobs:
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
 
-      - name: Start Android emulator
-        uses: reactivecircus/android-emulator-runner@v2
-        with:
-          api-level: 35
-          target: google_apis
-          arch: x86_64
-          profile: pixel_6
-          emulator-options: -no-window -no-audio -no-boot-anim
-          disable-animations: true
-          script: |
-            flutter test integration_test --dart-define=API_BASE_URL=${{ inputs.api_base_url || 'http://10.0.2.2:3100' }}
+      - name: Synchronize CocoaPods sandbox
+        working-directory: apps/client/ios
+        run: pod install --repo-update
+
+      - name: Boot iOS simulator and run integration tests
+        shell: bash
+        env:
+          API_BASE_URL: ${{ inputs.api_base_url || 'https://api.example.test' }}
+        run: |
+          set -euo pipefail
+          DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(device["udid"] for devices in data["devices"].values() for device in devices if device.get("isAvailable") and device["name"].startswith("iPhone")))')"
+          xcrun simctl boot "$DEVICE_ID" || true
+          xcrun simctl bootstatus "$DEVICE_ID" -b
+          flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
 
       - name: Upload integration artifacts
         if: always()

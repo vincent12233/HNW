@@ -20,8 +20,10 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(host(LoginPage(onSignedIn: (_) {})));
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.ensureVisible(find.text('Login'));
     await tester.tap(find.text('Login'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
     expect(find.text('Enter a valid Indian mobile number'), findsOneWidget);
     expect(find.text('Password must be at least 8 characters'), findsOneWidget);
   });
@@ -30,8 +32,13 @@ void main() {
     'registration validates invite, password and consent before submit',
     (tester) async {
       await tester.pumpWidget(host(const RegisterPage()));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.ensureVisible(find.byType(Checkbox));
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.ensureVisible(find.text('Sign Up'));
       await tester.tap(find.text('Sign Up'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Invite code is required'), findsOneWidget);
       expect(
         find.text('Password must be at least 8 characters'),
@@ -53,11 +60,19 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pumpAndSettle(const Duration(milliseconds: 100));
       await tester.enterText(find.byType(TextField).at(0), '50');
       await tester.enterText(find.byType(TextField).at(1), '123');
+      FocusManager.instance.primaryFocus?.unfocus();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.scrollUntilVisible(
+        find.text('Submit Request'),
+        240,
+        scrollable: find.byType(Scrollable).last,
+      );
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.tap(find.text('Submit Request'));
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
       expect(find.text('Minimum withdrawal amount is ₹100'), findsOneWidget);
       expect(find.text('50'), findsOneWidget);
     },

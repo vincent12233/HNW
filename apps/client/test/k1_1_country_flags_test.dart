@@ -87,7 +87,8 @@ void expectNoSmsEmailOtpCopy(WidgetTester tester) {
   expect(find.textContaining('OTP'), findsNothing);
 }
 
-const _captureDir = '/tmp/hnw-k1-country-flags';
+final _captureDir =
+    '${Directory.systemTemp.path}${Platform.pathSeparator}hnw-k1-country-flags';
 
 Future<void> captureCurrent(WidgetTester tester, String name) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(

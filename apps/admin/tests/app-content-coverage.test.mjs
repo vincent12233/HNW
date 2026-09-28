@@ -26,10 +26,11 @@ function keysOf(fields) {
 }
 
 function apiDefaultKeys() {
-  const source = readFileSync(
-    join(root, '../../api/src/app-content/app-content.defaults.ts'),
-    'utf8',
-  );
+  const defaultsDirectory = join(root, '../../api/src/app-content');
+  const source = readdirSync(defaultsDirectory)
+    .filter((name) => /^app-content\.defaults\.(?!types)[^.]+\.ts$/.test(name))
+    .map((name) => readFileSync(join(defaultsDirectory, name), 'utf8'))
+    .join('\n');
   const syntax = ts.createSourceFile('app-content.defaults.ts', source, ts.ScriptTarget.Latest, true);
   const byModule = new Map();
   const property = (node, name) => node.properties.find(

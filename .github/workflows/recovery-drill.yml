@@ -51,3 +51,22 @@ jobs:
         run: |
           echo 'Recovery drill is disabled until RECOVERY_DRILL_ENABLED=true and the isolated recovery secrets are configured.'
           echo 'No production data was accessed.'
+  recovery-drill-plan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate recovery drill plan
+        shell: pwsh
+        run: |
+          $work = Join-Path $env:RUNNER_TEMP 'recovery-drill-plan'
+          ./scripts/recovery-drill.ps1 `
+            -SourceDatabaseUrl 'postgres://source-host/source_db' `
+            -DrillDatabaseUrl 'postgres://drill-host/drill_db' `
+            -PrivateObjectRoot (Join-Path $work 'private') `
+            -WorkingDirectory $work `
+            -PlanOnly
+          $report = Get-Content (Join-Path $work 'recovery-report.json') | ConvertFrom-Json
+          if ($report.status -ne 'PLANNED' -or -not $report.planOnly) {
+            throw 'Recovery drill plan report is invalid.'
+          }

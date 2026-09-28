@@ -34,6 +34,9 @@ jobs:
       - name: Enforce maintainable source file sizes
         shell: bash
         run: node ./scripts/check-source-file-size.mjs
+      - name: Enforce Flutter architecture rules
+        shell: bash
+        run: node ./scripts/check-flutter-architecture.mjs
       - name: Check Android setup failure handling on Windows PowerShell
         shell: powershell
         run: ./scripts/tests/android-e2e.test.ps1

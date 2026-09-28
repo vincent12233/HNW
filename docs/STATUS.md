@@ -1,7 +1,7 @@
 # HNW 项目状态
 
-最后更新：2026-09-27
-当前基线：`a16a487`
+最后更新：2026-09-28
+本轮整改起始基线：`20f4bfa`
 
 本文件是当前项目状态的唯一入口；其他带日期的审计和交付文档仅作历史记录。
 
@@ -15,6 +15,7 @@
 - Docker Desktop/Compose 本地联调环境，API、五个后台、PostgreSQL、Redis 健康检查全部通过。
 - Admin 构建不再依赖 Google Fonts 网络，生产构建可在离线/受限网络环境完成。
 - Flutter CI 生成并上传 `coverage/lcov.info`。
+- Flutter 开发规则、响应式断点、统一敏感凭证存储边界和架构回退门槛已建立。
 - API lint 已完成自动格式化整理，当前无 lint warning。
 
 ## 持续改进队列

@@ -4,12 +4,18 @@ on:
   pull_request:
     paths:
       - 'apps/client/**'
+      - 'scripts/check-flutter-architecture.mjs'
+      - 'scripts/flutter-architecture-baseline.json'
+      - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
   push:
     branches:
       - main
     paths:
       - 'apps/client/**'
+      - 'scripts/check-flutter-architecture.mjs'
+      - 'scripts/flutter-architecture-baseline.json'
+      - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
 
 permissions:
@@ -39,6 +45,10 @@ jobs:
 
       - name: Install dependencies
         run: flutter pub get --enforce-lockfile
+
+      - name: Enforce Flutter architecture rules
+        working-directory: .
+        run: node ./scripts/check-flutter-architecture.mjs
 
       - name: Analyze
         # Errors and warnings block; infos stay non-fatal.

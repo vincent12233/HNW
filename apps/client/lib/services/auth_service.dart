@@ -2,7 +2,6 @@ import 'dart:convert';
 
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../app_config.dart';
@@ -12,6 +11,7 @@ import '../models/withdrawal_request.dart';
 import 'local_data_cache.dart';
 import 'session_expiry_service.dart';
 import 'salesmartly_service.dart';
+import 'secure_credential_store.dart';
 
 class AuthService {
   static String createClientRequestId(String operation) {
@@ -22,15 +22,11 @@ class AuthService {
     return 'APP-$normalized-${DateTime.now().microsecondsSinceEpoch}';
   }
 
-  static const String _sessionKey = 'auth_session';
-  static const String _biometricSessionKey = 'biometric_auth_session';
+  static const String _sessionKey = SecureCredentialStore.sessionKey;
+  static const String _biometricSessionKey =
+      SecureCredentialStore.biometricSessionKey;
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      migrateOnAlgorithmChange: true,
-      migrateWithBackup: true,
-    ),
-  );
+  final SecureCredentialStore _credentials = SecureCredentialStore.instance;
 
   Future<AuthSession> login({
     required String phone,
@@ -263,8 +259,7 @@ class AuthService {
       },
     };
     final encodedPayload = jsonEncode(payload);
-    final idempotencyKey =
-        'KYC:${sha256.convert(utf8.encode(encodedPayload))}';
+    final idempotencyKey = 'KYC:${sha256.convert(utf8.encode(encodedPayload))}';
     final http.Response response;
 
     try {
@@ -442,12 +437,12 @@ class AuthService {
 
   Future<AuthSession?> restoreSession() async {
     final preferences = await SharedPreferences.getInstance();
-    var saved = await _secureStorage.read(key: _sessionKey);
+    var saved = await _credentials.readSession();
     // One-time migration from legacy plaintext preferences, then scrub.
     final legacySaved = preferences.getString(_sessionKey);
     if (saved == null && legacySaved != null) {
       saved = legacySaved;
-      await _secureStorage.write(key: _sessionKey, value: legacySaved);
+      await _credentials.writeSession(legacySaved);
     }
     if (legacySaved != null) {
       await preferences.remove(_sessionKey);
@@ -471,7 +466,7 @@ class AuthService {
   Future<void> saveSession(AuthSession session) async {
     final preferences = await SharedPreferences.getInstance();
     final encoded = jsonEncode(session.toJson());
-    await _secureStorage.write(key: _sessionKey, value: encoded);
+    await _credentials.writeSession(encoded);
     // Never persist access tokens in plaintext SharedPreferences.
     await preferences.remove(_sessionKey);
     await preferences.setString('account_name', session.fullName);
@@ -513,19 +508,19 @@ class AuthService {
     }
     final token = decoded['biometricToken']?.toString() ?? '';
     if (token.isEmpty) throw AuthException('Invalid biometric login response');
-    await _secureStorage.write(key: _biometricSessionKey, value: token);
+    await _credentials.writeBiometricToken(token);
   }
 
   Future<void> disableBiometricQuickLogin() async {
-    await _secureStorage.delete(key: _biometricSessionKey);
+    await _credentials.deleteBiometricToken();
   }
 
   Future<String?> restoreBiometricToken() async {
     final preferences = await SharedPreferences.getInstance();
-    var token = await _secureStorage.read(key: _biometricSessionKey);
+    var token = await _credentials.readBiometricToken();
     token ??= preferences.getString(_biometricSessionKey);
     if (token != null && preferences.containsKey(_biometricSessionKey)) {
-      await _secureStorage.write(key: _biometricSessionKey, value: token);
+      await _credentials.writeBiometricToken(token);
       await preferences.remove(_biometricSessionKey);
     }
     return token;
@@ -569,7 +564,7 @@ class AuthService {
         // Local logout still proceeds if the network call fails.
       }
     }
-    await _secureStorage.delete(key: _sessionKey);
+    await _credentials.deleteSession();
     await disableBiometricQuickLogin();
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);

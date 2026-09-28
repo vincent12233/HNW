@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'market_socket_service.dart';
+import 'secure_credential_store.dart';
 
 class SessionExpiryService {
   factory SessionExpiryService() => _instance;
@@ -12,12 +12,7 @@ class SessionExpiryService {
   static final SessionExpiryService _instance = SessionExpiryService._();
   static const String _sessionKey = 'auth_session';
   static const String _biometricSessionKey = 'biometric_auth_session';
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      migrateOnAlgorithmChange: true,
-      migrateWithBackup: true,
-    ),
-  );
+  final SecureCredentialStore _credentials = SecureCredentialStore.instance;
 
   VoidCallback? onExpired;
   Future<void>? _expiryInFlight;
@@ -41,8 +36,8 @@ class SessionExpiryService {
     final preferences = await SharedPreferences.getInstance();
     await preferences.remove(_sessionKey);
     await preferences.remove(_biometricSessionKey);
-    await _secureStorage.delete(key: _sessionKey);
-    await _secureStorage.delete(key: _biometricSessionKey);
+    await _credentials.deleteSession();
+    await _credentials.deleteBiometricToken();
     MarketSocketService().dispose();
     onExpired?.call();
   }

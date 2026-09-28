@@ -3,10 +3,10 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import '../app_config.dart';
 import '../services/auth_service.dart';
+import '../services/secure_credential_store.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
@@ -29,12 +29,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       password = TextEditingController(),
       confirm = TextEditingController();
   String? phoneError;
-  final storage = const FlutterSecureStorage(
-    aOptions: AndroidOptions(
-      migrateOnAlgorithmChange: true,
-      migrateWithBackup: true,
-    ),
-  );
+  final credentials = SecureCredentialStore.instance;
   Country country = Country.parse('IN');
   String? token, error;
   bool busy = false,
@@ -54,7 +49,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   Future<void> _restore() async {
     try {
-      token = await storage.read(key: 'recovery_token');
+      token = await credentials.readRecoveryToken();
       if (!mounted) return;
       if (token != null) {
         await _poll();
@@ -85,7 +80,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                 : http.post(uri, headers: headers, body: jsonEncode(body)))
             .timeout(const Duration(seconds: 15));
     if (response.statusCode == 401) {
-      await storage.delete(key: 'recovery_token');
+      await credentials.deleteRecoveryToken();
       token = null;
       timer?.cancel();
       throw const AuthException('Please reconnect to customer support');
@@ -117,7 +112,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         });
       }
     } catch (e) {
-      final stored = await storage.read(key: 'recovery_token');
+      final stored = await credentials.readRecoveryToken();
       if (mounted) {
         setState(() {
           error = clientErrorMessage(e);
@@ -158,7 +153,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     await _run(() async {
       final data = await _request('open', body: {'phone': number});
       token = data['token'] as String;
-      await storage.write(key: 'recovery_token', value: token);
+      await credentials.writeRecoveryToken(token!);
       if (!mounted) return;
       await _poll();
       _startPolling();
@@ -182,7 +177,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       'reset',
       body: {'code': code.text.trim(), 'newPassword': password.text},
     );
-    await storage.delete(key: 'recovery_token');
+    await credentials.deleteRecoveryToken();
     await AuthService().disableBiometricQuickLogin();
     if (!mounted) return;
     timer?.cancel();
@@ -416,7 +411,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     const AppText('This support request is closed.'),
                     TextButton(
                       onPressed: () async {
-                        await storage.delete(key: 'recovery_token');
+                        await credentials.deleteRecoveryToken();
                         if (mounted) {
                           setState(() {
                             token = null;

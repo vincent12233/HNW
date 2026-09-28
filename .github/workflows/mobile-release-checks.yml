@@ -44,3 +44,23 @@ jobs:
       - name: Run release regression tests
         working-directory: apps/client
         run: flutter test --no-pub
+  ios-release-build:
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.8'
+          channel: stable
+          cache: true
+      - name: Install dependencies
+        working-directory: apps/client
+        run: flutter pub get --enforce-lockfile
+      - name: Synchronize CocoaPods
+        working-directory: apps/client/ios
+        run: pod install --repo-update
+      - name: Build iOS release without signing
+        working-directory: apps/client
+        run: flutter build ios --release --no-codesign

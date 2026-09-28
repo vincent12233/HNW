@@ -72,6 +72,7 @@ import 'withdrawal_page.dart';
 import 'trading_center_page.dart';
 
 part 'market_page_account_section.dart';
+part 'market_page_profile_settings_drawer.dart';
 part 'market_page_ipo_section.dart';
 part 'market_page_market_actions.dart';
 part 'market_page_account_actions.dart';

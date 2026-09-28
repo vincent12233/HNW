@@ -1,0 +1,53 @@
+name: Recovery Drill
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 1 * *'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: recovery-drill-${{ github.workflow }}
+  cancel-in-progress: false
+
+jobs:
+  recovery-drill:
+    if: ${{ vars.RECOVERY_DRILL_ENABLED == 'true' }}
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install PostgreSQL client tools
+        shell: powershell
+        run: choco install postgresql --no-progress --yes
+      - name: Run isolated database and private object recovery drill
+        shell: powershell
+        env:
+          SOURCE_DATABASE_URL: ${{ secrets.RECOVERY_SOURCE_DATABASE_URL }}
+          DRILL_DATABASE_URL: ${{ secrets.RECOVERY_DRILL_DATABASE_URL }}
+          PRIVATE_OBJECT_ROOT: ${{ secrets.RECOVERY_PRIVATE_OBJECT_ROOT }}
+        run: >-
+          ./scripts/recovery-drill.ps1
+          -SourceDatabaseUrl $env:SOURCE_DATABASE_URL
+          -DrillDatabaseUrl $env:DRILL_DATABASE_URL
+          -PrivateObjectRoot $env:PRIVATE_OBJECT_ROOT
+          -WorkingDirectory (Join-Path $env:GITHUB_WORKSPACE 'recovery-drill')
+      - name: Upload recovery report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: recovery-drill-report
+          path: recovery-drill/recovery-report.json
+          if-no-files-found: error
+          retention-days: 90
+
+  recovery-drill-disabled:
+    if: ${{ vars.RECOVERY_DRILL_ENABLED != 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Explain disabled drill
+        run: |
+          echo 'Recovery drill is disabled until RECOVERY_DRILL_ENABLED=true and the isolated recovery secrets are configured.'
+          echo 'No production data was accessed.'

@@ -155,7 +155,7 @@ class OrderTicketPanel extends StatelessWidget {
           inputFormatters: [FilteringTextInputFormatter.digitsOnly],
           onChanged: (_) => onChanged(),
           decoration: InputDecoration(
-            labelText: 'Quantity',
+            labelText: tr('Quantity'),
             border: const OutlineInputBorder(),
             prefixIcon: const Icon(Icons.numbers),
             errorText: quantityError,
@@ -176,7 +176,7 @@ class OrderTicketPanel extends StatelessWidget {
                     ],
                     onChanged: (_) => onChanged(),
                     decoration: InputDecoration(
-                      labelText: 'Limit Price',
+                      labelText: tr('Limit Price'),
                       prefixText: '₹ ',
                       border: const OutlineInputBorder(),
                       errorText: priceError,

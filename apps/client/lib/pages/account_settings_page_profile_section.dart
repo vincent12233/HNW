@@ -68,7 +68,7 @@ extension _AccountSettingsProfileSection on _AccountSettingsPageState {
           autofillHints: const [AutofillHints.name],
           decoration: InputDecoration(
             labelText: tr('Full name'),
-            helperText: 'This is the only profile field that can be saved.',
+            helperText: tr('This is the only profile field that can be saved.'),
           ),
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -153,5 +153,4 @@ extension _AccountSettingsProfileSection on _AccountSettingsPageState {
     if (parsed == null) return 'Unavailable';
     return formatAppDateTime(parsed).split(',').first;
   }
-
 }

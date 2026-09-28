@@ -358,11 +358,11 @@ class _StockHistoryChartState extends State<StockHistoryChart>
                       ),
                       const PopupMenuItem(
                         value: MainState.MA,
-                        child: Text('MA (5, 10, 20)'),
+                        child: AppText('MA (5, 10, 20)'),
                       ),
                       const PopupMenuItem(
                         value: MainState.BOLL,
-                        child: Text('BOLL (20, 2)'),
+                        child: AppText('BOLL (20, 2)'),
                       ),
                     ],
                     child: Padding(
@@ -391,11 +391,11 @@ class _StockHistoryChartState extends State<StockHistoryChart>
                       ),
                       const PopupMenuItem(
                         value: SecondaryState.RSI,
-                        child: Text('RSI (14)'),
+                        child: AppText('RSI (14)'),
                       ),
                       const PopupMenuItem(
                         value: SecondaryState.MACD,
-                        child: Text('MACD (12, 26, 9)'),
+                        child: AppText('MACD (12, 26, 9)'),
                       ),
                     ],
                     child: Padding(

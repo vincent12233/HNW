@@ -62,7 +62,7 @@ class AuthBrandHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      const Text('HNW', style: AuthLayout.wordmark),
+      const AppText('HNW', style: AuthLayout.wordmark),
       if (showSlogan) ...[
         const SizedBox(height: 4),
         Text(

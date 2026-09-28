@@ -107,7 +107,7 @@ extension _WithdrawalPageCards on _WithdrawalPageState {
               ),
             ],
             decoration: InputDecoration(
-              labelText: 'Withdrawal Amount',
+              labelText: tr('Withdrawal Amount'),
               prefixText: '₹ ',
               errorText: _formError,
             ),
@@ -128,13 +128,13 @@ extension _WithdrawalPageCards on _WithdrawalPageState {
               FilteringTextInputFormatter.digitsOnly,
               LengthLimitingTextInputFormatter(6),
             ],
-            decoration: const InputDecoration(labelText: 'Withdrawal PIN'),
+            decoration: InputDecoration(labelText: tr('Withdrawal PIN')),
           ),
           const SizedBox(height: AppSpacing.lg),
           DropdownButtonFormField<String>(
             isExpanded: true,
             initialValue: bank?['id']?.toString(),
-            decoration: const InputDecoration(labelText: 'Bank account'),
+            decoration: InputDecoration(labelText: tr('Bank account')),
             items: _banks.map((item) {
               final number = item['accountNumber']?.toString() ?? '';
               final suffix = number.length > 4

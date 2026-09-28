@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/app_language.dart';
+
 class StockLogo extends StatelessWidget {
   const StockLogo({
     super.key,
@@ -49,6 +51,7 @@ class StockLogo extends StatelessWidget {
     final resolvedLogoUrl = logoUrl?.trim().isNotEmpty == true
         ? logoUrl!.trim()
         : null;
+    final logoSemanticLabel = "$normalizedSymbol ${tr('logo')}";
 
     return Container(
       width: size,
@@ -68,7 +71,7 @@ class StockLogo extends StatelessWidget {
                 width: size - 6,
                 height: size - 6,
                 fit: BoxFit.contain,
-                semanticLabel: '$normalizedSymbol logo',
+                semanticLabel: logoSemanticLabel,
                 filterQuality: FilterQuality.medium,
                 loadingBuilder: (context, child, progress) {
                   if (progress == null) return child;

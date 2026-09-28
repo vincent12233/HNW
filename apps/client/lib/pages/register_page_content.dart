@@ -249,7 +249,7 @@ extension _RegisterPageContent on _RegisterPageState {
                           onboardingInput(
                             'Invite Code',
                             errorText: inviteError,
-                            helperText: 'Required. 7 to 20 characters.',
+                            helperText: tr('Required. 7 to 20 characters.'),
                           ).copyWith(
                             suffixIcon: const Icon(
                               Icons.card_giftcard,

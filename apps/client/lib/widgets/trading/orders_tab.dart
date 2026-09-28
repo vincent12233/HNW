@@ -131,8 +131,8 @@ class _OrdersTabState extends State<OrdersTab> {
               Expanded(
                 child: TextField(
                   onChanged: (value) => setState(() => query = value.trim()),
-                  decoration: const InputDecoration(
-                    hintText: 'Search symbol or order ID',
+                  decoration: InputDecoration(
+                    hintText: tr('Search symbol or order ID'),
                     prefixIcon: Icon(Icons.search_rounded),
                     isDense: true,
                   ),

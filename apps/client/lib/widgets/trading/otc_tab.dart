@@ -199,7 +199,7 @@ class _OtcTabState extends State<OtcTab> {
             TextField(
               controller: quantity,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Quantity'),
+              decoration: InputDecoration(labelText: tr('Quantity')),
             ),
             const SizedBox(height: 12),
             TextField(
@@ -211,8 +211,8 @@ class _OtcTabState extends State<OtcTab> {
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(4),
               ],
-              decoration: const InputDecoration(
-                labelText: '4-digit transaction PIN',
+              decoration: InputDecoration(
+                labelText: tr('4-digit transaction PIN'),
               ),
             ),
             const SizedBox(height: 12),

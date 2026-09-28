@@ -18,6 +18,46 @@ const appLanguageOptions = <AppLanguageOption>[
 
 const supportedAppLanguageCodes = {'en', 'hi', 'ta', 'te', 'kn', 'gu', 'ml'};
 
+/// Short, high-frequency controls that every supported locale must translate.
+/// Long-form CMS and legal copy intentionally remains eligible for English fallback.
+const coreLocalizationKeys = <String>[
+  'Home',
+  'Markets',
+  'Trade',
+  'Portfolio',
+  'Profile',
+  'Language',
+  'Login',
+  'Register',
+  'Phone number',
+  'Password',
+  'Quantity',
+  'Price',
+  'Market Price',
+  'Status',
+  'Cancel',
+  'Submit',
+  'Retry',
+  'Search symbol or order ID',
+  '4-digit transaction PIN',
+  'Withdrawal Amount',
+  'Withdrawal PIN',
+  'Bank account',
+];
+
+Map<String, List<String>> missingCoreTranslations() {
+  final missing = <String, List<String>>{};
+  for (final locale in supportedAppLanguageCodes.where(
+    (value) => value != 'en',
+  )) {
+    final absent = coreLocalizationKeys
+        .where((key) => _localTranslation(locale, key) == key)
+        .toList(growable: false);
+    if (absent.isNotEmpty) missing[locale] = absent;
+  }
+  return missing;
+}
+
 String appLanguageName(String code) {
   for (final option in appLanguageOptions) {
     if (option.code == code) return option.nativeName;

@@ -89,6 +89,9 @@ void main() {
     expect(rendered.data, 'फिर प्रयास करें');
     expect(rendered.semanticsLabel, 'फिर प्रयास करें');
   });
+  test('regional locales cover critical controls without English fallback', () {
+    expect(missingCoreTranslations(), isEmpty);
+  });
   test('language catalogue exposes seven supported Indian app locales', () {
     expect(appLanguageOptions.map((option) => option.code), [
       'en',

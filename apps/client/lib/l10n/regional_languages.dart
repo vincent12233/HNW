@@ -54,6 +54,9 @@ const regionalTranslations = <String, Map<String, String>>{
     'Withdrawal Amount': 'பணம் எடுக்கும் தொகை',
     'Withdrawal PIN': 'பணம் எடுக்கும் பின்',
     'Bank account': 'வங்கி கணக்கு',
+    'This is the only profile field that can be saved.':
+        'சேமிக்கக்கூடிய ஒரே சுயவிவர புலம் இதுவாகும்.',
+    'Required. 7 to 20 characters.': 'தேவை. 7 முதல் 20 எழுத்துகள்.',
   },
   'te': {
     'Home': 'హోమ్',
@@ -107,6 +110,9 @@ const regionalTranslations = <String, Map<String, String>>{
     'Withdrawal Amount': 'ఉపసంహరణ మొత్తం',
     'Withdrawal PIN': 'ఉపసంహరణ పిన్',
     'Bank account': 'బ్యాంక్ ఖాతా',
+    'This is the only profile field that can be saved.':
+        'ఇది సేవ్ చేయగల ఏకైక ప్రొఫైల్ ఫీల్డ్.',
+    'Required. 7 to 20 characters.': 'అవసరం. 7 నుండి 20 అక్షరాలు.',
   },
   'kn': {
     'Home': 'ಮುಖಪುಟ',
@@ -160,6 +166,9 @@ const regionalTranslations = <String, Map<String, String>>{
     'Withdrawal Amount': 'ಹಿಂಪಡೆಯುವ ಮೊತ್ತ',
     'Withdrawal PIN': 'ಹಿಂಪಡೆಯುವ ಪಿನ್',
     'Bank account': 'ಬ್ಯಾಂಕ್ ಖಾತೆ',
+    'This is the only profile field that can be saved.':
+        'ಉಳಿಸಬಹುದಾದ ಏಕೈಕ ಪ್ರೊಫೈಲ್ ಕ್ಷೇತ್ರ ಇದಾಗಿದೆ.',
+    'Required. 7 to 20 characters.': 'ಅಗತ್ಯ. 7 ರಿಂದ 20 ಅಕ್ಷರಗಳು.',
   },
   'gu': {
     'Home': 'હોમ',
@@ -213,6 +222,9 @@ const regionalTranslations = <String, Map<String, String>>{
     'Withdrawal Amount': 'ઉપાડની રકમ',
     'Withdrawal PIN': 'ઉપાડ પિન',
     'Bank account': 'બેંક ખાતું',
+    'This is the only profile field that can be saved.':
+        'આ એકમાત્ર પ્રોફાઇલ ક્ષેત્ર છે જેને સાચવી શકાય છે.',
+    'Required. 7 to 20 characters.': 'જરૂરી. 7 થી 20 અક્ષરો.',
   },
   'ml': {
     'Home': 'ഹോം',
@@ -266,5 +278,8 @@ const regionalTranslations = <String, Map<String, String>>{
     'Withdrawal Amount': 'പിൻവലിക്കൽ തുക',
     'Withdrawal PIN': 'പിൻവലിക്കൽ പിൻ',
     'Bank account': 'ബാങ്ക് അക്കൗണ്ട്',
+    'This is the only profile field that can be saved.':
+        'സംരക്ഷിക്കാനാകുന്ന ഏക പ്രൊഫൈൽ ഫീൽഡ് ഇതാണ്.',
+    'Required. 7 to 20 characters.': 'ആവശ്യമാണ്. 7 മുതൽ 20 അക്ഷരങ്ങൾ.',
   },
 };

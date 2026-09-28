@@ -43,6 +43,8 @@ const coreLocalizationKeys = <String>[
   'Withdrawal Amount',
   'Withdrawal PIN',
   'Bank account',
+  'This is the only profile field that can be saved.',
+  'Required. 7 to 20 characters.',
 ];
 
 Map<String, List<String>> missingCoreTranslations() {

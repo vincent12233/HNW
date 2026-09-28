@@ -17,6 +17,7 @@ import 'services/auth_service.dart';
 import 'services/local_data_cache.dart';
 import 'services/session_expiry_service.dart';
 import 'theme/app_theme.dart';
+import 'theme/app_typography.dart';
 import 'theme/appearance_settings.dart';
 import 'widgets/app_settings_gates.dart';
 import 'services/app_version.dart';
@@ -49,7 +50,7 @@ Future<void> main() async {
               AppText(
                 'Content is temporarily unavailable',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: AppTypography.titleLarge,
               ),
               SizedBox(height: 6),
               AppText(

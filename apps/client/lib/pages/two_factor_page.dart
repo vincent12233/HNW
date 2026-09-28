@@ -5,6 +5,7 @@ import '../l10n/app_language.dart';
 import '../services/auth_service.dart';
 import '../services/client_account_service.dart';
 import '../services/session_expiry_service.dart';
+import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_typography.dart';
@@ -155,12 +156,12 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
                 const Icon(
                   Icons.verified_user_outlined,
                   size: 48,
-                  color: Colors.teal,
+                  color: AppColors.success,
                 ),
                 const SizedBox(height: 20),
                 const AppText(
                   'Recovery codes',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                  style: AppTypography.headline,
                 ),
                 const SizedBox(height: 12),
                 const AppText(
@@ -179,10 +180,7 @@ class _TwoFactorPageState extends State<TwoFactorPage> {
               ] else if (_enabled != null) ...[
                 AppText(
                   _enabled! ? 'Enabled' : 'Disabled',
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w700,
-                  ),
+                  style: AppTypography.headline,
                 ),
                 const SizedBox(height: AppSpacing.md),
                 const AppText(

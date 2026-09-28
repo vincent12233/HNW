@@ -42,7 +42,11 @@ class AppLanguage extends ChangeNotifier {
     final saved = (await SharedPreferences.getInstance()).getString(
       'app_language',
     );
-    code = supportedAppLanguageCodes.contains(saved) ? saved! : 'en';
+    final nextCode = supportedAppLanguageCodes.contains(saved) ? saved! : 'en';
+    if (code == nextCode) return;
+    code = nextCode;
+    _remoteCopy = const {};
+    notifyListeners();
   }
 
   Future<void> select(String value) async {
@@ -152,7 +156,7 @@ class AppText extends StatelessWidget {
       overflow: overflow,
       textScaler: textScaler,
       maxLines: maxLines,
-      semanticsLabel: semanticsLabel,
+      semanticsLabel: semanticsLabel == null ? null : tr(semanticsLabel!),
       textWidthBasis: textWidthBasis,
       textHeightBehavior: textHeightBehavior,
       selectionColor: selectionColor,

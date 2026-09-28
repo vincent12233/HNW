@@ -51,6 +51,44 @@ void main() {
     expect(tr('logo'), 'लोगो');
     await AppLanguage.instance.select('en');
   });
+  test(
+    'loading a different saved locale clears stale CMS copy and notifies',
+    () async {
+      await AppLanguage.instance.select('en');
+      AppLanguage.instance.replaceRemoteCopy({'Retry': 'Old English CMS copy'});
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('app_language', 'hi');
+      var notifications = 0;
+      void listener() => notifications++;
+      AppLanguage.instance.addListener(listener);
+      try {
+        await AppLanguage.instance.load();
+        expect(notifications, 1);
+        expect(tr('Retry'), 'फिर प्रयास करें');
+        await AppLanguage.instance.load();
+        expect(notifications, 1);
+      } finally {
+        AppLanguage.instance.removeListener(listener);
+        await AppLanguage.instance.select('en');
+      }
+    },
+  );
+
+  testWidgets('AppText localizes the accessibility label', (tester) async {
+    await AppLanguage.instance.select('hi');
+    addTearDown(() => AppLanguage.instance.select('en'));
+    await tester.pumpWidget(
+      const MaterialApp(
+        locale: Locale('hi'),
+        supportedLocales: [Locale('en'), Locale('hi')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: Scaffold(body: AppText('Retry', semanticsLabel: 'Retry')),
+      ),
+    );
+    final rendered = tester.widget<Text>(find.byType(Text).first);
+    expect(rendered.data, 'फिर प्रयास करें');
+    expect(rendered.semanticsLabel, 'फिर प्रयास करें');
+  });
   test('language catalogue exposes seven supported Indian app locales', () {
     expect(appLanguageOptions.map((option) => option.code), [
       'en',

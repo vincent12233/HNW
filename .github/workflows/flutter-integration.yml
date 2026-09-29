@@ -57,9 +57,10 @@ jobs:
         run: |
           set -euo pipefail
           DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(device["udid"] for devices in data["devices"].values() for device in devices if device.get("isAvailable") and device["name"].startswith("iPhone")))')"
+          xcrun simctl shutdown "$DEVICE_ID" || true
           xcrun simctl boot "$DEVICE_ID" || true
-          xcrun simctl bootstatus "$DEVICE_ID" -b
-          flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
+          timeout 12m xcrun simctl bootstatus "$DEVICE_ID" -b
+          timeout 30m flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
 
       - name: Upload integration artifacts
         if: always()

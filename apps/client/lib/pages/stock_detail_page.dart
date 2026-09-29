@@ -26,6 +26,7 @@ import '../widgets/markets/news_article_sheet.dart';
 import '../widgets/markets/stock_quote_hero.dart';
 import '../widgets/stock_history_chart.dart';
 import '../widgets/trading/order_ticket.dart';
+import '../widgets/trading/order_estimate_card.dart';
 import '../widgets/trading/standard_order_details_sheet.dart';
 
 part 'stock_detail_page_tabs_section.dart';
@@ -308,5 +309,4 @@ class _StockDetailPageState extends State<StockDetailPage> {
       ),
     );
   }
-
 }

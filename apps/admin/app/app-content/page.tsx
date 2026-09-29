@@ -31,6 +31,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import ContentHistoryModal from "./components/ContentHistoryModal";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
 import { missingLocaleKeys } from "./coverage";
@@ -509,45 +510,18 @@ export default function AppOpsContentPage() {
           </Space>
         </Modal>
 
-        <Modal title="文案历史与恢复" open={historyEntryId !== undefined} onCancel={() => setHistoryEntryId(undefined)} footer={null} width={720} destroyOnHidden>
-          <Space orientation="vertical" style={{ width: "100%" }} size="middle">
-            <Select
-              showSearch
-              optionFilterProp="label"
-              placeholder="搜索条目、语言"
-              style={{ width: "100%" }}
-              value={historyEntryId || undefined}
-              onChange={(id) => void openHistory(id)}
-              options={entries.map((entry) => ({ value: entry.id, label: `${entry.module} / ${entry.key} / ${entry.locale.toUpperCase()}` }))}
-            />
-            {historyLoading ? <Text type="secondary">正在加载历史…</Text> : null}
-            {historyEntryId && !historyLoading && history.length === 0 ? <Text type="secondary">暂无可用的修改记录。</Text> : null}
-            {history.map((revision) => {
-              const before = revision.metadata?.before?.body;
-              const after = revision.metadata?.after?.body;
-              return (
-                <div key={revision.id} style={{ borderTop: "1px solid #d9d9d9", paddingTop: 12 }}>
-                  <Space wrap style={{ marginBottom: 8 }}>
-                    <Text strong>{revision.action.replace("APP_CONTENT_", "")}</Text>
-                    <Text type="secondary">{new Date(revision.createdAt).toLocaleString("zh-CN")}</Text>
-                    <Text type="secondary">{revision.actor?.fullName || "管理员"}</Text>
-                  </Space>
-                  {typeof before === "string" ? <Paragraph style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><Text type="secondary">修改前：</Text>{before}</Paragraph> : null}
-                  {typeof after === "string" ? <Paragraph style={{ whiteSpace: "pre-wrap", overflowWrap: "anywhere" }}><Text type="secondary">修改后：</Text>{after}</Paragraph> : null}
-                  {typeof after === "string" ? (
-                    <Button disabled={restoring || saving} loading={restoring} onClick={() => Modal.confirm({
-                      title: "恢复这个历史版本？",
-                      content: "将覆盖当前条目并重新加载页面表单。请先保存其他未提交的修改。",
-                      okText: "确认恢复",
-                      cancelText: "取消",
-                      onOk: () => restoreRevision(revision),
-                    })}>恢复此版本</Button>
-                  ) : null}
-                </div>
-              );
-            })}
-          </Space>
-        </Modal>
+        <ContentHistoryModal
+          open={historyEntryId !== undefined}
+          entries={entries}
+          entryId={historyEntryId}
+          history={history}
+          loading={historyLoading}
+          restoring={restoring}
+          saving={saving}
+          onCancel={() => setHistoryEntryId(undefined)}
+          onEntryChange={(id) => void openHistory(id)}
+          onRestore={restoreRevision}
+        />
 
         <Card loading={loading}>
           <Alert

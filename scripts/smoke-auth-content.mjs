@@ -138,6 +138,7 @@ try {
   assert.equal(expired.response.status, 200, 'Expiry content edit failed');
   const afterExpiry = await call('/app-content?locale=en');
   assert.equal(afterExpiry.data?.home?.[key], undefined, 'Expired content remained public');
+  assert.ok(expired.data?.updatedAt, 'Expiry update did not return updatedAt');
   const history = await call(`/admin/app-content/${entryId}/history`, { token: accessToken });
   assert.equal(history.response.status, 200, 'Content history failed');
   const creationRevision = history.data?.find((item) => item.action === 'APP_CONTENT_CREATE');
@@ -145,7 +146,7 @@ try {
   const restored = await call(`/admin/app-content/${entryId}/restore`, {
     method: 'POST',
     token: accessToken,
-    body: { revisionId: creationRevision.id, expectedUpdatedAt: updated.data?.updatedAt },
+    body: { revisionId: creationRevision.id, expectedUpdatedAt: expired.data?.updatedAt },
   });
   assert.equal(restored.response.status, 201, 'Content restore failed');
   const restoredPublic = await call('/app-content?locale=en');

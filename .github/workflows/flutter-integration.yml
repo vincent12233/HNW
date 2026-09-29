@@ -56,11 +56,24 @@ jobs:
           API_BASE_URL: ${{ inputs.api_base_url || 'https://api.example.test' }}
         run: |
           set -euo pipefail
+          run_with_timeout() {
+            local limit_seconds="$1"
+            shift
+            "$@" &
+            local pid=$!
+            for ((elapsed=0; elapsed<limit_seconds; elapsed++)); do
+              if ! kill -0 "$pid" 2>/dev/null; then wait "$pid"; return $?; fi
+              sleep 1
+            done
+            kill "$pid" 2>/dev/null || true
+            wait "$pid" || true
+            return 124
+          }
           DEVICE_ID="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; data=json.load(sys.stdin); print(next(device["udid"] for devices in data["devices"].values() for device in devices if device.get("isAvailable") and device["name"].startswith("iPhone")))')"
           xcrun simctl shutdown "$DEVICE_ID" || true
           xcrun simctl boot "$DEVICE_ID" || true
-          timeout 12m xcrun simctl bootstatus "$DEVICE_ID" -b
-          timeout 30m flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
+          run_with_timeout 720 xcrun simctl bootstatus "$DEVICE_ID" -b
+          run_with_timeout 1800 flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
 
       - name: Upload integration artifacts
         if: always()

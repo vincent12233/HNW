@@ -33,65 +33,16 @@ export type AppContentActor = {
   role: string;
 };
 
-/** Accept a bare URL or a full <script src="..."> snippet from SaleSmartly. */
-export function normalizeSaleSmartlyScriptUrl(raw: string): string {
-  const text = String(raw ?? '').trim();
-  if (!text) return '';
-  const srcMatch = text.match(/src\s*=\s*["']([^"']+)["']/i);
-  if (srcMatch?.[1]) return srcMatch[1].trim();
-  return text;
-}
+import {
+  ALLOWED_CONTENT_LOCALES,
+  beforePublicationStatus,
+  normalizeSaleSmartlyScriptUrl,
+  parseOptionalContentDate,
+  REQUIRED_LEGAL_CONTENT_KEYS,
+  validateLegalContentDocument,
+} from './app-content-policy';
 
-const ALLOWED_LOCALES = new Set(['en', 'hi', 'zh']);
-const REQUIRED_LEGAL_KEYS = new Set([
-  'privacy.document',
-  'terms.document',
-  'risk.document',
-]);
-
-function beforePublicationStatus(isActive?: boolean) {
-  return isActive === false
-    ? AppContentPublicationStatus.DRAFT
-    : AppContentPublicationStatus.PUBLISHED;
-}
-
-function parseOptionalDate(value: string | null | undefined, field: string) {
-  if (value == null || value === '') return null;
-  const parsed = new Date(value);
-  if (!Number.isFinite(parsed.getTime())) {
-    throw new BadRequestException(`Valid ${field} is required`);
-  }
-  return parsed;
-}
-
-function validateLegalDocument(key: string, body: string) {
-  if (!REQUIRED_LEGAL_KEYS.has(key)) return;
-  try {
-    const value = JSON.parse(body) as {
-      effective?: unknown;
-      sections?: unknown;
-    };
-    if (typeof value.effective !== 'string' || !value.effective.trim())
-      throw new Error();
-    if (!Array.isArray(value.sections) || !value.sections.length)
-      throw new Error();
-    for (const section of value.sections) {
-      if (
-        !section ||
-        typeof section !== 'object' ||
-        typeof (section as Record<string, unknown>).heading !== 'string' ||
-        !(section as { heading: string }).heading.trim() ||
-        typeof (section as Record<string, unknown>).body !== 'string' ||
-        !(section as { body: string }).body.trim()
-      )
-        throw new Error();
-    }
-  } catch {
-    throw new BadRequestException(
-      'Required legal documents need effective and non-empty heading/body sections',
-    );
-  }
-}
+export { normalizeSaleSmartlyScriptUrl } from './app-content-policy';
 
 @Injectable()
 export class AppContentService {
@@ -430,8 +381,8 @@ export class AppContentService {
 
     const publicationStatus =
       body.publicationStatus ?? beforePublicationStatus(body.isActive);
-    const publishAt = parseOptionalDate(body.publishAt, 'publishAt');
-    const expiresAt = parseOptionalDate(body.expiresAt, 'expiresAt');
+    const publishAt = parseOptionalContentDate(body.publishAt, 'publishAt');
+    const expiresAt = parseOptionalContentDate(body.expiresAt, 'expiresAt');
     if (publishAt && expiresAt && expiresAt <= publishAt) {
       throw new BadRequestException('expiresAt must be later than publishAt');
     }
@@ -442,9 +393,9 @@ export class AppContentService {
       throw new BadRequestException('Scheduled content requires publishAt');
     }
     if (module === AppContentModule.LEGAL && locale === 'en') {
-      validateLegalDocument(key, rawBody);
+      validateLegalContentDocument(key, rawBody);
       if (
-        REQUIRED_LEGAL_KEYS.has(key) &&
+        REQUIRED_LEGAL_CONTENT_KEYS.has(key) &&
         (body.isActive === false ||
           publicationStatus === AppContentPublicationStatus.DRAFT)
       ) {
@@ -584,7 +535,7 @@ export class AppContentService {
     if (
       existing.module === AppContentModule.LEGAL &&
       existing.locale === 'en' &&
-      REQUIRED_LEGAL_KEYS.has(existing.key)
+      REQUIRED_LEGAL_CONTENT_KEYS.has(existing.key)
     ) {
       throw new BadRequestException(
         'Required English legal documents cannot be deleted',
@@ -651,7 +602,7 @@ export class AppContentService {
       String(value || 'en')
         .trim()
         .toLowerCase() || 'en';
-    if (!ALLOWED_LOCALES.has(locale)) {
+    if (!ALLOWED_CONTENT_LOCALES.has(locale)) {
       throw new BadRequestException('Invalid content locale');
     }
     return locale;

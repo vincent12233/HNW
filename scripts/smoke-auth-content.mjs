@@ -107,6 +107,37 @@ try {
   assert.equal(publicContent.response.status, 200);
   assert.equal(publicContent.data?.home?.[key]?.body, 'Smoke content updated');
 
+  const scheduled = await call('/admin/app-content', {
+    method: 'PUT',
+    token: accessToken,
+    body: {
+      module: 'HOME',
+      key,
+      locale: 'en',
+      body: 'Smoke content scheduled',
+      publicationStatus: 'SCHEDULED',
+      publishAt: new Date(Date.now() + 60_000).toISOString(),
+    },
+  });
+  assert.equal(scheduled.response.status, 200, 'Scheduled content edit failed');
+  const beforePublish = await call('/app-content?locale=en');
+  assert.equal(beforePublish.data?.home?.[key], undefined, 'Scheduled content leaked before publishAt');
+
+  const expired = await call('/admin/app-content', {
+    method: 'PUT',
+    token: accessToken,
+    body: {
+      module: 'HOME',
+      key,
+      locale: 'en',
+      body: 'Smoke content expired',
+      publicationStatus: 'PUBLISHED',
+      expiresAt: new Date(Date.now() - 60_000).toISOString(),
+    },
+  });
+  assert.equal(expired.response.status, 200, 'Expiry content edit failed');
+  const afterExpiry = await call('/app-content?locale=en');
+  assert.equal(afterExpiry.data?.home?.[key], undefined, 'Expired content remained public');
   const history = await call(`/admin/app-content/${entryId}/history`, { token: accessToken });
   assert.equal(history.response.status, 200, 'Content history failed');
   const creationRevision = history.data?.find((item) => item.action === 'APP_CONTENT_CREATE');

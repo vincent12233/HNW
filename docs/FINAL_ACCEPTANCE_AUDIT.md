@@ -153,7 +153,7 @@ Live multi-role browser exercise not run in this environment.
 | updateUrl / force Continue | Flutter + API unit tests | COMPLETE (unit) |
 | Featured Home/Markets | Public filters + client sections hide when empty | COMPLETE (code/unit) |
 | Legal | Privacy/Terms/Risk Disclosure; English/Hindi editor | IMPLEMENTED — **REQUIRES_COMPLIANCE_REVIEW** |
-| Live Admin→DB→App loop | Not exercised against running stack | **GAP** (follow-up) |
+| Live Admin→DB→App loop | API CI smoke: edit → schedule/expiry filters → history → rollback | **COMPLETE (CI smoke); browser/RBAC acceptance remains** |
 | Android device E2E | Cloud Linux — no device; owner deferred for review | **DEFERRED** — required before production |
 
 ---

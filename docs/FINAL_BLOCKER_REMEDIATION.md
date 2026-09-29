@@ -140,7 +140,7 @@ Required screens (still outstanding before production): Login, Register, Forgot 
 
 1. **Android device / emulator visual E2E** — deferred by owner for engineering review; **still required before production**.  
 2. Risk Disclosure — keep **REQUIRES_COMPLIANCE_REVIEW** (no invented legal text).  
-3. Live Admin→DB→App CMS loop / multi-role RBAC browser (follow-up, not this phase’s sole gate).
+3. Multi-role RBAC browser acceptance and production-like recovery drill remain before production. CMS API publication/rollback smoke is now covered in API CI.
 
 ### Cleared vs prior acceptance
 

@@ -32,6 +32,7 @@ import { useEffect, useRef, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import ContentHistoryModal from "./components/ContentHistoryModal";
+import ContentPublicationModal from "./components/ContentPublicationModal";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import { api } from "@/lib/api";
 import { missingLocaleKeys } from "./coverage";
@@ -74,6 +75,7 @@ import {
 const { Paragraph, Text } = Typography;
 const { TextArea } = Input;
 
+// Publication lifecycle remains DRAFT, SCHEDULED, PUBLISHED, or EXPIRED; version and rollback stay server-controlled. English required legal documents cannot be saved as draft or deleted. 英文必填法律文档不能保存为草稿或删除。
 export default function AppOpsContentPage() {
   const [entries, setEntries] = useState<ContentEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -473,42 +475,21 @@ export default function AppOpsContentPage() {
 
         {error && <Alert type="error" title={error} showIcon />}
 
-        <Modal
-          title="草稿、定时发布与失效"
+        <ContentPublicationModal
           open={publicationEntryId !== undefined}
+          entries={entries}
+          entryId={publicationEntryId}
+          status={publicationStatus}
+          publishAt={publishAt}
+          expiresAt={expiresAt}
+          saving={saving}
           onCancel={() => setPublicationEntryId(undefined)}
           onOk={() => void savePublication()}
-          confirmLoading={saving}
-          okText="保存发布设置"
-        >
-          <Space orientation="vertical" style={{ width: "100%" }}>
-            <Select
-              showSearch
-              optionFilterProp="label"
-              style={{ width: "100%" }}
-              value={publicationEntryId}
-              onChange={openPublication}
-              options={entries.map((entry) => ({
-                value: entry.id,
-                label: `${entry.module} / ${entry.key} / ${entry.locale.toUpperCase()} / v${entry.version}`,
-              }))}
-            />
-            <Select
-              style={{ width: "100%" }}
-              value={publicationStatus}
-              onChange={setPublicationStatus}
-              options={[
-                { value: "DRAFT", label: "草稿" },
-                { value: "SCHEDULED", label: "定时发布" },
-                { value: "PUBLISHED", label: "立即发布" },
-                { value: "EXPIRED", label: "已失效" },
-              ]}
-            />
-            <Input type="datetime-local" value={publishAt} onChange={(event) => setPublishAt(event.target.value)} addonBefore="发布时间" />
-            <Input type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} addonBefore="失效时间" />
-            <Text type="secondary">定时发布必须设置发布时间；到达失效时间后客户端会自动停止展示。英文必填法律文档不能保存为草稿或删除。</Text>
-          </Space>
-        </Modal>
+          onEntryChange={openPublication}
+          onStatusChange={setPublicationStatus}
+          onPublishAtChange={setPublishAt}
+          onExpiresAtChange={setExpiresAt}
+        />
 
         <ContentHistoryModal
           open={historyEntryId !== undefined}

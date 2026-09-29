@@ -51,6 +51,7 @@ import { ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 import { api } from '@/lib/api';
 import { getBackendRole } from "@/lib/backend-role";
 import { findNavigationItem } from "@/lib/admin-navigation";
+import { hasAdminPermission, permissionForAdminRoute } from "@/lib/role-permissions";
 import { isAxiosError } from "axios";
 import OpsModal from "@/components/OpsModal";
 import OpsPermissionDenied from "@/components/OpsPermissionDenied";
@@ -427,12 +428,14 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   const activeGroup = menuGroups[role].find((group) =>
     group.keys.some((key) => key === selectedItem?.key),
   );
+  const routePermission = permissionForAdminRoute(pathname);
   const allowed =
-    pathname === "/" ||
-    pathname === "/login" ||
-    flatItems.some(
-      (item) => pathname === item.key.split("?")[0] || pathname.startsWith(`${item.key.split("?")[0]}/`),
-    );
+    (routePermission === undefined || hasAdminPermission(role, routePermission)) &&
+    (pathname === "/" ||
+      pathname === "/login" ||
+      flatItems.some(
+        (item) => pathname === item.key.split("?")[0] || pathname.startsWith(`${item.key.split("?")[0]}/`),
+      ));
 
   const logout = async () => {
     if (loggingOut) return;

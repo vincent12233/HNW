@@ -12,6 +12,7 @@ import 'local_data_cache.dart';
 import 'session_expiry_service.dart';
 import 'salesmartly_service.dart';
 import 'secure_credential_store.dart';
+import 'auth_session_store.dart';
 
 class AuthService {
   static String createClientRequestId(String operation) {
@@ -27,6 +28,7 @@ class AuthService {
       SecureCredentialStore.biometricSessionKey;
   final SessionExpiryService _sessionExpiry = SessionExpiryService();
   final SecureCredentialStore _credentials = SecureCredentialStore.instance;
+  final AuthSessionStore _sessionStore = AuthSessionStore();
 
   Future<AuthSession> login({
     required String phone,
@@ -435,43 +437,9 @@ class AuthService {
     return WithdrawalRequest.fromJson(decoded);
   }
 
-  Future<AuthSession?> restoreSession() async {
-    final preferences = await SharedPreferences.getInstance();
-    var saved = await _credentials.readSession();
-    // One-time migration from legacy plaintext preferences, then scrub.
-    final legacySaved = preferences.getString(_sessionKey);
-    if (saved == null && legacySaved != null) {
-      saved = legacySaved;
-      await _credentials.writeSession(legacySaved);
-    }
-    if (legacySaved != null) {
-      await preferences.remove(_sessionKey);
-    }
+  Future<AuthSession?> restoreSession() => _sessionStore.read();
 
-    if (saved == null) {
-      return null;
-    }
-
-    try {
-      final decoded = jsonDecode(saved) as Map<String, dynamic>;
-      final session = AuthSession.fromJson(decoded);
-
-      return session.isValid ? session : null;
-    } catch (_) {
-      await clearSession();
-      return null;
-    }
-  }
-
-  Future<void> saveSession(AuthSession session) async {
-    final preferences = await SharedPreferences.getInstance();
-    final encoded = jsonEncode(session.toJson());
-    await _credentials.writeSession(encoded);
-    // Never persist access tokens in plaintext SharedPreferences.
-    await preferences.remove(_sessionKey);
-    await preferences.setString('account_name', session.fullName);
-    await preferences.setString('account_phone', session.phone);
-  }
+  Future<void> saveSession(AuthSession session) => _sessionStore.write(session);
 
   Future<void> updateCachedFullName(String fullName) async {
     final session = await restoreSession();
@@ -515,16 +483,7 @@ class AuthService {
     await _credentials.deleteBiometricToken();
   }
 
-  Future<String?> restoreBiometricToken() async {
-    final preferences = await SharedPreferences.getInstance();
-    var token = await _credentials.readBiometricToken();
-    token ??= preferences.getString(_biometricSessionKey);
-    if (token != null && preferences.containsKey(_biometricSessionKey)) {
-      await _credentials.writeBiometricToken(token);
-      await preferences.remove(_biometricSessionKey);
-    }
-    return token;
-  }
+  Future<String?> restoreBiometricToken() => _sessionStore.readBiometricToken();
 
   Future<AuthSession> biometricLogin(String biometricToken) async {
     final response = await http

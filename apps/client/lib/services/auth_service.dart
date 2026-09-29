@@ -13,6 +13,9 @@ import 'session_expiry_service.dart';
 import 'salesmartly_service.dart';
 import 'secure_credential_store.dart';
 import 'auth_session_store.dart';
+import 'auth_service_support.dart';
+
+export 'auth_service_support.dart';
 
 class AuthService {
   static String createClientRequestId(String operation) {
@@ -58,7 +61,7 @@ class AuthService {
       );
     }
 
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       if (decoded is Map && decoded['twoFactorRequired'] == true) {
@@ -101,10 +104,10 @@ class AuthService {
         'Unable to connect. Please check your network and try again.',
       );
     }
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AuthException(
-        _englishApiMessage(decoded, 'Unable to send reset code'),
+        englishAuthApiMessage(decoded, 'Unable to send reset code'),
       );
     }
   }
@@ -132,10 +135,10 @@ class AuthService {
         'Unable to connect. Please check your network and try again.',
       );
     }
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AuthException(
-        _englishApiMessage(decoded, 'Unable to reset password'),
+        englishAuthApiMessage(decoded, 'Unable to reset password'),
       );
     }
   }
@@ -148,11 +151,11 @@ class AuthService {
           body: jsonEncode({'idToken': idToken}),
         )
         .timeout(const Duration(seconds: 12));
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
         decoded is! Map<String, dynamic>) {
-      throw AuthException(_englishApiMessage(decoded, 'Google sign in failed'));
+      throw AuthException(englishAuthApiMessage(decoded, 'Google sign in failed'));
     }
     final session = AuthSession.fromLoginJson(decoded);
     await saveSession(session);
@@ -172,10 +175,10 @@ class AuthService {
           body: jsonEncode({'idToken': idToken}),
         )
         .timeout(const Duration(seconds: 12));
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AuthException(
-        _englishApiMessage(decoded, 'Unable to link Google account'),
+        englishAuthApiMessage(decoded, 'Unable to link Google account'),
       );
     }
   }
@@ -207,7 +210,7 @@ class AuthService {
       );
     }
 
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded is Map ? decoded['message']?.toString() : null;
@@ -249,14 +252,14 @@ class AuthService {
       'fullName': ?fullName,
       'bankDetails': ?bankDetails,
       'selfieContentBase64': base64Encode(selfieFile.bytes),
-      'selfieMimeType': _mimeTypeForFile(selfieFile.name),
+      'selfieMimeType': mimeTypeForAuthFile(selfieFile.name),
       'signatureContentBase64': base64Encode(signatureFile.bytes),
       'fileName': file.name,
-      'mimeType': _mimeTypeForFile(file.name),
+      'mimeType': mimeTypeForAuthFile(file.name),
       'contentBase64': base64Encode(bytes),
       if (backFile != null && backBytes != null && backBytes.isNotEmpty) ...{
         'backFileName': backFile.name,
-        'backMimeType': _mimeTypeForFile(backFile.name),
+        'backMimeType': mimeTypeForAuthFile(backFile.name),
         'backContentBase64': base64Encode(backBytes),
       },
     };
@@ -282,7 +285,7 @@ class AuthService {
       );
     }
 
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       final message = decoded is Map ? decoded['message']?.toString() : null;
@@ -309,7 +312,7 @@ class AuthService {
       if (response.statusCode < 200 || response.statusCode >= 300) {
         return 'NOT_SUBMITTED';
       }
-      final decoded = _decodeJson(response.body);
+      final decoded = decodeAuthJson(response.body);
       return decoded is Map
           ? decoded['status']?.toString().toUpperCase() ?? 'NOT_SUBMITTED'
           : 'NOT_SUBMITTED';
@@ -327,7 +330,7 @@ class AuthService {
           headers: {'Authorization': 'Bearer $token'},
         )
         .timeout(const Duration(seconds: 12));
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode != 200 || decoded is! Map) {
       throw const AuthException('Unable to load verification status');
     }
@@ -354,11 +357,11 @@ class AuthService {
         return <WithdrawalRequest>[];
       }
 
-      final decoded = _decodeJson(response.body);
+      final decoded = decodeAuthJson(response.body);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw AuthException(
-          _englishApiMessage(decoded, 'Unable to load withdrawals'),
+          englishAuthApiMessage(decoded, 'Unable to load withdrawals'),
         );
       }
 
@@ -422,11 +425,11 @@ class AuthService {
       throw AuthException('Please sign in again');
     }
 
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw AuthException(
-        _englishApiMessage(decoded, 'Withdrawal request failed'),
+        englishAuthApiMessage(decoded, 'Withdrawal request failed'),
       );
     }
 
@@ -466,12 +469,12 @@ class AuthService {
           headers: {'Authorization': 'Bearer ${session.accessToken}'},
         )
         .timeout(const Duration(seconds: 10));
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
         decoded is! Map) {
       throw AuthException(
-        _englishApiMessage(decoded, 'Unable to enable biometric login'),
+        englishAuthApiMessage(decoded, 'Unable to enable biometric login'),
       );
     }
     final token = decoded['biometricToken']?.toString() ?? '';
@@ -493,12 +496,12 @@ class AuthService {
           body: jsonEncode({'biometricToken': biometricToken}),
         )
         .timeout(const Duration(seconds: 12));
-    final decoded = _decodeJson(response.body);
+    final decoded = decodeAuthJson(response.body);
     if (response.statusCode < 200 ||
         response.statusCode >= 300 ||
         decoded is! Map<String, dynamic>) {
       throw AuthException(
-        _englishApiMessage(decoded, 'Biometric quick login failed'),
+        englishAuthApiMessage(decoded, 'Biometric quick login failed'),
       );
     }
     final session = AuthSession.fromLoginJson(decoded);
@@ -544,7 +547,7 @@ class AuthService {
             body: jsonEncode({'refreshToken': refreshToken}),
           )
           .timeout(const Duration(seconds: 10));
-      final decoded = _decodeJson(response.body);
+      final decoded = decodeAuthJson(response.body);
       if (response.statusCode < 200 ||
           response.statusCode >= 300 ||
           decoded is! Map<String, dynamic>) {
@@ -608,82 +611,4 @@ String _normalizeIndianPhone(String value) {
   }
 
   return digits;
-}
-
-String _mimeTypeForFile(String fileName) {
-  final lowerName = fileName.toLowerCase();
-
-  if (lowerName.endsWith('.pdf')) return 'application/pdf';
-  if (lowerName.endsWith('.jpg') || lowerName.endsWith('.jpeg')) {
-    return 'image/jpeg';
-  }
-  if (lowerName.endsWith('.png')) return 'image/png';
-  if (lowerName.endsWith('.webp')) return 'image/webp';
-  if (lowerName.endsWith('.heic')) return 'image/heic';
-  if (lowerName.endsWith('.heif')) return 'image/heif';
-
-  return 'application/octet-stream';
-}
-
-dynamic _decodeJson(String body) {
-  if (body.trim().isEmpty) return null;
-
-  try {
-    return jsonDecode(body);
-  } on FormatException {
-    return null;
-  }
-}
-
-class TwoFactorRequiredException implements Exception {
-  const TwoFactorRequiredException();
-}
-
-class AuthException implements Exception {
-  const AuthException(this._message, {this.code, this.requestId});
-
-  final String _message;
-  final String? code;
-  final String? requestId;
-  String get message => RegExp(r'[\u3400-\u9fff]').hasMatch(_message)
-      ? 'Unable to complete this request. Please try again.'
-      : _message;
-
-  @override
-  String toString() => message;
-}
-
-class KycRequiredException implements Exception {
-  const KycRequiredException(this.token);
-  final String token;
-}
-
-String _englishApiMessage(dynamic decoded, String fallback) {
-  final message = decoded is Map ? decoded['message']?.toString() : null;
-
-  switch (message) {
-    case 'Amount must be greater than zero':
-      return 'Amount must be greater than zero';
-    case 'Minimum withdrawal amount is ₹100':
-      return 'Minimum withdrawal amount is ₹100';
-    case 'Withdrawal amount cannot have more than two decimal places':
-      return 'Withdrawal amount can have at most two decimal places';
-    case 'Withdrawal amount exceeds the limit':
-      return 'Withdrawal amount exceeds the supported limit';
-    case 'Provide either UPI ID or complete bank details':
-      return 'Please provide complete withdrawal details';
-    case 'Insufficient cash balance':
-      return 'Insufficient cash balance';
-    case 'Insufficient available balance':
-      return 'Part of your balance is currently frozen';
-    case 'Insufficient available balance after pending withdrawals':
-      return 'Available balance is reserved by pending withdrawals';
-    case 'Account not found':
-    case '未找到账户':
-      return 'Trading account not found';
-    default:
-      return message == null || RegExp(r'[\u4e00-\u9fff]').hasMatch(message)
-          ? fallback
-          : message;
-  }
 }

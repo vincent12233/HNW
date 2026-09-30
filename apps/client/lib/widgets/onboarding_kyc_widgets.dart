@@ -687,15 +687,12 @@ class KycFlowFooter extends StatelessWidget {
                               AppText(
                                 'Your information is secure',
                                 style: AppTypography.caption.copyWith(
-                                  fontSize: 10,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
                               AppText(
                                 'KYC information is used only for identity verification and is kept secure.',
-                                style: AppTypography.caption.copyWith(
-                                  fontSize: 10,
-                                ),
+                                style: AppTypography.caption,
                               ),
                             ],
                           ),

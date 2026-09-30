@@ -1,0 +1,79 @@
+name: Deploy Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm_sha:
+        description: 'Paste the full main-branch commit SHA that has passed required CI'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hnw-production
+  cancel-in-progress: false
+
+jobs:
+  validate-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require main branch and exact commit confirmation
+        shell: bash
+        run: |
+          test "${GITHUB_REF_NAME}" = "main" || { echo "Production deployment must run from main." >&2; exit 1; }
+          test "${{ inputs.confirm_sha }}" = "${GITHUB_SHA}" || { echo "confirm_sha must equal ${GITHUB_SHA}." >&2; exit 1; }
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Validate production operations tooling
+        run: node --test scripts/tests/production-operations.test.mjs
+      - name: Validate production Compose
+        env:
+          PUBLIC_API_URL: https://api.hnw-ci.invalid
+          DATABASE_URL: postgresql://ci:ci-password@db:5432/hnw?schema=public
+          RATE_LIMIT_REDIS_URL: redis://redis:6379
+          TRUST_PROXY_HOPS: '1'
+          PRIVATE_OBJECT_HOST_PATH: /srv/hnw/private-objects
+          JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          TWO_FACTOR_ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          OTC_KEY_ENCRYPTION_SECRET: cccccccccccccccccccccccccccccccc
+          OBJECT_SIGNING_SECRET: dddddddddddddddddddddddddddddddd
+          ADMIN_FIXED_INVITE_CODE: CI-INVITE-CODE-2026
+          ADMIN_INITIAL_PASSWORD: CiAdminPass2026
+          MANAGER_INITIAL_PASSWORD: CiManagerPass2026
+          FINANCE_INITIAL_PASSWORD: CiFinancePass2026
+          BUSINESS_INITIAL_PASSWORD: CiBusinessPass2026
+          SUPPORT_INITIAL_PASSWORD: CiSupportPass2026
+          CORS_ORIGINS: https://admin.hnw-ci.invalid,https://manager.hnw-ci.invalid,https://finance.hnw-ci.invalid,https://business.hnw-ci.invalid,https://operator.hnw-ci.invalid
+          MARKET_DATA_PROVIDER: LICENSED_CI_PROVIDER
+          VIRUS_SCAN_URL: https://scanner.hnw-ci.invalid/scan
+        run: docker compose -f compose.production.yaml config --quiet
+
+  deploy:
+    needs: validate-release
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Trigger approved Coolify deployment
+        env:
+          COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+        shell: bash
+        run: |
+          test -n "${COOLIFY_DEPLOY_WEBHOOK}" || { echo "COOLIFY_DEPLOY_WEBHOOK is not configured." >&2; exit 1; }
+          curl --fail --silent --show-error --request GET "${COOLIFY_DEPLOY_WEBHOOK}"
+      - name: Wait for deployment startup
+        run: sleep 30
+      - name: Verify production endpoints
+        env:
+          PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
+          PRODUCTION_ADMIN_URLS: ${{ vars.PRODUCTION_ADMIN_URLS }}
+          SMOKE_ATTEMPTS: '18'
+          SMOKE_DELAY_MS: '10000'
+        run: node scripts/post-deploy-smoke.mjs

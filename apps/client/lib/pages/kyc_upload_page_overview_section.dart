@@ -81,8 +81,7 @@ extension _KycUploadOverviewSection on _KycUploadPageState {
           icon: Icons.error_outline,
           title: 'Needs resubmission',
           subtitle:
-              reviewNote ??
-              'Please update your documents and submit again.',
+              reviewNote ?? 'Please update your documents and submit again.',
         )
       else
         const VerificationBanner(
@@ -173,6 +172,7 @@ extension _KycUploadOverviewSection on _KycUploadPageState {
       label: label,
       busy: isSubmitting,
       errorText: errorText,
+      securityNotice: true,
       onPressed: onPressed,
     );
   }
@@ -198,7 +198,9 @@ extension _KycUploadOverviewSection on _KycUploadPageState {
         width: double.infinity,
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: selected ? AppColors.brandPrimarySoft : AuthLayout.pageBackground,
+          color: selected
+              ? AppColors.brandPrimarySoft
+              : AuthLayout.pageBackground,
           borderRadius: AppRadius.borderSm,
           border: Border.all(
             color: selected ? AppColors.brandPrimary : AppColors.border,
@@ -249,7 +251,4 @@ extension _KycUploadOverviewSection on _KycUploadPageState {
       ),
     );
   }
-
 }
-
-

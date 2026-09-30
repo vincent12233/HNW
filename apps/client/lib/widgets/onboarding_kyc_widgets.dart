@@ -6,6 +6,7 @@ import '../models/picked_bytes_file.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
+import '../theme/app_typography.dart';
 import '../theme/auth_layout.dart';
 import 'onboarding_auth_widgets.dart';
 
@@ -617,6 +618,7 @@ class KycFlowFooter extends StatelessWidget {
     this.busy = false,
     this.errorText,
     this.helper = 'Used for identity verification',
+    this.securityNotice = false,
     this.footerKey = const ValueKey('kyc-footer'),
   });
 
@@ -625,6 +627,7 @@ class KycFlowFooter extends StatelessWidget {
   final bool busy;
   final String? errorText;
   final String helper;
+  final bool securityNotice;
   final Key footerKey;
 
   @override
@@ -671,29 +674,55 @@ class KycFlowFooter extends StatelessWidget {
                     onPressed: onPressed,
                   ),
                   const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.lock_outline,
-                        size: 15,
-                        color: AppColors.textTertiary,
-                      ),
-                      const SizedBox(width: 6),
-                      Flexible(
-                        child: AppText(
-                          helper,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            fontSize: AuthLayout.helperSize,
-                            color: AppColors.textTertiary,
-                            height: 1.35,
-                            letterSpacing: 0,
+                  if (securityNotice)
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Icon(Icons.shield_outlined, size: 16),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AppText(
+                                'Your information is secure',
+                                style: AppTypography.caption.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              AppText(
+                                'KYC information is used only for identity verification and is kept secure.',
+                                style: AppTypography.caption,
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                    ],
-                  ),
+                      ],
+                    )
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(
+                          Icons.lock_outline,
+                          size: 15,
+                          color: AppColors.textTertiary,
+                        ),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: AppText(
+                            helper,
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: AuthLayout.helperSize,
+                              color: AppColors.textTertiary,
+                              height: 1.35,
+                              letterSpacing: 0,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),

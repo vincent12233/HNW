@@ -81,7 +81,7 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
 
     return AppPageScaffold(
       appBar: AppBar(
-        title: const AppText('Wealth Insights'),
+        title: const AppText('Investment Notes'),
         actions: [
           IconButton(
             tooltip: tr('Refresh'),
@@ -96,16 +96,16 @@ class _WealthInsightsPageState extends State<WealthInsightsPage> {
         ],
       ),
       body: _loading
-          ? const AppLoadingView(message: 'Loading insights')
+          ? const AppLoadingView(message: 'Loading investment notes')
           : count == 0
           ? (_structuredApiOk
                 ? AppEmptyState(
                     icon: Icons.article_outlined,
-                    title: 'No published insights yet.',
+                    title: 'No investment notes have been published yet.',
                     onRetry: _refresh,
                   )
                 : AppErrorView(
-                    title: 'Insights are temporarily unavailable.',
+                    title: 'Investment notes are currently unavailable.',
                     onRetry: _refresh,
                   ))
           : RefreshIndicator(

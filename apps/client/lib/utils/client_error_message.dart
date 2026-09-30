@@ -16,11 +16,11 @@ String clientErrorMessage(Object error, {String fallback = 'Request failed'}) {
       raw.contains('Connection refused') ||
       raw.contains('XMLHttpRequest') ||
       raw.contains('NetworkError')) {
-    return 'Unable to connect. Please check your network and try again.';
+    return 'Connection lost. Check your network and try again.';
   }
 
   if (raw.contains('FormatException') || raw.contains('Unexpected')) {
-    return 'Unable to process the response. Please try again later.';
+    return 'The service returned an invalid response. Try again shortly.';
   }
 
   if (RegExp(r'https?://|Exception|Error:|uri=').hasMatch(raw)) {

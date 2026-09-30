@@ -48,13 +48,13 @@ Future<void> main() async {
               ),
               SizedBox(height: 12),
               AppText(
-                'Content is temporarily unavailable',
+                'This screen could not be loaded',
                 textAlign: TextAlign.center,
                 style: AppTypography.titleLarge,
               ),
               SizedBox(height: 6),
               AppText(
-                'Please refresh or switch tabs.',
+                'Refresh the page or open another section.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: AppConfig.neutralColor),
               ),

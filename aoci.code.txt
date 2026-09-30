@@ -1,0 +1,1320 @@
+#AOCI-CODE-VOLUME: 1
+
+===C:/Users/suyan/HNW/===
+.dockerignore[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+.gitattributes[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+.gitignore[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+.nvmrc[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+AGENTS.md[SG6M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+compose.local-test.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+compose.observability.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/.github/===
+dependabot.yml[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/.github/workflows/===
+admin-ci.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+api-ci.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+codeql.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+docker-ci.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+flutter-ci.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+flutter-integration.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+mobile-release-checks.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+recovery-drill.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+tooling-ci.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+
+===C:/Users/suyan/HNW/apps/admin/===
+.env.example[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+.gitignore[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
+AGENTS.md[SG6M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+CLAUDE.md[SG6M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+eslint.config.mjs[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+next.config.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+package-lock.json[FC5S]: F:锁定Admin应用npm依赖解析结果与完整性摘要 | R:code:apps/admin/package.json | A:npm lockfile v3 | S:必须与package.json同步并通过npm ci验证，不手工编辑传递依赖
+package.json[FC5S]: F:声明Admin Next.js应用的脚本、运行依赖、开发工具与Node版本约束 | R:code:apps/admin/package-lock.json | A:npm package manifest | S:五类后台生产入口共享同一构建产物并以不同端口启动
+postcss.config.mjs[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+tsconfig.json[FC5S]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/admin/app/announcements/===
+page.tsx[AU6M]: F:Implements an Admin application page or interaction | R:- | A:Admin application orchestration | S:The UI delegates protected operations to existing application boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/app-content/components/===
+ContentHistoryModal.tsx[AU6M]: F:Implements an Admin application page or interaction | R:- | A:Admin application orchestration | S:The UI delegates protected operations to existing application boundaries
+ContentPublicationModal.tsx[AU6M]: F:Implements an Admin application page or interaction | R:- | A:Admin application orchestration | S:The UI delegates protected operations to existing application boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/app-content/===
+content-editor-support.tsx[AU6M]: F:Implements an Admin application page or interaction | R:- | A:Admin application orchestration | S:The UI delegates protected operations to existing application boundaries
+coverage.ts[LU6S]: F:Provides Admin content-management support data or logic | R:- | A:Admin content support | S:Definitions remain consistent with the content workflow contract
+fields.ts[LU6S]: F:Provides Admin content-management support data or logic | R:- | A:Admin content support | S:Definitions remain consistent with the content workflow contract
+page.tsx[AU6M]: F:Implements an Admin application page or interaction | R:- | A:Admin application orchestration | S:The UI delegates protected operations to existing application boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/app-management/===
+page.tsx[AU6M]: F:Implements an Admin application page or interaction | R:- | A:Admin application orchestration | S:The UI delegates protected operations to existing application boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/app-settings/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/approvals/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/audit-logs/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/bank-accounts/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/block-trades/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-accounts/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-customers/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-deposits/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-funds/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-institutional/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-ipo/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-kyc/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-orders/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-otc/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-positions/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-trades/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-users/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-vip/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/business-withdrawals/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/company-showcase/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/customers/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/dashboard/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/deposits/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/===
+error.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+global-error.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+globals.css[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+layout.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+not-found.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/featured-instruments/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/finance-overview/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/funds/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/insights/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/instruments/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/ipo-debts/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/ipo-management/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/loans/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/login/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/market/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/operator-console/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/orders/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/quant/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/support-console/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/team-assignments/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/team-vip/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/team/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/trades/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/transactions/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/vip-clients/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/vip-history/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/vip-settings/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/watchlist/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/app/withdrawals/===
+page.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/components/===
+AdminShell.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+AppProviders.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+CurrentInviteCode.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+InvitePoolButton.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+KycReviewList.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+KycReviewModal.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+KycStatusTag.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsDrawer.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsEmpty.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsErrorState.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsHealthPanel.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsModal.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsMoney.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsOrderWorkspace.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsPageHeader.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsPermissionDenied.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsStatusTag.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsToolbar.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+OpsTradeWorkspace.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+RecoveryInbox.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+ScopedEditButton.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+TeamAssignmentWorkspace.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+VipClientsWorkspace.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+VipSuggestionTag.tsx[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:UI behavior delegates protected operations to existing service boundaries
+
+===C:/Users/suyan/HNW/apps/admin/lib/===
+admin-navigation.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+api.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+backend-role.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+error-report.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+kyc-review.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-directory.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-format.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-funding.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-governance.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-product.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-status.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+ops-trading.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+role-permissions.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+team-assignment.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+team-records.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+vip.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+
+===C:/Users/suyan/HNW/apps/api/===
+.env.example[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+.gitignore[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+.prettierrc[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+README.md[SG5M]: F:Documents project structure, usage, or engineering constraints | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+eslint.config.mjs[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+nest-cli.json[FC5S]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+package-lock.json[FC5S]: F:锁定API应用npm依赖解析结果、覆盖项与完整性摘要 | R:code:apps/api/package.json | A:npm lockfile v3 | S:必须与package.json同步并通过npm ci及Prisma生成验证，不手工编辑传递依赖
+package.json[FC5S]: F:声明NestJS API的构建、测试、Prisma、覆盖率脚本及运行与开发依赖 | R:code:apps/api/package-lock.json,code:apps/api/prisma/schema.prisma | A:npm package manifest | S:postinstall会生成Prisma Client，生产启动由NODE_ENV=production执行dist/main.js
+prisma.config.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+prisma.upgrade-test.config.ts[AU6S]: F:Implements application or service support logic | R:- | A:Application service boundary | S:Logic must preserve existing authorization and validation boundaries
+tsconfig.build.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+tsconfig.eslint.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+tsconfig.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260804134943_add_users_accounts/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260804151741_add_account_transactions/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260804165543_add_market_order_position_models/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260804174802_add_position_frozen_quantity/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260805104125_add_audit_logs/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260805120000_add_matching_time_in_force/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260805124823_add_ipo_management/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260806050000_sync_ipo_debt/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260806170000_add_deposit_request/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260806220000_make_transaction_reference_non_unique/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260806221000_add_withdrawal_request/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260807001000_add_business_invite_system/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260807114500_add_login_audit/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809120000_make_user_phone_unique/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809123000_add_kyc_submissions/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809124500_add_customer_no/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809143000_add_withdrawal_order_no/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809150000_add_support_conversation_tags/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809153000_add_admin_backend_modules/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260809162000_add_finance_user_role/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260810093000_add_loan_applications/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260810094500_enhance_support_conversations/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260810101000_add_instrument_display_fields/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260810194000_live_trading_terminology/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260812143000_add_user_watchlist/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260812170000_add_market_quote_history/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260813190000_add_otc_workflow/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260813213000_client_experience_fullstack/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260813230000_password_reset_hardening/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814001000_kyc_aadhaar_back_file/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814120000_add_four_eyes_approvals/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814150000_expand_institutional_offers/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814170000_add_otc_price_tiers/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814173000_encrypt_visible_otc_key/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814190000_add_withdrawal_frozen_amount/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260814203000_add_deposit_confirmation_reference/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260906000100_kyc_selfie_signature/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260907100000_onboarding_recovery/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260907140000_manager_scope/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260908120000_reusable_fixed_invite/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260910120000_withdrawal_pin/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260910163000_product_performance/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260910170000_account_security/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260910220000_staff_soft_delete/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260910223000_ipo_publication/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260912170000_add_published_ipo_status/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260912173000_add_listed_ipo_status/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260914000100_company_showcases/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260914000200_company_showcase_video/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260914090000_app_ops_content/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260914094500_app_ops_legal_insights/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260914150000_drop_deposit_receiving_accounts/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260914220000_bank_account_unique/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260915050000_drop_watchlist_reference_price/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260915063000_update_otc_guide_copy/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260915094500_seed_salesmartly_script_url/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260916100000_structured_app_content/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260916120000_add_app_client_update_url/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260918040000_financial_integrity/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260918043000_align_kyc_watchlist_models/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260920010000_vip_tier_configuration_and_history/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260920020000_business_manager_assignment_history/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260926143000_withdrawal_client_idempotency/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260926170000_kyc_submission_idempotency/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/20260927060000_app_content_publication_workflow/===
+migration.sql[FC4T]: F:Defines behavior and configuration for the repository component | R:- | A:Component boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/migrations/===
+migration_lock.toml[DB6M]: F:Defines database schema or seed behavior | R:- | A:Persistence boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/prisma/===
+schema.prisma[DB6M]: F:Defines database schema or seed behavior | R:- | A:Persistence boundary | S:-
+seed.ts[DB6M]: F:Defines database schema or seed behavior | R:- | A:Persistence boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/scripts/===
+clear-client-business-data.ts[AZ5S]: F:Provides an operational or development script | R:- | A:Development tooling | S:-
+create-admin-user.ts[AZ5S]: F:Provides an operational or development script | R:- | A:Development tooling | S:-
+create-finance-user.ts[AZ5S]: F:Provides an operational or development script | R:- | A:Development tooling | S:-
+create-support-user.ts[AZ5S]: F:Provides an operational or development script | R:- | A:Development tooling | S:-
+financial-integrity-preflight.ts[AZ5S]: F:Provides an operational or development script | R:- | A:Development tooling | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/account/===
+account.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+account.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+account.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-account.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-account.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/account/dto/===
+adjust-balance.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-admin-account-transactions-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-admin-accounts-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-transactions-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/admin-dashboard/===
+admin-dashboard.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-dashboard.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-dashboard.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/admin-products/===
+admin-products.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-products.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-products.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/admin/===
+admin.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/app-content/===
+app-content-history.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content-policy.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.about.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.deposit.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.home.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.insights.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.legal.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.support.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.trading.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.defaults.types.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-content.visibility.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/app-content/dto/===
+upsert-app-content.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/===
+app.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+main.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+test-environment.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/approval/===
+approval.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+approval.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+approval.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/audit/===
+audit.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+audit.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+audit.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/audit/dto/===
+list-audit-logs-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/auth/===
+auth.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+auth.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+auth.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+authenticated-request.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+jwt-auth.guard.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+jwt.strategy.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+phone-number.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+roles.decorator.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+roles.guard.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+session-policy.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+two-factor.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+two-factor.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/auth/dto/===
+login.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+register.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/business/===
+business-assignment.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-assignment.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-assignment.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-customer.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-dashboard.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-ipo.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-management.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-risk.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-trading.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+dedicated-operator-scope.guard.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+team.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+team.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+team.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/client-experience/===
+client-experience.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+client-experience.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+client-experience.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+product-portfolio.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+withdrawal-pin.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/common/===
+business-error-codes.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+fixed-invite.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+idempotency-key.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ipo-debt-repay.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ledger-idempotency.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+local-development-origin.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+money.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+operation-idempotency-key.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+rate-limit-store.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+request-context.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+trust-proxy.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/company-showcase/===
+company-showcase.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+company-showcase.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+company-showcase.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/deposit/===
+deposit.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+deposit.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+deposit.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/deposit/dto/===
+support-deposit-submit.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/error-ingestion/dto/===
+submit-client-error.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/error-ingestion/===
+error-ingestion.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+error-ingestion.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+error-ingestion.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/health/===
+health.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/instrument-master/===
+instrument-master.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+instrument-master.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+instrument-master.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/ipo/===
+admin-ipo.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+client-ipo.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ipo-listing.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ipo.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ipo.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/ipo/dto/===
+allocate-ipo.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+create-ipo.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+set-ipo-instrument.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-ipo-pricing.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-ipo-status.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/kyc/===
+kyc-access.guard.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+kyc.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+kyc.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+kyc.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/loans/dto/===
+approve-loan.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+create-loan.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+repay-loan.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/loans/===
+loans.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+loans.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+loans.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market-data/dto/===
+update-market-quote.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market-data/===
+historical-market-data.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+indian-indices.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-data-health.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-data.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-data.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-data.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-news.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+nse-sync.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+quote-ingestion.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+streaming-market-data.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market-data/providers/===
+market-data-provider.interface.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-data-provider.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+streaming-market-data-provider.interface.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+streaming-provider-registry.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+yahoo-chart.types.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+yahoo.provider.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market-data/websocket/market-data/===
+market-data.gateway.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market-session/===
+market-session.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market-session.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market/===
+admin-market.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+market.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/market/dto/===
+create-instrument.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-admin-instruments-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-instruments-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-instrument-placement.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-instrument-status.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-live-quote.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/matching/===
+matching-scan.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+matching.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+matching.scheduler.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+matching.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/observability/===
+all-exceptions.filter.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+business-events.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+error-report.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+metrics.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+metrics.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/ops-content/===
+announcements.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+app-client-settings.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+insight-articles.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+insight-legacy-import.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ops-content.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+ops-content.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/ops-content/dto/===
+ops-content.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/orders/===
+admin-orders.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-orders.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-trades.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-trades.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+orders.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+orders.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+orders.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+trading-orders.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/orders/dto/===
+create-order.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-admin-orders-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-admin-trades-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-orders-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-positions-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+list-trades-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/otc/dto/===
+create-otc-offer.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+submit-otc-order.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-otc-offer.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/otc/===
+otc.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+otc.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+otc.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/prisma/===
+prisma.module.ts[DB6M]: F:Defines database schema or seed behavior | R:- | A:Persistence boundary | S:-
+prisma.service.ts[DB6M]: F:Defines database schema or seed behavior | R:- | A:Persistence boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/storage/===
+private-object-storage.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+storage.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/support/===
+account-recovery.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+account-recovery.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+operator.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+operator.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+support.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+support.gateway.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+support.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+support.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/testing/===
+create-http-app.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+stub-auth.guard.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/trading/===
+calculator.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+commission.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+day-order-expiry.scheduler.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+freeze.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+limit-order.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+order-cancellation.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+order-preparation.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+order-submission.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+settlement.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+trading.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+trading.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+validator.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/users/===
+admin-users.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+admin-users.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+users.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+users.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/users/dto/===
+list-admin-users-query.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-user-role.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+update-user-status.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/vip/===
+vip-admin.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-business.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-clients.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-config.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-cumulative-deposit.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-phone.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-recommendation.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-team.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip-tier-change.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip.constants.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+vip.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/watchlist/===
+watchlist.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+watchlist.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+watchlist.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/withdrawal/dto/===
+create-withdrawal-request.dto.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/api/src/withdrawal/===
+withdrawal.controller.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+withdrawal.module.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+withdrawal.service.ts[DB6S]: F:Implements application service or domain support logic | R:- | A:Application service boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/===
+.gitignore[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+.metadata[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+DEVICE_TESTING.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+analysis_options.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+devtools_options.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+pubspec.lock[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+pubspec.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/===
+.gitignore[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+build.gradle.kts[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+gradle.properties[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+gradlew[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+gradlew.bat[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+settings.gradle.kts[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/===
+build.gradle.kts[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/debug/===
+AndroidManifest.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/===
+AndroidManifest.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/kotlin/com/indiatrading/india_trading_app/===
+MainActivity.kt[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+SaleSmartlyChatActivity.kt[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/res/drawable-v21/===
+launch_background.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/res/drawable/===
+launch_background.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/res/values-night/===
+styles.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/res/values/===
+styles.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/main/res/xml/===
+backup_rules.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+data_extraction_rules.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/app/src/profile/===
+AndroidManifest.xml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/android/gradle/wrapper/===
+gradle-wrapper.properties[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/integration_test/===
+critical_flows_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/===
+.gitignore[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+Podfile[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Flutter/===
+AppFrameworkInfo.plist[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+Debug.xcconfig[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+Release.xcconfig[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner.xcodeproj/===
+project.pbxproj[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner.xcodeproj/project.xcworkspace/===
+contents.xcworkspacedata[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/===
+IDEWorkspaceChecks.plist[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+WorkspaceSettings.xcsettings[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner.xcodeproj/xcshareddata/xcschemes/===
+Runner.xcscheme[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner.xcworkspace/===
+contents.xcworkspacedata[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner.xcworkspace/xcshareddata/===
+IDEWorkspaceChecks.plist[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+WorkspaceSettings.xcsettings[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner/===
+AppDelegate.swift[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+Info.plist[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+Runner-Bridging-Header.h[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+SaleSmartlyBridge.swift[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+SceneDelegate.swift[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner/Assets.xcassets/AppIcon.appiconset/===
+Contents.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner/Assets.xcassets/LaunchImage.imageset/===
+Contents.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/Runner/Base.lproj/===
+LaunchScreen.storyboard[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+Main.storyboard[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/ios/RunnerTests/===
+RunnerTests.swift[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/===
+app_config.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+main.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/l10n/===
+app_language.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+hindi_language.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+regional_languages.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/models/===
+account_transaction.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+async_data_state.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_session.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+company_showcase.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+deposit_request.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+institutional_opportunity.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_history.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_news_item.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+picked_bytes_file.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+portfolio_position.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_quote.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_order.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+withdrawal_request.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/pages/===
+account_content_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_security_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_settings_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_settings_page_banks_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_settings_page_kyc_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_settings_page_preferences_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_settings_page_profile_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_settings_page_reconciliation_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+appearance_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+bank_details_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+deposit_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+forgot_password_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+index_detail_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+index_list_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_upload_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_upload_page_overview_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_upload_page_steps_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_upload_page_submission_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_upload_page_upload_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+language_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+legal_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+legal_page_content.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+loan_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+login_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_news_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_account_actions.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_account_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_data_lifecycle.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_ipo_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_market_actions.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_market_view.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_portfolio_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_page_profile_settings_drawer.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_banner_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_catalog_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_content_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_data_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_empty_state_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_indices_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_sector_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_page_stock_list_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+movers_list_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+notifications_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_portfolio_details_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_portfolio_holdings_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_portfolio_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_portfolio_summary_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+register_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+register_page_content.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+selfie_camera_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+splash_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_detail_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_detail_page_data_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_detail_page_market_range.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_detail_page_order_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_detail_page_stats_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_detail_page_tabs_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_search_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+support_chat_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+support_chat_page_controls.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_center_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_center_page_action_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_center_page_content_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_center_page_data_lifecycle.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_center_page_tabs_section.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+two_factor_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+withdrawal_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+withdrawal_page_cards.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/services/===
+announcements_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+api_failure.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_client_settings_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_content_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_version.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_service_support.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_session_store.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+client_account_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+device_biometrics.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+error_telemetry.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+featured_instruments_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+insight_articles_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+insight_list_result.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo_notice_store.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+local_data_cache.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+logo_market_page.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_data_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_socket_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+otc_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+salesmartly_platform.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+salesmartly_platform_native.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+salesmartly_platform_stub.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+salesmartly_platform_web.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+salesmartly_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+secure_credential_store.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+session_expiry_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+watchlist_service.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/theme/===
+app_breakpoints.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_colors.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_motion.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_radius.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_shadows.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_spacing.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_theme.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_typography.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_ui.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+appearance_settings.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_layout.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/utils/===
+app_responsive.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+client_error_message.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+number_formatters.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_status_presentation.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_category.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/widgets/===
+aadhaar_mark.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+account_metrics.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_buttons.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_chip.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_feedback.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_page_scaffold.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_settings_gates.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_status_label.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+floating_support_button.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+holding_detail_sheet.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_announcement_banner.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+international_phone_field.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_signature_pad.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_header.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_status_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+membership_tier_badge.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+onboarding_auth_widgets.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+onboarding_kyc_widgets.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+onboarding_widgets.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+professional_chart_canvas.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_identity.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_menu.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+record_detail_sheet.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+scrolling_notice_text.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+sector_performance.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_history_chart.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_list_tile.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_logo.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+support_chat_launcher.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+support_ui_metrics.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/widgets/home/===
+home_action_button.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_dashboard.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_dashboard_content.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_dashboard_data.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_dashboard_movers.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_dashboard_overview.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_kyc_todo.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+mini_line_chart_painter.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/widgets/markets/===
+browse_only_banner.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+instrument_browse.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+instrument_news.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_index_ref.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_index_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+news_article_sheet.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_quote_hero.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/lib/widgets/trading/===
+funds_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+history_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+holdings_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+institutional_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_confirm_dialog.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_estimate_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_ticket.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+orders_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+otc_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+pending_center_tab.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_offer_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_risk_notice.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+standard_order_details_sheet.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trade_list.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_guide_card.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/test/===
+account_metrics_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+api_failure_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_breakpoints_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_config_security_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_content_service_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_design_system_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_language_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+app_settings_and_ops_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+async_data_state_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_capabilities_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_kyc_characterization_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_motion_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_session_refresh_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_session_storage_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+auth_ui_phase_a_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+cancel_confirmation_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+client_error_language_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+deposit_history_j1_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+error_telemetry_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+funds_load_state_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+holdings_responsive_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+home_dashboard_phase_c1_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo_application_debt_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo_notice_store_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ipo_product_j2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+j2_funds_capture_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+j3_profile_capture_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+j5_design_system_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+j6_final_ui_fixes_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+k1_1_country_flags_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+k1_auth_country_copy_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+k3_auth_responsive_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_flow_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_steps_phase_b2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+kyc_ui_phase_b_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+language_save_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+loan_application_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+loan_confirmation_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+loan_display_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+loan_refresh_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+loan_states_j2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+logo_market_page_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_data_exchange_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_history_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_news_refresh_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_search_response_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+market_status_card_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_phase_c2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+markets_phase_c3_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+membership_tier_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+mini_line_chart_painter_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+mobile_layout_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+notifications_concurrency_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+number_formatters_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ops_content_models_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_cancel_recovery_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_confirmation_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_details_price_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_idempotency_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+order_result_message_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+otc_tab_j2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+password_recovery_lifecycle_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+portfolio_feedback_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+portfolio_position_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+portfolio_ui_phase_e1_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+preferences_concurrency_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_category_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_offer_experience_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+product_portfolio_page_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_loading_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_security_j3_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_settings_drawer_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_ui_phase_e2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+profile_vip_readonly_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+security_load_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+shared_mobile_widgets_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_history_chart_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_logo_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_quote_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+stock_search_interaction_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trade_navigation_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trade_order_ui_phase_d1_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trade_order_ui_phase_d2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_account_snapshot_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_order_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+trading_refresh_failure_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+two_factor_validation_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+ui_capture_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+watchlist_identity_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+watchlist_response_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+widget_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+withdrawal_page_j2_test.dart[AU6M]: F:Implements application user-interface behavior | R:- | A:Application UI orchestration | S:-
+
+===C:/Users/suyan/HNW/apps/client/web/===
+index.html[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+manifest.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/docker/===
+admin.Dockerfile[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+api.Dockerfile[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/docker/observability/===
+alerts.yml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+grafana-dashboards.yml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+grafana-datasource.yml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+hnw-api-dashboard.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+prometheus.yml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+
+===C:/Users/suyan/HNW/docs/===
+APP_BACKEND_ADMIN_GAP_MATRIX.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_CMS_AUDIT.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_END_TO_END_MATRIX.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_PHASE_11A.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_PHASE_11B.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_PHASE_12_ADMIN.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_PHASE_13_CLIENT.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_CONTENT_TARGET_ARCHITECTURE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_DESIGN_SYSTEM.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_NAVIGATION_CLEANUP.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+APP_UI_UX_AUDIT.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+ARCHITECTURE_IMPROVEMENT_BACKLOG.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+CONFIGURATION_CLASSIFICATION.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+CURRENT_PROJECT_AUDIT_2026-09-24.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+FINAL_ACCEPTANCE_AUDIT.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+FINAL_BLOCKER_REMEDIATION.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+FINAL_HANDOFF_2026-09-24.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+FLUTTER_ENGINEERING_RULES.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+HARMONYOS_FEASIBILITY.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+HOME_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+MARKETS_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+PORTFOLIO_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+PROFILE_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+STATUS.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+TRADE_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+UI与KYC更新说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+上线准备与验收.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+交付验收清单.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+可观测性与告警.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+客户APP发布配置.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+本地启动与联调.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+生产部署说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+移动端双端同步说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+运营流程说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+项目交付总览.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+
+===C:/Users/suyan/HNW/scripts/===
+backup-postgres.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+backup-postgres.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+backup-private-objects.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+build-admin-roles.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+build-android-e2e.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+check-directory-coverage.mjs[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+check-flutter-architecture.mjs[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+check-source-file-size.mjs[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+flutter-architecture-baseline.json[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+recovery-drill.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+restore-postgres.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+restore-postgres.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+smoke-auth-content.mjs[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+start-backends.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+start-docker-desktop-stack.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+start-docker-stack.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+start-orbstack-stack.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+verification-test.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+verify-all.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+verify-all.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+verify-migration-upgrade.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+verify-release-config.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+virus-scan-stub.mjs[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-

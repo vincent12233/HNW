@@ -64,3 +64,9 @@ backups/
 # Local visual verification captures and accidental Windows cache folder
 artifacts/
 %SystemDrive%/
+
+# AOCI agent host integration (machine-bound; do not commit)
+.mcp.json
+.mcp.json.backup.*
+.codex/config.toml
+.codex/config.toml.backup.*

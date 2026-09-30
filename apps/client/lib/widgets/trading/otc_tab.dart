@@ -242,7 +242,7 @@ class _OtcTabState extends State<OtcTab> {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: AppText('OTC order submitted · Pending review'),
+          content: AppText('OTC order submitted · Status pending'),
         ),
       );
     } on OtcException catch (error) {
@@ -260,7 +260,7 @@ class _OtcTabState extends State<OtcTab> {
     final label = displayStatusLabel(
       order.status,
       labels: const {
-        'PENDING': 'Pending review',
+        'PENDING': 'Pending',
         'APPROVED': 'Approved',
         'REJECTED': 'Rejected',
       },
@@ -273,7 +273,7 @@ class _OtcTabState extends State<OtcTab> {
           status: AppLabeledStatus(
             status: order.status,
             labels: const {
-              'PENDING': 'Pending review',
+              'PENDING': 'Pending',
               'APPROVED': 'Approved',
               'REJECTED': 'Rejected',
             },

@@ -168,9 +168,9 @@ extension _WithdrawalPageCards on _WithdrawalPageState {
           _kv('Bank Status', bank?['status']?.toString() ?? 'Added'),
           const SizedBox(height: AppSpacing.lg),
           AppText(
-            'Submit here in the app. Finance reviews your request. '
-            'The amount is frozen right away. Approval deducts cash; '
-            'rejection releases the freeze.',
+            'Submit your request securely in the app. The amount remains '
+            'reserved until processing is complete, and you will receive an '
+            'update when the status changes.',
             style: AppTypography.bodySmall.copyWith(
               color: AppColors.textSecondary,
               height: 1.4,

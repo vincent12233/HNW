@@ -152,7 +152,7 @@ class _LoanPageState extends State<LoanPage> {
                 compact: true,
                 title: 'No loan applications',
                 message:
-                    'Submit a request for finance review. Approval is not automatic.',
+                    'Submit your request for assessment. Availability and terms are shown before confirmation.',
                 icon: Icons.request_quote_outlined,
               )
             else

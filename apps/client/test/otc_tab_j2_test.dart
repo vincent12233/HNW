@@ -119,7 +119,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Pending review'), findsWidgets);
+    expect(find.text('Pending'), findsWidgets);
     expect(find.textContaining('In holdings'), findsNothing);
     expect(find.textContaining('settled'), findsNothing);
     expect(tester.takeException(), isNull);
@@ -146,7 +146,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(service.submits, 1);
     expect(find.text('OTC1'), findsNothing);
-    expect(find.text('Pending review'), findsNothing);
+    expect(find.text('Pending'), findsNothing);
   });
 
   testWidgets('OTC reduced motion error keeps retry at 414', (tester) async {

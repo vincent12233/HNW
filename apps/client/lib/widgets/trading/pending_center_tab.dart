@@ -241,7 +241,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
               if (application.status == IpoApplicationStatus.applied) ...[
                 const SizedBox(height: 14),
                 const AppText(
-                  'Application submitted. Allocation is pending relationship manager review.',
+                  'Application submitted. Allocation status will be updated here.',
                   style: AppTypography.bodySmall,
                 ),
               ],
@@ -272,7 +272,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                       ),
                       const SizedBox(height: 4),
                       AppText(
-                        'Contact support to add funds. Payment is applied automatically after deposit.',
+                        'Add the required funds using the available account options to complete your subscription.',
                         style: AppTypography.bodySmall.copyWith(
                           color: AppColors.warning,
                         ),
@@ -373,7 +373,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                             ? 'Your IPO allotment is confirmed. Add the required funds to complete your subscription. No further action is needed after funds arrive.'
                             : application.shouldMoveToHoldings
                             ? 'Your allocated shares have been added to your holdings.'
-                            : 'Allocation is recorded. Holdings update after finance confirms payment.',
+                            : 'Allocation is recorded. Holdings will update when settlement is complete.',
                       ),
                     ],
                   ),

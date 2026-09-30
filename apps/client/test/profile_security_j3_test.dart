@@ -173,7 +173,8 @@ void main() {
 
   testWidgets('profile loading error retry and partial fields', (tester) async {
     setView(tester, const Size(390, 844));
-    final service = J3AccountFake()..profileError = const AuthException('offline');
+    final service = J3AccountFake()
+      ..profileError = const AuthException('offline');
     await tester.pumpWidget(
       host(
         AccountSettingsPage(section: 'profile', accountService: service),
@@ -214,7 +215,10 @@ void main() {
     service.updateError = const AuthException('Unable to save profile');
     await tester.tap(find.text('Save changes'));
     await tester.pumpAndSettle();
-    expect(tester.widget<TextField>(find.byType(TextField)).controller!.text, 'Kept Name');
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'Kept Name',
+    );
     expect(find.text('Unable to save profile'), findsOneWidget);
   });
 
@@ -242,7 +246,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Unavailable'), findsWidgets);
     expect(find.textContaining('123456789012'), findsNothing);
-    expect(find.textContaining('This is not a completed bank verification'), findsOneWidget);
+    expect(find.text('Bank account details saved securely'), findsOneWidget);
     expect(find.byTooltip('Copy'), findsNothing);
     expectNoSensitiveLeaks(tester);
   });
@@ -269,7 +273,10 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Current password is incorrect'), findsOneWidget);
     expect(
-      tester.widget<TextFormField>(find.byType(TextFormField).first).controller!.text,
+      tester
+          .widget<TextFormField>(find.byType(TextFormField).first)
+          .controller!
+          .text,
       'oldpass12',
     );
     expect(service.passwordCalls, [
@@ -290,7 +297,9 @@ void main() {
     expect(service.passwordCalls, hasLength(2));
   });
 
-  testWidgets('session expiry notice stays on the sign-in path', (tester) async {
+  testWidgets('session expiry notice stays on the sign-in path', (
+    tester,
+  ) async {
     setView(tester, const Size(390, 844));
     await tester.pumpWidget(
       host(
@@ -302,7 +311,10 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Your session has expired. Please sign in again.'), findsOneWidget);
+    expect(
+      find.text('Your session has expired. Please sign in again.'),
+      findsOneWidget,
+    );
     expect(find.textContaining('Welcome Back'), findsOneWidget);
     expectNoSensitiveLeaks(tester);
   });
@@ -319,14 +331,21 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('These switches save to the server. A failed change is not kept as saved.'), findsOneWidget);
+    expect(
+      find.text(
+        'These switches save to the server. A failed change is not kept as saved.',
+      ),
+      findsOneWidget,
+    );
     await tester.tap(find.text('Order notifications'));
     await tester.pumpAndSettle();
     expect(service.preferenceCalls, 1);
     expect(service.preferenceUpdates.first['orderNotifications'], isTrue);
   });
 
-  testWidgets('legal document stays scrollable with version text', (tester) async {
+  testWidgets('legal document stays scrollable with version text', (
+    tester,
+  ) async {
     setView(tester, const Size(320, 568));
     await tester.pumpWidget(
       host(
@@ -371,7 +390,9 @@ void main() {
     expect(find.text('Retry'), findsOneWidget);
   });
 
-  testWidgets('leaving during delayed profile load does not throw', (tester) async {
+  testWidgets('leaving during delayed profile load does not throw', (
+    tester,
+  ) async {
     final service = J3AccountFake()
       ..profileGate = Completer<Map<String, dynamic>>();
     await tester.pumpWidget(

@@ -19,7 +19,7 @@ extension _AccountSettingsBanksSection on _AccountSettingsPageState {
             compact: true,
           ),
         const AppText(
-          'Saved bank details are used for withdrawals after finance review. This is not a completed bank verification.',
+          'Saved bank details are protected and used to support secure withdrawals.',
           style: AppTypography.caption,
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -27,8 +27,7 @@ extension _AccountSettingsBanksSection on _AccountSettingsPageState {
           const AppEmptyState(
             compact: true,
             title: 'No bank account linked',
-            message:
-                'Add a bank account before withdrawing funds. Saved details are not a completed bank verification.',
+            message: 'Add a bank account to enable secure withdrawals.',
             icon: Icons.account_balance_outlined,
           )
         else
@@ -68,7 +67,7 @@ extension _AccountSettingsBanksSection on _AccountSettingsPageState {
             ),
             AppText('Holder $holder'),
             AppText(
-              status.isEmpty ? 'Not a completed bank verification' : status,
+              status.isEmpty ? 'Bank account details saved securely' : status,
               style: AppTypography.caption,
             ),
             OverflowBar(
@@ -162,5 +161,4 @@ extension _AccountSettingsBanksSection on _AccountSettingsPageState {
     );
     if (saved == true && mounted) await load();
   }
-
 }

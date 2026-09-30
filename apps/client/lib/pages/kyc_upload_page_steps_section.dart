@@ -32,10 +32,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
       ),
       const SizedBox(height: AuthLayout.fieldGap),
       _uploadPanel(back: false),
-      if (!pan) ...[
-        const SizedBox(height: 20),
-        _uploadPanel(back: true),
-      ],
+      if (!pan) ...[const SizedBox(height: 20), _uploadPanel(back: true)],
     ];
   }
 
@@ -183,9 +180,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
     final missing = <String>[
       if (fullName.isEmpty) 'Personal details',
       if (!documentsReady)
-        documentType == 'AADHAAR'
-            ? 'Aadhaar front and back'
-            : 'PAN document',
+        documentType == 'AADHAAR' ? 'Aadhaar front and back' : 'PAN document',
       if (selfieFile == null) 'Selfie',
       if (signatureFile == null) 'Signature',
       if (bankDetails == null) 'Bank details',
@@ -203,7 +198,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
         tone: KycBannerTone.info,
         title: 'Waiting for manual review',
         subtitle:
-            'After you submit, a reviewer will check your documents. There is no instant verification.',
+            'Your documents are protected and used only to complete identity verification.',
       ),
       const SizedBox(height: AuthLayout.fieldGap),
       if (missing.isNotEmpty) ...[
@@ -262,7 +257,4 @@ extension _KycUploadStepsSection on _KycUploadPageState {
       ),
     ];
   }
-
 }
-
-

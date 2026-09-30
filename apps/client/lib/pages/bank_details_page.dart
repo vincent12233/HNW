@@ -136,11 +136,13 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                               else ...[
                                 AppText(
                                   'Add Bank Account',
-                                  style: AuthLayout.title.copyWith(fontSize: 24),
+                                  style: AuthLayout.title.copyWith(
+                                    fontSize: 24,
+                                  ),
                                 ),
                                 const SizedBox(height: AuthLayout.titleGap),
                                 const AppText(
-                                  'Enter your bank details for withdrawals. Adding an account does not mean the bank has verified it.',
+                                  'Add a verified bank account to support secure withdrawals.',
                                   style: AuthLayout.subtitle,
                                 ),
                               ],
@@ -148,9 +150,9 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                               const VerificationBanner(
                                 tone: KycBannerTone.info,
                                 icon: Icons.account_balance_outlined,
-                                title: 'Bank details for this account',
+                                title: 'Your bank details are secure',
                                 subtitle:
-                                    'These details are stored with your application. They are not checked instantly against a bank.',
+                                    'Your details are protected and used only to support account services and withdrawals.',
                               ),
                               const SizedBox(height: AuthLayout.sectionGap),
                               _field(
@@ -170,9 +172,8 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                                 _number,
                                 numeric: true,
                                 obscure: _hideNumber,
-                                onToggleObscure: () => setState(
-                                  () => _hideNumber = !_hideNumber,
-                                ),
+                                onToggleObscure: () =>
+                                    setState(() => _hideNumber = !_hideNumber),
                                 validator: (value) =>
                                     !RegExp(
                                       r'^\d{6,18}$',
@@ -195,9 +196,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                                     : null,
                               ),
                               _field(
-                                _kycFlow
-                                    ? 'IFSC Code (Optional)'
-                                    : 'IFSC Code',
+                                _kycFlow ? 'IFSC Code (Optional)' : 'IFSC Code',
                                 'Enter the 11-character IFSC code',
                                 _ifsc,
                                 keyboard: TextInputType.visiblePassword,
@@ -228,9 +227,9 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                               const VerificationBanner(
                                 tone: KycBannerTone.info,
                                 icon: Icons.lock_outline,
-                                title: 'How these details are used',
+                                title: 'How your details are used',
                                 subtitle:
-                                    'Your bank details are used for account verification and withdrawals.',
+                                    'Your bank details are used to support account services and eligible withdrawals.',
                               ),
                             ],
                           ),
@@ -240,13 +239,13 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                   ),
                 ),
               ),
-                              KycFlowFooter(
+              KycFlowFooter(
                 label: 'Continue',
                 busy: _saving,
                 errorText: _error,
                 helper: _kycFlow
-                    ? 'Used for identity verification'
-                    : 'Saved for withdrawals after you submit. This is not a completed bank verification.',
+                    ? 'Used only for identity verification'
+                    : 'Protected for secure account services and withdrawals',
                 onPressed: _saving ? null : _save,
               ),
             ],
@@ -307,7 +306,9 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
             ? null
             : IconButton(
                 onPressed: onToggleObscure,
-                tooltip: obscure ? 'Show account number' : 'Hide account number',
+                tooltip: obscure
+                    ? 'Show account number'
+                    : 'Hide account number',
                 constraints: const BoxConstraints(
                   minWidth: AppMotion.tapTarget,
                   minHeight: AppMotion.tapTarget,

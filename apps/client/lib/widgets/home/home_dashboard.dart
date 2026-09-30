@@ -34,7 +34,7 @@ class HomeDashboard extends StatefulWidget {
     required this.totalAssets,
     required this.availableFunds,
     required this.frozenFunds,
-    required this.todayPnl,
+    required this.realizedPnl,
     required this.accountLoaded,
     required this.accountFailed,
     required this.accountRefreshing,
@@ -90,7 +90,7 @@ class HomeDashboard extends StatefulWidget {
   final double totalAssets;
   final double availableFunds;
   final double frozenFunds;
-  final double todayPnl;
+  final double realizedPnl;
   final double? unrealizedPnl;
   final bool accountLoaded;
   final bool accountFailed;
@@ -233,11 +233,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
                   ),
                   AccountMetric('Frozen Funds', _money(widget.frozenFunds)),
                   AccountMetric(
-                    "Today's P&L",
-                    _money(widget.todayPnl, signed: true),
+                    'Realized P&L',
+                    _money(widget.realizedPnl, signed: true),
                     color: widget.hideBalances || !widget.accountLoaded
                         ? AppColors.textPrimary
-                        : AppUiGainLoss.color(widget.todayPnl),
+                        : AppUiGainLoss.color(widget.realizedPnl),
                   ),
                   if (widget.unrealizedPnl != null)
                     AccountMetric(

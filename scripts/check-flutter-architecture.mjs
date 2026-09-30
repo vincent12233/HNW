@@ -35,12 +35,14 @@ const visualExcluded = [
 const copyExcluded = ['/l10n/', '/models/', '/services/'];
 
 const directSecureStorage = [];
+const directPageHttp = [];
 let rawColorLines = 0;
 let literalFontSizeLines = 0;
 let userVisibleLiteralLines = 0;
 for (const path of files) {
   const name = normalized(path);
   const source = await readFile(path, 'utf8');
+  if (name.includes('/pages/') && /package:(http|dio)\//.test(source)) directPageHttp.push(name);
   if (
     !directStorageAllowed.has(name) &&
     (source.includes('FlutterSecureStorage') ||
@@ -73,6 +75,7 @@ for (const path of files) {
 }
 
 const failures = [];
+if (directPageHttp.length) failures.push(`Page HTTP access must move to services: ${directPageHttp.join(', ')}`);
 if (directSecureStorage.length) {
   failures.push(
     `FlutterSecureStorage must be accessed only through SecureCredentialStore:\n${directSecureStorage

@@ -168,7 +168,7 @@ class _LoginPageState extends State<LoginPage> with WidgetsBindingObserver {
     String? nextPasswordError;
     String? nextVerificationError;
     if (phone == null) {
-      nextPhoneError = 'Enter a valid Indian mobile number';
+      nextPhoneError = 'Enter a valid mobile number for the selected country';
     }
     if (passwordController.text.length < 8) {
       nextPasswordError = 'Password must be at least 8 characters';

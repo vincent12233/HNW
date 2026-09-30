@@ -1,3 +1,4 @@
+import 'package:country_flags/country_flags.dart';
 import '../l10n/app_language.dart';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
@@ -6,13 +7,6 @@ import 'package:phone_numbers_parser/phone_numbers_parser.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_radius.dart';
 import '../theme/auth_layout.dart';
-
-const _emojiFontFallback = <String>[
-  'Apple Color Emoji',
-  'Segoe UI Emoji',
-  'Noto Color Emoji',
-  'Twemoji Mozilla',
-];
 
 String? internationalPhone(String value, String countryCode) {
   try {
@@ -52,15 +46,9 @@ class CountryFlagGlyph extends StatelessWidget {
           width: size,
           height: size,
           child: Center(
-            child: Text(
-              country.flagEmoji,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: size * 0.86,
-                height: 1,
-                leadingDistribution: TextLeadingDistribution.even,
-                fontFamilyFallback: _emojiFontFallback,
-              ),
+            child: CountryFlag.fromCountryCode(
+              country.countryCode,
+              theme: ImageTheme(width: size, height: size * 2 / 3),
             ),
           ),
         ),
@@ -88,7 +76,6 @@ void showAuthCountryPicker({
         color: AppColors.textPrimary,
       ),
       searchTextStyle: const TextStyle(fontSize: 14, letterSpacing: 0),
-      emojiFontFamilyFallback: _emojiFontFallback,
     ),
     onSelect: onSelect,
   );
@@ -210,7 +197,7 @@ class InternationalPhoneField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: tr(label),
         floatingLabelBehavior: FloatingLabelBehavior.always,
-        errorText: errorText,
+        errorText: errorText == null ? null : tr(errorText!),
         errorMaxLines: 4,
         prefixIconConstraints: const BoxConstraints(
           minWidth: 72,

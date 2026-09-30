@@ -98,7 +98,7 @@ HomeDashboard home({ValueChanged<HomeIndexQuote>? onOpenIndex}) {
     totalAssets: 100000,
     availableFunds: 20000,
     frozenFunds: 1000,
-    todayPnl: 120,
+    realizedPnl: 120,
     accountLoaded: true,
     accountFailed: false,
     accountRefreshing: false,

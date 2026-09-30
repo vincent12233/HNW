@@ -8,9 +8,15 @@ const roleByPort: Record<string, BackendRole> = {
   "3007": "SUPPORT",
 };
 
-export function getBackendRole(): BackendRole | undefined {
+export function getConfiguredBackendRole(): BackendRole | undefined {
   const configured = process.env.NEXT_PUBLIC_BACKEND_ROLE?.trim().toUpperCase();
   if (configured && ["ADMIN", "MANAGER", "FINANCE", "BUSINESS", "SUPPORT"].includes(configured)) return configured as BackendRole;
+  return undefined;
+}
+
+export function getBackendRole(): BackendRole | undefined {
+  const configured = getConfiguredBackendRole();
+  if (configured) return configured;
   if (typeof window === "undefined") return undefined;
   return roleByPort[window.location.port];
 }

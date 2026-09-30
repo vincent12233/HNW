@@ -66,7 +66,7 @@ extension _RegisterPageContent on _RegisterPageState {
                     ),
                     SizedBox(height: AuthLayout.titleGap),
                     AppText(
-                      'Register with an Indian mobile number, password, and invite code.',
+                      'Register with your mobile number, password, and invite code.',
                       style: AuthLayout.subtitle,
                     ),
                   ],

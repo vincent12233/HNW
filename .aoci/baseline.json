@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-09-29T12:04:48Z",
-  "updated_at": "2026-09-30T06:21:25Z",
+  "updated_at": "2026-09-30T09:09:57Z",
   "files": {
     ".dockerignore": {
       "role": "index",
@@ -176,6 +176,22 @@
       "sha256": "f6bca0e7f46a94bd3349fdb86511cbec4a9091e409b62dd2d6b8c1fdb9a3ce00",
       "size": 4,
       "normalized_sha256": "68ca3fba3b7e864770cb61aeb306d4bd4354b68ab4dd38450860c5d823e42a53"
+    },
+    ".pub-cache/hosted/pub.dev/country_flags-4.1.2/test/fonts/NotoColorEmoji.ttf": {
+      "role": "observe",
+      "sha256": "446d81fe164c5d90a66e4c5ec2173a19b0eb639aa617717fc022d21d854bdaec",
+      "size": 24270832
+    },
+    ".pub-cache/hosted/pub.dev/jovial_svg-1.1.31/demo/assets/fonts/README.rollerball": {
+      "role": "observe",
+      "sha256": "1d4194cea88360e016e1dc2951aa82fac5b331edf468e9b0e861b16ee0c41a44",
+      "size": 135,
+      "normalized_sha256": "1d4194cea88360e016e1dc2951aa82fac5b331edf468e9b0e861b16ee0c41a44"
+    },
+    ".pub-cache/hosted/pub.dev/jovial_svg-1.1.31/demo/assets/fonts/rollerball.ttf": {
+      "role": "observe",
+      "sha256": "858c89c1bd958166f2e8f471d3c8f3f78ad6009c7fda03d380287bd2afbf8f44",
+      "size": 22360
     },
     ".pub-cache/hosted/pub.dev/leak_tracker-11.0.2/test/tests/leak_tracking/_gc_counter_test.dart": {
       "role": "observe",
@@ -6496,8 +6512,8 @@
     },
     "scripts/tests/production-operations.test.mjs": {
       "role": "observe",
-      "sha256": "b22f51b9578aaaa63ab84cdee3a3d4f02d4dc1fd70c6f9a5c9e60531ac316013",
-      "size": 3233,
+      "sha256": "4e1cf92d150b1e7d5e682e875d53b6a1c06059b306bb702e44febb10076c5f89",
+      "size": 3232,
       "normalized_sha256": "4e1cf92d150b1e7d5e682e875d53b6a1c06059b306bb702e44febb10076c5f89"
     },
     "scripts/tests/recovery-drill.test.ps1": {
@@ -6508,8 +6524,8 @@
     },
     "scripts/tests/verify-environment.test.ps1": {
       "role": "observe",
-      "sha256": "5107166db00c9c158607b35c127f9300d049530f0259f18c41380952c12bf99b",
-      "size": 4749,
+      "sha256": "dc41a09738023064aaa9f53908257ab4472a6c40743198bf310fafcbceb2302a",
+      "size": 4652,
       "normalized_sha256": "dc41a09738023064aaa9f53908257ab4472a6c40743198bf310fafcbceb2302a"
     },
     "scripts/verification-test.ps1": {

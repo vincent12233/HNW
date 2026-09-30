@@ -234,7 +234,13 @@ void main() {
     await tester.pump();
     expect(find.text('9876543210'), findsOneWidget);
     expect(find.text('+61'), findsOneWidget);
-    expect(find.text(Country.parse('AU').flagEmoji), findsOneWidget);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CountryFlagGlyph && widget.country.countryCode == 'AU',
+      ),
+      findsOneWidget,
+    );
     expect(find.byTooltip('Australia flag, country code +61'), findsOneWidget);
     expect(phoneField(tester).country.countryCode, 'AU');
     expectNoSmsEmailOtpCopy(tester);
@@ -268,7 +274,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.text('+61'), findsOneWidget);
-    expect(find.text(Country.parse('AU').flagEmoji), findsWidgets);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CountryFlagGlyph && widget.country.countryCode == 'AU',
+      ),
+      findsWidgets,
+    );
     await disposeTree(tester);
   });
 

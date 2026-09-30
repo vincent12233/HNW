@@ -53,6 +53,7 @@ dependencies:
   k_chart: ^0.7.1
   web: ^1.1.1
   package_info_plus: ^10.2.1
+  country_flags: ^4.1.2
 dev_dependencies:
   flutter_test:
     sdk: flutter

@@ -33,7 +33,7 @@ extension _MarketHomeMarketView on _MarketHomePageState {
     });
     final totalPortfolioValue =
         _authoritativeTotalAsset ?? localTotalPortfolioValue;
-    final todayPnl = localUnrealizedPnl;
+    final realizedPnl = realizedProfitLoss;
     final unrealizedPnl = _authoritativeUnrealizedPnl ?? localUnrealizedPnl;
     final vix =
         indexQuotes['INDIAVIX'] ??
@@ -61,7 +61,7 @@ extension _MarketHomeMarketView on _MarketHomePageState {
           totalAssets: totalPortfolioValue,
           availableFunds: availableBalance,
           frozenFunds: frozenBalance,
-          todayPnl: todayPnl,
+          realizedPnl: realizedPnl,
           unrealizedPnl: unrealizedPnl,
           accountLoaded: _accountSnapshotLoaded,
           accountFailed: _accountSnapshotFailed,

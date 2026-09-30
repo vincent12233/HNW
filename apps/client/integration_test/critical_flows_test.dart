@@ -24,7 +24,10 @@ void main() {
     await tester.ensureVisible(find.text('Login'));
     await tester.tap(find.text('Login'));
     await tester.pump(const Duration(milliseconds: 500));
-    expect(find.text('Enter a valid Indian mobile number'), findsOneWidget);
+    expect(
+      find.text('Enter a valid mobile number for the selected country'),
+      findsOneWidget,
+    );
     expect(find.text('Password must be at least 8 characters'), findsOneWidget);
   });
 

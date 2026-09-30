@@ -1,5 +1,11 @@
 // Hindi local fallback copy. Keep keys aligned with the English source text.
 const hindi = <String, String>{
+  'Enter a valid mobile number for the selected country':
+      'चुने गए देश का मान्य मोबाइल नंबर दर्ज करें',
+  'Enter your registered mobile number': 'अपना पंजीकृत मोबाइल नंबर दर्ज करें',
+  'Register with your mobile number, password, and invite code.':
+      'अपने मोबाइल नंबर, पासवर्ड और आमंत्रण कोड से पंजीकरण करें।',
+
   'Add Money': 'पैसे जोड़ें',
   'Withdraw': 'राशि निकालें',
   'Unable to load account': 'खाता लोड नहीं हो सका',

@@ -1,12 +1,9 @@
 import '../l10n/app_language.dart';
 import 'dart:async';
-import 'dart:convert';
 import 'package:country_picker/country_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import '../app_config.dart';
 import '../services/auth_service.dart';
-import '../services/secure_credential_store.dart';
+import '../services/password_recovery_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_motion.dart';
 import '../theme/app_radius.dart';
@@ -29,9 +26,8 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       password = TextEditingController(),
       confirm = TextEditingController();
   String? phoneError;
-  final credentials = SecureCredentialStore.instance;
   Country country = Country.parse('IN');
-  String? token, error;
+  String? error;
   bool busy = false,
       polling = false,
       ready = false,
@@ -49,7 +45,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
 
   Future<void> _restore() async {
     try {
-      token = await credentials.readRecoveryToken();
+      await recovery.restore();
       if (!mounted) return;
       if (token != null) {
         await _poll();
@@ -68,32 +64,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     timer = Timer.periodic(const Duration(seconds: 5), (_) => _poll());
   }
 
+  final recovery = PasswordRecoveryService();
+  String? get token => recovery.token;
   Future<dynamic> _request(String path, {Map<String, dynamic>? body}) async {
-    final headers = {
-      'Content-Type': 'application/json',
-      'x-recovery-token': ?token,
-    };
-    final uri = Uri.parse('${AppConfig.apiBaseUrl}/auth/recovery/$path');
-    final response =
-        await (body == null
-                ? http.get(uri, headers: headers)
-                : http.post(uri, headers: headers, body: jsonEncode(body)))
-            .timeout(const Duration(seconds: 15));
-    if (response.statusCode == 401) {
-      await credentials.deleteRecoveryToken();
-      token = null;
-      timer?.cancel();
-      throw const AuthException('Please reconnect to customer support');
+    try {
+      return await recovery.request(path, body: body);
+    } finally {
+      if (token == null) timer?.cancel();
     }
-    final data = jsonDecode(response.body);
-    if (response.statusCode < 200 || response.statusCode >= 300) {
-      throw AuthException(
-        data is Map
-            ? data['message']?.toString() ?? 'Request failed'
-            : 'Request failed',
-      );
-    }
-    return data;
   }
 
   Future<void> _poll() async {
@@ -112,11 +90,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
         });
       }
     } catch (e) {
-      final stored = await credentials.readRecoveryToken();
       if (mounted) {
         setState(() {
           error = clientErrorMessage(e);
-          if (stored == null) token = null;
         });
       }
     } finally {
@@ -145,15 +121,14 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
     final number = internationalPhone(phone.text, country.countryCode);
     if (number == null) {
       setState(() {
-        phoneError = 'Enter your registered Indian mobile number';
+        phoneError = 'Enter your registered mobile number';
         error = null;
       });
       return;
     }
     await _run(() async {
       final data = await _request('open', body: {'phone': number});
-      token = data['token'] as String;
-      await credentials.writeRecoveryToken(token!);
+      await recovery.save(data['token'] as String);
       if (!mounted) return;
       await _poll();
       _startPolling();
@@ -177,7 +152,7 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
       'reset',
       body: {'code': code.text.trim(), 'newPassword': password.text},
     );
-    await credentials.deleteRecoveryToken();
+    await recovery.clear();
     await AuthService().disableBiometricQuickLogin();
     if (!mounted) return;
     timer?.cancel();
@@ -411,10 +386,9 @@ class _ForgotPasswordPageState extends State<ForgotPasswordPage> {
                     const AppText('This support request is closed.'),
                     TextButton(
                       onPressed: () async {
-                        await credentials.deleteRecoveryToken();
+                        await recovery.clear();
                         if (mounted) {
                           setState(() {
-                            token = null;
                             closed = false;
                             messages = [];
                           });

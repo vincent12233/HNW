@@ -121,7 +121,7 @@ class _RegisterPageState extends State<RegisterPage> {
     String? nextConfirmError;
     String? nextInviteError;
     if (normalized == null) {
-      nextPhoneError = 'Enter a valid Indian mobile number';
+      nextPhoneError = 'Enter a valid mobile number for the selected country';
     }
     if (password.text.length < 8) {
       nextPasswordError = 'Password must be at least 8 characters';
@@ -198,5 +198,4 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) => _buildContent(context);
-
 }

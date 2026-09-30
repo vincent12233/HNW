@@ -12,7 +12,11 @@ if ($manifest -notmatch 'android:allowBackup="false"') { throw 'Android release 
 if ($manifest -notmatch 'android:usesCleartextTraffic="false"') { throw 'Android release manifest must disable cleartext traffic' }
 if ($gradle -notmatch 'signingConfigs\.getByName\("release"\)') { throw 'Android release must select the release signing config' }
 if ($gradle -notmatch 'Release signing requires android/key\.properties') { throw 'Android release signing guard is missing' }
-if ($plist -notmatch 'NSFaceIDUsageDescription|NSCameraUsageDescription|NSPhotoLibraryUsageDescription') { throw 'iOS privacy usage descriptions are incomplete' }
+foreach ($privacyKey in @('NSFaceIDUsageDescription', 'NSCameraUsageDescription', 'NSPhotoLibraryUsageDescription')) {
+  if ($plist -notmatch "<key>$privacyKey</key>\s*<string>[^<]*\S[^<]*</string>") {
+    throw "iOS privacy usage description is missing or empty: $privacyKey"
+  }
+}
 if ($pubspec -notmatch '(?m)^version:\s*[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+') { throw 'Flutter release version must be semantic plus build number' }
 
 Write-Host 'Release configuration checks passed.'

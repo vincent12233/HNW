@@ -34,7 +34,7 @@ HomeDashboard dashboard({
   double totalAssets = 125000.5,
   double available = 82000.25,
   double frozen = 15000,
-  double todayPnl = 2450.75,
+  double realizedPnl = 2450.75,
   double? unrealizedPnl,
   bool accountLoaded = true,
   bool accountFailed = false,
@@ -68,7 +68,7 @@ HomeDashboard dashboard({
     totalAssets: totalAssets,
     availableFunds: available,
     frozenFunds: frozen,
-    todayPnl: todayPnl,
+    realizedPnl: realizedPnl,
     unrealizedPnl: unrealizedPnl,
     accountLoaded: accountLoaded,
     accountFailed: accountFailed,
@@ -277,7 +277,7 @@ void main() {
         quotesLoading: true,
         accountLoaded: false,
         totalAssets: 999999,
-        todayPnl: 8888,
+        realizedPnl: 8888,
       ),
     );
     expect(find.byType(LinearProgressIndicator), findsWidgets);
@@ -303,7 +303,7 @@ void main() {
         totalAssets: 0,
         available: 0,
         frozen: 0,
-        todayPnl: 0,
+        realizedPnl: 0,
       ),
     );
     expect(find.text('Index quotes are unavailable.'), findsOneWidget);
@@ -387,7 +387,7 @@ void main() {
         totalAssets: assets,
         available: available,
         frozen: frozen,
-        todayPnl: pnl,
+        realizedPnl: pnl,
       ),
     );
     expect(find.text(formatPrice(assets)), findsOneWidget);
@@ -395,7 +395,7 @@ void main() {
     expect(find.text(formatPrice(frozen)), findsOneWidget);
     expect(find.text(formatSignedPrice(pnl)), findsOneWidget);
     expect(find.text('Frozen Funds'), findsOneWidget);
-    expect(find.text('Daily P&L'), findsOneWidget);
+    expect(find.text('Realized P&L'), findsOneWidget);
     expect(find.textContaining('+2.15%'), findsOneWidget);
     expect(find.textContaining('-1.44%'), findsOneWidget);
   });
@@ -536,7 +536,7 @@ void main() {
           totalAssets: 12345678.9,
           available: 9876543.21,
           frozen: 1000000,
-          todayPnl: -876543.21,
+          realizedPnl: -876543.21,
         ),
       );
       await tester.pump();
@@ -571,7 +571,7 @@ void main() {
         unrealizedPnl: 0,
         available: 0,
         frozen: 0,
-        todayPnl: 0,
+        realizedPnl: 0,
       ),
     );
     expect(find.text(formatPrice(0)), findsWidgets);
@@ -589,7 +589,7 @@ void main() {
         hideBalances: true,
         totalAssets: 888888,
         unrealizedPnl: -12.5,
-        todayPnl: 9,
+        realizedPnl: 9,
       ),
     );
     expect(find.text(formatPrice(888888)), findsNothing);
@@ -606,7 +606,7 @@ void main() {
       size: const Size(320, 568),
       textScale: 1.5,
       reduceMotion: true,
-      home: dashboard(totalAssets: 0, unrealizedPnl: 0, todayPnl: -1),
+      home: dashboard(totalAssets: 0, unrealizedPnl: 0, realizedPnl: -1),
     );
     expect(tester.takeException(), isNull);
     expect(find.text('Unrealized P&L'), findsOneWidget);

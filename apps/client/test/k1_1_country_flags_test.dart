@@ -1,3 +1,4 @@
+import 'package:country_flags/country_flags.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -70,12 +71,17 @@ InternationalPhoneField phoneField(WidgetTester tester) {
 
 void expectIndiaFlagAndCode(WidgetTester tester) {
   expect(find.byType(CountryFlagGlyph), findsWidgets);
-  expect(find.text(Country.parse('IN').flagEmoji), findsWidgets);
-  expect(find.text('+91'), findsOneWidget);
   expect(
-    find.byTooltip('India flag, country code +91'),
-    findsOneWidget,
+    find.byWidgetPredicate(
+      (widget) =>
+          widget is CountryFlag &&
+          widget.flagCode == 'in' &&
+          widget.theme is ImageTheme,
+    ),
+    findsWidgets,
   );
+  expect(find.text('+91'), findsOneWidget);
+  expect(find.byTooltip('India flag, country code +91'), findsOneWidget);
   expect(phoneField(tester).country.countryCode, 'IN');
 }
 
@@ -98,7 +104,9 @@ Future<void> captureCurrent(WidgetTester tester, String name) async {
     final image = await boundary.toImage(pixelRatio: 1);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
     Directory(_captureDir).createSync(recursive: true);
-    File('$_captureDir/$name.png').writeAsBytesSync(bytes!.buffer.asUint8List());
+    File(
+      '$_captureDir/$name.png',
+    ).writeAsBytesSync(bytes!.buffer.asUint8List());
   });
 }
 
@@ -171,36 +179,55 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(find.byType(CountryFlagGlyph), findsWidgets);
-    expect(find.text(Country.parse('IN').flagEmoji), findsWidgets);
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is CountryFlag &&
+            widget.flagCode == 'in' &&
+            widget.theme is ImageTheme,
+      ),
+      findsWidgets,
+    );
     expect(find.textContaining('India'), findsWidgets);
     expect(find.textContaining('+91'), findsWidgets);
     expectNoSmsEmailOtpCopy(tester);
     await disposeTree(tester);
   });
 
-  testWidgets('switching country updates flag name and dial without clearing phone', (
+  testWidgets(
+    'switching country updates flag name and dial without clearing phone',
+    (tester) async {
+      setView(tester, const Size(390, 844));
+      await tester.pumpWidget(host(LoginPage(onSignedIn: (_) {})));
+      await tester.enterText(find.byType(TextField).at(0), '9876543210');
+      await tester.enterText(find.byType(TextField).at(1), 'password1');
+      phoneField(tester).onCountryChanged(Country.parse('US'));
+      await tester.pump();
+      expect(
+        find.byWidgetPredicate(
+          (widget) =>
+              widget is CountryFlag &&
+              widget.flagCode == 'us' &&
+              widget.theme is ImageTheme,
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('+1'), findsOneWidget);
+      expect(
+        find.byTooltip('United States flag, country code +1'),
+        findsOneWidget,
+      );
+      expect(find.text('9876543210'), findsOneWidget);
+      expect(find.text('password1'), findsOneWidget);
+      expect(phoneField(tester).country.countryCode, 'US');
+      expect(phoneField(tester).country.name, 'United States');
+      await disposeTree(tester);
+    },
+  );
+
+  testWidgets('login and register request fields stay the same', (
     tester,
   ) async {
-    setView(tester, const Size(390, 844));
-    await tester.pumpWidget(host(LoginPage(onSignedIn: (_) {})));
-    await tester.enterText(find.byType(TextField).at(0), '9876543210');
-    await tester.enterText(find.byType(TextField).at(1), 'password1');
-    phoneField(tester).onCountryChanged(Country.parse('US'));
-    await tester.pump();
-    expect(find.text(Country.parse('US').flagEmoji), findsOneWidget);
-    expect(find.text('+1'), findsOneWidget);
-    expect(
-      find.byTooltip('United States flag, country code +1'),
-      findsOneWidget,
-    );
-    expect(find.text('9876543210'), findsOneWidget);
-    expect(find.text('password1'), findsOneWidget);
-    expect(phoneField(tester).country.countryCode, 'US');
-    expect(phoneField(tester).country.name, 'United States');
-    await disposeTree(tester);
-  });
-
-  testWidgets('login and register request fields stay the same', (tester) async {
     setView(tester, const Size(390, 2000));
     late Map<String, dynamic> loginBody;
     late Map<String, dynamic> registerBody;
@@ -224,7 +251,9 @@ void main() {
         await tester.ensureVisible(find.byType(Checkbox));
         await tester.tap(find.byType(Checkbox));
         await tester.pump();
-        await tester.ensureVisible(find.widgetWithText(FilledButton, 'Sign Up'));
+        await tester.ensureVisible(
+          find.widgetWithText(FilledButton, 'Sign Up'),
+        );
         await tester.tap(find.widgetWithText(FilledButton, 'Sign Up'));
         await tester.pump();
         await tester.pump();
@@ -235,10 +264,16 @@ void main() {
           final body = jsonDecode(request.body) as Map<String, dynamic>;
           if (request.url.path == '/auth/login') {
             loginBody = body;
-            return http.Response(jsonEncode({'message': 'Invalid credentials'}), 401);
+            return http.Response(
+              jsonEncode({'message': 'Invalid credentials'}),
+              401,
+            );
           }
           registerBody = body;
-          return http.Response(jsonEncode({'message': 'Invalid invite code'}), 400);
+          return http.Response(
+            jsonEncode({'message': 'Invalid invite code'}),
+            400,
+          );
         });
       },
     );
@@ -250,7 +285,7 @@ void main() {
     expect(registerBody.containsKey('verificationCode'), isFalse);
   });
 
-  testWidgets('invalid numbers still use the Indian mobile error', (
+  testWidgets('invalid numbers use the selected-country validation error', (
     tester,
   ) async {
     setView(tester, const Size(390, 844));
@@ -259,12 +294,17 @@ void main() {
     await tester.enterText(find.byType(TextField).at(1), 'password1');
     await tester.tap(find.text('Login'));
     await tester.pump();
-    expect(find.text('Enter a valid Indian mobile number'), findsOneWidget);
+    expect(
+      find.text('Enter a valid mobile number for the selected country'),
+      findsOneWidget,
+    );
     expect(find.text('123'), findsOneWidget);
     await disposeTree(tester);
   });
 
-  testWidgets('flag controls fit listed phones and text scales', (tester) async {
+  testWidgets('flag controls fit listed phones and text scales', (
+    tester,
+  ) async {
     const sizes = <Size>[
       Size(320, 568),
       Size(390, 844),

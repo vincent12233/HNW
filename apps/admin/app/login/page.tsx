@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
 
 import { api } from "@/lib/api";
-import { backendRoleLabels, getBackendRole, type BackendRole } from "@/lib/backend-role";
+import { backendRoleLabels, getBackendRole, getConfiguredBackendRole, type BackendRole } from "@/lib/backend-role";
 
 type Values = { employeeNo: string; password: string };
 
@@ -43,7 +43,7 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [capsLock, setCapsLock] = useState(false);
-  const [deploymentRole, setDeploymentRole] = useState<BackendRole | undefined>(() => getBackendRole());
+  const [deploymentRole, setDeploymentRole] = useState<BackendRole | undefined>(() => getConfiguredBackendRole());
 
   useEffect(() => {
     setDeploymentRole(getBackendRole());

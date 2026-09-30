@@ -594,7 +594,7 @@ class SecureFooter extends StatelessWidget {
         SizedBox(width: 6),
         Expanded(
           child: AppText(
-            'Sign in with your registered Indian mobile number and password.',
+            'Sign in with your registered mobile number and password.',
             textAlign: TextAlign.center,
             style: TextStyle(
               color: AppColors.textTertiary,
@@ -609,4 +609,3 @@ class SecureFooter extends StatelessWidget {
     ),
   );
 }
-

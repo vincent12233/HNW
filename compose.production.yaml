@@ -1,0 +1,184 @@
+name: hnw-production
+
+x-admin-common: &admin-common
+  build:
+    context: .
+    dockerfile: docker/admin.Dockerfile
+  restart: unless-stopped
+  init: true
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  depends_on:
+    api:
+      condition: service_healthy
+  networks:
+    - hnw-private
+  healthcheck:
+    test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:' + process.env.PORT + '/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+    interval: 15s
+    timeout: 5s
+    retries: 12
+    start_period: 60s
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      target: runner
+      args:
+        GIT_COMMIT: ${GIT_COMMIT:-unknown}
+        BUILD_TIME: ${BUILD_TIME:-unknown}
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: "3100"
+      TRUST_PROXY_HOPS: ${TRUST_PROXY_HOPS:?Set TRUST_PROXY_HOPS}
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+      RATE_LIMIT_REDIS_URL: ${RATE_LIMIT_REDIS_URL:?Set RATE_LIMIT_REDIS_URL}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET}
+      TWO_FACTOR_ENCRYPTION_KEY: ${TWO_FACTOR_ENCRYPTION_KEY:?Set TWO_FACTOR_ENCRYPTION_KEY}
+      OTC_KEY_ENCRYPTION_SECRET: ${OTC_KEY_ENCRYPTION_SECRET:?Set OTC_KEY_ENCRYPTION_SECRET}
+      OBJECT_SIGNING_SECRET: ${OBJECT_SIGNING_SECRET:?Set OBJECT_SIGNING_SECRET}
+      ADMIN_FIXED_INVITE_CODE: ${ADMIN_FIXED_INVITE_CODE:?Set ADMIN_FIXED_INVITE_CODE}
+      ADMIN_INITIAL_PASSWORD: ${ADMIN_INITIAL_PASSWORD:?Set ADMIN_INITIAL_PASSWORD}
+      MANAGER_INITIAL_PASSWORD: ${MANAGER_INITIAL_PASSWORD:?Set MANAGER_INITIAL_PASSWORD}
+      FINANCE_INITIAL_PASSWORD: ${FINANCE_INITIAL_PASSWORD:?Set FINANCE_INITIAL_PASSWORD}
+      BUSINESS_INITIAL_PASSWORD: ${BUSINESS_INITIAL_PASSWORD:?Set BUSINESS_INITIAL_PASSWORD}
+      SUPPORT_INITIAL_PASSWORD: ${SUPPORT_INITIAL_PASSWORD:?Set SUPPORT_INITIAL_PASSWORD}
+      PRIVATE_OBJECT_ROOT: /app/private-objects
+      VIRUS_SCAN_URL: ${VIRUS_SCAN_URL:?Set VIRUS_SCAN_URL}
+      VIRUS_SCAN_BEARER_TOKEN: ${VIRUS_SCAN_BEARER_TOKEN:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:?Set CORS_ORIGINS}
+      MARKET_DATA_PROVIDER: ${MARKET_DATA_PROVIDER:?Set MARKET_DATA_PROVIDER}
+      MARKET_DATA_STREAMING_ENABLED: ${MARKET_DATA_STREAMING_ENABLED:-false}
+      MARKET_DATA_STREAMING_PROVIDER: ${MARKET_DATA_STREAMING_PROVIDER:-NONE}
+      MARKET_DATA_RECONNECT_MS: ${MARKET_DATA_RECONNECT_MS:-5000}
+      MARKET_DATA_STALE_AFTER_MS: ${MARKET_DATA_STALE_AFTER_MS:-60000}
+      MARKET_DATA_POLL_BATCH_SIZE: ${MARKET_DATA_POLL_BATCH_SIZE:-24}
+      MARKET_NEWS_RSS_URLS: ${MARKET_NEWS_RSS_URLS:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      SMS_OTP_WEBHOOK_URL: ${SMS_OTP_WEBHOOK_URL:-}
+      SMS_OTP_WEBHOOK_TOKEN: ${SMS_OTP_WEBHOOK_TOKEN:-}
+      SALESMARTLY_SCRIPT_URL: ${SALESMARTLY_SCRIPT_URL:-}
+      ERROR_REPORT_WEBHOOK_URL: ${ERROR_REPORT_WEBHOOK_URL:-}
+      ERROR_REPORT_WEBHOOK_TOKEN: ${ERROR_REPORT_WEBHOOK_TOKEN:-}
+      WS_MAX_CONNECTIONS_PER_USER: ${WS_MAX_CONNECTIONS_PER_USER:-5}
+      MATCHING_MAX_FILL_QUANTITY: ${MATCHING_MAX_FILL_QUANTITY:-1000}
+      MARKET_OPEN_TIME_IST: ${MARKET_OPEN_TIME_IST:-09:15}
+      MARKET_CLOSE_TIME_IST: ${MARKET_CLOSE_TIME_IST:-15:30}
+      MARKET_HOLIDAYS_IST: ${MARKET_HOLIDAYS_IST:-}
+      DAY_ORDER_EXPIRY_BATCH_SIZE: ${DAY_ORDER_EXPIRY_BATCH_SIZE:-500}
+    expose:
+      - "3100"
+    volumes:
+      - ${PRIVATE_OBJECT_HOST_PATH:?Set PRIVATE_OBJECT_HOST_PATH}:/app/private-objects
+    networks:
+      - hnw-private
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"fetch('http://127.0.0.1:3100/health/ready').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))\""]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+
+  migration: &api-operation
+    build:
+      context: .
+      dockerfile: docker/api.Dockerfile
+      target: development
+    profiles: ["operations"]
+    restart: "no"
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL}
+    command: ["npm", "run", "db:migrate"]
+    networks:
+      - hnw-private
+
+  seed:
+    <<: *api-operation
+    profiles: ["initialization"]
+    command: ["npm", "run", "seed"]
+
+  admin:
+    <<: *admin-common
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?Set PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_ROLE: ADMIN
+    environment:
+      PORT: "3002"
+      NEXT_PUBLIC_BACKEND_ROLE: ADMIN
+    expose: ["3002"]
+
+  manager:
+    <<: *admin-common
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?Set PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_ROLE: MANAGER
+    environment:
+      PORT: "3004"
+      NEXT_PUBLIC_BACKEND_ROLE: MANAGER
+    expose: ["3004"]
+
+  finance:
+    <<: *admin-common
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?Set PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_ROLE: FINANCE
+    environment:
+      PORT: "3005"
+      NEXT_PUBLIC_BACKEND_ROLE: FINANCE
+    expose: ["3005"]
+
+  business:
+    <<: *admin-common
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?Set PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_ROLE: BUSINESS
+    environment:
+      PORT: "3006"
+      NEXT_PUBLIC_BACKEND_ROLE: BUSINESS
+    expose: ["3006"]
+
+  support:
+    <<: *admin-common
+    build:
+      context: .
+      dockerfile: docker/admin.Dockerfile
+      target: runner
+      args:
+        NEXT_PUBLIC_API_URL: ${PUBLIC_API_URL:?Set PUBLIC_API_URL}
+        NEXT_PUBLIC_BACKEND_ROLE: SUPPORT
+    environment:
+      PORT: "3007"
+      NEXT_PUBLIC_BACKEND_ROLE: SUPPORT
+    expose: ["3007"]
+
+networks:
+  hnw-private:
+    driver: bridge

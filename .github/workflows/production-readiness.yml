@@ -1,0 +1,68 @@
+name: Production Readiness
+
+on:
+  pull_request:
+    paths:
+      - 'compose.production.yaml'
+      - '.env.production.example'
+      - 'docker/**'
+      - 'scripts/production-preflight.mjs'
+      - 'scripts/post-deploy-smoke.mjs'
+      - 'scripts/tests/production-operations.test.mjs'
+      - '.github/workflows/production-readiness.yml'
+      - 'docs/小白部署与运维手册.md'
+  push:
+    branches: [main]
+    paths:
+      - 'compose.production.yaml'
+      - '.env.production.example'
+      - 'docker/**'
+      - 'scripts/production-preflight.mjs'
+      - 'scripts/post-deploy-smoke.mjs'
+      - 'scripts/tests/production-operations.test.mjs'
+      - '.github/workflows/production-readiness.yml'
+      - 'docs/小白部署与运维手册.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-readiness-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate-production-template:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+      - name: Run production operation tests
+        run: node --test scripts/tests/production-operations.test.mjs
+      - name: Validate production Compose structure
+        env:
+          PUBLIC_API_URL: https://api.hnw-ci.invalid
+          DATABASE_URL: postgresql://ci:ci-password@db:5432/hnw?schema=public
+          RATE_LIMIT_REDIS_URL: redis://redis:6379
+          TRUST_PROXY_HOPS: '1'
+          PRIVATE_OBJECT_HOST_PATH: /srv/hnw/private-objects
+          JWT_SECRET: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          TWO_FACTOR_ENCRYPTION_KEY: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+          OTC_KEY_ENCRYPTION_SECRET: cccccccccccccccccccccccccccccccc
+          OBJECT_SIGNING_SECRET: dddddddddddddddddddddddddddddddd
+          ADMIN_FIXED_INVITE_CODE: CI-INVITE-CODE-2026
+          ADMIN_INITIAL_PASSWORD: CiAdminPass2026
+          MANAGER_INITIAL_PASSWORD: CiManagerPass2026
+          FINANCE_INITIAL_PASSWORD: CiFinancePass2026
+          BUSINESS_INITIAL_PASSWORD: CiBusinessPass2026
+          SUPPORT_INITIAL_PASSWORD: CiSupportPass2026
+          CORS_ORIGINS: https://admin.hnw-ci.invalid,https://manager.hnw-ci.invalid,https://finance.hnw-ci.invalid,https://business.hnw-ci.invalid,https://operator.hnw-ci.invalid
+          MARKET_DATA_PROVIDER: LICENSED_CI_PROVIDER
+          VIRUS_SCAN_URL: https://scanner.hnw-ci.invalid/scan
+        run: docker compose -f compose.production.yaml config --quiet
+      - name: Build production API image
+        run: docker build -f docker/api.Dockerfile --target runner --build-arg GIT_COMMIT=${GITHUB_SHA} --build-arg BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -t hnw-api-production .
+      - name: Build one representative Admin image
+        run: docker build -f docker/admin.Dockerfile --target runner --build-arg NEXT_PUBLIC_API_URL=https://api.hnw-ci.invalid --build-arg NEXT_PUBLIC_BACKEND_ROLE=ADMIN -t hnw-admin-production .

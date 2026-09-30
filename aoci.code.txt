@@ -6,9 +6,11 @@
 .gitignore[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
 .nvmrc[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
 AGENTS.md[SG6M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
-README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:Documentation must remain consistent with maintained project behavior
+README.md[SG6M]: F:说明HNW架构、本地开发、验证入口及面向新手的Coolify生产部署路径 | R:code:docs/README.md,code:docs/小白部署与运维手册.md,code:compose.production.yaml | A:仓库总览与工程使用入口 | S:文档中的生产流程必须与实际Compose、验证脚本和安全发布门禁保持一致
 compose.local-test.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
 compose.observability.yaml[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+.env.production.example[FC6T]: F:列出生产部署所需环境变量的无密钥占位模板 | R:code:compose.production.yaml,code:scripts/production-preflight.mjs | A:复制到部署平台后逐项替换为独立真实值 | S:文件只能保留占位值，数据库凭据、签名密钥和Webhook令牌不得提交仓库
+compose.production.yaml[OV9L]: F:定义API、五类后台站点及显式迁移和初始化任务的生产容器拓扑 | R:code:.env.production.example,code:apps/api/Dockerfile,code:apps/admin/Dockerfile | A:供Coolify解析部署，服务仅连私有网络并由反向代理暴露 | S:运行服务禁用额外Linux能力并启用no-new-privileges；migration和seed仅在各自profile下人工执行且不会随常规启动自动运行
 
 ===C:/Users/suyan/HNW/.github/===
 dependabot.yml[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
@@ -23,6 +25,8 @@ flutter-integration.yml[OV4T]: F:Runs automated repository validation | R:- | A:
 mobile-release-checks.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
 recovery-drill.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
 tooling-ci.yml[OV4T]: F:Runs automated repository validation | R:- | A:Continuous integration workflow | S:Workflow behavior is executed by the repository CI environment
+production-deploy.yml[OV8S]: F:提供受保护的手动生产发布与部署后冒烟验证流程 | R:code:compose.production.yaml,code:scripts/post-deploy-smoke.mjs,code:scripts/tests/production-operations.test.mjs | A:仅允许main分支且输入完整当前SHA，通过production环境审批后触发Coolify Webhook | S:发布不会由push自动触发；缺少Webhook或端点变量、SHA不匹配、冒烟失败均使作业失败
+production-readiness.yml[TV7S]: F:验证生产运维脚本、Compose解析及API和后台镜像可构建 | R:code:compose.production.yaml,code:scripts/tests/production-operations.test.mjs | A:在相关部署文件变更的PR和main提交上执行生产就绪门禁 | S:CI使用无效测试域名与非真实密钥验证配置结构，不执行数据库迁移、初始化或生产发布
 
 ===C:/Users/suyan/HNW/apps/admin/===
 .env.example[FC4T]: F:Defines repository configuration | R:- | A:Configuration boundary | S:-
@@ -1280,7 +1284,7 @@ HOME_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage
 MARKETS_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
 PORTFOLIO_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
 PROFILE_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
-README.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+README.md[SG5T]: F:索引项目工程、安全、发布与运维文档 | R:code:docs/小白部署与运维手册.md | A:文档导航入口 | S:新增长期流程时应在此提供可发现入口
 STATUS.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
 TRADE_UI_UX_UPGRADE.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
 UI与KYC更新说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
@@ -1293,6 +1297,7 @@ UI与KYC更新说明.md[SG5M]: F:Documents project structure and engineering usa
 移动端双端同步说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
 运营流程说明.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
 项目交付总览.md[SG5M]: F:Documents project structure and engineering usage | R:- | A:Repository documentation | S:-
+小白部署与运维手册.md[SV7L]: F:以Coolify为中心说明首次上线、日常发布、监控、备份恢复与回滚操作 | R:code:compose.production.yaml,code:.env.production.example,code:.github/workflows/production-deploy.yml | A:面向非专业维护者的生产操作手册 | S:迁移与seed必须显式执行；部署失败或冒烟失败时应停止继续变更并从Coolify回滚到上一成功版本
 
 ===C:/Users/suyan/HNW/scripts/===
 backup-postgres.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
@@ -1313,8 +1318,10 @@ start-docker-desktop-stack.ps1[FC4T]: F:Defines a repository component | R:- | A
 start-docker-stack.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
 start-orbstack-stack.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
 verification-test.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
-verify-all.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
-verify-all.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+verify-all.ps1[XQ6M]: F:在Windows顺序执行API、后台、Flutter及运维脚本的完整本地验证 | R:code:scripts/tests/recovery-drill.test.ps1,code:scripts/tests/production-operations.test.mjs | A:为Flutter配置仓库内可写缓存并在任一步失败时终止 | S:只有显式未跳过时才运行依赖已启动服务的业务验证测试
+verify-all.sh[XQ6T]: F:在Unix环境顺序执行API、后台、Flutter与生产运维测试 | R:code:scripts/tests/production-operations.test.mjs | A:检查Node与Flutter工具后以严格Shell错误模式运行全套验证 | S:要求Node.js 24或更高；存在DATABASE_URL时才执行数据库迁移
 verify-migration-upgrade.sh[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
 verify-release-config.ps1[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
 virus-scan-stub.mjs[FC4T]: F:Defines a repository component | R:- | A:Configuration boundary | S:-
+post-deploy-smoke.mjs[OR7S]: F:重试检查生产API就绪端点和各后台登录页可用性 | R:code:.github/workflows/production-deploy.yml | A:从环境变量读取生产URL、重试次数与间隔并以退出码报告结果 | S:任一必需端点在重试耗尽后仍失败会非零退出，并提示通过Coolify回滚
+production-preflight.mjs[OS8M]: F:在部署前验证生产环境变量、HTTPS端点、凭据强度与路径约束 | R:code:.env.production.example,code:compose.production.yaml | A:聚合所有配置错误后非零退出，避免带占位值或弱配置上线 | S:关键密钥和初始密码必须满足长度且互不重复；市场数据提供商不得使用Yahoo；私有对象路径必须为绝对路径

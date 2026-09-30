@@ -1,13 +1,19 @@
 {
   "version": 1,
   "created_at": "2026-09-29T12:04:48Z",
-  "updated_at": "2026-09-30T04:43:51Z",
+  "updated_at": "2026-09-30T06:03:17Z",
   "files": {
     ".dockerignore": {
       "role": "index",
       "sha256": "dd2fb41680a3509731bb823c985d5153a92caa23d8aca07f4dbff3cccb1b2495",
       "size": 253,
       "normalized_sha256": "1106faeedaefa7e14084d7f4904ed46fac4c80c629fad7c03b2896504be164a7"
+    },
+    ".env.production.example": {
+      "role": "index",
+      "sha256": "428a6ee0e8f3e3d65da6af4d7a74d4a03f57fcba3385290b492186a5bd49cec2",
+      "size": 1636,
+      "normalized_sha256": "63956d5f67bf8e6355e4d2675db02e6884ddb0edc29a80b3f382dae0cc1397bd"
     },
     ".gitattributes": {
       "role": "index",
@@ -62,6 +68,18 @@
       "sha256": "8060dac59c3c716303be69842a3bd5eea7b97b68eb3e56bfcb9b8402d9fdeb3b",
       "size": 1934,
       "normalized_sha256": "3a70f00c1c4071a3b95cf34ffd419ecfe88f29674a180783b434a0c8ab4bbe84"
+    },
+    ".github/workflows/production-deploy.yml": {
+      "role": "index",
+      "sha256": "5a6df1d3b2cb3b2bf7c6ac03b8d26676d9349dab91bbd89ea871f9e664b17514",
+      "size": 3193,
+      "normalized_sha256": "9f0a31c7012cb718fffd5bc5cce9faa9bc58903037635aab805faf5711425746"
+    },
+    ".github/workflows/production-readiness.yml": {
+      "role": "index",
+      "sha256": "5d3b58893fc9ce8ac379480de1188a1df0f783092da64162fbaf16758a7a8a97",
+      "size": 2987,
+      "normalized_sha256": "7c43276b2b6aee3e3a083fdacd547d9bcfaf0153baeffa9bc5ec55c7def405b6"
     },
     ".github/workflows/recovery-drill.yml": {
       "role": "index",
@@ -299,15 +317,15 @@
     },
     "README.md": {
       "role": "index",
-      "sha256": "7dc5877457def3c18d472482e6174c07e19fddb211e1bbf4293a422963d25e73",
-      "size": 8676,
-      "normalized_sha256": "9166180d9976c58d0f45d69f831a8e66ace7b21886fa3bfa4887bcda8ee6c660"
+      "sha256": "fc66fd2fa2c120d5ee2b3ba90fe1803fa93e3f6c097f219daf5b428d1aecbea0",
+      "size": 8956,
+      "normalized_sha256": "48db24ebbb1be7f098875b757e6a84a939eb8f890747bb27837e3a12b11eec20"
     },
     "aoci.code.txt": {
       "role": "index",
-      "sha256": "4c9293589edb92802fd732e9fb3901146f9de41b8070fab9c3a9526d95fe73b7",
-      "size": 130381,
-      "normalized_sha256": "4c9293589edb92802fd732e9fb3901146f9de41b8070fab9c3a9526d95fe73b7"
+      "sha256": "4977b3cdea4e1fb2de2be9b02c26d8b4cb3b7666533829ab7d42e67945d3174c",
+      "size": 133828,
+      "normalized_sha256": "4977b3cdea4e1fb2de2be9b02c26d8b4cb3b7666533829ab7d42e67945d3174c"
     },
     "aoci.meta.txt": {
       "role": "index",
@@ -6086,6 +6104,12 @@
       "size": 1345,
       "normalized_sha256": "49621e6d77bf0a08e1508b585948c559a7414a03c811775bdb675f00806317cb"
     },
+    "compose.production.yaml": {
+      "role": "index",
+      "sha256": "454cbc053fdc12d74cef419e6e527d67c469070c0c6037fb8862db956854a770",
+      "size": 6054,
+      "normalized_sha256": "1b7ea497a80530d9c48415e5fd5a68f1f295f0c075841486752b7f87e73e1de2"
+    },
     "docker/admin.Dockerfile": {
       "role": "index",
       "sha256": "fbe2acb35ec0366cb77c945b8397ba329f34adb6097fcbc2e9287eba0727e3e5",
@@ -6268,9 +6292,9 @@
     },
     "docs/README.md": {
       "role": "index",
-      "sha256": "3e182649543cdbca46dcec1b0756e774390c306b2f3922a44b1401a65973da1c",
-      "size": 3104,
-      "normalized_sha256": "5d0ab4c404c86eda35cde308aef29ad2620a1ea82bbcdfdb2b80057e6a83c9c0"
+      "sha256": "ee764dc0539aa3c04bdf248a19037fc3f856c3ec76158d5efef6f8869e057417",
+      "size": 3251,
+      "normalized_sha256": "bddcc2a03fabe89b5ab1bbc7e773eed214e523eb536ef455b413b6502f77636d"
     },
     "docs/STATUS.md": {
       "role": "index",
@@ -6313,6 +6337,12 @@
       "sha256": "cf441b034acb8ea2cabab82eca08a3b61aad748b8f73fbef2dfde6d5c4166fc1",
       "size": 2185,
       "normalized_sha256": "f93174cb9364075d216c6642caeab74acc22aef4780dae01338275f94310233d"
+    },
+    "docs/小白部署与运维手册.md": {
+      "role": "index",
+      "sha256": "efab6971a52b2167d035f4936cc90daac19af2cbde3a13c2db0d62f62ffb5865",
+      "size": 5016,
+      "normalized_sha256": "e0cc25968c74613b9ac6223390729c5be876d15a6f6e6cafc98d393b09307530"
     },
     "docs/本地启动与联调.md": {
       "role": "index",
@@ -6398,6 +6428,18 @@
       "size": 91,
       "normalized_sha256": "7039abb2d26e0f9640af309f9f787cb1fa96caabb4579dcd40b8e09c75001c8a"
     },
+    "scripts/post-deploy-smoke.mjs": {
+      "role": "index",
+      "sha256": "d456aaaa062b81609d8450826872f26608562d49443bf31e048a52e8f6d8afed",
+      "size": 1473,
+      "normalized_sha256": "2f955c32849fe2946522892334b426af0fdf5933584686446d108031836de3e8"
+    },
+    "scripts/production-preflight.mjs": {
+      "role": "index",
+      "sha256": "04b9c05cef9ab1e7409dba32a363f1d71a511a84a9394710db99079da438ad74",
+      "size": 3584,
+      "normalized_sha256": "85b6b7e0b173b16bcba3ba557ec075dd67c151ec07edf95620971d2e075e1993"
+    },
     "scripts/recovery-drill.ps1": {
       "role": "index",
       "sha256": "92cb0826e1d9ca583d9553e89421c01931fa1a66798b320dd2a8522393e39db5",
@@ -6452,6 +6494,12 @@
       "size": 6509,
       "normalized_sha256": "3160677bf474304b4db05c73cf34d492e99ba85960578013dc4532609c552fe9"
     },
+    "scripts/tests/production-operations.test.mjs": {
+      "role": "observe",
+      "sha256": "b22f51b9578aaaa63ab84cdee3a3d4f02d4dc1fd70c6f9a5c9e60531ac316013",
+      "size": 3233,
+      "normalized_sha256": "4e1cf92d150b1e7d5e682e875d53b6a1c06059b306bb702e44febb10076c5f89"
+    },
     "scripts/tests/recovery-drill.test.ps1": {
       "role": "observe",
       "sha256": "66621140c004af9f81e50757d493c457f6994ab1dab5f44bc4a4eaaa746e5322",
@@ -6472,15 +6520,15 @@
     },
     "scripts/verify-all.ps1": {
       "role": "index",
-      "sha256": "3928c87c2f124163251ae7ea0322bfa6b1fac8c527b00fbd0439008fc4991517",
-      "size": 3994,
-      "normalized_sha256": "43eadb15ad3e4a67127cace08fef6982895cd75cd5c22cfd4b765285f6a1f2a1"
+      "sha256": "c2964bb7ce45e138c5cfff4d5c010337bf0b3626369647e54d62afa98e50fe0a",
+      "size": 4095,
+      "normalized_sha256": "0bf734c747a67d92ebb7da6e99f0c249e05915940db3877e899b0ab0b4255621"
     },
     "scripts/verify-all.sh": {
       "role": "index",
-      "sha256": "4a2b3135925121d74986149f7c7d4b1d756369284cb966991f03cd0ea832a122",
-      "size": 1358,
-      "normalized_sha256": "a3b349de2796be6d180120f05a62cda30fc21a07f8916107e2a2883402ab8b9c"
+      "sha256": "9f0c1ff795bd9ce465aa86b32993ce99bb51ac27cccffe8122d09befb2f5c5b1",
+      "size": 1447,
+      "normalized_sha256": "965123d0785cf8f194bc5f755c730b85aeda5e03c75fe66f42765928e381a201"
     },
     "scripts/verify-migration-upgrade.sh": {
       "role": "index",

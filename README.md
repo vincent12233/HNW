@@ -2,7 +2,7 @@
 
 面向印度手机号客户注册的交易平台：客户 App、五个分离的运营后台、API 后端。客服通过客户端内 SaleSmartly 原生 SDK 接入。
 
-**正式环境按服务器部署**（Node + PostgreSQL + Nginx），见 `docs/生产部署说明.md`。本地使用 Windows Docker Desktop 或 macOS OrbStack 运行隔离的 Compose 环境，专用于 E2E 和后台联调。
+**推荐正式环境使用 Coolify + `compose.production.yaml` 可视化部署**，小白操作见 `docs/小白部署与运维手册.md`；需要原生服务器部署时见 `docs/生产部署说明.md`。本地使用 Windows Docker Desktop 或 macOS OrbStack 运行隔离的 Compose 环境，专用于 E2E 和后台联调。
 
 ## 项目组成
 
@@ -37,7 +37,7 @@
 docs/生产部署说明.md
 ```
 
-服务器上：`npm ci` → 迁移 / seed → `npm run build` → `npm run start:prod`（API 入口为 `dist/main.js`），五个后台分别构建并用 Nginx 反代。
+推荐在 Coolify 中导入 `compose.production.yaml`，由面板完成构建、HTTPS、日志和版本回滚；生产变量从 `.env.production.example` 复制后逐项替换。原生服务器路径仍保留在 `docs/生产部署说明.md`。
 
 ## Windows Docker Desktop E2E 联调
 
@@ -182,7 +182,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 
 完整索引和文档状态见 `docs/README.md`。
 
-- `docs/生产部署说明.md`（服务器上线主路径）
+- `docs/小白部署与运维手册.md`（Coolify 可视化部署、回滚、备份和日常巡检）
+- `docs/生产部署说明.md`（原生服务器上线路径）
 - `docs/本地启动与联调.md`（本机无容器联调）
 - `docs/运营流程说明.md`
 - `docs/客户APP发布配置.md`

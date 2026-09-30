@@ -48,4 +48,6 @@ echo "== Admin =="
 run_admin
 echo "== Client =="
 run_client
+echo "== Operations =="
+node --test "$ROOT/scripts/tests/production-operations.test.mjs"
 echo "All selected checks passed."

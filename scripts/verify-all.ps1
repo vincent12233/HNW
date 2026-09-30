@@ -113,6 +113,7 @@ Invoke-Step "Client analyze" {
 
 Invoke-Step "Operational script tests" {
   & (Join-Path $root "scripts/tests/recovery-drill.test.ps1")
+  Invoke-Native "node" @("--test", (Join-Path $root "scripts/tests/production-operations.test.mjs"))
 }
 if (-not $SkipVerification) {
   Invoke-Step "Business verification test" {

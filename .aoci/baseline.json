@@ -1,7 +1,7 @@
 {
   "version": 1,
   "created_at": "2026-09-29T12:04:48Z",
-  "updated_at": "2026-09-30T06:03:17Z",
+  "updated_at": "2026-09-30T06:21:25Z",
   "files": {
     ".dockerignore": {
       "role": "index",
@@ -6508,9 +6508,9 @@
     },
     "scripts/tests/verify-environment.test.ps1": {
       "role": "observe",
-      "sha256": "fa85d3322375e5de2ca0b74e8288970982975978297341cb4001a6ab6bfe1aaa",
-      "size": 4602,
-      "normalized_sha256": "0210adc60553f7a44e0dddbb91dac6145132759b9a54627c8c27f58dab49d450"
+      "sha256": "5107166db00c9c158607b35c127f9300d049530f0259f18c41380952c12bf99b",
+      "size": 4749,
+      "normalized_sha256": "dc41a09738023064aaa9f53908257ab4472a6c40743198bf310fafcbceb2302a"
     },
     "scripts/verification-test.ps1": {
       "role": "index",

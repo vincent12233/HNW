@@ -13,6 +13,7 @@ New-Item -ItemType Directory -Path $directories -Force | Out-Null
 $testScript = Join-Path $testScripts 'verify-all.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\verify-all.ps1') -Destination $testScript
 Set-Content -LiteralPath (Join-Path $testScriptTests 'recovery-drill.test.ps1') -Value 'Write-Host recovery-test-stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScriptTests 'production-operations.test.mjs') -Value '// production operations test stub' -Encoding utf8
 
 function Get-Command {
   [CmdletBinding()]

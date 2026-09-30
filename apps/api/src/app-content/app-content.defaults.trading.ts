@@ -929,7 +929,7 @@ export const TRADING_DEFAULTS: DefaultContent[] = [
   {
     module: AppContentModule.TRADING,
     key: 'tab.ins_stock',
-    body: 'Ins. Stock',
+    body: 'Institutional',
     locale: 'en',
     sortOrder: 620,
   },

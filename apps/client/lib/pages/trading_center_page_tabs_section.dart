@@ -19,7 +19,7 @@ extension _TradingCenterTabsSection on _TradingCenterPageState {
             AppContentService.instance.current.text(
               'trading',
               'tab.ins_stock',
-              fallback: 'Intr.',
+              fallback: 'Institutional',
             ),
           ),
           (
@@ -87,5 +87,4 @@ extension _TradingCenterTabsSection on _TradingCenterPageState {
       ],
     ),
   );
-
 }

@@ -46,7 +46,7 @@ dependencies:
   image_picker: ^1.2.1
   google_sign_in: ^7.2.0
   local_auth: ^3.0.2
-  url_launcher: ^6.3.2
+  url_launcher: ^6.3.3
   country_picker: ^2.0.28
   phone_numbers_parser: ^9.0.26
   camera: ^0.12.1

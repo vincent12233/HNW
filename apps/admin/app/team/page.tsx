@@ -179,8 +179,10 @@ export default function TeamPage() {
         const batch = await Promise.all(
           staff.slice(offset, offset + 5).map(async (member) => {
             const items = await loadTeamRecords(async (page) => {
-              const memberId = encodeURIComponent(member.id);
-              const { data } = await api.get(`/team/${memberId}/${view}`, {
+              if (!/^[A-Za-z0-9_-]+$/.test(member.id)) {
+                throw new Error("Invalid team member identifier");
+              }
+              const { data } = await api.get(`/team/${member.id}/${view}`, {
                 params: view === "orders" ? { page, pageSize: 100 } : undefined,
               });
               return data;

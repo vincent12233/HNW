@@ -189,14 +189,16 @@ export class MarketNewsService {
       new RegExp(`<${tag}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/${tag}>`, 'i').exec(
         xml,
       )?.[1] ?? '';
+    const entities: Record<string, string> = {
+      '&amp;': '&',
+      '&quot;': '"',
+      '&#39;': "'",
+      '&apos;': "'",
+    };
     return value
       .replace(/^<!\[CDATA\[|\]\]>$/g, '')
-      .replace(/&amp;/g, '&')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;|&apos;/g, "'")
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
       .replace(/<[^>]+>/g, ' ')
+      .replace(/&(?:amp|quot|apos|#39);/g, (entity) => entities[entity])
       .replace(/\s+/g, ' ')
       .trim();
   }

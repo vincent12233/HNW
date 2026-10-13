@@ -191,12 +191,12 @@ export class MarketNewsService {
       )?.[1] ?? '';
     return value
       .replace(/^<!\[CDATA\[|\]\]>$/g, '')
-      .replace(/<[^>]+>/g, ' ')
       .replace(/&amp;/g, '&')
       .replace(/&quot;/g, '"')
       .replace(/&#39;|&apos;/g, "'")
       .replace(/&lt;/g, '<')
       .replace(/&gt;/g, '>')
+      .replace(/<[^>]+>/g, ' ')
       .replace(/\s+/g, ' ')
       .trim();
   }

@@ -55,7 +55,16 @@ export class WithdrawalService {
       throw new BadRequestException('Withdrawal amount exceeds the limit');
     }
 
-    if (!upiId && (!bankName || !accountNumber || !ifscCode)) {
+    const normalizedBankName = bankName?.trim() || undefined;
+    const normalizedAccountNumber = accountNumber?.trim() || undefined;
+    const normalizedIfscCode = ifscCode?.trim().toUpperCase() || undefined;
+    const normalizedUpiId = upiId?.trim() || undefined;
+    const normalizedNote = note?.trim() || undefined;
+
+    if (
+      !normalizedUpiId &&
+      (!normalizedBankName || !normalizedAccountNumber || !normalizedIfscCode)
+    ) {
       throw new BadRequestException(
         'Provide either UPI ID or complete bank details',
       );
@@ -78,12 +87,11 @@ export class WithdrawalService {
           if (existing) {
             const matchesOriginalRequest =
               moneyDecimal(existing.amount).eq(amount) &&
-              (existing.bankName ?? '') === (bankName?.trim() ?? '') &&
+              (existing.bankName ?? '') === (normalizedBankName ?? '') &&
               (existing.accountNumber ?? '') ===
-                (accountNumber?.trim() ?? '') &&
-              (existing.ifscCode ?? '') ===
-                (ifscCode?.trim().toUpperCase() ?? '') &&
-              (existing.upiId ?? '') === (upiId?.trim() ?? '');
+                (normalizedAccountNumber ?? '') &&
+              (existing.ifscCode ?? '') === (normalizedIfscCode ?? '') &&
+              (existing.upiId ?? '') === (normalizedUpiId ?? '');
             if (!matchesOriginalRequest) {
               throw new ConflictException({
                 code: BUSINESS_ERROR_CODES.IDEMPOTENCY_KEY_REUSED,
@@ -109,11 +117,11 @@ export class WithdrawalService {
             accountId: account.id,
             amount,
             frozenAmount: amount,
-            bankName: bankName?.trim() || null,
-            accountNumber: accountNumber?.trim() || null,
-            ifscCode: ifscCode?.trim().toUpperCase() || null,
-            upiId: upiId?.trim() || null,
-            note: note?.trim() || null,
+            bankName: normalizedBankName ?? null,
+            accountNumber: normalizedAccountNumber ?? null,
+            ifscCode: normalizedIfscCode ?? null,
+            upiId: normalizedUpiId ?? null,
+            note: normalizedNote ?? null,
             status: 'PENDING',
           },
         });

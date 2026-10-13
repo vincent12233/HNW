@@ -77,8 +77,8 @@ if (new Set(values).size !== values.length) errors.push('Secrets, passwords, and
 if ((env.ADMIN_FIXED_INVITE_CODE ?? '').length < 12) errors.push('ADMIN_FIXED_INVITE_CODE must contain at least 12 characters');
 
 if (errors.length) {
-  console.error('Production preflight failed:');
-  for (const error of errors) console.error(`- ${error}`);
+  console.error(`Production preflight failed with ${errors.length} configuration error(s).`);
+  console.error('Review the production environment template and rerun the preflight check.');
   process.exit(1);
 }
 console.log(`Production preflight passed for ${envPath}`);

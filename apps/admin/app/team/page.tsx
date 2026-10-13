@@ -84,6 +84,11 @@ const VIEW_TITLES: Record<string, string> = {
   trades: "客户成交",
   kyc: "KYC 审核",
 };
+const TEAM_RECORD_VIEWS = new Set(Object.keys(VIEW_TITLES));
+
+function normalizeTeamView(candidate: string | null) {
+  return candidate && TEAM_RECORD_VIEWS.has(candidate) ? candidate : "team";
+}
 
 export default function TeamPage() {
   const [view, setView] = useState("team");
@@ -143,10 +148,9 @@ export default function TeamPage() {
         event instanceof CustomEvent && typeof event.detail === "string"
           ? event.detail
           : window.location.search;
-      setView(
-        new URLSearchParams(target.startsWith("?") ? target : target.split("?")[1] || "").get("view") ||
-          "team",
-      );
+      setView(normalizeTeamView(
+        new URLSearchParams(target.startsWith("?") ? target : target.split("?")[1] || "").get("view"),
+      ));
     };
     syncView();
     window.addEventListener("popstate", syncView);
@@ -175,7 +179,8 @@ export default function TeamPage() {
         const batch = await Promise.all(
           staff.slice(offset, offset + 5).map(async (member) => {
             const items = await loadTeamRecords(async (page) => {
-              const { data } = await api.get(`/team/${member.id}/${view}`, {
+              const memberId = encodeURIComponent(member.id);
+              const { data } = await api.get(`/team/${memberId}/${view}`, {
                 params: view === "orders" ? { page, pageSize: 100 } : undefined,
               });
               return data;

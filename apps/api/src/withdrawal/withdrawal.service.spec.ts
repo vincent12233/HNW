@@ -62,7 +62,28 @@ describe('WithdrawalService', () => {
     ).rejects.toThrow('Minimum withdrawal amount is ₹100');
   });
 
-  it('allows a withdrawal of exactly ₹100', async () => {
+  it('rejects whitespace-only payout details before freezing funds', async () => {
+    const transaction = jest.fn();
+    (service as any).prisma = { $transaction: transaction };
+
+    await expect(
+      service.createRequest(
+        'user-1',
+        100,
+        undefined,
+        undefined,
+        undefined,
+        '  ',
+      ),
+    ).rejects.toThrow('Provide either UPI ID or complete bank details');
+    await expect(
+      service.createRequest('user-1', 100, ' ', '  ', '\t'),
+    ).rejects.toThrow('Provide either UPI ID or complete bank details');
+    expect(transaction).not.toHaveBeenCalled();
+    expect((service as any).pins.verify).not.toHaveBeenCalled();
+  });
+
+  it('allows exactly ₹100 with normalized bank details and a blank UPI ID', async () => {
     const createdRequest = {
       id: 'withdrawal-1',
       orderNo: 'WD2026081400000001',
@@ -92,12 +113,23 @@ describe('WithdrawalService', () => {
       service.createRequest(
         'user-1',
         100,
-        'Test Bank',
-        '1234567890',
-        'TEST0001234',
+        ' Test Bank ',
+        ' 1234567890 ',
+        ' test0001234 ',
+        '  ',
+        ' Payout note ',
       ),
     ).resolves.toBe(createdRequest);
     expect(transaction.withdrawalRequest.create).toHaveBeenCalledTimes(1);
+    expect(transaction.withdrawalRequest.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        bankName: 'Test Bank',
+        accountNumber: '1234567890',
+        ifscCode: 'TEST0001234',
+        upiId: null,
+        note: 'Payout note',
+      }),
+    });
     const createUpdate = transaction.account.update.mock.calls[0][0];
     expect(createUpdate.where).toEqual({ id: 'account-1' });
     expect(Number(createUpdate.data.buyingPower.decrement)).toBe(100);

@@ -28,7 +28,9 @@ concurrency:
 jobs:
   ios-integration:
     runs-on: macos-26-intel
-    timeout-minutes: 45
+    # The test command may use its full 30-minute budget, while Flutter setup,
+    # CocoaPods, and the always-uploaded build artifacts need additional time.
+    timeout-minutes: 75
     defaults:
       run:
         working-directory: apps/client
@@ -73,7 +75,9 @@ jobs:
           xcrun simctl shutdown "$DEVICE_ID" || true
           xcrun simctl boot "$DEVICE_ID" || true
           run_with_timeout 720 xcrun simctl bootstatus "$DEVICE_ID" -b
-          run_with_timeout 1800 flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
+          # A cold Xcode build can spend more than 30 minutes resolving and
+          # compiling iOS dependencies before the test process starts.
+          run_with_timeout 2700 flutter test integration_test/critical_flows_test.dart -d "$DEVICE_ID" --dart-define=API_BASE_URL="$API_BASE_URL"
 
       - name: Upload integration artifacts
         if: always()

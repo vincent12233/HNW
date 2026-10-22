@@ -162,3 +162,30 @@ Entry 的语义必须来自模型对真实证据的理解。不得仅依据路�
 
 不预加载、不猜测，也不自行重建这些专项流程。平台调用方式、请求格式、批次上限、审批规则、索引格式细节和恢复步骤由对应Guide、工具说明、模型Prompt和CLI帮助按需提供。
 <!-- aoci:end -->
+
+## AI Context Loading
+
+For a new session, load the smallest current context first:
+
+1. `AGENTS.md`
+2. `docs/ai/CURRENT_STATE.md`
+3. `docs/ai/SESSION_HANDOFF.md`
+
+Then load only the module architecture, decision records, source files, and
+CI evidence required by the current task. Treat GitHub commit, pull request,
+and CI state as authoritative over chat history. Verify the current checkout
+and remote state before relying on a handoff. Never record secrets, tokens,
+customer data, or unverified test results. At the end of a task, update the
+current state and handoff only after recording the exact files, commit SHA,
+commands, exit codes, and CI evidence. If a write is not authorized or a
+working tree contains unrelated changes, stop and report the conflict.
+
+The persistent context files are:
+
+- `docs/ai/PROJECT_OVERVIEW.md`
+- `docs/ai/ARCHITECTURE.md`
+- `docs/ai/DECISIONS.md`
+- `docs/ai/CURRENT_STATE.md`
+- `docs/ai/TASK_QUEUE.md`
+- `docs/ai/SESSION_HANDOFF.md`
+- `docs/ai/CONTEXT_PROTOCOL.md`

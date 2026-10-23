@@ -34,6 +34,7 @@ import { OpsContentModule } from './ops-content/ops-content.module';
 import { VipModule } from './vip/vip.module';
 import { MetricsController } from './observability/metrics.controller';
 import { ErrorIngestionModule } from './error-ingestion/error-ingestion.module';
+import { MetricsAccessGuard } from './observability/metrics-access.guard';
 
 @Module({
   imports: [
@@ -76,5 +77,6 @@ import { ErrorIngestionModule } from './error-ingestion/error-ingestion.module';
     ErrorIngestionModule,
   ],
   controllers: [HealthController, MetricsController],
+  providers: [MetricsAccessGuard],
 })
 export class AppModule {}

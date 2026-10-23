@@ -519,7 +519,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
           color: accent ? AppColors.brandPrimary : AppColors.textTertiary,
           fontSize: 9,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.3,
+          letterSpacing: 0,
         ),
       ),
     );

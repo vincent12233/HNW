@@ -170,36 +170,10 @@ class _MoverList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (showHeader)
-            Row(
-              children: [
-                Expanded(
-                  child: AppText(
-                    title,
-                    style: AppTypography.labelMedium.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                ),
-                TextButton(
-                  style: TextButton.styleFrom(
-                    minimumSize: const Size(
-                      AppMotion.tapTarget,
-                      AppMotion.tapTarget,
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.xs,
-                    ),
-                  ),
-                  onPressed: onViewAll,
-                  child: AppText(
-                    'View All',
-                    style: AppTypography.caption.copyWith(
-                      color: AppColors.brandPrimary,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ],
+            HomeSectionHeader(
+              title: title,
+              onViewAll: onViewAll,
+              compact: true,
             ),
           if (items.isEmpty)
             Padding(

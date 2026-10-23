@@ -22,13 +22,13 @@
 - `/metrics` 支持私网访问或独立 Bearer Token，生产启动校验会拒绝弱 Token、占位 Token 和复用的应用密钥。
 - 后台登录、团队管理、仪表盘与客户端响应式 UI/UX 已完成本轮优化；交易参数、交易执行、客户注册和存款方式保持不变。
 
-## 当前交付分支
+## 2026-10-23 交付记录
 
 - 分支：`codex/security-ui-2fa-2026-10-23`
 - 最新提交：以 Pull Request 页面显示的 head commit 为准。
 - Pull Request：[HNW #146](https://github.com/vincent12233/HNW/pull/146)
-- 状态：开放、可合并；API、Admin、Flutter、iOS integration、Docker、生产配置、移动端发布检查和 CodeQL 全部通过。
-- 合并策略：在 Pull Request 审查后合并到 `main`，不直接推送或强制覆盖默认分支。
+- 状态与验证结果：以 Pull Request 页面和 `main` 分支记录为准。
+- 合并策略：通过 Pull Request 审查和必需检查后合并到 `main`，不直接推送或强制覆盖默认分支。
 
 ## 持续改进队列
 

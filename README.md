@@ -204,4 +204,4 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 
 项目当前完成项、持续改进队列和验证规则统一记录在 `docs/STATUS.md`。
 
-当前待合并开发版本位于分支 `codex/security-ui-2fa-2026-10-23`，对应 [Pull Request #146](https://github.com/vincent12233/HNW/pull/146)。该 PR 的 API、Admin、Flutter、iOS integration、Docker、生产配置与 CodeQL 检查均已通过；合并前仍以 PR 页面显示的最新提交和检查结果为准。
+2026-10-23 安全与 UI/UX 升级的开发、审查和自动化验证记录见 [Pull Request #146](https://github.com/vincent12233/HNW/pull/146)。交付结果以 `main` 分支为准，历史提交和检查详情以 Pull Request 页面为准。

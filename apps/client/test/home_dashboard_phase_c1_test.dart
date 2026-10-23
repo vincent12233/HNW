@@ -330,6 +330,30 @@ void main() {
     expect(find.byTooltip('Retry news'), findsOneWidget);
   });
 
+  testWidgets('unavailable quotes and news retry their own data sources', (
+    tester,
+  ) async {
+    var quoteRetries = 0;
+    var newsRetries = 0;
+    await pumpHome(
+      tester,
+      home: dashboard(
+        indices: const [],
+        news: const [],
+        onRetryQuotes: () => quoteRetries++,
+        onRetryNews: () => newsRetries++,
+      ),
+    );
+
+    await tester.ensureVisible(find.byTooltip('Retry quotes'));
+    await tester.tap(find.byTooltip('Retry quotes'));
+    await tester.ensureVisible(find.byTooltip('Retry news'));
+    await tester.tap(find.byTooltip('Retry news'));
+    expect(quoteRetries, 1);
+    expect(newsRetries, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('account error retry does not fire until tapped', (tester) async {
     var accountRetries = 0;
     var quoteRetries = 0;

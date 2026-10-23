@@ -45,10 +45,18 @@ test('dashboard preserves role endpoints, funding guidance, and workflow links',
   assert.match(dashboard, /客户存款完成后由财务单人创建上分订单/);
 });
 
+test('dashboard does not present a risk percentage without customers', () => {
+  const dashboard = read('../app/dashboard/page.tsx');
+  assert.match(dashboard, /if \(!total\) return null/);
+  assert.match(dashboard, /暂无客户数据/);
+  assert.match(dashboard, /adminRiskPercent === null \?/);
+});
+
 test('dashboard styles retain responsive, focus, and reduced-motion behavior', () => {
   const css = read('../app/globals.css');
   assert.match(css, /\.ops-dashboard-grid/);
   assert.match(css, /\.ops-dashboard-section/);
+  assert.doesNotMatch(css, /letter-spacing\s*:\s*-/);
   assert.match(css, /prefers-reduced-motion: reduce/);
   assert.match(css, /:focus-visible/);
   assert.match(css, /@media \(max-width:767px\)/);

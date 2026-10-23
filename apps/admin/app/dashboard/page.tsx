@@ -127,7 +127,7 @@ export default function DashboardPage() {
 
   const adminRiskPercent = useMemo(() => {
     const total = adminRisk?.totalCustomers ?? 0;
-    if (!total) return 0;
+    if (!total) return null;
     return Math.round(((adminRisk?.highRiskCustomers ?? 0) / total) * 100);
   }, [adminRisk]);
 
@@ -315,7 +315,11 @@ export default function DashboardPage() {
                   <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                     <div>
                       <Text strong>高风险客户占比</Text>
-                      <Progress percent={adminRiskPercent} strokeColor="#dc2626" />
+                      {adminRiskPercent === null ? (
+                        <Text type="secondary" role="status">暂无客户数据</Text>
+                      ) : (
+                        <Progress percent={adminRiskPercent} strokeColor="#dc2626" />
+                      )}
                     </div>
                     <div>
                       <Text strong>财务处理建议</Text>

@@ -23,7 +23,7 @@ class HomeSectionHeader extends StatelessWidget {
     final titleWidget = AppText(
       title,
       style: (compact ? AppTypography.labelMedium : AppTypography.sectionTitle)
-          .copyWith(fontWeight: FontWeight.w800, letterSpacing: 0.1),
+          .copyWith(fontWeight: FontWeight.w800, letterSpacing: 0),
     );
     final action = onViewAll == null
         ? null

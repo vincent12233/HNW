@@ -51,6 +51,7 @@ class HomeQuickActions extends StatelessWidget {
         final width =
             (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
         return Wrap(
+          alignment: WrapAlignment.center,
           spacing: AppSpacing.sm,
           runSpacing: AppSpacing.sm,
           children: [

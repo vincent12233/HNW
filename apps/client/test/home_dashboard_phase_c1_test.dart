@@ -478,6 +478,19 @@ void main() {
     expect(withdrawals, 0);
   });
 
+  testWidgets('final home action is centered in its incomplete row', (
+    tester,
+  ) async {
+    await pumpHome(tester, size: const Size(390, 844), home: dashboard());
+
+    final action = find.byType(HomeActionButton).last;
+    await tester.ensureVisible(action);
+    final actionCenter = tester.getCenter(action).dx;
+
+    expect((actionCenter - 195).abs(), lessThan(1));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('pending KYC todo appears only from real status', (tester) async {
     await pumpHome(tester, home: dashboard(kycAvailable: false));
     expect(find.text('KYC pending review'), findsNothing);

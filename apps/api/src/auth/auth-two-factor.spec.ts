@@ -72,4 +72,71 @@ describe('Authentication second-factor enforcement', () => {
     );
     expect(jwt.signAsync).not.toHaveBeenCalled();
   });
+
+  it('issues only a short-lived setup challenge for an unbound staff login', async () => {
+    const { service, jwt, prisma, twoFactor } = await fixture();
+    const staff = {
+      id: 'manager-1',
+      role: 'MANAGER',
+      status: 'ACTIVE',
+      phone: null,
+      authVersion: 7,
+      passwordHash: await bcrypt.hash('test-password', 4),
+      businessProfile: { isActive: true },
+    };
+    (service as any).usersService.findByEmployeeNo = jest
+      .fn()
+      .mockResolvedValue(staff);
+    twoFactor.status.mockResolvedValue({ enabled: false });
+
+    await expect(
+      service.login({ employeeNo: 'MANAGER01', password: 'test-password' }),
+    ).rejects.toMatchObject({
+      response: expect.objectContaining({
+        twoFactorSetupRequired: true,
+        setupToken: 'token',
+      }),
+    });
+    expect(jwt.signAsync).toHaveBeenCalledWith(
+      expect.objectContaining({
+        sub: 'manager-1',
+        role: 'MANAGER',
+        version: 7,
+        purpose: 'STAFF_2FA_SETUP',
+      }),
+      { expiresIn: '10m' },
+    );
+    expect(prisma.userDevice.create).not.toHaveBeenCalled();
+    expect(prisma.loginAudit.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ success: true }),
+      }),
+    );
+  });
+
+  it('rejects the wrong staff portal before issuing a setup challenge', async () => {
+    const { service, jwt, twoFactor } = await fixture();
+    const staff = {
+      id: 'manager-1',
+      role: 'MANAGER',
+      status: 'ACTIVE',
+      phone: null,
+      authVersion: 7,
+      passwordHash: await bcrypt.hash('test-password', 4),
+      businessProfile: null,
+    };
+    (service as any).usersService.findByEmployeeNo = jest
+      .fn()
+      .mockResolvedValue(staff);
+    twoFactor.status.mockResolvedValue({ enabled: false });
+
+    await expect(
+      service.login(
+        { employeeNo: 'MANAGER01', password: 'test-password' },
+        { backendRole: 'FINANCE' },
+      ),
+    ).rejects.toThrow('This account belongs to the MANAGER backend.');
+    expect(twoFactor.status).not.toHaveBeenCalled();
+    expect(jwt.signAsync).not.toHaveBeenCalled();
+  });
 });

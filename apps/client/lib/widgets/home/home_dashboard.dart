@@ -18,9 +18,10 @@ import '../market_header.dart';
 import '../market_status_card.dart';
 import '../stock_list_tile.dart';
 import '../stock_logo.dart';
-import 'home_action_button.dart';
 import 'home_dashboard_data.dart';
 import 'home_kyc_todo.dart';
+import 'home_quick_actions.dart';
+import 'home_section_header.dart';
 import 'mini_line_chart_painter.dart';
 
 part 'home_dashboard_movers.dart';
@@ -216,7 +217,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           if (!loading) ...[
             const SizedBox(height: AppSpacing.sm),
-            _HomeQuickActions(dashboard: widget),
+            HomeQuickActions(
+              onDeposit: widget.onDeposit,
+              onWithdraw: widget.onWithdraw,
+              onTrade: widget.onTrade,
+            ),
             AccountDataStatus(
               hasData: widget.accountLoaded,
               refreshing: widget.accountRefreshing,
@@ -252,7 +257,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
             if (widget.featured.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.xl - 2),
-              const _SectionTitle('Featured'),
+              const HomeSectionHeader(title: 'Featured'),
               const SizedBox(height: AppSpacing.sm + 2),
               _FeaturedList(
                 stocks: widget.featured,
@@ -260,7 +265,10 @@ class _HomeDashboardState extends State<HomeDashboard> {
               ),
             ],
             const SizedBox(height: AppSpacing.xl - 2),
-            _SectionTitle('Market Indices', onViewAll: widget.onOpenMarkets),
+            HomeSectionHeader(
+              title: 'Market Indices',
+              onViewAll: widget.onOpenMarkets,
+            ),
             const SizedBox(height: AppSpacing.sm + 2),
             _IndicesGrid(
               indices: widget.indices,
@@ -285,8 +293,8 @@ class _HomeDashboardState extends State<HomeDashboard> {
               onLogoLoadFailed: widget.onLogoLoadFailed,
             ),
             const SizedBox(height: AppSpacing.xl - 2),
-            _SectionTitle(
-              'Market News',
+            HomeSectionHeader(
+              title: 'Market News',
               onViewAll: widget.news.isEmpty ? null : widget.onViewAllNews,
             ),
             const SizedBox(height: AppSpacing.sm + 2),
@@ -297,7 +305,7 @@ class _HomeDashboardState extends State<HomeDashboard> {
             ),
             if (widget.companyCard != null) ...[
               const SizedBox(height: AppSpacing.xl - 2),
-              const _SectionTitle('Our Company'),
+              const HomeSectionHeader(title: 'Our Company'),
               const SizedBox(height: AppSpacing.sm + 2),
               widget.companyCard!,
             ],

@@ -20,7 +20,7 @@ const read = (relative) => readFileSync(join(root, relative), 'utf8');
 
 const PII_LOG = /console\.(log|debug|info|warn|error)\([^)]*(phone|accountNumber|token|stack)/i;
 const VIP_SPECIAL = /VIP 优先|VIP限额|vipPriority|自动升级|客户经理/;
-const AUTH_INVENT = /smsOtp|verificationCode|\bOTP\b|totp|authenticator|2FA/i;
+const AUTH_INVENT = /smsOtp/i;
 const DANGER_HEALTH = /重启服务|清缓存|auto-repair|replayAudit|删除审计/;
 
 test('G.5 governance role allowlist keeps audit and settings on ADMIN only', () => {
@@ -156,7 +156,7 @@ test('G.5 settings, invites and operator console keep server scopes and mask PII
   assert.doesNotMatch(settings, VIP_SPECIAL);
 });
 
-test('G.5 account, 403, 404 and global error states stay password-login only', () => {
+test('G.5 account, 403, 404 and global error states keep the staff login return path', () => {
   const shell = read('../components/AdminShell.tsx');
   const login = read('../app/login/page.tsx');
   const denied = read('../components/OpsPermissionDenied.tsx');
@@ -170,6 +170,7 @@ test('G.5 account, 403, 404 and global error states stay password-login only', (
   assert.ok(login.includes('params.get("session") !== "expired"'));
   assert.match(login, /员工编号和密码/);
   assert.doesNotMatch(login, AUTH_INVENT);
+  assert.match(login, /谷歌验证器/);
   assert.match(denied, /status="403"/);
   assert.match(denied, /没有访问该页面的权限/);
   assert.match(missing, /status="404"/);

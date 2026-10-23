@@ -109,7 +109,7 @@ class _FloatingSupportButtonState extends State<FloatingSupportButton>
                               color: AppColors.textInverse,
                               fontSize: m.fabFontSize,
                               fontWeight: FontWeight.w600,
-                              letterSpacing: 0.15,
+                              letterSpacing: 0,
                               height: 1,
                             ),
                           ),

@@ -64,7 +64,7 @@ class _AadhaarMarkPainter extends CustomPainter {
           color: Color(0xFFE52B36),
           fontSize: 7,
           fontWeight: FontWeight.w800,
-          letterSpacing: 1.0,
+          letterSpacing: 0,
         ),
       ),
       textDirection: TextDirection.ltr,

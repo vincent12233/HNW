@@ -45,21 +45,19 @@ export class AuthController {
     @Req() req: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const forwardedFor = req.headers['x-forwarded-for'];
-
-    const forwardedIp = Array.isArray(forwardedFor)
-      ? forwardedFor[0]
-      : forwardedFor?.split(',')[0]?.trim();
-
-    const ipAddress = forwardedIp || req.ip || req.socket.remoteAddress || null;
+    // Express derives req.ip from the configured trust-proxy hop count. Reading
+    // X-Forwarded-For directly would let an untrusted client forge audit data.
+    const ipAddress = req.ip || req.socket.remoteAddress || null;
 
     const userAgent = req.headers['user-agent'] || null;
+    const backendRole = req.header('x-backend-role')?.trim().toUpperCase();
 
     const result = await this.authService.login(dto, {
       ipAddress,
       userAgent,
+      backendRole:
+        backendRole && backendRoles.has(backendRole) ? backendRole : undefined,
     });
-    const backendRole = req.header('x-backend-role')?.trim().toUpperCase();
     if (
       backendRole &&
       backendRoles.has(backendRole) &&

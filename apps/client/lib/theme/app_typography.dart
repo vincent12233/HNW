@@ -19,7 +19,7 @@ abstract final class AppTypography {
     fontSize: 28,
     fontWeight: FontWeight.w800,
     height: 1.15,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     color: AppColors.textPrimary,
   );
 
@@ -29,7 +29,7 @@ abstract final class AppTypography {
     fontSize: 22,
     fontWeight: FontWeight.w800,
     height: 1.2,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     color: AppColors.textPrimary,
   );
 
@@ -123,7 +123,7 @@ abstract final class AppTypography {
     fontSize: 28,
     fontWeight: FontWeight.w800,
     height: 1.1,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     fontFeatures: tabularFeatures,
     color: AppColors.textPrimary,
   );
@@ -151,7 +151,7 @@ abstract final class AppTypography {
     fontSize: 28,
     fontWeight: FontWeight.w800,
     height: 1.1,
-    letterSpacing: -0.4,
+    letterSpacing: 0,
     fontFeatures: tabularFeatures,
     color: AppColors.textInverse,
   );
@@ -160,7 +160,7 @@ abstract final class AppTypography {
     fontFamily: fontFamily,
     fontSize: 16,
     fontWeight: FontWeight.w800,
-    letterSpacing: -0.2,
+    letterSpacing: 0,
     color: AppColors.textPrimary,
   );
 

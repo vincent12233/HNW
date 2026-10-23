@@ -724,6 +724,79 @@ body {
   border: 1px solid #e8edf5 !important;
 }
 
+.ops-dashboard-grid,
+.ops-dashboard-grid .ant-col {
+  min-width: 0;
+}
+
+.ops-dashboard-section {
+  border-radius: 8px !important;
+}
+
+.ops-metric-layout,
+.ops-quick-layout {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.ops-metric-layout .ant-statistic {
+  min-width: 0;
+}
+
+.ops-metric-icon,
+.ops-quick-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  color: #fff;
+}
+
+.ops-metric-icon {
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+}
+
+.ops-quick-icon {
+  width: 38px;
+  height: 38px;
+  font-size: 17px;
+}
+
+.ops-metric-icon[data-tone="brand"],
+.ops-quick-icon[data-tone="brand"] { background: #1f6feb; }
+.ops-metric-icon[data-tone="success"],
+.ops-quick-icon[data-tone="success"] { background: #16834b; }
+.ops-metric-icon[data-tone="info"],
+.ops-quick-icon[data-tone="info"] { background: #087f9b; }
+.ops-metric-icon[data-tone="warning"],
+.ops-quick-icon[data-tone="warning"] { background: #a86600; }
+.ops-metric-icon[data-tone="danger"],
+.ops-quick-icon[data-tone="danger"] { background: #c43d4b; }
+.ops-metric-icon[data-tone="violet"],
+.ops-quick-icon[data-tone="violet"] { background: #7254a8; }
+
+.ops-quick-content,
+.ops-quick-copy {
+  min-width: 0;
+}
+
+.ops-quick-content {
+  flex: 1 1 auto;
+}
+
+.ops-quick-description {
+  margin: 3px 0 0 !important;
+}
+
+.ops-quick-arrow {
+  flex: 0 0 auto;
+  margin-top: 10px;
+  color: #64748b;
+}
+
 .ops-quick-action {
   display: block;
   width: 100%;
@@ -735,6 +808,11 @@ body {
   font: inherit;
   text-align: start;
   cursor: pointer;
+}
+
+.ops-quick-action:focus-visible {
+  outline: 3px solid #1f6feb;
+  outline-offset: 3px;
 }
 
 .ops-quick-action .ant-space-item {
@@ -756,6 +834,16 @@ body {
   }
   .ops-quick-card:hover {
     transform: none;
+  }
+}
+
+@media (max-width:767px) {
+  .ops-quick-card .ant-card-body {
+    padding: 16px !important;
+  }
+
+  .ops-quick-content {
+    gap: 10px;
   }
 }
 

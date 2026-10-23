@@ -199,7 +199,7 @@ class _SupportChatPageState extends State<SupportChatPage>
                       style: TextStyle(
                         fontSize: m.subtitleSize,
                         fontWeight: FontWeight.w800,
-                        letterSpacing: 0.25,
+                        letterSpacing: 0,
                         color: Colors.blueGrey.shade600,
                       ),
                     ),
@@ -295,7 +295,7 @@ class _DayChip extends StatelessWidget {
         'TODAY',
         style: TextStyle(
           fontSize: (9 * m.scale).clamp(8.0, 11.0),
-          letterSpacing: 1,
+          letterSpacing: 0,
           fontWeight: FontWeight.w800,
           color: const Color(0xFF667085),
         ),

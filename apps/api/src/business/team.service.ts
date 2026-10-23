@@ -36,6 +36,7 @@ export class TeamService {
         role: true,
         status: true,
         businessProfile: { select: { employeeNo: true, isActive: true } },
+        twoFactor: { select: { enabled: true } },
         _count: {
           select: { assignedCustomers: true, createdBusinessUsers: true },
         },
@@ -64,6 +65,8 @@ export class TeamService {
     );
     return rows.map((row) => ({
       ...row,
+      twoFactorEnabled: row.twoFactor?.enabled ?? false,
+      twoFactor: undefined,
       vipClientCount: vipCounts.get(row.id) ?? 0,
     }));
   }
@@ -156,6 +159,71 @@ export class TeamService {
   async audit(actorId: string, targetId: string, action: string) {
     await this.prisma.auditLog.create({
       data: { actorId, action, resource: 'TEAM', resourceId: targetId },
+    });
+  }
+
+  async resetTwoFactor(actorId: string, targetId: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const actor = await tx.user.findUnique({
+        where: { id: actorId },
+        select: { role: true, status: true },
+      });
+      if (
+        !actor ||
+        actor.status !== 'ACTIVE' ||
+        !['ADMIN', 'MANAGER'].includes(actor.role)
+      ) {
+        throw new ForbiddenException('无权重置后台验证器');
+      }
+
+      const target = await tx.user.findFirst({
+        where:
+          actor.role === 'ADMIN'
+            ? { id: targetId, role: 'MANAGER', deletedAt: null }
+            : {
+                id: targetId,
+                role: 'BUSINESS',
+                businessCreatorId: actorId,
+                deletedAt: null,
+              },
+        select: { id: true, role: true, fullName: true },
+      });
+      if (!target)
+        throw new NotFoundException('该员工不在当前验证器重置范围内');
+
+      await tx.twoFactorCredential.upsert({
+        where: { userId: target.id },
+        create: { userId: target.id },
+        update: {
+          enabled: false,
+          secret: null,
+          pendingSecret: null,
+          pendingExpiresAt: null,
+          recoveryHashes: [],
+          lastStep: -1,
+          attempts: 0,
+          lockedUntil: null,
+        },
+      });
+      await tx.user.update({
+        where: { id: target.id },
+        data: { authVersion: { increment: 1 } },
+      });
+      await tx.auditLog.create({
+        data: {
+          actorId,
+          action: 'STAFF_TWO_FACTOR_RESET',
+          resource: 'USER',
+          resourceId: target.id,
+          metadata: { targetRole: target.role },
+        },
+      });
+      return {
+        reset: true,
+        targetId: target.id,
+        targetRole: target.role,
+        message: `${target.fullName} 下次登录需要重新绑定谷歌验证器`,
+      };
     });
   }
 

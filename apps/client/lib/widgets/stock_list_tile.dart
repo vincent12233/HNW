@@ -130,7 +130,7 @@ class StockListTile extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: AppTypography.titleSmall.copyWith(
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 0.15,
+                              letterSpacing: 0,
                             ),
                           ),
                         ),

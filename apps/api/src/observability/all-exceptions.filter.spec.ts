@@ -49,6 +49,21 @@ describe('Authentication error response contracts', () => {
       responseFor(new UnauthorizedException({ kycToken: 'onboarding' }))
         .kycToken,
     ).toBe('onboarding');
+    expect(
+      responseFor(
+        new UnauthorizedException({
+          message: 'Setup required',
+          twoFactorSetupRequired: true,
+          setupToken: 'short-lived-setup-token',
+          staffRole: 'MANAGER',
+          passwordHash: 'secret',
+        }),
+      ),
+    ).toMatchObject({
+      twoFactorSetupRequired: true,
+      setupToken: 'short-lived-setup-token',
+      staffRole: 'MANAGER',
+    });
   });
   it('returns stable generic and business error codes with the request id', () => {
     expect(responseFor(new UnauthorizedException())).toMatchObject({

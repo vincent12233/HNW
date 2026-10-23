@@ -18,6 +18,7 @@ import {
   type RateLimitStore,
 } from './common/rate-limit-store';
 import { resolveTrustProxyHops } from './common/trust-proxy';
+import { requestLimit } from './common/request-limit-policy';
 import {
   recordBusinessEvent,
   recordBusinessFailure,
@@ -142,31 +143,27 @@ function validateProductionEnvironment() {
   if (!process.env.RATE_LIMIT_REDIS_URL?.trim()) {
     throw new Error('RATE_LIMIT_REDIS_URL is required in production');
   }
-}
-
-function requestLimit(path: string) {
+  const metricsToken = process.env.METRICS_BEARER_TOKEN?.trim() ?? '';
   if (
-    path === '/auth/login' ||
-    path === '/auth/google' ||
-    path === '/auth/biometric' ||
-    path.startsWith('/auth/recovery')
+    metricsToken &&
+    (metricsToken.length < 32 ||
+      /generate_|replace|change-me|development/i.test(metricsToken))
   ) {
-    return 10;
+    throw new Error(
+      'METRICS_BEARER_TOKEN must be a random value of at least 32 characters when configured',
+    );
   }
-  if (path.startsWith('/auth/')) return 20;
-  if (path.startsWith('/kyc/')) return 10;
-  if (path === '/otc/orders') return 10;
   if (
-    path.includes('/deposit') ||
-    path.includes('/withdrawal') ||
-    path.includes('/loans') ||
-    (path.includes('/accounts/') &&
-      (path.includes('/credit') || path.includes('/debit')))
+    metricsToken &&
+    (requiredSecrets.some(
+      (name) => process.env[name]?.trim() === metricsToken,
+    ) ||
+      metricsToken === inviteCode)
   ) {
-    return 30;
+    throw new Error(
+      'METRICS_BEARER_TOKEN must be distinct from application secrets',
+    );
   }
-  if (path.includes('/orders') || path.includes('/withdrawal')) return 60;
-  return 300;
 }
 
 function securityMiddleware(rateLimitStore: RateLimitStore) {

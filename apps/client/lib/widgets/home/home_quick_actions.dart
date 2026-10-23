@@ -19,12 +19,13 @@ class HomeQuickActions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final actionColors = [AppColors.brandPrimary, AppColors.gain, AppColors.info];
     final actions = <Widget>[
       HomeActionButton(
         label: tr('Add Money'),
         subtitle: tr('Instant Deposit'),
         icon: Icons.add_card_outlined,
-        color: AppColors.brandPrimary,
+        color: actionColors[0],
         onTap: onDeposit,
         showChevron: false,
       ),
@@ -32,14 +33,14 @@ class HomeQuickActions extends StatelessWidget {
         label: tr('Withdraw'),
         subtitle: tr('Withdraw to Bank'),
         icon: Icons.account_balance_outlined,
-        color: AppColors.gain,
+        color: actionColors[1],
         onTap: onWithdraw,
       ),
       HomeActionButton(
         label: tr('Trade'),
         subtitle: tr('Explore stocks and place orders'),
         icon: Icons.show_chart_rounded,
-        color: AppColors.info,
+        color: actionColors[2],
         onTap: onTrade,
       ),
     ];

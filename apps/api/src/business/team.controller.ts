@@ -183,4 +183,11 @@ export class TeamController {
     await this.team.audit(req.user.userId, id, 'MANAGER_BUSINESS_PASSWORD');
     return result;
   }
+  @Patch(':id/two-factor-reset')
+  async resetTwoFactor(
+    @Req() req: AuthenticatedRequest,
+    @Param('id') id: string,
+  ) {
+    return this.team.resetTwoFactor(req.user.userId, id);
+  }
 }

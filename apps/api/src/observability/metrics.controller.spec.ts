@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import { MetricsController } from './metrics.controller';
 import { recordBusinessEvent } from './metrics';
+import { MetricsAccessGuard } from './metrics-access.guard';
 
 describe('MetricsController', () => {
   let app: INestApplication;
@@ -10,6 +11,7 @@ describe('MetricsController', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [MetricsController],
+      providers: [MetricsAccessGuard],
     }).compile();
     app = module.createNestApplication();
     await app.init();
@@ -23,6 +25,7 @@ describe('MetricsController', () => {
       .get('/metrics')
       .expect(200);
     expect(response.headers['content-type']).toContain('text/plain');
+    expect(response.headers['cache-control']).toBe('no-store');
     expect(response.text).toContain(
       'hnw_business_events_total{event="order_submitted"}',
     );

@@ -6,19 +6,31 @@ import { fileURLToPath } from 'node:url';
 
 const root = dirname(fileURLToPath(import.meta.url));
 
-test('staff login currently uses employeeNo and password, not OTP', () => {
+test('staff login keeps employeeNo and password and adds mandatory authenticator enrollment', () => {
   const source = readFileSync(join(root, '../app/login/page.tsx'), 'utf8');
-  assert.match(source, /type Values = \{ employeeNo: string; password: string \}/);
+  assert.match(source, /employeeNo: string; password: string; verificationCode\?: string/);
   assert.match(source, /name="employeeNo"/);
   assert.match(source, /name="password"/);
   assert.match(source, /\/auth\/login/);
   assert.match(source, /员工工作台/);
   assert.match(source, /Input.Password/);
   assert.match(source, /EyeInvisibleOutlined/);
-  assert.doesNotMatch(source, /smsOtp|verificationCode|\bOTP\b/);
-  assert.doesNotMatch(source, /totp|authenticator/i);
+  assert.doesNotMatch(source, /smsOtp/);
+  assert.match(source, /twoFactorSetupRequired/);
+  assert.match(source, /\/auth\/staff-two-factor\/setup/);
+  assert.match(source, /\/auth\/staff-two-factor\/confirm/);
+  assert.match(source, /QRCode value=\{setupData\.uri\}/);
+  assert.match(source, /Input\.OTP/);
+  assert.match(source, /恢复码只显示一次/);
   assert.doesNotMatch(source, /3002|3004|3005|3006|3007/);
   assert.doesNotMatch(source, /accessToken|staff_access_/);
+});
+
+test('team UI exposes only the scoped authenticator reset endpoint', () => {
+  const source = readFileSync(join(root, '../app/team/page.tsx'), 'utf8');
+  assert.match(source, /\/team\/\$\{row\.id\}\/two-factor-reset/);
+  assert.match(source, /下次登录必须重新绑定/);
+  assert.doesNotMatch(source, /\/business\/\$\{row\.id\}\/two-factor-reset/);
 });
 
 test('each staff role menu is an allowlist and does not include F&O, GTT, or basket routes', () => {

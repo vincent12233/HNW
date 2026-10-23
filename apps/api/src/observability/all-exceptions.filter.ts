@@ -83,6 +83,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       ...(authentication.twoFactorRequired === true
         ? { twoFactorRequired: true }
         : {}),
+      ...(authentication.twoFactorSetupRequired === true &&
+      typeof authentication.setupToken === 'string' &&
+      typeof authentication.staffRole === 'string'
+        ? {
+            twoFactorSetupRequired: true,
+            setupToken: authentication.setupToken,
+            staffRole: authentication.staffRole,
+          }
+        : {}),
       ...(typeof authentication.kycToken === 'string'
         ? { kycToken: authentication.kycToken }
         : {}),

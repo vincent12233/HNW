@@ -37,6 +37,18 @@ void main() {
     expect(AppTypography.numericLarge.fontFeatures!.first.feature, 'tnum');
   });
 
+  test('typography keeps standard letter spacing across display styles', () {
+    for (final style in [
+      AppTypography.display,
+      AppTypography.headline,
+      AppTypography.numericLarge,
+      AppTypography.numericInverse,
+      AppTypography.sectionTitle,
+    ]) {
+      expect(style.letterSpacing, 0);
+    }
+  });
+
   testWidgets('AppCard renders bordered surface', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

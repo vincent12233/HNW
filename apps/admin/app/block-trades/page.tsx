@@ -150,7 +150,7 @@ export default function OtcOffersPage() {
         content: (
           <Space orientation="vertical">
             <Text>该 4 位交易密钥将在 OTC 列表中显示，下架后隐藏。</Text>
-            <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
+            <Title level={2} copyable style={{ margin: 0, letterSpacing: 0 }}>
               {response.data.transactionKey}
             </Title>
           </Space>
@@ -217,7 +217,7 @@ export default function OtcOffersPage() {
               <Text>
                 下架会清空旧密钥；重新上架会生成新的 4 位交易密钥。
               </Text>
-              <Title level={2} copyable style={{ margin: 0, letterSpacing: 8 }}>
+              <Title level={2} copyable style={{ margin: 0, letterSpacing: 0 }}>
                 {response.data.transactionKey}
               </Title>
             </Space>

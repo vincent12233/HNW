@@ -86,6 +86,12 @@ test('G.4 OTC review keeps pending PATCH and confirm-before-mutate', () => {
   assert.doesNotMatch(source, PII_LOG);
 });
 
+test('OTC transaction keys use readable standard character spacing', () => {
+  const source = read('../app/block-trades/page.tsx');
+  assert.equal((source.match(/letterSpacing: 0/g) ?? []).length, 2);
+  assert.doesNotMatch(source, /letterSpacing:\s*8/);
+});
+
 test('G.4 instruments keep search/status/exchange APIs and catalog honesty', () => {
   const source = read('../app/instruments/page.tsx');
   assert.match(source, /\/admin\/instruments/);

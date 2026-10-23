@@ -4,6 +4,7 @@ import request from 'supertest';
 import { AllExceptionsFilter } from '../observability/all-exceptions.filter';
 import { PrismaService } from '../prisma/prisma.service';
 import { HealthController } from './health.controller';
+import { MetricsAccessGuard } from '../observability/metrics-access.guard';
 
 describe('health probe HTTP contracts', () => {
   let app: INestApplication;
@@ -12,7 +13,10 @@ describe('health probe HTTP contracts', () => {
   beforeAll(async () => {
     const module = await Test.createTestingModule({
       controllers: [HealthController],
-      providers: [{ provide: PrismaService, useValue: { $queryRaw: query } }],
+      providers: [
+        { provide: PrismaService, useValue: { $queryRaw: query } },
+        MetricsAccessGuard,
+      ],
     }).compile();
     app = module.createNestApplication();
     app.useGlobalFilters(new AllExceptionsFilter());
@@ -48,6 +52,7 @@ describe('health probe HTTP contracts', () => {
       .get('/health/metrics')
       .expect(200);
     expect(response.headers['content-type']).toContain('text/plain');
+    expect(response.headers['cache-control']).toBe('no-store');
     expect(response.text).toContain('hnw_process_uptime_seconds');
     expect(response.text).toContain('hnw_http_requests_total');
     expect(response.text).toContain('hnw_business_failures_total');

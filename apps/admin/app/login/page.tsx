@@ -1,7 +1,7 @@
 "use client";
 
 import { EyeInvisibleOutlined, EyeOutlined, IdcardOutlined, LockOutlined, LoginOutlined, SafetyCertificateOutlined } from "@ant-design/icons";
-import { Alert, Button, Form, Input } from "antd";
+import { Alert, Button, Form, Input, QRCode, Space, Typography } from "antd";
 import { isAxiosError } from "axios";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useRef, useState } from "react";
@@ -9,7 +9,8 @@ import { Suspense, useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { backendRoleLabels, getBackendRole, getConfiguredBackendRole, type BackendRole } from "@/lib/backend-role";
 
-type Values = { employeeNo: string; password: string };
+type Values = { employeeNo: string; password: string; verificationCode?: string };
+type SetupData = { secret: string; uri: string; expiresAt: string };
 
 const roleHints: Record<BackendRole, string> = {
   ADMIN: "平台治理、产品上架、权限与审计",
@@ -43,6 +44,11 @@ export default function AdminLoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const [capsLock, setCapsLock] = useState(false);
+  const [verificationRequired, setVerificationRequired] = useState(false);
+  const [setupToken, setSetupToken] = useState("");
+  const [setupData, setSetupData] = useState<SetupData | null>(null);
+  const [setupCode, setSetupCode] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState<string[]>([]);
   const [deploymentRole, setDeploymentRole] = useState<BackendRole | undefined>(() => getConfiguredBackendRole());
 
   useEffect(() => {
@@ -57,7 +63,11 @@ export default function AdminLoginPage() {
     try {
       const { data } = await api.post(
         "/auth/login",
-        { employeeNo: values.employeeNo.trim().toUpperCase(), password: values.password },
+        {
+          employeeNo: values.employeeNo.trim().toUpperCase(),
+          password: values.password,
+          ...(values.verificationCode ? { verificationCode: values.verificationCode.trim() } : {}),
+        },
         { timeout: 20000 },
       );
       if (
@@ -70,8 +80,40 @@ export default function AdminLoginPage() {
       localStorage.setItem("adminUser", JSON.stringify(data.user));
       router.push(homeByRole[data.user.role] || "/dashboard");
     } catch (err: unknown) {
-      const message = (err as { response?: { data?: { message?: string | string[] } } }).response?.data?.message;
+      const responseData = (err as {
+        response?: {
+          data?: {
+            message?: string | string[];
+            twoFactorRequired?: boolean;
+            twoFactorSetupRequired?: boolean;
+            setupToken?: string;
+          };
+        };
+      }).response?.data;
+      const message = responseData?.message;
       const status = isAxiosError(err) ? err.response?.status : undefined;
+      if (status === 401 && responseData?.twoFactorSetupRequired && responseData.setupToken) {
+        setSetupToken(responseData.setupToken);
+        setError("");
+        try {
+          const { data } = await api.post<SetupData>(
+            "/auth/staff-two-factor/setup",
+            {},
+            { headers: { Authorization: `Bearer ${responseData.setupToken}` } },
+          );
+          setSetupData(data);
+          return;
+        } catch {
+          setSetupToken("");
+          setError("验证器绑定会话创建失败，请重新输入员工编号和密码。");
+          return;
+        }
+      }
+      if (status === 401 && responseData?.twoFactorRequired) {
+        setVerificationRequired(true);
+        setError("请输入谷歌验证器中的 6 位动态码。");
+        return;
+      }
       setError(
         isAxiosError(err) && !err.response
           ? "暂时无法连接后台服务，请检查网络后重试。"
@@ -81,6 +123,31 @@ export default function AdminLoginPage() {
       );
     } finally {
       submittingRef.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  async function confirmSetup() {
+    if (!setupToken || !/^\d{6}$/.test(setupCode)) {
+      setError("请输入谷歌验证器显示的 6 位动态码。");
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      const { data } = await api.post<{ recoveryCodes: string[] }>(
+        "/auth/staff-two-factor/confirm",
+        { code: setupCode },
+        { headers: { Authorization: `Bearer ${setupToken}` } },
+      );
+      setRecoveryCodes(data.recoveryCodes || []);
+      setSetupToken("");
+      setSetupData(null);
+      setSetupCode("");
+    } catch (err: unknown) {
+      const message = (err as { response?: { data?: { message?: string } } }).response?.data?.message;
+      setError(message || "动态码验证失败，请确认手机时间准确后重试。");
+    } finally {
       setSubmitting(false);
     }
   }
@@ -113,7 +180,55 @@ export default function AdminLoginPage() {
         <Suspense fallback={null}>
           <SessionStatus />
         </Suspense>
-        <Form<Values>
+        {setupData ? (
+          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+            <Alert
+              type="info"
+              showIcon
+              title="首次登录必须绑定谷歌验证器"
+              description="使用 Google Authenticator 扫描二维码，再输入应用中显示的 6 位动态码。二维码将在 10 分钟后失效。"
+            />
+            <div className="login-qr-wrap">
+              <QRCode value={setupData.uri} size={196} bordered={false} />
+            </div>
+            <Typography.Text type="secondary">无法扫码时手动输入密钥：</Typography.Text>
+            <Typography.Text copyable code className="login-setup-secret">
+              {setupData.secret}
+            </Typography.Text>
+            <Input.OTP
+              length={6}
+              value={setupCode}
+              onChange={setSetupCode}
+              aria-label="验证器动态码"
+              size="large"
+            />
+            <Button type="primary" block loading={submitting} onClick={() => void confirmSetup()}>
+              确认绑定
+            </Button>
+          </Space>
+        ) : recoveryCodes.length ? (
+          <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
+            <Alert
+              type="success"
+              showIcon
+              title="谷歌验证器绑定成功"
+              description="恢复码只显示一次。请离线安全保存，每个恢复码只能使用一次。"
+            />
+            <div className="login-recovery-codes">
+              {recoveryCodes.map((code) => <Typography.Text code key={code}>{code}</Typography.Text>)}
+            </div>
+            <Button
+              type="primary"
+              block
+              onClick={() => {
+                setRecoveryCodes([]);
+                setVerificationRequired(true);
+              }}
+            >
+              返回登录
+            </Button>
+          </Space>
+        ) : <Form<Values>
           layout="vertical"
           onFinish={submit}
           size="large"
@@ -130,6 +245,18 @@ export default function AdminLoginPage() {
               aria-label="员工编号"
             />
           </Form.Item>
+          {verificationRequired && (
+            <Form.Item
+              label="谷歌验证器动态码"
+              name="verificationCode"
+              rules={[
+                { required: true, message: "请输入 6 位动态码" },
+                { pattern: /^\d{6}$/, message: "动态码必须是 6 位数字" },
+              ]}
+            >
+              <Input.OTP length={6} aria-label="谷歌验证器动态码" />
+            </Form.Item>
+          )}
           <Form.Item
             label="密码"
             name="password"
@@ -165,7 +292,7 @@ export default function AdminLoginPage() {
           >
             {submitting ? "正在登录…" : "登录工作台"}
           </Button>
-        </Form>
+        </Form>}
         <p className="login-foot">仅限已授权员工使用本入口。客户请使用移动端账户登录。</p>
       </section>
     </main>

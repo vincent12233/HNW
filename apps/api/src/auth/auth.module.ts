@@ -8,6 +8,8 @@ import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { JwtStrategy } from './jwt.strategy';
 import { TwoFactorModule } from './two-factor.module';
+import { StaffTwoFactorSetupGuard } from './staff-two-factor-setup.guard';
+import { StaffTwoFactorController } from './staff-two-factor.controller';
 
 @Global()
 @Module({
@@ -23,8 +25,8 @@ import { TwoFactorModule } from './two-factor.module';
       }),
     }),
   ],
-  controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  controllers: [AuthController, StaffTwoFactorController],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard, StaffTwoFactorSetupGuard],
   exports: [JwtModule, PassportModule, JwtAuthGuard],
 })
 export class AuthModule {}

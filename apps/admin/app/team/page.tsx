@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Button, Descriptions, Form, Input, Popconfirm, Select, Space, Table, Tag, Tooltip, Typography, message } from "antd";
-import { HistoryOutlined, PlusOutlined, ProfileOutlined, ReloadOutlined, SearchOutlined } from "@ant-design/icons";
+import { HistoryOutlined, PlusOutlined, ProfileOutlined, ReloadOutlined, SafetyCertificateOutlined, SearchOutlined } from "@ant-design/icons";
 import AdminShell from "@/components/AdminShell";
 import InvitePoolButton from "@/components/InvitePoolButton";
 import KycReviewList from "@/components/KycReviewList";
@@ -49,6 +49,7 @@ type Staff = {
   createdAt?: string;
   businessProfile?: { employeeNo: string; isActive?: boolean };
   vipClientCount?: number;
+  twoFactorEnabled?: boolean;
   _count?: { assignedCustomers: number; createdBusinessUsers: number };
 };
 
@@ -354,6 +355,16 @@ export default function TeamPage() {
     }
   }
 
+  async function resetStaffAuthenticator(row: Staff) {
+    try {
+      await api.patch(`/team/${row.id}/two-factor-reset`);
+      message.success(`${row.fullName} 的验证器已重置，下次登录必须重新绑定`);
+      await load();
+    } catch (failure: unknown) {
+      message.error(getApiErrorMessage(failure, "验证器重置失败"));
+    }
+  }
+
   const hasFilters = keyword.trim() !== "" || statusFilter !== "ALL";
   const filteredStaff = useMemo(
     () =>
@@ -533,6 +544,15 @@ export default function TeamPage() {
                 render: (_, r) => <OpsStatusTag code={r.status} label={accountStatusLabel(r.status)} />,
               },
               {
+                title: "验证器",
+                render: (_, r) => (
+                  <OpsStatusTag
+                    code={r.twoFactorEnabled ? "ACTIVE" : "PENDING"}
+                    label={r.twoFactorEnabled ? "已绑定" : "待绑定"}
+                  />
+                ),
+              },
+              {
                 title: role === "ADMIN" ? "业务员数量" : "客户数量",
                 render: (_, r) =>
                   role === "ADMIN" ? r._count?.createdBusinessUsers : r._count?.assignedCustomers,
@@ -566,6 +586,22 @@ export default function TeamPage() {
                         <InvitePoolButton id={row.id} name={row.fullName} />
                       </>
                     ) : null}
+                    <Popconfirm
+                      title={`重置 ${row.fullName} 的谷歌验证器？`}
+                      description="重置会立即撤销该账号现有会话。下次登录必须重新扫码绑定，不会修改密码或业务权限。"
+                      okText="确认重置"
+                      cancelText="取消"
+                      okButtonProps={{ danger: true }}
+                      onConfirm={() => void resetStaffAuthenticator(row)}
+                    >
+                      <Button
+                        size="small"
+                        icon={<SafetyCertificateOutlined />}
+                        aria-label={`重置 ${row.fullName} 的谷歌验证器`}
+                      >
+                        重置验证器
+                      </Button>
+                    </Popconfirm>
                     <Popconfirm
                       title={`删除${row.role === "MANAGER" ? "管理员" : "业务员"} ${row.fullName}？`}
                       description="删除后无法登录，保留历史记录；名下有业务员或客户时需先转移归属。"

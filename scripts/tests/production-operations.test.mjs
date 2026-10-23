@@ -28,6 +28,9 @@ test('accepts a complete production configuration', () => assert.equal(run().sta
 test('rejects development market provider', () => assert.notEqual(run({ MARKET_DATA_PROVIDER: 'YAHOO' }).status, 0));
 test('rejects reused secrets', () => assert.notEqual(run({ OBJECT_SIGNING_SECRET: 'a'.repeat(32) }).status, 0));
 test('rejects non-HTTPS API URL', () => assert.notEqual(run({ PUBLIC_API_URL: 'http://localhost:3000' }).status, 0));
+test('rejects a weak optional metrics token', () => assert.notEqual(run({ METRICS_BEARER_TOKEN: 'too-short' }).status, 0));
+test('rejects a placeholder metrics token', () => assert.notEqual(run({ METRICS_BEARER_TOKEN: 'GENERATE_UNIQUE_32_PLUS_CHARACTERS' }).status, 0));
+test('rejects a metrics token reused from an application secret', () => assert.notEqual(run({ METRICS_BEARER_TOKEN: 'a'.repeat(32) }).status, 0));
 
 const readRepoFile = (path) => readFileSync(join(process.cwd(), path), 'utf8');
 

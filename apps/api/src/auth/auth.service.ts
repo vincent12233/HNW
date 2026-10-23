@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   HttpException,
   HttpStatus,
   Injectable,
@@ -310,6 +311,7 @@ export class AuthService {
     context?: {
       ipAddress?: string | null;
       userAgent?: string | null;
+      backendRole?: string;
     },
   ) {
     const phone = dto.phone ? normalizePhone(dto.phone) : null;
@@ -411,6 +413,30 @@ export class AuthService {
       });
 
       throw new UnauthorizedException('该业务员账号已被停用');
+    }
+
+    if (context?.backendRole && user.role !== context.backendRole) {
+      throw new ForbiddenException(
+        `This account belongs to the ${user.role} backend.`,
+      );
+    }
+
+    const secondFactor = await this.twoFactor.status(user.id);
+    if (user.role !== UserRole.CLIENT && !secondFactor.enabled) {
+      throw new UnauthorizedException({
+        message: '首次登录需要绑定谷歌验证器',
+        twoFactorSetupRequired: true,
+        setupToken: await this.jwtService.signAsync(
+          {
+            sub: user.id,
+            role: user.role,
+            version: user.authVersion,
+            purpose: 'STAFF_2FA_SETUP',
+          },
+          { expiresIn: '10m' },
+        ),
+        staffRole: user.role,
+      });
     }
 
     await this.twoFactor.verifyLogin(user.id, dto.verificationCode);

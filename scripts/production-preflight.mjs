@@ -71,10 +71,13 @@ for (const key of secretKeys) {
 for (const key of passwordKeys) {
   if ((env[key] ?? '').length < 12) errors.push(`${key} must contain at least 12 characters`);
 }
-const uniqueKeys = [...secretKeys, ...passwordKeys, 'ADMIN_FIXED_INVITE_CODE'];
+const uniqueKeys = [...secretKeys, ...passwordKeys, 'ADMIN_FIXED_INVITE_CODE', ...(env.METRICS_BEARER_TOKEN ? ['METRICS_BEARER_TOKEN'] : [])];
 const values = uniqueKeys.map((key) => env[key]).filter(Boolean);
 if (new Set(values).size !== values.length) errors.push('Secrets, passwords, and invite code must all be different');
 if ((env.ADMIN_FIXED_INVITE_CODE ?? '').length < 12) errors.push('ADMIN_FIXED_INVITE_CODE must contain at least 12 characters');
+if (env.METRICS_BEARER_TOKEN && (env.METRICS_BEARER_TOKEN.length < 32 || /GENERATE_|replace|change-me|development/i.test(env.METRICS_BEARER_TOKEN))) {
+  errors.push('METRICS_BEARER_TOKEN must be a generated value of at least 32 characters when configured');
+}
 
 if (errors.length) {
   console.error(`Production preflight failed with ${errors.length} configuration error(s).`);

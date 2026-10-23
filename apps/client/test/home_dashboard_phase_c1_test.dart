@@ -330,6 +330,30 @@ void main() {
     expect(find.byTooltip('Retry news'), findsOneWidget);
   });
 
+  testWidgets('unavailable quotes and news retry their own data sources', (
+    tester,
+  ) async {
+    var quoteRetries = 0;
+    var newsRetries = 0;
+    await pumpHome(
+      tester,
+      home: dashboard(
+        indices: const [],
+        news: const [],
+        onRetryQuotes: () => quoteRetries++,
+        onRetryNews: () => newsRetries++,
+      ),
+    );
+
+    await tester.ensureVisible(find.byTooltip('Retry quotes'));
+    await tester.tap(find.byTooltip('Retry quotes'));
+    await tester.ensureVisible(find.byTooltip('Retry news'));
+    await tester.tap(find.byTooltip('Retry news'));
+    expect(quoteRetries, 1);
+    expect(newsRetries, 1);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('account error retry does not fire until tapped', (tester) async {
     var accountRetries = 0;
     var quoteRetries = 0;
@@ -425,20 +449,46 @@ void main() {
     expect(find.text('Open Trade'), findsOneWidget);
   });
 
-  testWidgets('home actions fill two equal columns on phone and tablet', (
+  testWidgets('home actions expose deposit, withdrawal, and trade on phone', (
     tester,
   ) async {
+    var deposits = 0;
+    var withdrawals = 0;
+    var trades = 0;
     for (final width in [320.0, 390.0, 768.0]) {
-      await pumpHome(tester, size: Size(width, 844), home: dashboard());
+      await pumpHome(
+        tester,
+        size: Size(width, 844),
+        home: dashboard(
+          onDeposit: () => deposits++,
+          onWithdraw: () => withdrawals++,
+          onTrade: () => trades++,
+        ),
+      );
       final actions = find.byType(HomeActionButton);
-      expect(actions, findsNWidgets(2));
+      expect(actions, findsNWidgets(3));
       await tester.ensureVisible(actions.first);
-      final first = tester.getRect(actions.first);
-      final second = tester.getRect(actions.last);
-      expect(first.width, closeTo(second.width, 0.1));
-      expect(first.top, closeTo(second.top, 0.1));
       expect(tester.takeException(), isNull);
     }
+    final tradeAction = find.byType(HomeActionButton).last;
+    await tester.ensureVisible(tradeAction);
+    await tester.tap(tradeAction);
+    expect(trades, 1);
+    expect(deposits, 0);
+    expect(withdrawals, 0);
+  });
+
+  testWidgets('final home action is centered in its incomplete row', (
+    tester,
+  ) async {
+    await pumpHome(tester, size: const Size(390, 844), home: dashboard());
+
+    final action = find.byType(HomeActionButton).last;
+    await tester.ensureVisible(action);
+    final actionCenter = tester.getCenter(action).dx;
+
+    expect((actionCenter - 195).abs(), lessThan(1));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('pending KYC todo appears only from real status', (tester) async {

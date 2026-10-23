@@ -201,7 +201,7 @@ class _DepositPageState extends State<DepositPage> {
                           ),
                           style: AppTypography.labelLarge.copyWith(
                             fontWeight: FontWeight.w800,
-                            letterSpacing: .5,
+                            letterSpacing: 0,
                           ),
                         ),
                       ),
@@ -232,7 +232,7 @@ class _DepositPageState extends State<DepositPage> {
                     ),
                     style: AppTypography.labelLarge.copyWith(
                       fontWeight: FontWeight.w800,
-                      letterSpacing: .8,
+                      letterSpacing: 0,
                       color: AppColors.brandDark,
                     ),
                   ),

@@ -181,6 +181,36 @@ export class TwoFactorService {
     });
   }
 
+  async setupVerifiedStaff(userId: string) {
+    return this.attempt(userId, async (tx, row) => {
+      if (row.enabled)
+        throw new BadRequestException(
+          'Two-factor authentication is already enabled',
+        );
+      const user = await tx.user.findUniqueOrThrow({
+        where: { id: userId },
+        include: { businessProfile: true },
+      });
+      const secret = new OTPAuth.Secret({ size: 20 }).base32;
+      const expiresAt = new Date(Date.now() + 600000);
+      await tx.twoFactorCredential.update({
+        where: { userId },
+        data: {
+          pendingSecret: this.encrypt(secret),
+          pendingExpiresAt: expiresAt,
+        },
+      });
+      return {
+        secret,
+        uri: this.otp(
+          secret,
+          user.businessProfile?.employeeNo || user.id,
+        ).toString(),
+        expiresAt,
+      };
+    });
+  }
+
   private proof(
     row: TwoFactorCredential,
     code: unknown,

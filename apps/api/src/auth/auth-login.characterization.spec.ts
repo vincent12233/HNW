@@ -97,6 +97,26 @@ describe('Current client login, refresh, and logout behavior', () => {
       );
     });
 
+    it('does not trust a raw forwarded IP header for login audit context', async () => {
+      authService.login.mockResolvedValue({
+        message: 'Login successful',
+        accessToken: 'access',
+        refreshToken: 'refresh',
+        user: { id: 'u1', role: 'CLIENT', status: 'ACTIVE' },
+      });
+      await request(app.getHttpServer())
+        .post('/auth/login')
+        .set('X-Forwarded-For', '203.0.113.88')
+        .send({ phone: '9876543210', password: 'password1' })
+        .expect(201);
+      expect(authService.login).toHaveBeenCalledWith(
+        expect.any(Object),
+        expect.objectContaining({
+          ipAddress: expect.not.stringMatching(/^203\.0\.113\.88$/),
+        }),
+      );
+    });
+
     it('surfaces twoFactorRequired from the current UnauthorizedException payload', async () => {
       authService.login.mockRejectedValue(
         new UnauthorizedException({
@@ -111,7 +131,9 @@ describe('Current client login, refresh, and logout behavior', () => {
           .send({ phone: '9876543210', password: 'password1' })
           .expect(401);
         expect(response.body.twoFactorRequired).toBe(true);
-        expect(response.body.message).toMatch(/authenticator code or recovery code/);
+        expect(response.body.message).toMatch(
+          /authenticator code or recovery code/,
+        );
       } finally {
         logging.mockRestore();
       }
@@ -142,7 +164,9 @@ describe('Current client login, refresh, and logout behavior', () => {
         .expect(({ body }) => {
           expect(body.loggedOut).toBe(true);
         });
-      expect(authService.revokeAccessToken).toHaveBeenCalledWith('access-token');
+      expect(authService.revokeAccessToken).toHaveBeenCalledWith(
+        'access-token',
+      );
     });
   });
 

@@ -8,7 +8,7 @@ extension _ProductPortfolioDetailsSection on _ProductPortfolioPageState {
         style: AppTypography.sectionTitle.copyWith(
           fontSize: 14,
           fontWeight: FontWeight.w800,
-          letterSpacing: 0.1,
+          letterSpacing: 0,
         ),
       );
       final button = action == null

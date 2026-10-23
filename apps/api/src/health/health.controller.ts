@@ -3,9 +3,11 @@ import {
   Get,
   Header,
   ServiceUnavailableException,
+  UseGuards,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { renderPrometheusMetrics } from '../observability/metrics';
+import { MetricsAccessGuard } from '../observability/metrics-access.guard';
 
 @Controller('health')
 export class HealthController {
@@ -35,7 +37,9 @@ export class HealthController {
   }
 
   @Get('metrics')
+  @UseGuards(MetricsAccessGuard)
   @Header('content-type', 'text/plain; version=0.0.4')
+  @Header('cache-control', 'no-store')
   metrics() {
     return renderPrometheusMetrics();
   }

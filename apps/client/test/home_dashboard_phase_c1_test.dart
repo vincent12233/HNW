@@ -425,20 +425,33 @@ void main() {
     expect(find.text('Open Trade'), findsOneWidget);
   });
 
-  testWidgets('home actions fill two equal columns on phone and tablet', (
+  testWidgets('home actions expose deposit, withdrawal, and trade on phone', (
     tester,
   ) async {
+    var deposits = 0;
+    var withdrawals = 0;
+    var trades = 0;
     for (final width in [320.0, 390.0, 768.0]) {
-      await pumpHome(tester, size: Size(width, 844), home: dashboard());
+      await pumpHome(
+        tester,
+        size: Size(width, 844),
+        home: dashboard(
+          onDeposit: () => deposits++,
+          onWithdraw: () => withdrawals++,
+          onTrade: () => trades++,
+        ),
+      );
       final actions = find.byType(HomeActionButton);
-      expect(actions, findsNWidgets(2));
+      expect(actions, findsNWidgets(3));
       await tester.ensureVisible(actions.first);
-      final first = tester.getRect(actions.first);
-      final second = tester.getRect(actions.last);
-      expect(first.width, closeTo(second.width, 0.1));
-      expect(first.top, closeTo(second.top, 0.1));
       expect(tester.takeException(), isNull);
     }
+    final tradeAction = find.byType(HomeActionButton).last;
+    await tester.ensureVisible(tradeAction);
+    await tester.tap(tradeAction);
+    expect(trades, 1);
+    expect(deposits, 0);
+    expect(withdrawals, 0);
   });
 
   testWidgets('pending KYC todo appears only from real status', (tester) async {

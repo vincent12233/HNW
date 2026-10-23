@@ -167,48 +167,6 @@ class _AssetPanel extends StatelessWidget {
   }
 }
 
-class _HomeQuickActions extends StatelessWidget {
-  const _HomeQuickActions({required this.dashboard});
-
-  final HomeDashboard dashboard;
-
-  @override
-  Widget build(BuildContext context) {
-    final actions = <Widget>[
-      HomeActionButton(
-        label: 'Add Money',
-        subtitle: 'Instant Deposit',
-        icon: Icons.add_card_outlined,
-        color: AppColors.brandPrimary,
-        onTap: dashboard.onDeposit,
-        showChevron: false,
-      ),
-      HomeActionButton(
-        label: 'Withdraw',
-        subtitle: 'Withdraw to Bank',
-        icon: Icons.account_balance_outlined,
-        color: AppColors.gain,
-        onTap: dashboard.onWithdraw,
-      ),
-    ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final scale = MediaQuery.textScalerOf(context).scale(14) / 14;
-        final columns = constraints.maxWidth >= 280 * scale ? 2 : 1;
-        final width =
-            (constraints.maxWidth - AppSpacing.sm * (columns - 1)) / columns;
-        return Wrap(
-          spacing: AppSpacing.sm,
-          runSpacing: AppSpacing.sm,
-          children: [
-            for (final action in actions) SizedBox(width: width, child: action),
-          ],
-        );
-      },
-    );
-  }
-}
-
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle(this.title, {this.onViewAll});
 

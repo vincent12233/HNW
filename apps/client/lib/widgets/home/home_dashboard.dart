@@ -18,9 +18,9 @@ import '../market_header.dart';
 import '../market_status_card.dart';
 import '../stock_list_tile.dart';
 import '../stock_logo.dart';
-import 'home_action_button.dart';
 import 'home_dashboard_data.dart';
 import 'home_kyc_todo.dart';
+import 'home_quick_actions.dart';
 import 'mini_line_chart_painter.dart';
 
 part 'home_dashboard_movers.dart';
@@ -216,7 +216,11 @@ class _HomeDashboardState extends State<HomeDashboard> {
           ),
           if (!loading) ...[
             const SizedBox(height: AppSpacing.sm),
-            _HomeQuickActions(dashboard: widget),
+            HomeQuickActions(
+              onDeposit: widget.onDeposit,
+              onWithdraw: widget.onWithdraw,
+              onTrade: widget.onTrade,
+            ),
             AccountDataStatus(
               hasData: widget.accountLoaded,
               refreshing: widget.accountRefreshing,

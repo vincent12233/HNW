@@ -5,7 +5,6 @@ import {
   DollarOutlined,
   GiftOutlined,
   ReloadOutlined,
-  RightOutlined,
   SafetyCertificateOutlined,
   StockOutlined,
   TeamOutlined,
@@ -16,14 +15,16 @@ import {
 } from "@ant-design/icons";
 import { Button, Card, Col, Progress, Row, Skeleton, Space, Statistic, Tag, Typography } from "antd";
 import { isAxiosError } from "axios";
-import Link from "next/link";
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
 import CurrentInviteCode from "@/components/CurrentInviteCode";
 import OpsErrorState from "@/components/OpsErrorState";
+import OpsMetricCard from "@/components/OpsMetricCard";
 import OpsPageHeader from "@/components/OpsPageHeader";
+import OpsQuickAction from "@/components/OpsQuickAction";
 import { api } from "@/lib/api";
+import { formatOpsCount } from "@/lib/ops-dashboard";
 import { formatInr } from "@/lib/ops-format";
 
 const { Paragraph, Text } = Typography;
@@ -51,10 +52,10 @@ type BusinessDashboard = {
   todayWithdrawalCount: number;
   pendingIpoApplications: number;
   ipoDebtCustomers: number;
-  ipoDebtAmount: number;
+  ipoDebtAmount: string;
   loanOutstandingAmount: string;
   loanOutstandingCount: number;
-  totalAssets: number;
+  totalAssets: string;
   unusedInviteCodes: number;
 };
 
@@ -72,92 +73,8 @@ type LoginRiskSummary = {
   totalCustomers: number;
 };
 
-function formatMoney(value: number) {
+function formatMoney(value?: string | number | null) {
   return formatInr(value);
-}
-
-function MetricCard({
-  title,
-  value,
-  icon,
-  tone,
-  suffix,
-}: {
-  title: string;
-  value: string | number;
-  icon: ReactNode;
-  tone: string;
-  suffix?: string;
-}) {
-  return (
-    <Card className="ops-metric-card">
-      <Space align="start" style={{ justifyContent: "space-between", width: "100%" }}>
-        <Statistic title={title} value={value} suffix={suffix} />
-        <span
-          style={{
-            width: 42,
-            height: 42,
-            borderRadius: 8,
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            background: tone,
-            color: "#fff",
-            fontSize: 18,
-          }}
-        >
-          {icon}
-        </span>
-      </Space>
-    </Card>
-  );
-}
-
-function QuickAction({
-  title,
-  description,
-  icon,
-  tone,
-  href,
-}: {
-  title: string;
-  description: string;
-  icon: ReactNode;
-  tone: string;
-  href: string;
-}) {
-  return (
-    <Link href={href} className="ops-quick-action">
-      <Card hoverable className="ops-quick-card" styles={{ body: { padding: 18 } }}>
-        <Space align="start" style={{ width: "100%", justifyContent: "space-between" }}>
-          <Space align="start">
-            <span
-              style={{
-                width: 38,
-                height: 38,
-                borderRadius: 8,
-                display: "inline-flex",
-                alignItems: "center",
-                justifyContent: "center",
-                background: tone,
-                color: "#fff",
-                fontSize: 17,
-              }}
-            >
-              {icon}
-            </span>
-            <div>
-              <Text strong>{title}</Text>
-              <Paragraph type="secondary" style={{ marginBottom: 0, marginTop: 3 }}>
-                {description}
-              </Paragraph>
-            </div>
-          </Space>
-          <RightOutlined style={{ color: "#94a3b8", marginTop: 10 }} />
-        </Space>
-      </Card>
-    </Link>
-  );
 }
 
 export default function DashboardPage() {
@@ -210,7 +127,7 @@ export default function DashboardPage() {
 
   const adminRiskPercent = useMemo(() => {
     const total = adminRisk?.totalCustomers ?? 0;
-    if (!total) return 0;
+    if (!total) return null;
     return Math.round(((adminRisk?.highRiskCustomers ?? 0) / total) * 100);
   }, [adminRisk]);
 
@@ -271,63 +188,63 @@ export default function DashboardPage() {
 
         {isBusiness ? (
           <>
-            <Row gutter={[16, 16]}>
+            <Row gutter={[16, 16]} className="ops-dashboard-grid">
               <Col xs={24} md={8}>
-                <MetricCard title="我的客户" value={businessData?.totalCustomers ?? 0} icon={<TeamOutlined />} tone="#1f8fff" />
+                <OpsMetricCard title="我的客户" value={formatOpsCount(businessData?.totalCustomers)} icon={<TeamOutlined />} tone="brand" />
               </Col>
               <Col xs={24} md={8}>
-                <MetricCard title="今日新增" value={businessData?.todayCustomers ?? 0} icon={<UserAddOutlined />} tone="#16a34a" />
+                <OpsMetricCard title="今日新增" value={formatOpsCount(businessData?.todayCustomers)} icon={<UserAddOutlined />} tone="success" />
               </Col>
               <Col xs={24} md={8}>
-                <MetricCard title="客户资产" value={formatMoney(businessData?.totalAssets ?? 0)} icon={<WalletOutlined />} tone="#7c3aed" />
+                <OpsMetricCard title="客户资产" value={formatMoney(businessData?.totalAssets)} icon={<WalletOutlined />} tone="violet" />
               </Col>
               <Col xs={24} md={8}>
-                <MetricCard title="待 KYC" value={businessData?.pendingKyc ?? 0} icon={<SafetyCertificateOutlined />} tone="#0ea5e9" />
+                <OpsMetricCard title="待 KYC" value={formatOpsCount(businessData?.pendingKyc)} icon={<SafetyCertificateOutlined />} tone="info" />
               </Col>
               <Col xs={24} md={8}>
-                <MetricCard title="待处理提现" value={businessData?.pendingWithdrawals ?? 0} icon={<BankOutlined />} tone="#dc2626" />
+                <OpsMetricCard title="待处理提现" value={formatOpsCount(businessData?.pendingWithdrawals)} icon={<BankOutlined />} tone="danger" />
               </Col>
               <Col xs={24} md={8}>
-                <MetricCard title="IPO 待分配" value={businessData?.pendingIpoApplications ?? 0} icon={<StockOutlined />} tone="#2563eb" />
+                <OpsMetricCard title="IPO 待分配" value={formatOpsCount(businessData?.pendingIpoApplications)} icon={<StockOutlined />} tone="brand" />
               </Col>
               <Col xs={24} md={8}>
-                <MetricCard title="IPO 欠款" value={formatMoney(Number(businessData?.ipoDebtAmount ?? 0))} icon={<WarningOutlined />} tone="#ef4444" />
+                <OpsMetricCard title="IPO 欠款" value={formatMoney(businessData?.ipoDebtAmount)} icon={<WarningOutlined />} tone="danger" />
               </Col>
               {!isSupport && <Col xs={24} md={8}>
-                <MetricCard title="贷款未还" value={formatMoney(Number(businessData?.loanOutstandingAmount ?? 0))} icon={<DollarOutlined />} tone="#ea580c" />
+                <OpsMetricCard title="贷款未还" value={formatMoney(businessData?.loanOutstandingAmount)} icon={<DollarOutlined />} tone="warning" />
               </Col>}
               {!isSupport && <Col xs={24} md={8}>
-                <MetricCard title="未使用邀请码" value={businessData?.unusedInviteCodes ?? 0} icon={<GiftOutlined />} tone="#f59e0b" />
+                <OpsMetricCard title="未使用邀请码" value={formatOpsCount(businessData?.unusedInviteCodes)} icon={<GiftOutlined />} tone="warning" />
               </Col>}
               <Col xs={24} md={8}>
-                <MetricCard title="高风险客户" value={businessRisk?.highRiskCustomers ?? 0} icon={<WarningOutlined />} tone="#ef4444" />
+                <OpsMetricCard title="高风险客户" value={formatOpsCount(businessRisk?.highRiskCustomers)} icon={<WarningOutlined />} tone="danger" />
               </Col>
             </Row>
 
-            <Card title="资金观察" style={{ borderRadius: 8 }}>
+            <Card title="资金观察" className="ops-dashboard-section">
               <Row gutter={[16, 16]}>
                 <Col xs={24} md={6}>
-                  <Statistic title="当日总提现" value={formatMoney(Number(businessData?.todayWithdrawalAmount ?? 0))} />
+                  <Statistic title="当日总提现" value={formatMoney(businessData?.todayWithdrawalAmount)} />
                 </Col>
                 <Col xs={24} md={6}>
-                  <Statistic title="当日总充值" value={formatMoney(Number(businessData?.todayDepositAmount ?? 0))} />
+                  <Statistic title="当日总充值" value={formatMoney(businessData?.todayDepositAmount)} />
                 </Col>
                 <Col xs={24} md={6}>
-                  <Statistic title="客户累计入金" value={formatMoney(Number(businessData?.totalDepositAmount ?? 0))} />
+                  <Statistic title="客户累计入金" value={formatMoney(businessData?.totalDepositAmount)} />
                 </Col>
                 <Col xs={24} md={6}>
-                  <Statistic title="客户累计提现" value={formatMoney(Number(businessData?.totalWithdrawalAmount ?? 0))} />
+                  <Statistic title="客户累计提现" value={formatMoney(businessData?.totalWithdrawalAmount)} />
                 </Col>
               </Row>
             </Card>
 
-            <Row gutter={[16, 16]}>
+            <Row gutter={[16, 16]} className="ops-dashboard-grid">
               <Col xs={24} md={8}>
-                <QuickAction
+                <OpsQuickAction
                   title="审核 KYC"
                   description="处理自己客户提交的 Aadhaar / PAN 文件"
                   icon={<SafetyCertificateOutlined />}
-                  tone="#1f8fff"
+                  tone="brand"
                   href="/business-kyc"
                 />
               </Col>
@@ -335,11 +252,11 @@ export default function DashboardPage() {
                 <CurrentInviteCode />
               </Col>}
               <Col xs={24} md={8}>
-                <QuickAction
+                <OpsQuickAction
                   title="客户提现记录"
                   description="查看自己客户提交的提现订单号和状态"
                   icon={<BankOutlined />}
-                  tone="#dc2626"
+                  tone="danger"
                   href="/business-withdrawals"
                 />
               </Col>
@@ -347,58 +264,62 @@ export default function DashboardPage() {
           </>
         ) : (
           <>
-            <Row gutter={[16, 16]}>
+            <Row gutter={[16, 16]} className="ops-dashboard-grid">
               <Col xs={24} md={6}>
-                <MetricCard title="客户总数" value={adminRisk?.totalCustomers ?? 0} icon={<TeamOutlined />} tone="#1f8fff" />
+                <OpsMetricCard title="客户总数" value={formatOpsCount(adminRisk?.totalCustomers)} icon={<TeamOutlined />} tone="brand" />
               </Col>
               <Col xs={24} md={6}>
-                <MetricCard title="失败登录" value={adminRisk?.failedLoginCount24h ?? 0} icon={<SafetyCertificateOutlined />} tone="#f59e0b" />
+                <OpsMetricCard title="失败登录" value={formatOpsCount(adminRisk?.failedLoginCount24h)} icon={<SafetyCertificateOutlined />} tone="warning" />
               </Col>
               <Col xs={24} md={6}>
-                <MetricCard title="中风险客户" value={adminRisk?.mediumRiskCustomers ?? 0} icon={<WarningOutlined />} tone="#fb7185" />
+                <OpsMetricCard title="中风险客户" value={formatOpsCount(adminRisk?.mediumRiskCustomers)} icon={<WarningOutlined />} tone="danger" />
               </Col>
               <Col xs={24} md={6}>
-                <MetricCard title="高风险客户" value={adminRisk?.highRiskCustomers ?? 0} icon={<WarningOutlined />} tone="#dc2626" />
+                <OpsMetricCard title="高风险客户" value={formatOpsCount(adminRisk?.highRiskCustomers)} icon={<WarningOutlined />} tone="danger" />
               </Col>
             </Row>
 
             {isFinance ? (
-              <Card title="财务快捷入口" style={{ borderRadius: 8 }}>
+              <Card title="财务快捷入口" className="ops-dashboard-section">
                 <Row gutter={[12, 12]}>
                   <Col xs={24} md={8}>
-                    <QuickAction title="上下分" description="单人操作：按交易账号创建上分或下分" icon={<WalletOutlined />} tone="#0d9488" href="/finance-overview" />
+                    <OpsQuickAction title="上下分" description="单人操作：按交易账号创建上分或下分" icon={<WalletOutlined />} tone="info" href="/finance-overview" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="上分订单" description="客户存款完成后核对到账并完成上分" icon={<DollarOutlined />} tone="#c98200" href="/deposits" />
+                    <OpsQuickAction title="上分订单" description="客户存款完成后核对到账并完成上分" icon={<DollarOutlined />} tone="warning" href="/deposits" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="提现审核" description="客户 APP 发起后，核对收款信息并审核" icon={<BankOutlined />} tone="#dc2626" href="/withdrawals" />
+                    <OpsQuickAction title="提现审核" description="客户 APP 发起后，核对收款信息并审核" icon={<BankOutlined />} tone="danger" href="/withdrawals" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="资金流水" description="查询账户资金变动记录" icon={<TransactionOutlined />} tone="#7c3aed" href="/transactions" />
+                    <OpsQuickAction title="资金流水" description="查询账户资金变动记录" icon={<TransactionOutlined />} tone="violet" href="/transactions" />
                   </Col>
                   <Col xs={24} md={8}>
-                    <QuickAction title="贷款处理" description="审核客户贷款申请" icon={<DollarOutlined />} tone="#ea580c" href="/loans" />
+                    <OpsQuickAction title="贷款处理" description="审核客户贷款申请" icon={<DollarOutlined />} tone="warning" href="/loans" />
                   </Col>
                 </Row>
               </Card>
             ) : (
-              <Card title="交易产品运营" style={{ borderRadius: 8 }}>
+              <Card title="交易产品运营" className="ops-dashboard-section">
                 <Row gutter={[12, 12]}>
-                  <Col xs={24} md={8}><QuickAction title="Ins. Stock" description="管理涨停股（机构股票）上架；成交按实时行情结算" icon={<StockOutlined />} tone="#2563eb" href="/watchlist" /></Col>
-                  <Col xs={24} md={8}><QuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="#0d9488" href="/block-trades" /></Col>
-                  <Col xs={24} md={8}><QuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="#ef4444" href="/ipo-management" /></Col>
+                  <Col xs={24} md={8}><OpsQuickAction title="Ins. Stock" description="管理涨停股（机构股票）上架；成交按实时行情结算" icon={<StockOutlined />} tone="brand" href="/watchlist" /></Col>
+                  <Col xs={24} md={8}><OpsQuickAction title="OTC" description="管理场外机会、折扣价格和审核订单" icon={<TransactionOutlined />} tone="info" href="/block-trades" /></Col>
+                  <Col xs={24} md={8}><OpsQuickAction title="IPO" description="维护 IPO 状态、认购价和分配记录" icon={<GiftOutlined />} tone="danger" href="/ipo-management" /></Col>
                 </Row>
               </Card>
             )}
 
             <Row gutter={[16, 16]}>
               <Col xs={24} lg={14}>
-                <Card title="运营优先级" style={{ borderRadius: 8 }}>
+                <Card title="运营优先级" className="ops-dashboard-section">
                   <Space orientation="vertical" size="middle" style={{ width: "100%" }}>
                     <div>
                       <Text strong>高风险客户占比</Text>
-                      <Progress percent={adminRiskPercent} strokeColor="#dc2626" />
+                      {adminRiskPercent === null ? (
+                        <Text type="secondary" role="status">暂无客户数据</Text>
+                      ) : (
+                        <Progress percent={adminRiskPercent} strokeColor="#dc2626" />
+                      )}
                     </div>
                     <div>
                       <Text strong>财务处理建议</Text>
@@ -412,7 +333,7 @@ export default function DashboardPage() {
                 </Card>
               </Col>
               <Col xs={24} lg={10}>
-                <Card title="今日工作流" style={{ borderRadius: 8 }}>
+                <Card title="今日工作流" className="ops-dashboard-section">
                   <Space orientation="vertical" size="middle">
                     <Tag color="blue">客户开户：手机号注册 + 邀请码 + KYC</Tag>
                     <Tag color="green">充值：客服沟通付款，存款完成后财务单人上分</Tag>
@@ -424,40 +345,40 @@ export default function DashboardPage() {
             </Row>
 
             {!isFinance && (
-              <Row gutter={[16, 16]}>
+              <Row gutter={[16, 16]} className="ops-dashboard-grid">
                 <Col xs={24} md={6}>
-                  <QuickAction
+                  <OpsQuickAction
                     title="客户管理"
                     description="查看客户资料、KYC、账号和登录风险"
                     icon={<TeamOutlined />}
-                    tone="#1f8fff"
+                    tone="brand"
                     href="/customers"
                   />
                 </Col>
                 <Col xs={24} md={6}>
-                  <QuickAction
+                  <OpsQuickAction
                     title="业务员管理"
                     description="管理业务员账号、客户归属和邀请码"
                     icon={<UserAddOutlined />}
-                    tone="#16a34a"
+                    tone="success"
                     href="/business-users"
                   />
                 </Col>
                 <Col xs={24} md={6}>
-                  <QuickAction
+                  <OpsQuickAction
                     title="操作日志"
                     description="查看账户、资金、IPO、贷款等关键操作"
                     icon={<SafetyCertificateOutlined />}
-                    tone="#dc2626"
+                    tone="danger"
                     href="/audit-logs"
                   />
                 </Col>
                 <Col xs={24} md={6}>
-                  <QuickAction
+                  <OpsQuickAction
                     title="股票管理"
                     description="维护可交易股票、价格和启用状态"
                     icon={<StockOutlined />}
-                    tone="#7c3aed"
+                    tone="violet"
                     href="/market"
                   />
                 </Col>

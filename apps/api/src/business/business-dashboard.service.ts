@@ -1,4 +1,3 @@
-import { Prisma } from '../generated/prisma/client';
 import { InviteCodeStatus, UserRole } from '../generated/prisma/enums';
 import { moneyDecimal } from '../common/money';
 import { PrismaService } from '../prisma/prisma.service';
@@ -22,7 +21,7 @@ export class BusinessDashboardService {
       pendingIpoApplications,
       openIpoDebts,
       loanOutstanding,
-      accounts,
+      accountTotals,
       businessProfile,
     ] = await this.prisma.$transaction([
       this.prisma.user.count({
@@ -176,13 +175,13 @@ export class BusinessDashboardService {
         _count: true,
       }),
 
-      this.prisma.account.findMany({
+      this.prisma.account.aggregate({
         where: {
           user: {
             assignedBusinessId: businessUserId,
           },
         },
-        select: {
+        _sum: {
           cashBalance: true,
           frozenBalance: true,
         },
@@ -198,14 +197,8 @@ export class BusinessDashboardService {
       }),
     ]);
 
-    const totalAssets = accounts
-      .reduce(
-        (sum, account) =>
-          sum
-            .add(moneyDecimal(account.cashBalance))
-            .add(moneyDecimal(account.frozenBalance)),
-        new Prisma.Decimal(0),
-      )
+    const totalAssets = moneyDecimal(accountTotals._sum.cashBalance ?? 0)
+      .add(moneyDecimal(accountTotals._sum.frozenBalance ?? 0))
       .toFixed(2);
 
     const pendingKycRows = await this.prisma.$queryRaw<{ count: bigint }[]>`

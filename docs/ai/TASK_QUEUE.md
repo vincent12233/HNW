@@ -1,41 +1,35 @@
 # HNW Task Queue
 
-Statuses below are planning records, not authorization to execute.
+Statuses below are planning records, not authorization to execute. The detailed
+delivery queue remains in `docs/STATUS.md`.
 
-## P0 — Verify governance before production release
+## P0 - Verify governance before production release
 
-- Status: pending live verification
-- Dependencies: authorized GitHub administration read access
-- Scope: main branch protection, required checks, PR approvals, force-push and
-  deletion restrictions, production environment reviewers and branch rules
-- Acceptance: settings are read from GitHub and recorded with URL/time; no
-  claim relies only on workflow YAML.
+- Status: pending live verification before each production release
+- Scope: branch protection, required checks, PR approvals, force-push/deletion
+  restrictions, production environment reviewers, and deployment permissions
+- Acceptance: settings are read from GitHub and tied to a timestamp; no claim
+  relies only on workflow YAML
 
-## P1 — Complete API dependency remediation review
+## P1 - Complete environment-backed production readiness
 
-- Status: Draft PR #142 was open at the last live check
-- Dependencies: current PR and CI re-check
-- Scope: API lockfile `follow-redirects` 1.16.0 → 1.16.1 only
-- Acceptance: exact head SHA has successful API CI, dependency audit, Docker CI,
-  and CodeQL; human reviewer approves before merge.
+- Status: requires deployment-environment configuration
+- Scope: commercial market data, KYC scanning, alert receivers, error-reporting
+  credentials, and post-deploy smoke verification
+- Acceptance: provider credentials remain outside Git; production preflight and
+  smoke checks pass against the intended environment
 
-## P1 — Decide the financial runtime workflow disposition
+## P1 - Execute true integration validation
 
-- Status: pending explicit owner decision
-- Dependency: review `.github/workflows/financial-runtime-verification.yml`
-- Scope: preserve or remove the untracked workflow; do not silently add it to
-  required checks
-- Acceptance: owner records whether it is retained, consolidated, or discarded.
+- Status: CI foundations exist; environment-backed validation remains ongoing
+- Scope: registration, KYC, deposit, trading, review, and mobile device flows
+- Acceptance: results are tied to the exact application SHA and isolated test
+  accounts/resources; trading and funding semantics are not altered to make
+  tests pass
 
-## P2 — Maintain persistent context
+## P2 - Maintain persistent context
 
-- Status: ongoing
-- Dependencies: every task start/end
-- Acceptance: `CURRENT_STATE.md` and `SESSION_HANDOFF.md` contain only
-  verified, source-linked facts and exact validation evidence.
-
-## P2 — Operational readiness items
-
-Refer to `docs/STATUS.md` for the existing product and operations queue,
-including provider onboarding, recovery-drill execution, mobile release checks,
-and production observability configuration. Do not duplicate that queue here.
+- Status: ongoing when durable architecture, constraints, or delivery state
+  materially changes
+- Acceptance: `CURRENT_STATE.md` and `SESSION_HANDOFF.md` contain verified,
+  source-linked facts and do not duplicate volatile GitHub state unnecessarily

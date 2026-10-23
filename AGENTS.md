@@ -175,10 +175,11 @@ Then load only the module architecture, decision records, source files, and
 CI evidence required by the current task. Treat GitHub commit, pull request,
 and CI state as authoritative over chat history. Verify the current checkout
 and remote state before relying on a handoff. Never record secrets, tokens,
-customer data, or unverified test results. At the end of a task, update the
-current state and handoff only after recording the exact files, commit SHA,
-commands, exit codes, and CI evidence. If a write is not authorized or a
-working tree contains unrelated changes, stop and report the conflict.
+customer data, or unverified test results. Update the current state and handoff
+when a durable architecture, constraint, or delivery checkpoint materially
+changes. Record exact files, commit SHA, commands, results, and CI evidence.
+If a write is not authorized or a working tree contains overlapping unrelated
+changes, stop the dependent action and report the conflict.
 
 The persistent context files are:
 

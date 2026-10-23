@@ -1,43 +1,46 @@
 # HNW Current State
 
-## State at context-set creation
+## Verified delivery baseline
 
-Verified locally on 2026-10-22 from the `work` checkout:
+Verified on 2026-10-23 against GitHub and the local checkout:
 
-- HEAD: `7f5e5f28171e086d85b8b3f40378a9b2545abcb6`
-- Branch: `work`
-- Working tree: clean except for the pre-existing untracked
-  `.github/workflows/financial-runtime-verification.yml`
-- No `docs/ai` directory existed before this context set.
+- Default branch: `main`
+- Verified `main` commit: `3bf7d49648c23452dfad59a51c42d247e287fc4a`
+- PR #146 delivered staff authenticator enrollment/reset controls, security
+  hardening, and the scoped UI/UX upgrade.
+- PR #147 consolidated the pending Admin/API dependency updates. Its PR checks
+  and the applicable post-merge `main` workflows passed.
+- PR #142 was closed as superseded after its `follow-redirects` 1.16.1 change
+  was confirmed already present on `main`.
+- The repository did not contain
+  `.github/workflows/financial-runtime-verification.yml` at verification time.
 
-Verified through GitHub for PR #142:
+This is a dated checkpoint, not a permanent claim. Re-read GitHub and Git before
+using branch, PR, commit, or CI state in a later task.
 
-- URL: https://github.com/vincent12233/HNW/pull/142
-- State: open, draft, unmerged at last check
-- Base: `main@7f5e5f28171e086d85b8b3f40378a9b2545abcb6`
-- Head: `phase4a-api-security@bed2c0a9294ddb55c53905f6ca74c9239cfefdbc`
-- Changed files: API lockfile only
-- API CI, Docker CI, and CodeQL: successful for that head SHA
+## Preserved product boundaries
 
-These GitHub facts must be re-read before being reused; they are not a
-permanent assertion that PR #142 is still open or that the head remains
-current.
+- Trading rules and execution semantics remain unchanged by the 2026-10-23
+  security/UI delivery.
+- Customer registration and login flows remain unchanged.
+- Deposit methods and funding semantics remain unchanged.
+- Staff Google Authenticator enrollment and role-scoped reset are administrative
+  security controls, not changes to customer authentication.
 
-## Current blockers and cautions
+## Operational cautions
 
-- The local Codex environment previously could not download Prisma 7.10.0
-  engines from `binaries.prisma.sh` because the environment proxy returned
-  HTTP 403. GitHub-hosted API CI later verified generation successfully.
-- The untracked financial runtime workflow is protected user work and must not
-  be overwritten, deleted, tracked, or committed without explicit instruction.
-- Branch protection, required checks, and production environment reviewers are
-  remote settings and require a fresh authorized read before deployment claims.
+- Production credentials, customer data, and deployment secrets must never be
+  recorded in these context files.
+- Branch protection, required checks, production reviewers, and deployment
+  state are remote facts and require a fresh authorized read.
+- Use `docs/STATUS.md` as the canonical delivery and operations queue; avoid
+  duplicating volatile status in multiple documents.
 
-## Next recovery entry
+## Recovery entry
 
-1. Run `git status --short --branch` and `git rev-parse HEAD` in the active
-   checkout.
-2. Query PR #142 and its head CI status from GitHub.
-3. Confirm whether the current task authorizes any write, merge, or deployment.
-4. Read `SESSION_HANDOFF.md` and only then load task-specific architecture or
-   source files.
+1. Run `git status --short --branch`, `git rev-parse HEAD`, and
+   `git branch --show-current`.
+2. Fetch/prune and compare the checkout with `origin/main` without discarding
+   local changes.
+3. Query current PRs and workflows for the exact head SHA.
+4. Read `SESSION_HANDOFF.md`, then load only task-specific source and evidence.

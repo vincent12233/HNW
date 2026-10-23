@@ -1,24 +1,27 @@
 # HNW Session Handoff
 
-## Session identity
+## Checkpoint
 
-- Date: 2026-10-22 UTC
+- Date: 2026-10-23 UTC
 - Repository: `vincent12233/HNW`
-- Context branch: `docs/ai-persistent-context`
-- Context branch base: `7f5e5f28171e086d85b8b3f40378a9b2545abcb6`
+- Context delivery: PR #143
+- Verified base before final review:
+  `3bf7d49648c23452dfad59a51c42d247e287fc4a`
 
-## Completed in this session
+## Completed delivery context
 
-- Verified local branch `work`, HEAD, and working-tree status.
-- Verified the pre-existing untracked financial workflow remains outside the
-  context branch and was not touched.
-- Queried GitHub PR #142 and recorded its last observed open/draft state and
-  successful CI evidence.
-- Confirmed no existing `docs/ai` context directory was present.
-- Created the persistent context documents and added the context-loading entry
-  to the root `AGENTS.md` in this isolated worktree.
+- PR #146 delivered the scoped staff-authenticator security controls and UI/UX
+  work without changing trading rules, customer registration/login, or deposit
+  methods.
+- PR #145 and PR #141 delivered isolated React and Supertest patch updates.
+- PR #147 consolidated the remaining Admin/API dependency updates after local
+  audits, lint, tests, and builds, followed by successful PR checks.
+- Superseded dependency PRs and their remote branches were closed or deleted.
+- The persistent context set was reviewed against the current repository; stale
+  references to PR #142, the old `work` checkout, Prisma 7.10.0, and a missing
+  financial-runtime workflow were removed.
 
-## Files changed in this context branch
+## Context files
 
 - `AGENTS.md`
 - `docs/ai/PROJECT_OVERVIEW.md`
@@ -29,30 +32,20 @@
 - `docs/ai/SESSION_HANDOFF.md`
 - `docs/ai/CONTEXT_PROTOCOL.md`
 
-No application, dependency, migration, workflow, or deployment file is
-changed by this context branch.
-
-## Verification still required before handoff is final
-
-- Markdown link and path checks
-- Diff review for secrets and unrelated files
-- Commit and Draft PR creation only after explicit review of this context
-  branch
+These files are operational memory, not a substitute for source, Git, GitHub,
+CI, or deployment-environment verification.
 
 ## Resume instruction
 
 ```text
-cd /workspace/HNW
- git status --short --branch
- git rev-parse HEAD
- cat AGENTS.md
- cat docs/ai/CURRENT_STATE.md
- cat docs/ai/SESSION_HANDOFF.md
- # Then query GitHub PR/CI state for the exact current HEAD before acting.
+git status --short --branch
+git rev-parse HEAD
+git fetch --prune origin
+# Then query current PR and workflow state for the exact HEAD before acting.
 ```
 
 ## Evidence rule
 
-Do not treat this handoff as proof that a test, PR, or deployment is current.
-Re-run the corresponding read-only check and update this file at the end of the
-next task.
+Do not treat this handoff as proof that a test, PR, workflow, or deployment is
+still current. Re-run the corresponding read-only check and update this file
+only when a durable checkpoint materially changes.

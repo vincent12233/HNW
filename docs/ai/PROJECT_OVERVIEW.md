@@ -3,9 +3,8 @@
 ## Verified identity
 
 - Repository: `vincent12233/HNW`
-- Baseline inspected for this context set: `7f5e5f28171e086d85b8b3f40378a9b2545abcb6`
+- Baseline verified on 2026-10-23: `3bf7d49648c23452dfad59a51c42d247e287fc4a`
 - Default branch: `main`
-- Local development branch at inspection: `work`
 - Node.js: `.nvmrc` specifies 24
 
 ## Product shape
@@ -31,7 +30,7 @@ withdrawals, trading, support, and operations management.
 
 ## Runtime baseline
 
-- Prisma CLI, Client, and PostgreSQL adapter: 7.10.0 at the inspected baseline
+- Prisma CLI, Client, and PostgreSQL adapter: 7.10.1 at the verified baseline
 - Prisma generator: `prisma-client`
 - Generated output: `apps/api/src/generated/prisma`
 - Database: PostgreSQL 17

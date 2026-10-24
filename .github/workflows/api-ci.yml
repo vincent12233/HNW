@@ -145,8 +145,9 @@ jobs:
       - name: Enforce critical directory coverage
         run: npm run test:coverage:directories
 
-      - name: Upload API coverage
+      - name: Upload API coverage (optional)
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v7
         with:
           name: api-coverage

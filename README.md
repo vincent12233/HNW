@@ -1,8 +1,21 @@
 # HNW Trading Platform
 
-面向印度手机号客户注册的交易平台：客户 App、五个分离的运营后台、API 后端。客服通过客户端内 SaleSmartly 原生 SDK 接入。
+面向印度市场的交易平台，由 Flutter 客户端、NestJS API、Next.js 运营后台和 PostgreSQL 数据库组成。后台提供五个按角色隔离的入口；客服通过客户端内 SaleSmartly 原生 SDK 接入。
 
-**推荐正式环境使用 Coolify + `compose.production.yaml` 可视化部署**，小白操作见 `docs/小白部署与运维手册.md`；需要原生服务器部署时见 `docs/生产部署说明.md`。本地使用 Windows Docker Desktop 或 macOS OrbStack 运行隔离的 Compose 环境，专用于 E2E 和后台联调。
+**生产部署推荐使用 Coolify + `compose.production.yaml`。** 操作手册见 [`docs/小白部署与运维手册.md`](docs/小白部署与运维手册.md)；原生服务器部署见 [`docs/生产部署说明.md`](docs/生产部署说明.md)。本地可使用 Windows Docker Desktop、macOS OrbStack 或原生 PostgreSQL 进行开发和隔离联调。
+
+## 技术栈
+
+| 层 | 技术 | 位置 |
+| --- | --- | --- |
+| 客户端 | Flutter / Dart | `apps/client` |
+| API | NestJS / Node.js 24 / Prisma 7 | `apps/api` |
+| 运营后台 | Next.js / React / TypeScript / Ant Design | `apps/admin` |
+| 数据库 | PostgreSQL 17 | `apps/api/prisma` |
+| 共享限流 | Redis 7 | API 配置及 Compose 部署 |
+| 部署 | Docker Compose / Coolify | `compose.production.yaml` |
+
+依赖管理使用 npm 和 `package-lock.json`；Flutter 使用 `pubspec.lock`。Node.js 版本以仓库根目录的 `.nvmrc` 为准。
 
 ## 项目组成
 
@@ -17,6 +30,8 @@
 | 客户 App | `apps/client` | Flutter 客户端，界面英文 |
 | 数据库 | PostgreSQL 17.x | 部署在服务器（或本机原生 Postgres 联调） |
 
+五个后台入口共用一个 Admin 应用代码库和 API，但分别构建为 `ADMIN`、`MANAGER`、`FINANCE`、`BUSINESS`、`SUPPORT` 角色。端口用于本地开发；生产环境应为各入口配置独立域名和匹配的角色构建，不能依赖端口识别权限。
+
 ## 核心规则
 
 - 客户注册只需要印度手机号、登录密码、邀请码。
@@ -30,6 +45,14 @@
 - 专用运营员只能查看使用超级管理员固定邀请码注册的客户。
 - 业务员可查看自己客户的入金、提现、订单、成交记录，但不能审核提现。
 - 后台统一中文，客户 App 支持英文和 Hindi，并在内容缺失时回退英文。
+
+### 安全与隔离
+
+- 后台会话和菜单按角色隔离；API 服务端负责最终授权，前端路由和菜单不作为权限边界。
+- 后台首次登录必须完成 Google Authenticator 绑定，后续登录使用动态码；恢复码仅在生成时显示一次。
+- 验证器重置遵循管理层级权限，会撤销目标员工的现有会话，并要求其重新绑定。
+- 生产配置必须使用独立强密钥、HTTPS、明确的 CORS 来源、Redis 限流和私有文件存储；生产环境不应使用开发行情或本地扫描 stub。
+- 客户端交易规则、注册登录流程和存款方式与后台 UI/UX、员工安全功能分开管理；界面优化不代表这些业务规则已改变。
 
 ### 后台验证器与重置权限
 
@@ -47,6 +70,8 @@ docs/生产部署说明.md
 ```
 
 推荐在 Coolify 中导入 `compose.production.yaml`，由面板完成构建、HTTPS、日志和版本回滚；生产变量从 `.env.production.example` 复制后逐项替换。原生服务器路径仍保留在 `docs/生产部署说明.md`。
+
+生产发布通过手动 GitHub Actions 工作流触发：必须从 `main` 指定已验证的完整提交 SHA，先完成部署配置验证，再经 `production` 环境授权调用 Coolify，并执行部署后端点冒烟检查。具体发布门槛和环境变量以部署手册及工作流为准。仓库不提供可直接用于生产的默认凭据。
 
 ## Windows Docker Desktop E2E 联调
 
@@ -154,6 +179,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-android-e2e.
 
 ## 一键验收
 
+验证脚本适用于本地开发/测试环境；使用 `DATABASE_URL` 时必须指向专用、可丢弃的测试数据库，不能指向生产库。完整自动化覆盖由 GitHub Actions 对确切提交执行，包含数据库迁移与升级验证、依赖审计、API/Admin/Flutter 检查、Docker 镜像构建和安全分析。
+
 macOS / Linux：
 
 ```bash
@@ -199,9 +226,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1 -Sk
 - `docs/交付验收清单.md`
 - `docs/上线准备与验收.md`（发布门槛与待补验证）
 - `docs/项目交付总览.md`
+- `docs/STATUS.md`（当前完成项、持续改进队列与验证要求）
+- `docs/ai/`（项目架构、长期约束和跨会话交接；事实状态需按文档要求重新核验）
 
 ## 当前状态
 
-项目当前完成项、持续改进队列和验证规则统一记录在 `docs/STATUS.md`。
+当前完成项、未完成事项和验证规则统一记录在 [`docs/STATUS.md`](docs/STATUS.md)。近期已合并交付记录：
 
-2026-10-23 安全与 UI/UX 升级的开发、审查和自动化验证记录见 [Pull Request #146](https://github.com/vincent12233/HNW/pull/146)。交付结果以 `main` 分支为准，历史提交和检查详情以 Pull Request 页面为准。
+- [PR #146](https://github.com/vincent12233/HNW/pull/146)：后台员工验证器安全与后台/客户端 UI/UX 升级。
+- [PR #147](https://github.com/vincent12233/HNW/pull/147)：Admin/API 依赖更新整理。
+- [PR #143](https://github.com/vincent12233/HNW/pull/143)：持久化项目上下文文档。
+
+PR 链接用于追溯改动和审查证据；实际交付以 `main` 当前代码为准，自动化验证结果必须对应具体提交。

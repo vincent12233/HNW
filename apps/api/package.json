@@ -115,8 +115,9 @@
   },
   "overrides": {
     "follow-redirects": "1.16.1",
-    "multer": "2.4.0",
-    "fast-uri": "3.1.8",
+    "multer": "2.5.0",
+    "body-parser": "2.4.0",
+    "fast-uri": "3.1.9",
     "qs": "6.16.0",
     "deepmerge-ts": "8.0.2",
     "mysql2": "3.24.4",

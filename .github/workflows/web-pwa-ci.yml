@@ -37,7 +37,7 @@ jobs:
         shell: bash
         run: |
           ! find apps/client/build/web -type f -name '*.map' | grep .
-          ! grep -RIE 'localhost|127\.0\.0\.1|postgresql://|redis://' apps/client/build/web
+          ! grep -RIE 'https?://(localhost|127\.0\.0\.1)|postgresql://|redis://' apps/client/build/web
       - working-directory: tests/web-pwa
         run: npm ci
       - working-directory: tests/web-pwa

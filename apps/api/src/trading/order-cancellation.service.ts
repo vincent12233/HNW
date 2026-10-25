@@ -5,8 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
+import { runSerializableTransaction } from '../common/transaction-retry';
 import { PrismaService } from '../prisma/prisma.service';
 import { FreezeService } from './freeze.service';
+import { assertOrderTransition } from './order-state-machine';
 
 @Injectable()
 export class OrderCancellationService {
@@ -28,25 +30,18 @@ export class OrderCancellationService {
     userId: string | undefined,
     allowInactive: boolean,
   ) {
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        return await this.prisma.$transaction(
+    return runSerializableTransaction(
+      () =>
+        this.prisma.$transaction(
           (tx) => this.cancelInTransaction(tx, orderId, userId, allowInactive),
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-        );
-      } catch (error: unknown) {
-        if (this.hasPrismaCode(error, 'P2034')) {
-          if (attempt < 3) continue;
-          throw new ConflictException(
+        ),
+      {
+        onExhausted: () =>
+          new ConflictException(
             'Concurrent order update detected; please retry',
-          );
-        }
-        throw error;
-      }
-    }
-
-    throw new ConflictException(
-      'Concurrent order update detected; please retry',
+          ),
+      },
     );
   }
 
@@ -121,6 +116,7 @@ export class OrderCancellationService {
     }
 
     const now = new Date();
+    assertOrderTransition(order.status, 'CANCELLED');
     const cancelledOrder = await tx.order.update({
       where: { id: order.id },
       data: {
@@ -146,14 +142,5 @@ export class OrderCancellationService {
     });
 
     return { cancelled: true, order: cancelledOrder };
-  }
-
-  private hasPrismaCode(error: unknown, expectedCode: string): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: unknown }).code === expectedCode
-    );
   }
 }

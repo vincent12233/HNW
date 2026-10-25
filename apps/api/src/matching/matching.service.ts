@@ -2,8 +2,10 @@ import { ConflictException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
+import { runSerializableTransaction } from '../common/transaction-retry';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertOrderTransition } from '../trading/order-state-machine';
 
 type MatchableOrder = Prisma.OrderGetPayload<{
   include: { account: true; instrument: { include: { quote: true } } };
@@ -52,9 +54,9 @@ export class MatchingService {
   }
 
   async matchOrder(orderId: string) {
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        return await this.prisma.$transaction(
+    return runSerializableTransaction(
+      () =>
+        this.prisma.$transaction(
           async (tx) => {
             const order = await tx.order.findUnique({
               where: { id: orderId },
@@ -125,20 +127,13 @@ export class MatchingService {
             });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-        );
-      } catch (error: unknown) {
-        if (this.hasPrismaCode(error, 'P2034')) {
-          if (attempt < 3) continue;
-          throw new ConflictException(
+        ),
+      {
+        onExhausted: () =>
+          new ConflictException(
             'Concurrent order update detected; please retry',
-          );
-        }
-        throw error;
-      }
-    }
-
-    throw new ConflictException(
-      'Concurrent order update detected; please retry',
+          ),
+      },
     );
   }
 
@@ -301,10 +296,12 @@ export class MatchingService {
         netAmount,
       },
     });
+    const nextStatus = complete ? 'FILLED' : 'PARTIALLY_FILLED';
+    assertOrderTransition(order.status, nextStatus);
     await tx.order.update({
       where: { id: order.id },
       data: {
-        status: complete ? 'FILLED' : 'PARTIALLY_FILLED',
+        status: nextStatus,
         filledQuantity: newFilledQuantity,
         averageFillPrice,
         frozenAmount: frozenAmountAfter,
@@ -401,6 +398,7 @@ export class MatchingService {
         data: { frozenQuantity: { decrement: remaining } },
       });
     }
+    assertOrderTransition(order.status, 'CANCELLED');
     await tx.order.update({
       where: { id: order.id },
       data: {
@@ -421,14 +419,5 @@ export class MatchingService {
   private positiveInteger(value: string | undefined, fallback: number): number {
     const parsed = Number(value);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-  }
-
-  private hasPrismaCode(error: unknown, expectedCode: string): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: unknown }).code === expectedCode
-    );
   }
 }

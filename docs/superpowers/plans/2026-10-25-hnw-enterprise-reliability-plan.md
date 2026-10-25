@@ -260,8 +260,11 @@
 - Create: `apps/admin/components/OpsDataPage.tsx`
 - Create: `apps/admin/lib/ops-page-registry.ts`
 - Create: `apps/admin/lib/ops-mutation-contract.ts`
+- Create: `apps/admin/lib/ops-action-registry.ts`
 - Modify: `apps/admin/lib/admin-navigation.ts`
 - Modify: `apps/admin/lib/role-permissions.ts`
+- Modify: `apps/admin/components/KycReviewModal.tsx`
+- Modify: `apps/admin/lib/kyc-review.ts`
 - Modify: `apps/admin/app/deposits/page.tsx`
 - Modify: `apps/admin/app/orders/page.tsx`
 - Modify: `apps/admin/app/trades/page.tsx`
@@ -275,21 +278,30 @@
 - Create: `apps/admin/tests/ops-failure-states.test.mjs`
 - Create: `apps/admin/tests/ops-status-scenes.test.mjs`
 - Create: `apps/admin/tests/ops-page-registry.test.mjs`
+- Create: `apps/admin/tests/ops-action-matrix.test.mjs`
 - Create: `apps/admin/tests/ops-maintainability.test.mjs`
+- Modify: `apps/admin/tests/kyc-review.test.mjs`
+- Modify: `apps/admin/tests/g3-kyc-workspace.test.mjs`
+- Modify: `apps/api/src/kyc/kyc.characterization.spec.ts`
 - Create: `docs/admin/ADMIN_MODULE_MAINTENANCE.md`
+- Create: `docs/admin/ADMIN_OPERATION_MATRIX.md`
 
 **Interfaces:**
 - Existing Admin routes and permission matrix; no new role capability.
 
 - [ ] Pin role menus/endpoints and add 403/409/429/timeout/partial/stale/unknown-result tests.
 - [ ] Centralize every route, title, breadcrumb, menu item, required role, module owner, and API dependency in one typed registry.
+- [ ] Define a typed role × module × record-state × action registry covering view/list/filter/detail/create/edit/approve/reject/publish/reset/export/read-only boundaries; generate UI availability from it without replacing server authorization.
 - [ ] Introduce one reusable server-paginated data-page contract and one audited mutation contract; remove duplicated page-local implementations as each page migrates.
 - [ ] Standardize grid, page width, sidebar, headers, filters, tables, drawers, confirmations, status tags, density, and responsive breakpoints.
 - [ ] Replace inconsistent Admin spinners, empty placeholders, success messages and pending/review displays with shared role-aware status scenes and timelines; preserve exact server state and never imply completion before the API confirms it.
 - [ ] Require current/new value, impact, reason, requestId, and explicit confirmation for writes.
+- [ ] Pin KYC review completeness: pending rows expose both approve and reject, rejection requires a meaningful note, both decisions show a confirmation summary, completed rows are view-only, and 403/409/timeout/unknown-result paths refresh safely without optimistic success.
+- [ ] Audit customer/KYC, funding, orders/trades, products/content, support, personnel/2FA, governance and system modules against the operation matrix; add every missing in-scope action and state without expanding protected business behavior or role scope.
 - [ ] Add governance, health, and read-only deployment views for audit, reconciliation, API/DB/Redis/market/worker health, current SHA/image/migration, recent release results, rollback readiness, and configuration provenance; never display secret values or expose a server shell.
 - [ ] Add maintainability tests that fail on unregistered routes, duplicated permission logic, direct raw fetch in migrated pages, unbounded lists, or missing loading/error/denied states.
 - [ ] Document each module's responsibility, API, permission boundary, data source, alert, common failure, and rollback.
+- [ ] Document each module's complete operation inventory, eligible states, required reason/confirmation, idempotency key, audit event and recovery behavior; fail CI when a registered mutation lacks these controls.
 - [ ] Capture and review every role at all Admin viewports.
 - [ ] Run lint/tests/typecheck/build, accessibility, screenshot comparison, and protected API tests.
 - [ ] Commit: `feat: deliver pixel-level role-scoped operations UI`.

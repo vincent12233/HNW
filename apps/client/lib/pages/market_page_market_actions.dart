@@ -216,6 +216,29 @@ extension _MarketHomeMarketActions on _MarketHomePageState {
       });
 
       return null;
+    } on TradingException catch (error) {
+      final clientOrderId = order.clientOrderId?.trim() ?? '';
+      if (clientOrderId.isNotEmpty &&
+          error.message.contains('Order confirmation is unavailable')) {
+        try {
+          final reconciled = await tradingService.findOrderByClientOrderId(
+            clientOrderId,
+          );
+          if (reconciled != null && mounted) {
+            final updatedOrders = mergeConfirmedOrder(reconciled, orders);
+            _updateState(() {
+              orders
+                ..clear()
+                ..addAll(updatedOrders);
+            });
+            return null;
+          }
+        } catch (_) {
+          // Keep the original uncertain result. The same clientOrderId is
+          // retained so any later retry remains idempotent.
+        }
+      }
+      return error.message;
     } catch (error) {
       return error.toString();
     }

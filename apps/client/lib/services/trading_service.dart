@@ -140,6 +140,15 @@ class TradingService {
     }
   }
 
+  /// Reconciles an uncertain submission using the server order list and the
+  /// exact clientOrderId. It never guesses by symbol, quantity, or time.
+  Future<TradingOrder?> findOrderByClientOrderId(String clientOrderId) async {
+    final orders = await fetchOrders(allowCached: false);
+    final matched = orderByClientOrderId(orders, clientOrderId);
+    if (matched != null) _lastPlacedOrder = matched;
+    return matched;
+  }
+
   Future<List<AccountTransaction>> fetchTransactions() async {
     final session = await _authService.restoreSession();
     if (session == null || session.accessToken.isEmpty) return const [];
@@ -379,6 +388,18 @@ List<TradingOrder> _ordersFromRows(List<dynamic> rows) {
             TradingOrder.fromApiJson(Map<String, dynamic>.from(item as Map)),
       )
       .toList();
+}
+
+TradingOrder? orderByClientOrderId(
+  Iterable<TradingOrder> orders,
+  String clientOrderId,
+) {
+  final target = clientOrderId.trim();
+  if (target.isEmpty) return null;
+  for (final order in orders) {
+    if (order.clientOrderId?.trim() == target) return order;
+  }
+  return null;
 }
 
 class TradingAccountSnapshot {

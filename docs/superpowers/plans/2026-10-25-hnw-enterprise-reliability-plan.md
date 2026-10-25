@@ -206,6 +206,7 @@
 - Modify: `apps/admin/app/audit-logs/page.tsx`
 - Create: `apps/admin/app/system-health/page.tsx`
 - Create: `apps/admin/app/system-governance/page.tsx`
+- Create: `apps/admin/app/system-deployments/page.tsx`
 - Modify: `apps/admin/app/globals.css`
 - Modify: `apps/admin/tests/role-permissions.test.mjs`
 - Modify: `apps/admin/tests/g4-orders-trades.test.mjs`
@@ -222,7 +223,7 @@
 - [ ] Introduce one reusable server-paginated data-page contract and one audited mutation contract; remove duplicated page-local implementations as each page migrates.
 - [ ] Standardize grid, page width, sidebar, headers, filters, tables, drawers, confirmations, status tags, density, and responsive breakpoints.
 - [ ] Require current/new value, impact, reason, requestId, and explicit confirmation for writes.
-- [ ] Add governance and health views for audit, reconciliation, API/DB/Redis/market/worker health, deployment version, and configuration provenance; never display secret values.
+- [ ] Add governance, health, and read-only deployment views for audit, reconciliation, API/DB/Redis/market/worker health, current SHA/image/migration, recent release results, rollback readiness, and configuration provenance; never display secret values or expose a server shell.
 - [ ] Add maintainability tests that fail on unregistered routes, duplicated permission logic, direct raw fetch in migrated pages, unbounded lists, or missing loading/error/denied states.
 - [ ] Document each module's responsibility, API, permission boundary, data source, alert, common failure, and rollback.
 - [ ] Capture and review every role at all Admin viewports.
@@ -345,18 +346,32 @@
 - Modify: `compose.production.yaml`
 - Modify: `scripts/verify-release-config.ps1`
 - Create: `scripts/verify-release-config.sh`
+- Create: `scripts/ops/hnw-ops.ps1`
+- Create: `scripts/ops/hnw-ops.sh`
+- Create: `scripts/ops/lib/preflight.ps1`
+- Create: `scripts/ops/lib/preflight.sh`
 - Modify: `.github/workflows/docker-ci.yml`
 - Modify: `.github/workflows/production-deploy.yml`
+- Create: `.github/workflows/production-rollback.yml`
+- Create: `docs/operations/DEPLOYMENT_AND_SERVER_MANAGEMENT.md`
+- Create: `docs/operations/ENVIRONMENT_INVENTORY.template.md`
+- Create: `docs/operations/RELEASE_EVIDENCE.template.md`
 
 **Interfaces:**
 - `RedisLease.acquire(resource, ttlMs, owner)`; release verifies owner token.
 - Gateway forwards bounded trusted headers/WSS; API remains authorization boundary.
+- `hnw-ops preflight|status|logs|backup-check|deploy|rollback --environment <name>` provides one audited operator interface; production mutations require CI environment approval and cannot be run from the Admin browser.
 
 - [ ] Test disconnect/reconnect/failover/stale owner/two-instance shared limits.
 - [ ] Add deadlines, jittered reconnect, and no infinite command queue.
 - [ ] Apply the exact design `17 fail-closed list; read-only paths degrade honestly.
 - [ ] Add opt-in Envoy profile, body/time/connection limits, WSS, trusted proxy validation.
-- [ ] Require exact SHA, compatible migration, protected gate, smoke, and rollback metadata.
+- [ ] Build idempotent Windows/Linux operator commands for preflight, status, correlated logs, backup verification, deploy, and rollback; default to read-only and reject missing/unknown environments.
+- [ ] Validate required configuration, secret references, certificates, time sync, disk headroom, image digest, backup freshness, migration compatibility, and dependency health before deployment.
+- [ ] Require exact SHA/image digest, protected gate, approved environment, deployment concurrency lock, expand/migrate/contract compatibility, smoke tests, release evidence, and rollback metadata.
+- [ ] Make deployment and rollback workflows resumable, auditable, least-privileged, and safe against duplicate triggers; never print secrets or undo committed financial records.
+- [ ] Publish sanitized deployment status for the Admin read-only view and alerts, with no credentials, host shell, or destructive controls.
+- [ ] Document server inventory, routine maintenance, scaling, certificate renewal, backup/restore drill, incident access, and operator handover so deployment does not depend on one maintainer.
 - [ ] Verify two-instance Compose, container/security/config tests.
 - [ ] Commit: `ops: harden multi-instance deployment path`.
 

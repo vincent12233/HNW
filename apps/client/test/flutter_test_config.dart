@@ -3,7 +3,10 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-const _goldenPixelTolerance = 0.01;
+// Skia text rasterization differs slightly between Windows development hosts
+// and Linux CI. Keep the allowance below a visible layout-level change while
+// tolerating the measured cross-platform glyph edge variance.
+const _goldenPixelTolerance = 0.02;
 
 Future<void> testExecutable(FutureOr<void> Function() testMain) async {
   goldenFileComparator = _TolerantGoldenComparator(

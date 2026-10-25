@@ -23,6 +23,21 @@ services:
       interval: 5s
       timeout: 5s
       retries: 12
+  timescaledb:
+    image: timescale/timescaledb:2.17.2-pg17
+    environment:
+      POSTGRES_USER: hnw_market
+      POSTGRES_PASSWORD: ${HNW_E2E_TIMESERIES_PASSWORD:?Set HNW_E2E_TIMESERIES_PASSWORD before starting}
+      POSTGRES_DB: hnw_market_e2e
+    ports: ["127.0.0.1:55433:5432"]
+    volumes:
+      - timeseries-data:/var/lib/postgresql/data
+      - ./docker/timescaledb/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hnw_market -d hnw_market_e2e"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
   private-objects-init:
     image: alpine:3.22
     command: ["sh", "-c", "mkdir -p /private-objects/kyc && chown -R 1000:1000 /private-objects"]
@@ -61,12 +76,15 @@ services:
       PRIVATE_OBJECT_ROOT: /app/private-objects
       CORS_ORIGINS: http://localhost:3000,http://localhost:3002,http://localhost:3004,http://localhost:3005,http://localhost:3006,http://localhost:3007
       MARKET_DATA_STREAMING_ENABLED: "false"
+      TIMESERIES_DATABASE_URL: postgresql://hnw_market:${HNW_E2E_TIMESERIES_PASSWORD:?Set HNW_E2E_TIMESERIES_PASSWORD before starting}@timescaledb:5432/hnw_market_e2e
     ports: ["${HNW_E2E_BIND_IP:-127.0.0.1}:3100:3100"]
     volumes: ["private-objects:/app/private-objects"]
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      timescaledb:
         condition: service_healthy
       private-objects-init:
         condition: service_completed_successfully
@@ -155,3 +173,4 @@ volumes:
   postgres-data:
   redis-data:
   private-objects:
+  timeseries-data:

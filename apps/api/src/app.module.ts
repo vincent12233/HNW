@@ -37,6 +37,7 @@ import { ErrorIngestionModule } from './error-ingestion/error-ingestion.module';
 import { MetricsAccessGuard } from './observability/metrics-access.guard';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
 import { OutboxModule } from './outbox/outbox.module';
+import { MarketTimeseriesModule } from './market-timeseries/market-timeseries.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { OutboxModule } from './outbox/outbox.module';
     ErrorIngestionModule,
     ReconciliationModule,
     OutboxModule,
+    MarketTimeseriesModule,
   ],
   controllers: [HealthController, MetricsController],
   providers: [MetricsAccessGuard],

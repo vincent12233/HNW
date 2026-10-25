@@ -13,15 +13,31 @@ typedef MarketConnectionListener = void Function(bool connected);
 
 class MarketQuoteFreshnessGate {
   final Map<String, DateTime> _latest = <String, DateTime>{};
+  final Map<String, int> _sequences = <String, int>{};
 
-  bool accept(String key, DateTime updatedAt) {
+  bool accept(String key, DateTime updatedAt, [int? sequence]) {
+    final latestSequence = _sequences[key];
+    if (sequence != null &&
+        latestSequence != null &&
+        sequence <= latestSequence) {
+      return false;
+    }
     final latest = _latest[key];
     if (latest != null && !updatedAt.isAfter(latest)) return false;
     _latest[key] = updatedAt;
+    if (sequence != null) _sequences[key] = sequence;
     return true;
   }
 
-  void clear() => _latest.clear();
+  bool hasSequenceGap(String key, int? sequence) {
+    final latest = _sequences[key];
+    return sequence != null && latest != null && sequence > latest + 1;
+  }
+
+  void clear() {
+    _latest.clear();
+    _sequences.clear();
+  }
 }
 
 class MarketSocketService with WidgetsBindingObserver {
@@ -113,6 +129,7 @@ class MarketSocketService with WidgetsBindingObserver {
 
     socket.onConnect((_) {
       _lastServerActivityAt = DateTime.now();
+      _quoteFreshness.clear();
       _startConnectionWatchdog();
       _debugLog('Market websocket connected');
       _emitConnection(true);
@@ -238,12 +255,16 @@ class MarketSocketService with WidgetsBindingObserver {
     final exchange = quote['exchange']?.toString().trim().toUpperCase() ?? '';
     final type = quote['type']?.toString().trim().toUpperCase() ?? 'STOCK';
     final updatedAt = DateTime.tryParse(quote['updatedAt']?.toString() ?? '');
+    final sequence = int.tryParse(quote['sequence']?.toString() ?? '');
     if (symbol.isEmpty || updatedAt == null) return;
     if (updatedAt.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
       return;
     }
     final key = '$type:$exchange:$symbol';
-    if (!_quoteFreshness.accept(key, updatedAt)) return;
+    if (_quoteFreshness.hasSequenceGap(key, sequence)) {
+      unawaited(refreshSnapshot());
+    }
+    if (!_quoteFreshness.accept(key, updatedAt, sequence)) return;
 
     onQuoteUpdate?.call(quote);
     for (final listener in List<MarketQuoteListener>.from(_quoteListeners)) {

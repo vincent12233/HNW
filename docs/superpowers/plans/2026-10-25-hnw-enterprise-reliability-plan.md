@@ -18,6 +18,7 @@
 - Preserve India phone + password + invite registration; phone + password login; support-issued recovery code; support/manual-credit deposit.
 - Preserve BUY/SELL, MARKET/LIMIT, DAY/IOC/FOK, quantity, limit price, freeze, matching, cancellation, settlement, and idempotency semantics.
 - Preserve staff employee number/password, mandatory authenticator setup, OTP login, and scoped reset.
+- Preserve customer-facing support/recovery/deposit entry behavior while consolidating all chat into SaleSmartly; remove the standalone HNW support console only after verified migration, without deleting required recovery/deposit business controls or historical records.
 - Trade-page visual hierarchy/copy may change; its fields, defaults, validation, confirmation, payload, and submission path may not.
 - Customer App must not expose repository, stack, endpoints, environment names, DB fields, internal roles, vendor diagnostics, secrets, stack traces, test data, or internal IDs.
 - PostgreSQL remains authoritative for balances, orders, trades, approvals, and audit. Redis/events/caches/replicas/time-series are never sole financial truth.
@@ -150,6 +151,62 @@
 - [ ] Keep every current field and reset/deposit support step.
 - [ ] Run protected gate, goldens, full Flutter suite, and real Android smoke.
 - [ ] Commit: `feat: polish protected authentication and support screens`.
+
+## Task 4A: Consolidate customer chat into SaleSmartly and retire the internal support console
+
+**Files:**
+- Modify: `apps/client/lib/pages/support_chat_page.dart`
+- Modify: `apps/client/lib/widgets/support_chat_launcher.dart`
+- Modify: `apps/client/lib/services/salesmartly_service.dart`
+- Modify: `apps/client/lib/services/salesmartly_platform_web.dart`
+- Modify: `apps/client/lib/services/salesmartly_platform_native.dart`
+- Modify: `apps/client/lib/pages/forgot_password_page.dart`
+- Modify: `apps/client/lib/pages/deposit_page.dart`
+- Create: `apps/api/src/integrations/salesmartly/salesmartly.module.ts`
+- Create: `apps/api/src/integrations/salesmartly/salesmartly.adapter.ts`
+- Create: `apps/api/src/integrations/salesmartly/salesmartly-webhook.controller.ts`
+- Create: `apps/api/src/integrations/salesmartly/salesmartly-signature.service.ts`
+- Create: `apps/api/src/integrations/salesmartly/support-interaction-reference.service.ts`
+- Create: `apps/api/src/integrations/salesmartly/salesmartly-integration.spec.ts`
+- Modify: `apps/api/prisma/schema.prisma`
+- Create: `apps/api/prisma/migrations/<timestamp>_salesmartly_support_reference/migration.sql`
+- Modify: `apps/api/src/support/account-recovery.controller.ts`
+- Modify: `apps/api/src/support/account-recovery.service.ts`
+- Modify: `apps/api/src/deposit/deposit.service.ts`
+- Modify: `apps/admin/components/AdminShell.tsx`
+- Modify: `apps/admin/app/operator-console/page.tsx`
+- Create: `apps/admin/components/AccountRecoveryAction.tsx`
+- Delete after migration gate: `apps/admin/app/support-console/page.tsx`
+- Delete after migration gate: `apps/admin/components/RecoveryInbox.tsx`
+- Retire after history/archive verification: `apps/api/src/support/support.gateway.ts`
+- Retire after history/archive verification: `apps/api/src/support/support.controller.ts`
+- Retire after history/archive verification: `apps/api/src/support/support.service.ts`
+- Modify: `apps/admin/tests/admin-auth-menus.test.mjs`
+- Create: `apps/admin/tests/no-internal-support-console.test.mjs`
+- Create: `apps/client/test/salesmartly_support_contract_test.dart`
+- Modify: `apps/client/test/password_recovery_lifecycle_test.dart`
+- Create: `docs/operations/SALESMARTLY_SUPPORT_MIGRATION.md`
+
+**Interfaces:**
+- SaleSmartly owns chat, assignment, collaboration, tags and conversation history. HNW owns authentication, recovery-code issuance, manual-deposit records, financial data and audit.
+- Customer-visible support, forgot-password and deposit entry steps remain unchanged. A minimal external customer/conversation reference may link systems; no sensitive financial or identity payload is copied into SaleSmartly.
+- API/Webhook automation is enabled only when the subscribed SaleSmartly plan and official contract support it; otherwise use the supported SDK/widget and an audited manual handoff.
+
+- [ ] Characterize the current customer support, forgot-password and manual-deposit journeys, plus every internal `/support-console`, WebSocket, SUPPORT-role and database dependency.
+- [ ] Add failing tests proving all customer entries open SaleSmartly on Android/iOS/Web, logout clears identity, unavailable states are safe, and no HNW internal chat UI remains after cutover.
+- [ ] Define a data minimization map and stable pseudonymous customer/conversation reference; prohibit password, recovery code, TOTP, PAN/Aadhaar evidence, bank details, balance and full order payloads.
+- [ ] Verify the actual SaleSmartly subscription, SDK, JSSDK, API, Webhook, privacy and data-location capabilities against official documentation before enabling each integration path.
+- [ ] Implement a server-side adapter with secret storage, signature/timestamp verification, replay protection, idempotency, rate limits, timeouts, audit and sanitized observability.
+- [ ] Preserve recovery-code issuance and manual-deposit business behavior as HNW-controlled actions; SaleSmartly initiates communication/handoff but never mutates passwords, balances, orders, KYC or permissions directly.
+- [ ] Replace the removed Recovery Inbox with a narrowly scoped, audited account-recovery action inside the appropriate existing operations workspace; it accepts only a verified SaleSmartly interaction reference and never renders chat history.
+- [ ] Store only the external interaction reference, provider, purpose, actor, timestamps and audit status needed to correlate recovery/deposit work; keep message bodies and customer-service history in SaleSmartly.
+- [ ] Archive existing internal conversation history read-only according to retention policy; do not delete records merely because the UI is removed.
+- [ ] Shadow-test identity linking, conversation opening, recovery and deposit handoff, vendor outage and duplicate Webhook events; compare against the protected baseline.
+- [ ] Remove `/support-console` navigation/page and stop new internal chat writes only after Android/iOS/Web and operational acceptance pass; keep rollback metadata until the observation window ends.
+- [ ] Remove obsolete internal chat runtime code and credentials after the retention/rollback gate, while retaining required account-recovery/deposit endpoints and audit history.
+- [ ] Document SaleSmartly configuration, agent access, privacy, incident response, vendor outage, export/deletion and exit migration.
+- [ ] Run protected-flow, API/Admin/Flutter/Web, security and vendor-failure tests.
+- [ ] Commit: `refactor: consolidate customer chat into salesmartly`.
 
 ## Task 5: Pixel-polish the trading journey without core drift
 
@@ -523,7 +580,7 @@
 
 ## Final Integration Gate
 
-- [ ] Integrate in order 1 → 2 → 3 → 4/5/6 → 6A → 7 → 8 → 9 → 10 → 11 → 12 → 13.
+- [ ] Integrate in order 1 → 2 → 3 → 4 → 4A → 5/6 → 6A → 7 → 8 → 9 → 10 → 11 → 12 → 13.
 - [ ] Run protected-flow gate after every task; full verification at every workstream boundary.
 - [ ] Use a fresh reviewer for every financial/data migration task and one whole-branch review before PR.
 - [ ] Every pixel-level screen receives before/after evidence, golden/screenshot review, accessibility check, and real-device/browser verification.

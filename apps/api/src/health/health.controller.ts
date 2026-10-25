@@ -2,16 +2,21 @@ import {
   Controller,
   Get,
   Header,
+  Optional,
   ServiceUnavailableException,
   UseGuards,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { renderPrometheusMetrics } from '../observability/metrics';
 import { MetricsAccessGuard } from '../observability/metrics-access.guard';
+import { RedisHealthService } from '../common/redis-health.service';
 
 @Controller('health')
 export class HealthController {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional() private readonly redis?: RedisHealthService,
+  ) {}
 
   @Get()
   check() {
@@ -48,14 +53,23 @@ export class HealthController {
   async ready() {
     try {
       await this.prisma.$queryRaw`SELECT 1`;
+      const redis = this.redis?.status();
+      if (redis?.configured && !redis.connected) {
+        throw new Error('Required Redis dependency is unavailable');
+      }
     } catch (error) {
       throw new ServiceUnavailableException('Service is not ready', {
         cause: error,
       });
     }
+    const redis = this.redis?.status() ?? {
+      configured: false,
+      connected: false,
+    };
     return {
       status: 'ready',
       database: 'connected',
+      redis,
       timestamp: new Date().toISOString(),
     };
   }

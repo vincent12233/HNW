@@ -38,6 +38,7 @@ import { MetricsAccessGuard } from './observability/metrics-access.guard';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
 import { OutboxModule } from './outbox/outbox.module';
 import { MarketTimeseriesModule } from './market-timeseries/market-timeseries.module';
+import { CommonInfrastructureModule } from './common/common-infrastructure.module';
 
 @Module({
   imports: [
@@ -81,6 +82,7 @@ import { MarketTimeseriesModule } from './market-timeseries/market-timeseries.mo
     ReconciliationModule,
     OutboxModule,
     MarketTimeseriesModule,
+    CommonInfrastructureModule,
   ],
   controllers: [HealthController, MetricsController],
   providers: [MetricsAccessGuard],

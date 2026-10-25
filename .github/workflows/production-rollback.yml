@@ -1,0 +1,54 @@
+name: Rollback Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_image_digest:
+        description: 'Previously approved immutable image digest'
+        required: true
+        type: string
+      incident_reference:
+        description: 'Incident/change reference'
+        required: true
+        type: string
+      confirm:
+        description: 'Type ROLLBACK_PRODUCTION'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hnw-production
+  cancel-in-progress: false
+
+jobs:
+  rollback:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v7
+      - name: Validate immutable rollback target
+        shell: bash
+        run: |
+          test "${{ inputs.confirm }}" = 'ROLLBACK_PRODUCTION'
+          printf '%s' "${{ inputs.target_image_digest }}" | grep -Eq '^sha256:[0-9a-f]{64}$'
+          test -n "${{ inputs.incident_reference }}"
+      - name: Trigger approved non-destructive image rollback
+        env:
+          ROLLBACK_WEBHOOK: ${{ secrets.COOLIFY_ROLLBACK_WEBHOOK }}
+          TARGET_IMAGE_DIGEST: ${{ inputs.target_image_digest }}
+        run: |
+          test -n "$ROLLBACK_WEBHOOK" || { echo 'Rollback webhook is not configured.' >&2; exit 1; }
+          curl --fail --silent --show-error --request POST \
+            --header 'content-type: application/json' \
+            --data "{\"imageDigest\":\"$TARGET_IMAGE_DIGEST\"}" \
+            "$ROLLBACK_WEBHOOK"
+      - name: Verify service recovery
+        env:
+          PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
+          PRODUCTION_ADMIN_URLS: ${{ vars.PRODUCTION_ADMIN_URLS }}
+          SMOKE_ATTEMPTS: '18'
+          SMOKE_DELAY_MS: '10000'
+        run: node scripts/post-deploy-smoke.mjs

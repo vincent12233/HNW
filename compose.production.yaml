@@ -23,6 +23,20 @@ x-admin-common: &admin-common
     start_period: 60s
 
 services:
+  gateway:
+    image: envoyproxy/envoy:v1.31.2
+    profiles: ["gateway"]
+    restart: unless-stopped
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    volumes: ["./docker/gateway/envoy.yaml:/etc/envoy/envoy.yaml:ro"]
+    expose: ["8088"]
+    networks: ["hnw-private"]
+    depends_on:
+      api: { condition: service_healthy }
+      client-web: { condition: service_healthy }
   client-web:
     build:
       context: .

@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Optional } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { MarketSessionService } from '../market-session/market-session.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { OrderCancellationService } from './order-cancellation.service';
+import { RedisLeaseService } from '../common/redis-lease.service';
 
 @Injectable()
 export class DayOrderExpiryScheduler {
@@ -16,6 +17,7 @@ export class DayOrderExpiryScheduler {
     private readonly marketSession: MarketSessionService,
     private readonly cancellation: OrderCancellationService,
     config: ConfigService,
+    @Optional() private readonly leases?: RedisLeaseService,
   ) {
     this.batchSize = this.positiveInteger(
       config.get<string>('DAY_ORDER_EXPIRY_BATCH_SIZE'),
@@ -29,34 +31,38 @@ export class DayOrderExpiryScheduler {
     this.running = true;
 
     try {
-      const now = new Date();
-      const orders = await this.prisma.order.findMany({
-        where: {
-          timeInForce: 'DAY',
-          status: { in: ['OPEN', 'PARTIALLY_FILLED'] },
-        },
-        select: { id: true, placedAt: true },
-        orderBy: [{ placedAt: 'asc' }, { id: 'asc' }],
-        take: this.batchSize,
-      });
-
-      for (const order of orders) {
-        if (!this.marketSession.isDayOrderExpired(order.placedAt, now)) {
-          continue;
-        }
-
-        try {
-          await this.cancellation.expireDayOrder(order.id);
-        } catch (error: unknown) {
-          const message =
-            error instanceof Error ? error.message : String(error);
-          this.logger.error(
-            `Could not expire DAY order ${order.id}: ${message}`,
-          );
-        }
-      }
+      const operation = () => this.expireEligibleOrders();
+      if (this.leases)
+        await this.leases.runExclusive('day-order-expiry', 55000, operation);
+      else await operation();
     } finally {
       this.running = false;
+    }
+  }
+
+  private async expireEligibleOrders(): Promise<void> {
+    const now = new Date();
+    const orders = await this.prisma.order.findMany({
+      where: {
+        timeInForce: 'DAY',
+        status: { in: ['OPEN', 'PARTIALLY_FILLED'] },
+      },
+      select: { id: true, placedAt: true },
+      orderBy: [{ placedAt: 'asc' }, { id: 'asc' }],
+      take: this.batchSize,
+    });
+
+    for (const order of orders) {
+      if (!this.marketSession.isDayOrderExpired(order.placedAt, now)) {
+        continue;
+      }
+
+      try {
+        await this.cancellation.expireDayOrder(order.id);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        this.logger.error(`Could not expire DAY order ${order.id}: ${message}`);
+      }
     }
   }
 

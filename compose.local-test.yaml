@@ -1,5 +1,17 @@
 name: hnw-local-e2e
 services:
+  gateway:
+    image: envoyproxy/envoy:v1.31.2
+    profiles: ["gateway"]
+    read_only: true
+    tmpfs: ["/tmp"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: ["ALL"]
+    volumes: ["./docker/gateway/envoy.yaml:/etc/envoy/envoy.yaml:ro"]
+    ports: ["127.0.0.1:8088:8088"]
+    depends_on:
+      api: { condition: service_healthy }
+      admin: { condition: service_healthy }
   postgres:
     image: postgres:17
     environment:

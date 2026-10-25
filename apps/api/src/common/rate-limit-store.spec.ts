@@ -2,6 +2,7 @@ import {
   MemoryRateLimitStore,
   RedisRateLimitStore,
   normalizeRateLimitPath,
+  createRateLimitStore,
 } from './rate-limit-store';
 
 describe('rate limit store', () => {
@@ -21,6 +22,22 @@ describe('rate limit store', () => {
       ),
     ).toBe('/customers/:id/kyc');
   });
+});
+
+it('fails closed when production Redis is not configured', async () => {
+  const previousNodeEnv = process.env.NODE_ENV;
+  const previousUrl = process.env.RATE_LIMIT_REDIS_URL;
+  process.env.NODE_ENV = 'production';
+  delete process.env.RATE_LIMIT_REDIS_URL;
+  try {
+    await expect(createRateLimitStore()).rejects.toThrow(
+      'RATE_LIMIT_REDIS_URL is required in production',
+    );
+  } finally {
+    process.env.NODE_ENV = previousNodeEnv;
+    if (previousUrl === undefined) delete process.env.RATE_LIMIT_REDIS_URL;
+    else process.env.RATE_LIMIT_REDIS_URL = previousUrl;
+  }
 });
 
 const redisTest = process.env.HNW_VERIFY_REDIS === '1' ? it : it.skip;

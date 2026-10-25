@@ -72,7 +72,7 @@ test('AdminShell keeps role menus, adds tooltips, and shows permission denied in
   assert.doesNotMatch(block, /\/vip-products/);
   assert.doesNotMatch(source, /VIP 产品目录/);
   assert.match(source, /Tooltip title="退出登录"/);
-  assert.match(source, /aria-label=\{mobile \? \(drawerOpen \? "关闭导航"/);
+  assert.match(source, /aria-label=\{\s*mobile\s*\?\s*drawerOpen\s*\?\s*"关闭导航"/);
   assert.match(source, /OpsPermissionDenied/);
   assert.doesNotMatch(source, /if \(user && !allowed\) router\.replace/);
   assert.match(source, /aria-label="页面路径"/);

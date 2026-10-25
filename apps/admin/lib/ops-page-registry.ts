@@ -1,5 +1,5 @@
-import type { BackendRole } from './backend-role';
-import type { AdminPermission } from './role-permissions';
+import type { BackendRole } from "./backend-role";
+import type { AdminPermission } from "./role-permissions";
 
 export type OpsPageRegistration = {
   route: string;
@@ -13,30 +13,44 @@ export type OpsPageRegistration = {
 
 export const opsPageRegistry: readonly OpsPageRegistration[] = [
   {
-    route: '/system-health',
-    title: '系统健康',
-    owner: 'Platform Operations',
-    roles: ['ADMIN'],
-    permission: 'audit.read',
-    apiDependencies: ['/health', '/health/ready', '/market-data/health', '/market-data/session'],
+    route: "/reconciliation",
+    title: "财务对账",
+    owner: "Financial Operations",
+    roles: ["ADMIN"],
+    permission: "audit.read",
+    apiDependencies: ["/admin/reconciliation"],
     readOnly: true,
   },
   {
-    route: '/system-governance',
-    title: '系统治理',
-    owner: 'Security & Governance',
-    roles: ['ADMIN'],
-    permission: 'audit.read',
-    apiDependencies: ['/admin/audit-logs'],
+    route: "/system-health",
+    title: "系统健康",
+    owner: "Platform Operations",
+    roles: ["ADMIN"],
+    permission: "audit.read",
+    apiDependencies: [
+      "/health",
+      "/health/ready",
+      "/market-data/health",
+      "/market-data/session",
+    ],
     readOnly: true,
   },
   {
-    route: '/system-deployments',
-    title: '部署状态',
-    owner: 'Release Engineering',
-    roles: ['ADMIN'],
-    permission: 'audit.read',
-    apiDependencies: ['/health/version'],
+    route: "/system-governance",
+    title: "系统治理",
+    owner: "Security & Governance",
+    roles: ["ADMIN"],
+    permission: "audit.read",
+    apiDependencies: ["/admin/audit-logs"],
+    readOnly: true,
+  },
+  {
+    route: "/system-deployments",
+    title: "部署状态",
+    owner: "Release Engineering",
+    roles: ["ADMIN"],
+    permission: "audit.read",
+    apiDependencies: ["/health/version"],
     readOnly: true,
   },
 ] as const;

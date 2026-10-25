@@ -48,10 +48,13 @@ import type { ItemType } from "antd/es/menu/interface";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ReactNode, Suspense, useEffect, useMemo, useState } from "react";
 
-import { api } from '@/lib/api';
+import { api } from "@/lib/api";
 import { getBackendRole } from "@/lib/backend-role";
 import { findNavigationItem } from "@/lib/admin-navigation";
-import { hasAdminPermission, permissionForAdminRoute } from "@/lib/role-permissions";
+import {
+  hasAdminPermission,
+  permissionForAdminRoute,
+} from "@/lib/role-permissions";
 import { isAxiosError } from "axios";
 import OpsModal from "@/components/OpsModal";
 import OpsPermissionDenied from "@/components/OpsPermissionDenied";
@@ -90,8 +93,17 @@ const menus: Record<Role, MenuItemDef[]> = {
   ADMIN: [
     { key: "/team", icon: <UsergroupAddOutlined />, label: "管理员管理" },
     { key: "/team-assignments", icon: <SwapOutlined />, label: "团队归属管理" },
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "管理总览", badge: "total" },
-    { key: "/business-users", icon: <UsergroupAddOutlined />, label: "员工与权限" },
+    {
+      key: "/dashboard",
+      icon: <DashboardOutlined />,
+      label: "管理总览",
+      badge: "total",
+    },
+    {
+      key: "/business-users",
+      icon: <UsergroupAddOutlined />,
+      label: "员工与权限",
+    },
     { key: "/customers", icon: <TeamOutlined />, label: "客户总览" },
     { key: "/vip-settings", icon: <CrownOutlined />, label: "VIP 等级设置" },
     { key: "/vip-clients", icon: <CrownOutlined />, label: "VIP 客户总览" },
@@ -105,7 +117,11 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/quant", icon: <BarChartOutlined />, label: "量化策略" },
     { key: "/orders", icon: <StockOutlined />, label: "订单查询" },
     { key: "/trades", icon: <TransactionOutlined />, label: "成交查询" },
-    { key: "/app-management", icon: <AppstoreOutlined />, label: "APP 管理总览" },
+    {
+      key: "/app-management",
+      icon: <AppstoreOutlined />,
+      label: "APP 管理总览",
+    },
     { key: "/app-content", icon: <SettingOutlined />, label: "文案配置" },
     { key: "/insights", icon: <BookOutlined />, label: "洞察文章" },
     { key: "/announcements", icon: <BellOutlined />, label: "平台公告" },
@@ -115,74 +131,233 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
     { key: "/system-health", icon: <DashboardOutlined />, label: "系统健康" },
     { key: "/system-governance", icon: <AuditOutlined />, label: "系统治理" },
-    { key: "/system-deployments", icon: <SettingOutlined />, label: "部署状态" },
-    { key: "/approvals", icon: <AuditOutlined />, label: "余额调整复核", badge: "approvals" },
+    {
+      key: "/system-deployments",
+      icon: <SettingOutlined />,
+      label: "部署状态",
+    },
+    { key: "/reconciliation", icon: <AuditOutlined />, label: "财务对账" },
+    {
+      key: "/approvals",
+      icon: <AuditOutlined />,
+      label: "余额调整复核",
+      badge: "approvals",
+    },
   ],
   MANAGER: [
     { key: "/team?view=customers", icon: <TeamOutlined />, label: "客户资料" },
-    { key: "/team?view=deposits", icon: <DollarOutlined />, label: "客户入金", badge: "deposits" },
-    { key: "/team?view=withdrawals", icon: <BankOutlined />, label: "客户提现", badge: "withdrawals" },
-    { key: "/team?view=positions", icon: <BarChartOutlined />, label: "客户持仓" },
+    {
+      key: "/team?view=deposits",
+      icon: <DollarOutlined />,
+      label: "客户入金",
+      badge: "deposits",
+    },
+    {
+      key: "/team?view=withdrawals",
+      icon: <BankOutlined />,
+      label: "客户提现",
+      badge: "withdrawals",
+    },
+    {
+      key: "/team?view=positions",
+      icon: <BarChartOutlined />,
+      label: "客户持仓",
+    },
     { key: "/team?view=orders", icon: <StockOutlined />, label: "客户订单" },
-    { key: "/team?view=trades", icon: <TransactionOutlined />, label: "客户成交" },
-    { key: "/team?view=kyc", icon: <IdcardOutlined />, label: "KYC 审核", badge: "kyc" },
+    {
+      key: "/team?view=trades",
+      icon: <TransactionOutlined />,
+      label: "客户成交",
+    },
+    {
+      key: "/team?view=kyc",
+      icon: <IdcardOutlined />,
+      label: "KYC 审核",
+      badge: "kyc",
+    },
     { key: "/team-vip", icon: <CrownOutlined />, label: "团队 VIP" },
-    { key: "/team?view=team", icon: <UsergroupAddOutlined />, label: "我的业务员" },
+    {
+      key: "/team?view=team",
+      icon: <UsergroupAddOutlined />,
+      label: "我的业务员",
+    },
   ],
   BUSINESS: [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "业务总览", badge: "total" },
+    {
+      key: "/dashboard",
+      icon: <DashboardOutlined />,
+      label: "业务总览",
+      badge: "total",
+    },
     { key: "/business-customers", icon: <TeamOutlined />, label: "我的客户" },
     { key: "/business-vip", icon: <CrownOutlined />, label: "我的客户 VIP" },
-    { key: "/business-kyc", icon: <IdcardOutlined />, label: "KYC 审核", badge: "kyc" },
+    {
+      key: "/business-kyc",
+      icon: <IdcardOutlined />,
+      label: "KYC 审核",
+      badge: "kyc",
+    },
     { key: "/business-accounts", icon: <BankOutlined />, label: "客户账户" },
-    { key: "/business-deposits", icon: <DollarOutlined />, label: "我的客户入金记录" },
-    { key: "/business-withdrawals", icon: <BankOutlined />, label: "我的客户提现记录" },
+    {
+      key: "/business-deposits",
+      icon: <DollarOutlined />,
+      label: "我的客户入金记录",
+    },
+    {
+      key: "/business-withdrawals",
+      icon: <BankOutlined />,
+      label: "我的客户提现记录",
+    },
     { key: "/loans", icon: <DollarOutlined />, label: "客户贷款" },
-    { key: "/business-otc", icon: <TransactionOutlined />, label: "OTC 审核", badge: "otc" },
+    {
+      key: "/business-otc",
+      icon: <TransactionOutlined />,
+      label: "OTC 审核",
+      badge: "otc",
+    },
     { key: "/business-ipo", icon: <GiftOutlined />, label: "IPO 分配" },
-    { key: "/business-positions", icon: <BarChartOutlined />, label: "客户持仓" },
+    {
+      key: "/business-positions",
+      icon: <BarChartOutlined />,
+      label: "客户持仓",
+    },
     { key: "/business-orders", icon: <StockOutlined />, label: "客户订单" },
-    { key: "/business-trades", icon: <TransactionOutlined />, label: "客户成交" },
+    {
+      key: "/business-trades",
+      icon: <TransactionOutlined />,
+      label: "客户成交",
+    },
   ],
   FINANCE: [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "财务工作台", badge: "total" },
+    {
+      key: "/dashboard",
+      icon: <DashboardOutlined />,
+      label: "财务工作台",
+      badge: "total",
+    },
     { key: "/customers", icon: <TeamOutlined />, label: "客户账户" },
     { key: "/finance-overview", icon: <DollarOutlined />, label: "上下分" },
-    { key: "/deposits", icon: <DollarOutlined />, label: "上分订单", badge: "deposits" },
-    { key: "/withdrawals", icon: <BankOutlined />, label: "提现审核", badge: "withdrawals" },
+    {
+      key: "/deposits",
+      icon: <DollarOutlined />,
+      label: "上分订单",
+      badge: "deposits",
+    },
+    {
+      key: "/withdrawals",
+      icon: <BankOutlined />,
+      label: "提现审核",
+      badge: "withdrawals",
+    },
     { key: "/transactions", icon: <TransactionOutlined />, label: "资金流水" },
     { key: "/bank-accounts", icon: <BankOutlined />, label: "银行账户" },
     { key: "/ipo-debts", icon: <GiftOutlined />, label: "IPO 欠款" },
     { key: "/orders", icon: <StockOutlined />, label: "订单查询" },
     { key: "/trades", icon: <TransactionOutlined />, label: "成交查询" },
-    { key: "/loans", icon: <DollarOutlined />, label: "贷款处理", badge: "loans" },
+    {
+      key: "/loans",
+      icon: <DollarOutlined />,
+      label: "贷款处理",
+      badge: "loans",
+    },
   ],
   SUPPORT: [
-    { key: "/dashboard", icon: <DashboardOutlined />, label: "专用运营总览", badge: "total" },
-    { key: "/operator-console", icon: <CustomerServiceOutlined />, label: "固定邀请码客户", badge: "total" },
+    {
+      key: "/dashboard",
+      icon: <DashboardOutlined />,
+      label: "专用运营总览",
+      badge: "total",
+    },
+    {
+      key: "/operator-console",
+      icon: <CustomerServiceOutlined />,
+      label: "固定邀请码客户",
+      badge: "total",
+    },
     { key: "/business-customers", icon: <TeamOutlined />, label: "客户管理" },
     { key: "/business-funds", icon: <DollarOutlined />, label: "资金管理" },
-    { key: "/deposits", icon: <DollarOutlined />, label: "入金审核", badge: "deposits" },
-    { key: "/business-deposits", icon: <DollarOutlined />, label: "我的客户入金记录" },
-    { key: "/business-withdrawals", icon: <BankOutlined />, label: "我的客户提现记录" },
-    { key: "/business-kyc", icon: <IdcardOutlined />, label: "KYC 管理", badge: "kyc" },
+    {
+      key: "/deposits",
+      icon: <DollarOutlined />,
+      label: "入金审核",
+      badge: "deposits",
+    },
+    {
+      key: "/business-deposits",
+      icon: <DollarOutlined />,
+      label: "我的客户入金记录",
+    },
+    {
+      key: "/business-withdrawals",
+      icon: <BankOutlined />,
+      label: "我的客户提现记录",
+    },
+    {
+      key: "/business-kyc",
+      icon: <IdcardOutlined />,
+      label: "KYC 管理",
+      badge: "kyc",
+    },
     { key: "/business-accounts", icon: <BankOutlined />, label: "客户账户" },
-    { key: "/business-institutional", icon: <StockOutlined />, label: "涨停股" },
-    { key: "/business-otc", icon: <TransactionOutlined />, label: "OTC 审核", badge: "otc" },
+    {
+      key: "/business-institutional",
+      icon: <StockOutlined />,
+      label: "涨停股",
+    },
+    {
+      key: "/business-otc",
+      icon: <TransactionOutlined />,
+      label: "OTC 审核",
+      badge: "otc",
+    },
     { key: "/business-ipo", icon: <GiftOutlined />, label: "IPO 分配" },
-    { key: "/business-positions", icon: <BarChartOutlined />, label: "客户持仓" },
+    {
+      key: "/business-positions",
+      icon: <BarChartOutlined />,
+      label: "客户持仓",
+    },
     { key: "/business-orders", icon: <StockOutlined />, label: "客户订单" },
-    { key: "/business-trades", icon: <TransactionOutlined />, label: "客户成交" },
+    {
+      key: "/business-trades",
+      icon: <TransactionOutlined />,
+      label: "客户成交",
+    },
   ],
 };
 
 /** Visual grouping only — keys must stay within the role allowlist above. */
 const menuGroups: Record<Role, MenuGroupDef[]> = {
   ADMIN: [
-    { title: "治理与人员", keys: ["/team", "/team-assignments", "/dashboard", "/business-users", "/customers", "/vip-settings", "/vip-clients", "/vip-history", "/audit-logs", "/system-health", "/system-governance", "/system-deployments", "/approvals"] },
+    {
+      title: "治理与人员",
+      keys: [
+        "/team",
+        "/team-assignments",
+        "/dashboard",
+        "/business-users",
+        "/customers",
+        "/vip-settings",
+        "/vip-clients",
+        "/vip-history",
+        "/audit-logs",
+        "/system-health",
+        "/system-governance",
+        "/system-deployments",
+        "/reconciliation",
+        "/approvals",
+      ],
+    },
     {
       title: "市场与产品",
-      keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],
+      keys: [
+        "/market",
+        "/instruments",
+        "/watchlist",
+        "/block-trades",
+        "/ipo-management",
+        "/funds",
+        "/quant",
+      ],
     },
     { title: "交易查询", keys: ["/orders", "/trades"] },
     {
@@ -216,16 +391,36 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
   ],
   BUSINESS: [
     { title: "工作台", keys: ["/dashboard"] },
-    { title: "我的客户", keys: ["/business-customers", "/business-vip", "/business-kyc", "/business-accounts"] },
-    { title: "资金与贷款", keys: ["/business-deposits", "/business-withdrawals", "/loans"] },
+    {
+      title: "我的客户",
+      keys: [
+        "/business-customers",
+        "/business-vip",
+        "/business-kyc",
+        "/business-accounts",
+      ],
+    },
+    {
+      title: "资金与贷款",
+      keys: ["/business-deposits", "/business-withdrawals", "/loans"],
+    },
     {
       title: "交易业务",
-      keys: ["/business-otc", "/business-ipo", "/business-positions", "/business-orders", "/business-trades"],
+      keys: [
+        "/business-otc",
+        "/business-ipo",
+        "/business-positions",
+        "/business-orders",
+        "/business-trades",
+      ],
     },
   ],
   FINANCE: [
     { title: "工作台", keys: ["/dashboard"] },
-    { title: "资金操作", keys: ["/finance-overview", "/deposits", "/withdrawals", "/loans"] },
+    {
+      title: "资金操作",
+      keys: ["/finance-overview", "/deposits", "/withdrawals", "/loans"],
+    },
     {
       title: "账户与流水",
       keys: ["/customers", "/transactions", "/bank-accounts", "/ipo-debts"],
@@ -260,16 +455,32 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
   ],
 };
 
-const roleMeta: Record<Role, { label: string; product: string; color: string }> = {
+const roleMeta: Record<
+  Role,
+  { label: string; product: string; color: string }
+> = {
   ADMIN: { label: "超级管理员", product: "平台治理后台", color: "geekblue" },
   MANAGER: { label: "管理员", product: "客户业务管理后台", color: "cyan" },
   BUSINESS: { label: "业务员", product: "客户业务后台", color: "green" },
   FINANCE: { label: "财务", product: "资金结算后台", color: "gold" },
-  SUPPORT: { label: "专用运营员", product: "固定邀请码客户后台", color: "blue" },
+  SUPPORT: {
+    label: "专用运营员",
+    product: "固定邀请码客户后台",
+    color: "blue",
+  },
 };
 
 function emptyPending(): PendingCounts {
-  return { kyc: 0, deposits: 0, withdrawals: 0, loans: 0, otc: 0, ipo: 0, approvals: 0, total: 0 };
+  return {
+    kyc: 0,
+    deposits: 0,
+    withdrawals: 0,
+    loans: 0,
+    otc: 0,
+    ipo: 0,
+    approvals: 0,
+    total: 0,
+  };
 }
 
 function NavigationState({ onChange }: { onChange: (key: string) => void }) {
@@ -337,13 +548,19 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       let lastError: unknown;
       for (let attempt = 0; attempt < 3; attempt += 1) {
         try {
-          const { data } = await api.get<CurrentUser>("/auth/me", { timeout: 12000 });
+          const { data } = await api.get<CurrentUser>("/auth/me", {
+            timeout: 12000,
+          });
           return data;
         } catch (error: unknown) {
           lastError = error;
-          const status = isAxiosError(error) ? error.response?.status : undefined;
+          const status = isAxiosError(error)
+            ? error.response?.status
+            : undefined;
           if (status === 401 || status === 403 || attempt === 2) throw error;
-          await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+          await new Promise((resolve) =>
+            window.setTimeout(resolve, 500 * (attempt + 1)),
+          );
         }
       }
       throw lastError;
@@ -352,7 +569,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     verifySession()
       .then((data) => {
         if (!active) return;
-        if (!data.role || !menus[data.role] || (deploymentRole && data.role !== deploymentRole)) {
+        if (
+          !data.role ||
+          !menus[data.role] ||
+          (deploymentRole && data.role !== deploymentRole)
+        ) {
           localStorage.removeItem("adminUser");
           router.replace("/login");
           return;
@@ -385,7 +606,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     const refresh = async () => {
       const current = ++generation;
       try {
-        const { data } = await api.get<PendingCounts>("/admin/pending-counts", { timeout: 12000 });
+        const { data } = await api.get<PendingCounts>("/admin/pending-counts", {
+          timeout: 12000,
+        });
         if (active && current === generation) {
           setPending(data);
           setPendingUnavailable(false);
@@ -417,11 +640,19 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     () =>
       menus[role].map((item) => ({
         ...item,
-        badge: item.key === "/business-ipo" ? ("ipo" as const) : item.badge === "total" ? undefined : item.badge,
+        badge:
+          item.key === "/business-ipo"
+            ? ("ipo" as const)
+            : item.badge === "total"
+              ? undefined
+              : item.badge,
       })),
     [role],
   );
-  const byKey = useMemo(() => Object.fromEntries(flatItems.map((item) => [item.key, item])), [flatItems]);
+  const byKey = useMemo(
+    () => Object.fromEntries(flatItems.map((item) => [item.key, item])),
+    [flatItems],
+  );
   const meta = roleMeta[role];
   const selectedItem = findNavigationItem(flatItems, activeKey);
   const pageTitle = selectedItem?.label || "工作台";
@@ -430,11 +661,14 @@ export default function AdminShell({ children }: { children: ReactNode }) {
   );
   const routePermission = permissionForAdminRoute(pathname);
   const allowed =
-    (routePermission === undefined || hasAdminPermission(role, routePermission)) &&
+    (routePermission === undefined ||
+      hasAdminPermission(role, routePermission)) &&
     (pathname === "/" ||
       pathname === "/login" ||
       flatItems.some(
-        (item) => pathname === item.key.split("?")[0] || pathname.startsWith(`${item.key.split("?")[0]}/`),
+        (item) =>
+          pathname === item.key.split("?")[0] ||
+          pathname.startsWith(`${item.key.split("?")[0]}/`),
       ));
 
   const logout = async () => {
@@ -479,7 +713,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
     if (nextKey.startsWith("group-")) return;
     setActiveKey(nextKey);
     router.push(nextKey);
-    window.dispatchEvent(new CustomEvent("admin-navigation", { detail: nextKey }));
+    window.dispatchEvent(
+      new CustomEvent("admin-navigation", { detail: nextKey }),
+    );
     setDrawerOpen(false);
   };
 
@@ -530,14 +766,22 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 >
                   重新连接
                 </Button>
-                <Button aria-label="返回登录入口" onClick={() => router.replace("/login")}>
+                <Button
+                  aria-label="返回登录入口"
+                  onClick={() => router.replace("/login")}
+                >
                   返回登录入口
                 </Button>
               </Space>
             }
           />
         ) : (
-          <Space orientation="vertical" align="center" size="middle" role="status">
+          <Space
+            orientation="vertical"
+            align="center"
+            size="middle"
+            role="status"
+          >
             <Spin size="large" />
             <Text type="secondary">正在验证安全会话…</Text>
           </Space>
@@ -551,7 +795,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       <Suspense fallback={null}>
         <NavigationState onChange={setActiveKey} />
       </Suspense>
-      <a className="ops-skip-link" href="#ops-main-content">跳转到页面内容</a>
+      <a className="ops-skip-link" href="#ops-main-content">
+        跳转到页面内容
+      </a>
       {pendingUnavailable && (
         <div className="ops-pending-warn">
           <Alert
@@ -559,7 +805,12 @@ export default function AdminShell({ children }: { children: ReactNode }) {
             showIcon
             title="待办数量暂未更新，请勿将角标视为最新结果"
             action={
-              <Button size="small" onClick={() => window.dispatchEvent(new CustomEvent("admin-data-changed"))}>
+              <Button
+                size="small"
+                onClick={() =>
+                  window.dispatchEvent(new CustomEvent("admin-data-changed"))
+                }
+              >
                 重试
               </Button>
             }
@@ -568,11 +819,26 @@ export default function AdminShell({ children }: { children: ReactNode }) {
       )}
 
       {!mobile && (
-        <Sider width={264} collapsedWidth={78} collapsed={collapsed} trigger={null} className="ops-sider">
+        <Sider
+          width={264}
+          collapsedWidth={78}
+          collapsed={collapsed}
+          trigger={null}
+          className="ops-sider"
+        >
           {brand}
-          <nav id="ops-desktop-navigation" className="ops-navigation" aria-label="后台导航">{menu}</nav>
+          <nav
+            id="ops-desktop-navigation"
+            className="ops-navigation"
+            aria-label="后台导航"
+          >
+            {menu}
+          </nav>
           <div className="ops-sidebar-footer">
-            <Tooltip title={collapsed ? "展开侧边栏" : "收起侧边栏"} placement="right">
+            <Tooltip
+              title={collapsed ? "展开侧边栏" : "收起侧边栏"}
+              placement="right"
+            >
               <Button
                 type="text"
                 block
@@ -600,27 +866,65 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         rootClassName={`ops-nav-drawer role-${role.toLowerCase()}`}
         styles={{
           body: { padding: 0, overflow: "hidden" },
-          header: { background: "var(--sider-from)", color: "#fff", borderBottom: "1px solid #ffffff20" },
+          header: {
+            background: "var(--sider-from)",
+            color: "#fff",
+            borderBottom: "1px solid #ffffff20",
+          },
         }}
       >
         <div className="ops-mobile-nav">
           {brand}
-          <nav id="ops-mobile-navigation" className="ops-navigation" aria-label="后台导航">{menu}</nav>
+          <nav
+            id="ops-mobile-navigation"
+            className="ops-navigation"
+            aria-label="后台导航"
+          >
+            {menu}
+          </nav>
         </div>
       </Drawer>
 
       <Layout className="ops-main-layout">
         <Header className="ops-header">
           <Space size={12} className="ops-header-start">
-            <Tooltip title={mobile ? (drawerOpen ? "关闭导航" : "打开导航") : collapsed ? "展开导航" : "收起导航"}>
+            <Tooltip
+              title={
+                mobile
+                  ? drawerOpen
+                    ? "关闭导航"
+                    : "打开导航"
+                  : collapsed
+                    ? "展开导航"
+                    : "收起导航"
+              }
+            >
               <Button
                 type="text"
-                aria-label={mobile ? (drawerOpen ? "关闭导航" : "打开导航") : collapsed ? "展开导航" : "收起导航"}
+                aria-label={
+                  mobile
+                    ? drawerOpen
+                      ? "关闭导航"
+                      : "打开导航"
+                    : collapsed
+                      ? "展开导航"
+                      : "收起导航"
+                }
                 aria-expanded={mobile ? drawerOpen : !collapsed}
-                aria-controls={mobile ? "ops-mobile-navigation" : "ops-desktop-navigation"}
+                aria-controls={
+                  mobile ? "ops-mobile-navigation" : "ops-desktop-navigation"
+                }
                 className="ops-nav-toggle"
-                icon={mobile || collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
-                onClick={() => (mobile ? setDrawerOpen((value) => !value) : toggleSidebar())}
+                icon={
+                  mobile || collapsed ? (
+                    <MenuUnfoldOutlined />
+                  ) : (
+                    <MenuFoldOutlined />
+                  )
+                }
+                onClick={() =>
+                  mobile ? setDrawerOpen((value) => !value) : toggleSidebar()
+                }
               />
             </Tooltip>
             <div className="ops-title">
@@ -647,7 +951,10 @@ export default function AdminShell({ children }: { children: ReactNode }) {
                 </Avatar>
                 <div className="ops-user">
                   <strong>{user.fullName || meta.label}</strong>
-                  <small>{user.businessProfile?.employeeNo || "Unavailable"} · 权限已隔离</small>
+                  <small>
+                    {user.businessProfile?.employeeNo || "Unavailable"} ·
+                    权限已隔离
+                  </small>
                 </div>
               </>
             )}
@@ -667,7 +974,11 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         </Header>
         <Content id="ops-main-content" tabIndex={-1} className="ops-content">
           <div className="ops-page-frame" key={activeKey}>
-            {verified && allowed ? children : verified ? <OpsPermissionDenied role={role} /> : null}
+            {verified && allowed ? (
+              children
+            ) : verified ? (
+              <OpsPermissionDenied role={role} />
+            ) : null}
           </div>
         </Content>
       </Layout>
@@ -680,7 +991,9 @@ export default function AdminShell({ children }: { children: ReactNode }) {
         okButtonProps={{ danger: true, disabled: loggingOut }}
         confirmLoading={loggingOut}
       >
-        <Text>退出后需要使用员工编号和密码重新登录。不会发送短信或邮箱验证码。</Text>
+        <Text>
+          退出后需要使用员工编号和密码重新登录。不会发送短信或邮箱验证码。
+        </Text>
       </OpsModal>
     </Layout>
   );

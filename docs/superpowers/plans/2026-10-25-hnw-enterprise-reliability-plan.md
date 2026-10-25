@@ -79,7 +79,7 @@
 
 **Interfaces:**
 - Produces: One shared token inventory, approved viewport matrix, Flutter golden images, and Admin screenshot artifacts.
-- Visual matrix: 320×640, 360×800, 390×844, 412×915, landscape phone, tablet; Admin 1280×720, 1440×900, 1920×1080.
+- Visual matrix: 320×640, 360×800, 390×844, 412×915, landscape phone, tablet; customer Web/PWA 768×1024, 1024×768, 1280×720, 1440×900, 1920×1080; Admin 1280×720, 1440×900, 1920×1080.
 
 - [ ] Inventory every raw color/font/spacing/radius/shadow and map it to semantic tokens.
 - [ ] Define pixel acceptance: 8 px rhythm, typography hierarchy, 44/48 px touch targets, focus ring, contrast, table density, skeleton/error/empty states.
@@ -184,6 +184,56 @@
 - [ ] Ensure every price and P&L displays source time/quality and INR formatting.
 - [ ] Verify goldens, all Flutter tests, protected contracts, and low-end Android performance.
 - [ ] Commit: `feat: unify resilient customer journeys`.
+
+## Task 6A: Deliver the responsive Web and installable PWA client
+
+**Files:**
+- Modify: `apps/client/web/index.html`
+- Modify: `apps/client/web/manifest.json`
+- Replace: `apps/client/web/icons/Icon-192.png`
+- Replace: `apps/client/web/icons/Icon-512.png`
+- Replace: `apps/client/web/icons/Icon-maskable-192.png`
+- Replace: `apps/client/web/icons/Icon-maskable-512.png`
+- Create: `apps/client/web/flutter_bootstrap.js`
+- Create: `apps/client/web/pwa_service_worker.js`
+- Modify: `apps/client/lib/main.dart`
+- Create: `apps/client/lib/widgets/web_responsive_shell.dart`
+- Create: `apps/client/lib/services/web_update_service.dart`
+- Create: `apps/client/lib/services/web_session_coordinator.dart`
+- Create: `apps/client/test/web_manifest_contract_test.dart`
+- Create: `apps/client/test/web_responsive_layout_test.dart`
+- Create: `apps/client/test/web_offline_policy_test.dart`
+- Create: `apps/client/integration_test/web_critical_flows_test.dart`
+- Create: `docker/client-web.Dockerfile`
+- Create: `docker/client-web.nginx.conf`
+- Modify: `compose.production.yaml`
+- Modify: `.env.production.example`
+- Create: `.github/workflows/web-pwa-ci.yml`
+- Create: `tests/web-pwa/package.json`
+- Create: `tests/web-pwa/playwright.config.ts`
+- Create: `tests/web-pwa/pwa.spec.ts`
+- Create: `tests/web-pwa/security-and-cache.spec.ts`
+- Create: `tests/web-pwa/lighthouse.config.cjs`
+- Create: `docs/client/WEB_PWA_OPERATIONS.md`
+
+**Interfaces:**
+- Reuses the protected Flutter services, API DTOs, registration/login/recovery/deposit/trading contracts, and `clientOrderId`; no second business implementation.
+- Production uses same-origin `/api` and `/ws` routing where possible. Service Worker precaches only the versioned App Shell/static allowlist and explicitly bypasses every API, WebSocket, auth, KYC, support, account, fund, order, and trade path.
+- Offline mode never queues or replays a write. Unknown order results are resolved online through the existing idempotent lookup path.
+
+- [ ] Add failing browser contract tests for manifest/installability, deep-link refresh, history, session expiry, logout across tabs, offline startup, stale shell, update available, write blocking, and unknown order result recovery.
+- [ ] Replace Flutter template metadata, colors, descriptions, favicon and icons with approved customer branding; keep repository, stack, endpoint, environment and internal-version details out of the UI and manifest.
+- [ ] Add responsive phone/tablet/desktop composition, keyboard navigation, visible focus, pointer/hover behavior, bounded desktop widths, wide data layouts, and safe-area handling without hiding or changing protected trade fields.
+- [ ] Add a custom, versioned PWA bootstrap/update path. Cache only immutable/versioned static assets and the minimum shell; use network-only/no-store for sensitive and financial traffic and purge incompatible caches safely.
+- [ ] Show explicit offline/stale/update states. Defer activation while an order form or write is in progress; never auto-refresh a financial workflow.
+- [ ] Coordinate multi-tab sign-out/session expiry and prevent passwords, PINs, tokens, PII or financial responses from entering Cache Storage, logs, analytics payloads or public source maps.
+- [ ] Serve the release build through a non-root, read-only container with SPA fallback, correct asset 404 behavior, compression, HTTPS-forwarding awareness, CSP, HSTS, frame-ancestors, Referrer-Policy and Permissions-Policy.
+- [ ] Add Web CI for `flutter build web --release`, Chrome tests, Playwright critical journeys, manifest/service-worker/cache assertions, Lighthouse performance/PWA/accessibility budgets, and a secret/private-host/source-map artifact scan.
+- [ ] Validate install/update/uninstall, online/offline/slow network, hard refresh and rollback on Chrome, Edge, Safari and Firefox at the full customer Web viewport matrix.
+- [ ] Capture pixel-level Web/PWA screenshots in English/Hindi, text scale 1.0/1.4, reduced motion and existing themes; review alongside Android to prevent cross-platform drift.
+- [ ] Document domains, same-origin proxy, cache headers, release retention, service-worker recovery, monitoring, rollback, and customer-support troubleshooting.
+- [ ] Run protected-flow, Flutter, Web build, browser E2E, security-header, accessibility and container checks.
+- [ ] Commit: `feat: deliver production web and pwa client`.
 
 ## Task 7: Pixel-polish and harden all five Admin roles
 
@@ -342,6 +392,7 @@
 - Modify: `apps/api/src/health/health.controller.ts`
 - Create: `docker/gateway/envoy.yaml`
 - Create: `docker/gateway/README.md`
+- Modify: `docker/client-web.nginx.conf`
 - Modify: `compose.local-test.yaml`
 - Modify: `compose.production.yaml`
 - Modify: `scripts/verify-release-config.ps1`
@@ -365,7 +416,7 @@
 - [ ] Test disconnect/reconnect/failover/stale owner/two-instance shared limits.
 - [ ] Add deadlines, jittered reconnect, and no infinite command queue.
 - [ ] Apply the exact design `17 fail-closed list; read-only paths degrade honestly.
-- [ ] Add opt-in Envoy profile, body/time/connection limits, WSS, trusted proxy validation.
+- [ ] Add opt-in Envoy profile, body/time/connection limits, WSS, trusted proxy validation, customer Web/PWA same-origin routing, and cache/header rules.
 - [ ] Build idempotent Windows/Linux operator commands for preflight, status, correlated logs, backup verification, deploy, and rollback; default to read-only and reject missing/unknown environments.
 - [ ] Validate required configuration, secret references, certificates, time sync, disk headroom, image digest, backup freshness, migration compatibility, and dependency health before deployment.
 - [ ] Require exact SHA/image digest, protected gate, approved environment, deployment concurrency lock, expand/migrate/contract compatibility, smoke tests, release evidence, and rollback metadata.
@@ -415,7 +466,7 @@
 
 ## Final Integration Gate
 
-- [ ] Integrate in order 1 → 2 → 3 → 4/5/6/7 → 8 → 9 → 10 → 11 → 12 → 13.
+- [ ] Integrate in order 1 → 2 → 3 → 4/5/6 → 6A → 7 → 8 → 9 → 10 → 11 → 12 → 13.
 - [ ] Run protected-flow gate after every task; full verification at every workstream boundary.
 - [ ] Use a fresh reviewer for every financial/data migration task and one whole-branch review before PR.
 - [ ] Every pixel-level screen receives before/after evidence, golden/screenshot review, accessibility check, and real-device/browser verification.
@@ -440,6 +491,11 @@ npm run build
 cd ..\client
 flutter analyze
 flutter test
+flutter build web --release --dart-define=API_BASE_URL=/api
+cd ..\..\tests\web-pwa
+npm ci
+npx playwright test
+npm run lighthouse
 ```
 
 Expected: exit code 0 for each affected application. PostgreSQL/Redis integration, migration, load, chaos, Docker, visual capture, and release checks additionally require their explicitly disposable environments; no test may point at production.

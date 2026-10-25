@@ -3,18 +3,21 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  Optional,
 } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { runSerializableTransaction } from '../common/transaction-retry';
 import { PrismaService } from '../prisma/prisma.service';
 import { FreezeService } from './freeze.service';
 import { assertOrderTransition } from './order-state-machine';
+import { OutboxService } from '../outbox/outbox.service';
 
 @Injectable()
 export class OrderCancellationService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly freezeService: FreezeService,
+    @Optional() private readonly outbox?: OutboxService,
   ) {}
 
   cancel(userId: string, orderId: string) {
@@ -131,15 +134,27 @@ export class OrderCancellationService {
       },
     });
 
-    await tx.notification?.create({
-      data: {
-        userId: order.account.userId,
-        type: 'TRADE',
-        title: allowInactive ? 'DAY order expired' : 'Order cancelled',
-        body: `${order.instrument?.symbol ?? 'Order'} ${order.side} order: ${remainingQuantity} remaining share${remainingQuantity === 1 ? '' : 's'} cancelled and reserved assets released.`,
-        referenceId: order.id,
-      },
-    });
+    const notification = {
+      userId: order.account.userId,
+      type: 'TRADE',
+      title: allowInactive ? 'DAY order expired' : 'Order cancelled',
+      body: `${order.instrument?.symbol ?? 'Order'} ${order.side} order: ${remainingQuantity} remaining share${remainingQuantity === 1 ? '' : 's'} cancelled and reserved assets released.`,
+      referenceId: order.id,
+    };
+    if (this.outbox) {
+      await this.outbox.enqueue(tx, {
+        eventId: `order:${order.id}:cancelled`,
+        type: 'notification.requested',
+        aggregateType: 'ORDER',
+        aggregateId: order.id,
+        aggregateVersion: order.filledQuantity,
+        occurredAt: now,
+        correlationId: order.id,
+        payload: notification,
+      });
+    } else {
+      await tx.notification?.create({ data: notification });
+    }
 
     return { cancelled: true, order: cancelledOrder };
   }

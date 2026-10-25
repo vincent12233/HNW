@@ -1,4 +1,9 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
@@ -6,6 +11,7 @@ import { runSerializableTransaction } from '../common/transaction-retry';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { assertOrderTransition } from '../trading/order-state-machine';
+import { OutboxService } from '../outbox/outbox.service';
 
 type MatchableOrder = Prisma.OrderGetPayload<{
   include: { account: true; instrument: { include: { quote: true } } };
@@ -21,6 +27,7 @@ export class MatchingService {
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
+    @Optional() private readonly outbox?: OutboxService,
   ) {
     this.batchSize = this.positiveInteger(
       config.get('MATCHING_BATCH_SIZE'),
@@ -311,15 +318,27 @@ export class MatchingService {
     // Some transaction adapters (including focused unit-test doubles) do not
     // expose the optional notification delegate. Order settlement must remain
     // atomic and must not fail solely because a notification cannot be queued.
-    if (tx.notification?.create) {
+    const notification = {
+      userId: order.account.userId,
+      type: 'ORDER',
+      title: complete ? 'Order filled' : 'Order partially filled',
+      body: `${order.side} ${quantity} ${order.instrument.symbol} at ₹${price.toFixed(2)}.`,
+      referenceId: order.id,
+    };
+    if (this.outbox) {
+      await this.outbox.enqueue(tx, {
+        eventId: `order:${order.id}:fill:${newFilledQuantity}`,
+        type: 'notification.requested',
+        aggregateType: 'ORDER',
+        aggregateId: order.id,
+        aggregateVersion: newFilledQuantity,
+        occurredAt: new Date(),
+        correlationId: order.id,
+        payload: notification,
+      });
+    } else if (tx.notification?.create) {
       await tx.notification.create({
-        data: {
-          userId: order.account.userId,
-          type: 'ORDER',
-          title: complete ? 'Order filled' : 'Order partially filled',
-          body: `${order.side} ${quantity} ${order.instrument.symbol} at ₹${price.toFixed(2)}.`,
-          referenceId: order.id,
-        },
+        data: notification,
       });
     }
   }

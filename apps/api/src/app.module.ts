@@ -36,6 +36,7 @@ import { MetricsController } from './observability/metrics.controller';
 import { ErrorIngestionModule } from './error-ingestion/error-ingestion.module';
 import { MetricsAccessGuard } from './observability/metrics-access.guard';
 import { ReconciliationModule } from './reconciliation/reconciliation.module';
+import { OutboxModule } from './outbox/outbox.module';
 
 @Module({
   imports: [
@@ -77,6 +78,7 @@ import { ReconciliationModule } from './reconciliation/reconciliation.module';
     VipModule,
     ErrorIngestionModule,
     ReconciliationModule,
+    OutboxModule,
   ],
   controllers: [HealthController, MetricsController],
   providers: [MetricsAccessGuard],

@@ -381,6 +381,32 @@ model ReconciliationIssue {
   @@map("reconciliation_issues")
 }
 
+model OutboxEvent {
+  id               String    @id @default(uuid())
+  eventId          String    @unique
+  type             String
+  aggregateType    String
+  aggregateId      String
+  aggregateVersion Int
+  schemaVersion    Int       @default(1)
+  occurredAt       DateTime
+  correlationId    String?
+  payload          Json
+  status           String    @default("PENDING")
+  attempts         Int       @default(0)
+  availableAt      DateTime  @default(now())
+  leasedUntil      DateTime?
+  processedAt      DateTime?
+  lastError        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, availableAt, createdAt])
+  @@index([leasedUntil])
+  @@index([aggregateType, aggregateId, aggregateVersion])
+  @@map("outbox_events")
+}
+
 model BusinessManagerAssignmentHistory {
   id                        String   @id @default(uuid())
   businessUserId            String
@@ -554,15 +580,16 @@ model UserPreference {
 }
 
 model Notification {
-  id          String    @id @default(uuid())
-  userId      String
-  type        String
-  title       String
-  body        String
-  referenceId String?
-  readAt      DateTime?
-  createdAt   DateTime  @default(now())
-  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(uuid())
+  userId        String
+  type          String
+  title         String
+  body          String
+  referenceId   String?
+  outboxEventId String?   @unique
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")

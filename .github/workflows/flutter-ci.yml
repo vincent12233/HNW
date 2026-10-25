@@ -50,6 +50,10 @@ jobs:
         working-directory: .
         run: node ./scripts/check-flutter-architecture.mjs
 
+      - name: Verify protected customer and trading flows
+        working-directory: .
+        run: bash ./scripts/verify-protected-flows.sh --flutter-only
+
       - name: Analyze
         # Errors and warnings block; infos stay non-fatal.
         run: flutter analyze --no-fatal-infos

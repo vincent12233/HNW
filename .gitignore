@@ -73,3 +73,4 @@ artifacts/
 
 # Local isolated implementation worktrees
 .worktrees/
+.superpowers/

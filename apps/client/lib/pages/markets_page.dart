@@ -261,11 +261,13 @@ class _MarketsPageState extends State<MarketsPage> {
 
   Future<void> _loadWatchlist() async {
     final previousState = _watchlistState;
+    final requestGeneration = previousState.requestGeneration + 1;
     if (mounted) {
       setState(() {
         _watchlistState = AsyncDataState.loading(
           data: previousState.data,
           updatedAt: previousState.updatedAt,
+          requestGeneration: requestGeneration,
         );
       });
     }
@@ -289,21 +291,32 @@ class _MarketsPageState extends State<MarketsPage> {
             .toList();
       }
 
-      if (!mounted) return;
+      if (!mounted || !_watchlistState.acceptsResponse(requestGeneration)) {
+        return;
+      }
       setState(() {
-        _watchlistState = AsyncDataState.success(stocks);
+        _watchlistState = AsyncDataState.success(
+          stocks,
+          requestGeneration: requestGeneration,
+        );
       });
     } catch (error) {
-      if (!mounted) return;
+      if (!mounted || !_watchlistState.acceptsResponse(requestGeneration)) {
+        return;
+      }
       final message = clientErrorMessage(error);
       setState(() {
         final previousStocks = _watchlistState.data;
         _watchlistState = previousStocks == null
-            ? AsyncDataState.error(message)
+            ? AsyncDataState.error(
+                message,
+                requestGeneration: requestGeneration,
+              )
             : AsyncDataState.stale(
                 previousStocks,
                 updatedAt: _watchlistState.updatedAt ?? DateTime.now(),
                 message: message,
+                requestGeneration: requestGeneration,
               );
       });
     }
@@ -603,6 +616,4 @@ class _MarketsPageState extends State<MarketsPage> {
       ),
     );
   }
-
-
 }

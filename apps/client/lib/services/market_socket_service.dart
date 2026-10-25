@@ -11,6 +11,19 @@ import 'market_data_service.dart';
 typedef MarketQuoteListener = void Function(Map<String, dynamic> quote);
 typedef MarketConnectionListener = void Function(bool connected);
 
+class MarketQuoteFreshnessGate {
+  final Map<String, DateTime> _latest = <String, DateTime>{};
+
+  bool accept(String key, DateTime updatedAt) {
+    final latest = _latest[key];
+    if (latest != null && !updatedAt.isAfter(latest)) return false;
+    _latest[key] = updatedAt;
+    return true;
+  }
+
+  void clear() => _latest.clear();
+}
+
 class MarketSocketService with WidgetsBindingObserver {
   factory MarketSocketService() => _instance;
 
@@ -25,7 +38,7 @@ class MarketSocketService with WidgetsBindingObserver {
   DateTime? _lastResumeAt;
   DateTime? _lastServerActivityAt;
   Timer? _connectionWatchdog;
-  final Map<String, DateTime> _latestQuoteAt = <String, DateTime>{};
+  final MarketQuoteFreshnessGate _quoteFreshness = MarketQuoteFreshnessGate();
   final Set<MarketQuoteListener> _quoteListeners = <MarketQuoteListener>{};
   final Set<MarketConnectionListener> _connectionListeners =
       <MarketConnectionListener>{};
@@ -230,9 +243,7 @@ class MarketSocketService with WidgetsBindingObserver {
       return;
     }
     final key = '$type:$exchange:$symbol';
-    final latest = _latestQuoteAt[key];
-    if (latest != null && updatedAt.isBefore(latest)) return;
-    _latestQuoteAt[key] = updatedAt;
+    if (!_quoteFreshness.accept(key, updatedAt)) return;
 
     onQuoteUpdate?.call(quote);
     for (final listener in List<MarketQuoteListener>.from(_quoteListeners)) {
@@ -262,7 +273,7 @@ class MarketSocketService with WidgetsBindingObserver {
     _lastServerActivityAt = null;
     _connectionWatchdog?.cancel();
     _connectionWatchdog = null;
-    _latestQuoteAt.clear();
+    _quoteFreshness.clear();
     _removeLifecycleObserver();
   }
 

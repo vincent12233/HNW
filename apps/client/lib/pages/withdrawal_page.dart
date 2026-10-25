@@ -111,6 +111,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
           data: previousState.data,
           message: previousState.message,
           updatedAt: previousState.updatedAt,
+          requestGeneration: request,
         );
       });
     }
@@ -131,7 +132,10 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         _banks = banks;
         _selectedBank = selected;
         _history = history;
-        _loadState = AsyncDataState.success(history);
+        _loadState = AsyncDataState.success(
+          history,
+          requestGeneration: request,
+        );
       });
     } catch (error) {
       if (!mounted || request != _generation) return;
@@ -145,9 +149,13 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
             _history,
             updatedAt: _loadState.updatedAt ?? DateTime.now(),
             message: message,
+            requestGeneration: request,
           );
         } else {
-          _loadState = AsyncDataState.error(message);
+          _loadState = AsyncDataState.error(
+            message,
+            requestGeneration: request,
+          );
         }
       });
     }
@@ -313,6 +321,4 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
       body: body,
     );
   }
-
-
 }

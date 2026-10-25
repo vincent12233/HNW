@@ -21,4 +21,15 @@ void main() {
     expect(state.updatedAt, timestamp);
     expect(state.message, isNull);
   });
+
+  test('request generations reject responses from an older request', () {
+    final loading = const AsyncDataState<List<int>>.loading(
+      data: [1],
+      requestGeneration: 4,
+    );
+
+    expect(loading.acceptsResponse(4), isTrue);
+    expect(loading.acceptsResponse(3), isFalse);
+    expect(loading.requestGeneration, 4);
+  });
 }

@@ -71,6 +71,10 @@
 - Create: `apps/client/lib/widgets/app_status_timeline.dart`
 - Create: `apps/client/test/app_status_scene_test.dart`
 - Create: `apps/client/test/goldens/status_scenes_golden_test.dart`
+- Create: `docs/client/CLIENT_SCREEN_INVENTORY.md`
+- Create: `scripts/check-client-screen-inventory.mjs`
+- Create: `scripts/client-screen-inventory.json`
+- Create: `scripts/tests/client-screen-inventory.test.mjs`
 - Create: `apps/admin/tests/visual-layout-contracts.test.mjs`
 - Create: `scripts/capture-admin-visuals.mjs`
 - Modify: `apps/client/lib/theme/app_colors.dart`
@@ -88,6 +92,7 @@
 - [ ] Inventory every raw color/font/spacing/radius/shadow and map it to semantic tokens.
 - [ ] Define pixel acceptance: 8 px rhythm, typography hierarchy, 44/48 px touch targets, focus ring, contrast, table density, skeleton/error/empty states.
 - [ ] Inventory every loading/submitting/pending/processing/success/rejected/error/empty/offline/stale/unknown-result surface in Flutter, Web/PWA and Admin; map each to one semantic presentation contract.
+- [ ] Inventory every Flutter page, navigation destination, drawer, sheet and dialog with its entry point, tier, prerequisite, platform, protected-flow flag, state matrix and visual evidence; fail CI when a new surface is unregistered.
 - [ ] Build shared enterprise status-scene and status-timeline components with title, explanation, status, freshness, next step and actions; eliminate oversized hourglasses, arbitrary standalone spinners and inconsistent result layouts as screens migrate.
 - [ ] Add failing Flutter goldens for English, Hindi, text scale 1.0/1.4, reduced motion, light/dark only where already supported.
 - [ ] Add Admin layout assertions and deterministic screenshot capture for all five roles.
@@ -180,6 +185,27 @@
 - Modify: `apps/client/lib/pages/product_portfolio_page.dart`
 - Modify: `apps/client/lib/pages/market_page_account_section.dart`
 - Modify: `apps/client/lib/pages/support_chat_page.dart`
+- Modify: `apps/client/lib/pages/stock_search_page.dart`
+- Modify: `apps/client/lib/pages/index_list_page.dart`
+- Modify: `apps/client/lib/pages/index_detail_page.dart`
+- Modify: `apps/client/lib/pages/movers_list_page.dart`
+- Modify: `apps/client/lib/pages/market_news_page.dart`
+- Modify: `apps/client/lib/pages/notifications_page.dart`
+- Modify: `apps/client/lib/pages/withdrawal_page.dart`
+- Modify: `apps/client/lib/pages/loan_page.dart`
+- Modify: `apps/client/lib/pages/account_settings_page.dart`
+- Modify: `apps/client/lib/pages/account_security_page.dart`
+- Modify: `apps/client/lib/pages/bank_details_page.dart`
+- Modify: `apps/client/lib/pages/language_page.dart`
+- Modify: `apps/client/lib/pages/appearance_page.dart`
+- Modify: `apps/client/lib/pages/legal_page.dart`
+- Modify: `apps/client/lib/pages/account_content_page.dart`
+- Modify: `apps/client/lib/widgets/record_detail_sheet.dart`
+- Modify: `apps/client/lib/widgets/holding_detail_sheet.dart`
+- Modify: `apps/client/lib/widgets/markets/news_article_sheet.dart`
+- Modify: `apps/client/lib/widgets/trading/standard_order_details_sheet.dart`
+- Create: `apps/client/test/secondary_surface_coverage_test.dart`
+- Create: `apps/client/test/overlay_consistency_test.dart`
 - Modify: `apps/client/lib/services/market_socket_service.dart`
 - Create: `apps/client/test/network_failure_matrix_test.dart`
 - Create: `apps/client/test/market_socket_recovery_test.dart`
@@ -191,6 +217,8 @@
 - [ ] Add freshness/request-generation metadata without converting failure to zero/empty.
 - [ ] Normalize card/table/list spacing, typography, skeletons, empty/error/stale banners, and responsive layouts.
 - [ ] Migrate order, deposit, withdrawal, IPO, KYC, support, security and portfolio state displays to the shared status system; distinguish business-pending, network-loading, unknown-result and terminal-failure semantics.
+- [ ] Upgrade every registered secondary page, detail surface, drawer, sheet, dialog and result view to the shared scaffold, spacing, typography, status, motion and action hierarchy; no main-page-only acceptance.
+- [ ] Verify navigation/back restoration, SafeArea, scrolling, keyboard avoidance, long localized text, destructive confirmations and input preservation on every registered secondary surface.
 - [ ] Ensure every price and P&L displays source time/quality and INR formatting.
 - [ ] Verify goldens, all Flutter tests, protected contracts, and low-end Android performance.
 - [ ] Commit: `feat: unify resilient customer journeys`.
@@ -241,6 +269,7 @@
 - [ ] Add Web CI for `flutter build web --release`, Chrome tests, Playwright critical journeys, manifest/service-worker/cache assertions, Lighthouse performance/PWA/accessibility budgets, and a secret/private-host/source-map artifact scan.
 - [ ] Validate install/update/uninstall, online/offline/slow network, hard refresh and rollback on Chrome, Edge, Safari and Firefox at the full customer Web viewport matrix.
 - [ ] Capture pixel-level Web/PWA screenshots in English/Hindi, text scale 1.0/1.4, reduced motion and existing themes; review alongside Android to prevent cross-platform drift.
+- [ ] Run the same Web/PWA screenshot and interaction matrix for every registered secondary route and overlay, not only landing tabs.
 - [ ] Document domains, same-origin proxy, cache headers, release retention, service-worker recovery, monitoring, rollback, and customer-support troubleshooting.
 - [ ] Run protected-flow, Flutter, Web build, browser E2E, security-header, accessibility and container checks.
 - [ ] Commit: `feat: deliver production web and pwa client`.

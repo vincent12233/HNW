@@ -8,6 +8,7 @@ import KycReviewList from "@/components/KycReviewList";
 import KycReviewModal from "@/components/KycReviewModal";
 import OpsPageHeader from "@/components/OpsPageHeader";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { classifyOpsMutationFailure } from "@/lib/ops-mutation-contract";
 import {
   KYC_REVIEW_COPY,
   acquireReviewLock,
@@ -152,7 +153,9 @@ export default function BusinessKycPage() {
       setPreviewError("");
       await loadItems();
     } catch (requestError: unknown) {
-      message.error(getApiErrorMessage(requestError, "") || KYC_REVIEW_COPY.reviewFailure);
+      const failure = classifyOpsMutationFailure(requestError);
+      message.error(failure.message);
+      if (failure.refreshRequired) await loadItems();
     } finally {
       releaseReviewLock(reviewLock);
       setReviewSaving(false);

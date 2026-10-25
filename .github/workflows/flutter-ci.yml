@@ -6,6 +6,8 @@ on:
       - 'apps/client/**'
       - 'scripts/check-flutter-architecture.mjs'
       - 'scripts/flutter-architecture-baseline.json'
+      - 'scripts/check-client-screen-inventory.mjs'
+      - 'scripts/client-screen-inventory.json'
       - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
   push:
@@ -15,6 +17,8 @@ on:
       - 'apps/client/**'
       - 'scripts/check-flutter-architecture.mjs'
       - 'scripts/flutter-architecture-baseline.json'
+      - 'scripts/check-client-screen-inventory.mjs'
+      - 'scripts/client-screen-inventory.json'
       - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
 
@@ -49,6 +53,10 @@ jobs:
       - name: Enforce Flutter architecture rules
         working-directory: .
         run: node ./scripts/check-flutter-architecture.mjs
+
+      - name: Enforce client screen inventory
+        working-directory: .
+        run: node ./scripts/check-client-screen-inventory.mjs
 
       - name: Verify protected customer and trading flows
         working-directory: .

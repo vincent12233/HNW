@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-10-25-hnw-india-stock-reliability-upgrade-design.md`
 
+**Business Baseline:** `docs/HNW_MASTER_REQUIREMENTS_ZH.md`
+
 ## Global Constraints
 
 - Protected baseline: `main@8d0dcd3e55e65324dc5659e89a186c9acc49147d`.

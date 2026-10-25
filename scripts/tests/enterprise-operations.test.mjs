@@ -33,3 +33,24 @@ test('production workflows serialize deploy and rollback with approvals', () => 
     assert.match(workflow, /sha256:/);
   }
 });
+
+test('enterprise acceptance assets cover SLOs, financial integrity and safe rollback', () => {
+  const alerts = read('docker/observability/alerts.yml');
+  assert.match(alerts, /HnwCoreJourneyErrorBudgetBurn/);
+  assert.match(alerts, /HnwReconciliationIssuesDetected/);
+  assert.match(alerts, /docs\/runbooks\/redis-unavailable\.md/);
+
+  const rollback = read('docs/rollout/enterprise-upgrade-rollback.md');
+  assert.match(rollback, /不能通过回滚删除或反转/);
+  assert.match(rollback, /对账差异为 0/);
+
+  const chaos = read('tests/chaos/run-failure-matrix.sh');
+  assert.match(chaos, /HNW_CHAOS_CONFIRM/);
+  assert.match(chaos, /isolated-disposable/);
+});
+
+test('financial dashboard does not use customer or financial identifiers as labels', () => {
+  const dashboard = read('docker/observability/hnw-financial-integrity-dashboard.json');
+  JSON.parse(dashboard);
+  assert.doesNotMatch(dashboard, /phone|accountId|orderId|amount|clientOrderId/i);
+});

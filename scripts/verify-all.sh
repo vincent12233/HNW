@@ -50,4 +50,8 @@ echo "== Client =="
 run_client
 echo "== Operations =="
 node --test "$ROOT/scripts/tests/production-operations.test.mjs"
+node --test "$ROOT/scripts/tests/enterprise-operations.test.mjs"
+echo "== Protected flows and release configuration =="
+bash "$ROOT/scripts/verify-protected-flows.sh"
+bash "$ROOT/scripts/verify-release-config.sh"
 echo "All selected checks passed."

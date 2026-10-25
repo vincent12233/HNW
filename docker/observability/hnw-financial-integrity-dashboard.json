@@ -1,0 +1,14 @@
+{
+  "title": "HNW Financial Integrity",
+  "uid": "hnw-financial-integrity",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "panels": [
+    {"type":"stat","title":"Open reconciliation issues","targets":[{"expr":"hnw_operational_gauge{metric=\"reconciliation_open_issues\"}"}],"gridPos":{"h":8,"w":8,"x":0,"y":0}},
+    {"type":"stat","title":"Pending outbox events","targets":[{"expr":"hnw_operational_gauge{metric=\"outbox_pending_events\"}"}],"gridPos":{"h":8,"w":8,"x":8,"y":0}},
+    {"type":"stat","title":"Dead outbox events","targets":[{"expr":"hnw_operational_gauge{metric=\"outbox_dead_events\"}"}],"gridPos":{"h":8,"w":8,"x":16,"y":0}},
+    {"type":"timeseries","title":"Reconciliation executions","targets":[{"expr":"rate(hnw_operational_counters_total{event=~\"reconciliation_.*\"}[15m])","legendFormat":"{{event}}"}],"gridPos":{"h":9,"w":12,"x":0,"y":8}},
+    {"type":"timeseries","title":"Outbox processing","targets":[{"expr":"rate(hnw_operational_counters_total{event=~\"outbox_.*\"}[15m])","legendFormat":"{{event}}"}],"gridPos":{"h":9,"w":12,"x":12,"y":8}}
+  ]
+}

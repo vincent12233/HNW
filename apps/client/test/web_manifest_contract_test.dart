@@ -8,8 +8,8 @@ void main() {
     final manifest = jsonDecode(File('web/manifest.json').readAsStringSync())
         as Map<String, dynamic>;
 
-    expect(manifest['name'], 'HNW');
-    expect(manifest['short_name'], 'HNW');
+    expect(manifest['name'], 'India Trading');
+    expect(manifest['short_name'], 'India Trading');
     expect(manifest['display'], 'standalone');
     expect(manifest['start_url'], '/');
     expect(manifest['scope'], '/');
@@ -21,7 +21,7 @@ void main() {
   test('index metadata contains no template or implementation details', () {
     final html = File('web/index.html').readAsStringSync();
 
-    expect(html, contains('<title>HNW</title>'));
+    expect(html, contains('<title>India Trading</title>'));
     expect(html, contains('name="theme-color"'));
     expect(html, isNot(contains('A new Flutter project')));
     expect(html, isNot(contains('india_trading_app')));

@@ -5,8 +5,8 @@ test('manifest is installable and customer safe', async ({ request }) => {
   expect(response.ok()).toBeTruthy();
   const manifest = await response.json();
   expect(manifest).toMatchObject({
-    name: 'HNW',
-    short_name: 'HNW',
+    name: 'India Trading',
+    short_name: 'India Trading',
     display: 'standalone',
     start_url: '/',
     scope: '/',
@@ -16,9 +16,9 @@ test('manifest is installable and customer safe', async ({ request }) => {
 
 test('root and deep-link refresh render the same app shell', async ({ page }) => {
   await page.goto('/');
-  await expect(page).toHaveTitle('HNW');
+  await expect(page).toHaveTitle('India Trading');
   await page.goto('/account/settings');
-  await expect(page).toHaveTitle('HNW');
+  await expect(page).toHaveTitle('India Trading');
   await expect(page.locator('flutter-view')).toBeAttached();
 });
 

@@ -113,6 +113,9 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/app-settings", icon: <MobileOutlined />, label: "客户端设置" },
     { key: "/company-showcase", icon: <ShopOutlined />, label: "平台公司信息" },
     { key: "/audit-logs", icon: <AuditOutlined />, label: "安全审计" },
+    { key: "/system-health", icon: <DashboardOutlined />, label: "系统健康" },
+    { key: "/system-governance", icon: <AuditOutlined />, label: "系统治理" },
+    { key: "/system-deployments", icon: <SettingOutlined />, label: "部署状态" },
     { key: "/approvals", icon: <AuditOutlined />, label: "余额调整复核", badge: "approvals" },
   ],
   MANAGER: [
@@ -176,7 +179,7 @@ const menus: Record<Role, MenuItemDef[]> = {
 /** Visual grouping only — keys must stay within the role allowlist above. */
 const menuGroups: Record<Role, MenuGroupDef[]> = {
   ADMIN: [
-    { title: "治理与人员", keys: ["/team", "/team-assignments", "/dashboard", "/business-users", "/customers", "/vip-settings", "/vip-clients", "/vip-history", "/audit-logs", "/approvals"] },
+    { title: "治理与人员", keys: ["/team", "/team-assignments", "/dashboard", "/business-users", "/customers", "/vip-settings", "/vip-clients", "/vip-history", "/audit-logs", "/system-health", "/system-governance", "/system-deployments", "/approvals"] },
     {
       title: "市场与产品",
       keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],

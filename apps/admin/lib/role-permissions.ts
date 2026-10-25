@@ -25,6 +25,9 @@ export const rolePermissions: Record<BackendRole, readonly AdminPermission[]> = 
 };
 
 const routePermissions: Array<[string, AdminPermission]> = [
+  ['/system-health', 'audit.read'],
+  ['/system-governance', 'audit.read'],
+  ['/system-deployments', 'audit.read'],
   ['/app-content', 'cms.write'],
   ['/audit-logs', 'audit.read'],
   ['/team', 'customers.read'],

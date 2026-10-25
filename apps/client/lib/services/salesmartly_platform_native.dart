@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-import '../models/auth_session.dart';
 import 'salesmartly_platform.dart';
 
 SaleSmartlyPlatform createSaleSmartlyPlatform() => _SaleSmartlyNativePlatform();
@@ -15,7 +14,7 @@ final class _SaleSmartlyNativePlatform implements SaleSmartlyPlatform {
   @override
   Future<void> openChat({
     required String scriptUrl,
-    required AuthSession session,
+    required SaleSmartlyCustomerIdentity identity,
     String? initialMessage,
   }) async {
     if (defaultTargetPlatform != TargetPlatform.android &&
@@ -27,9 +26,8 @@ final class _SaleSmartlyNativePlatform implements SaleSmartlyPlatform {
     try {
       await _channel.invokeMethod<void>('openChat', {
         'scriptUrl': scriptUrl,
-        'userId': session.userId,
-        'userName': session.fullName,
-        'phone': session.phone,
+        'customerReference': identity.customerReference,
+        'displayName': identity.displayName,
         'initialMessage': initialMessage?.trim() ?? '',
       });
     } on PlatformException {

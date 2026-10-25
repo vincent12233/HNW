@@ -110,11 +110,22 @@ export class AccountRecoveryService {
     return { sent: true };
   }
 
-  async issue(id: string, actorId: string, verified: boolean) {
+  async issue(
+    id: string,
+    actorId: string,
+    verified: boolean,
+    interactionRefValue: string,
+  ) {
     this.validateId(id);
     if (verified !== true)
       throw new BadRequestException(
         'Confirm customer identity before issuing a reset code',
+      );
+    const interactionRef =
+      typeof interactionRefValue === 'string' ? interactionRefValue.trim() : '';
+    if (!/^[A-Za-z0-9][A-Za-z0-9._:-]{5,119}$/.test(interactionRef))
+      throw new BadRequestException(
+        'Enter a valid SaleSmartly interaction reference',
       );
     const code = randomBytes(6).toString('hex').toUpperCase();
     const codeHash = await bcrypt.hash(code, 12);
@@ -141,6 +152,7 @@ export class AccountRecoveryService {
           'No eligible customer account matches this phone',
         );
       await tx.$executeRaw`UPDATE account_recovery_sessions SET "codeHash" = ${codeHash}, "codeExpiresAt" = CURRENT_TIMESTAMP + INTERVAL '10 minutes', "codeUsedAt" = NULL, "codeAttempts" = 0, "issuedById" = ${actorId}, "issuedUserId" = ${user.id}, "updatedAt" = CURRENT_TIMESTAMP WHERE id = ${id}::uuid`;
+      await tx.$executeRaw`INSERT INTO support_interaction_references (id, provider, "externalReference", purpose, "recoverySessionId", "actorId", status) VALUES (${randomUUID()}::uuid, 'SALESMARTLY', ${interactionRef}, 'ACCOUNT_RECOVERY', ${id}::uuid, ${actorId}, 'VERIFIED') ON CONFLICT (provider, "externalReference", purpose) DO NOTHING`;
       const content = `A one-time password reset code was issued. It expires in 10 minutes and can only be used once. Ask support for the code shown on their screen — it is not stored in chat.`;
       await tx.$executeRaw`INSERT INTO account_recovery_messages (id, "sessionId", sender, content) VALUES (${randomUUID()}::uuid, ${id}::uuid, 'SUPPORT', ${content})`;
       await tx.auditLog.create({
@@ -150,7 +162,7 @@ export class AccountRecoveryService {
           resource: 'account_recovery',
           resourceId: id,
           description:
-            'Support confirmed identity and issued a single-use reset code',
+            'Support confirmed identity through the referenced external interaction and issued a single-use reset code',
         },
       });
     });

@@ -6,6 +6,7 @@ import type { ColumnsType } from "antd/es/table";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "@/components/AdminShell";
+import AccountRecoveryAction from "@/components/AccountRecoveryAction";
 import OpsEmpty from "@/components/OpsEmpty";
 import OpsErrorState from "@/components/OpsErrorState";
 import OpsMoney from "@/components/OpsMoney";
@@ -145,6 +146,7 @@ export default function OperatorConsolePage() {
   return (
     <AdminShell>
       <Space orientation="vertical" size="large" style={{ width: "100%" }} className="ops-workspace">
+        <AccountRecoveryAction />
         <OpsPageHeader
           eyebrow="SUPPORT SCOPE"
           title="固定邀请码客户"

@@ -58,8 +58,13 @@ export class StaffRecoveryController {
   @Post(':id/issue') issue(
     @Param('id') id: string,
     @Req() req: AuthenticatedRequest,
-    @Body() body: { identityVerified: boolean },
+    @Body() body: { identityVerified: boolean; interactionRef: string },
   ) {
-    return this.service.issue(id, req.user.userId, body.identityVerified);
+    return this.service.issue(
+      id,
+      req.user.userId,
+      body.identityVerified,
+      body.interactionRef,
+    );
   }
 }

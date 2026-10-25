@@ -105,7 +105,6 @@ const menus: Record<Role, MenuItemDef[]> = {
     { key: "/quant", icon: <BarChartOutlined />, label: "量化策略" },
     { key: "/orders", icon: <StockOutlined />, label: "订单查询" },
     { key: "/trades", icon: <TransactionOutlined />, label: "成交查询" },
-    { key: "/support-console", icon: <CustomerServiceOutlined />, label: "客服会话台" },
     { key: "/app-management", icon: <AppstoreOutlined />, label: "APP 管理总览" },
     { key: "/app-content", icon: <SettingOutlined />, label: "文案配置" },
     { key: "/insights", icon: <BookOutlined />, label: "洞察文章" },
@@ -158,7 +157,6 @@ const menus: Record<Role, MenuItemDef[]> = {
   SUPPORT: [
     { key: "/dashboard", icon: <DashboardOutlined />, label: "专用运营总览", badge: "total" },
     { key: "/operator-console", icon: <CustomerServiceOutlined />, label: "固定邀请码客户", badge: "total" },
-    { key: "/support-console", icon: <CustomerServiceOutlined />, label: "客服会话台" },
     { key: "/business-customers", icon: <TeamOutlined />, label: "客户管理" },
     { key: "/business-funds", icon: <DollarOutlined />, label: "资金管理" },
     { key: "/deposits", icon: <DollarOutlined />, label: "入金审核", badge: "deposits" },
@@ -184,7 +182,6 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
       keys: ["/market", "/instruments", "/watchlist", "/block-trades", "/ipo-management", "/funds", "/quant"],
     },
     { title: "交易查询", keys: ["/orders", "/trades"] },
-    { title: "客服", keys: ["/support-console"] },
     {
       title: "APP 管理",
       keys: [
@@ -233,7 +230,7 @@ const menuGroups: Record<Role, MenuGroupDef[]> = {
     { title: "交易查询", keys: ["/orders", "/trades"] },
   ],
   SUPPORT: [
-    { title: "工作台", keys: ["/dashboard", "/operator-console", "/support-console"] },
+    { title: "工作台", keys: ["/dashboard", "/operator-console"] },
     {
       title: "客户与资金",
       keys: [

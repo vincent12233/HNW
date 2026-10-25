@@ -71,10 +71,10 @@ test('VIP and assignment tables reuse Ops empty/error chrome', () => {
   assert.match(assignment, /\/admin\/business-assignments\/transfer/);
 });
 
-test('session picker empty is not merged into record-empty chrome', () => {
-  const support = read('../app/support-console/page.tsx');
-  assert.match(support, /请选择一个客户会话/);
-  assert.match(support, /OpsEmpty description=\{loading \? "正在加载会话" : "暂无会话"\}/);
+test('account recovery remains separate from external chat history', () => {
+  const recovery = read('../components/AccountRecoveryAction.tsx');
+  assert.match(recovery, /不显示或保存客服聊天记录/);
+  assert.doesNotMatch(recovery, /聊天窗口|发送回复/);
 });
 
 test('role allowlists stay on the existing AdminShell menus', () => {

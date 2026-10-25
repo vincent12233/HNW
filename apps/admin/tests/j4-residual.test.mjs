@@ -52,7 +52,8 @@ test('J.4 residual page role allowlists stay on existing AdminShell menus', () =
   assert.match(business, /\/business-accounts/);
   assert.match(business, /\/business-positions/);
   assert.match(support, /\/business-institutional/);
-  assert.match(support, /\/support-console/);
+  assert.match(support, /\/operator-console/);
+  assert.doesNotMatch(support, /\/support-console/);
   assert.doesNotMatch(business, /\/vip-settings/);
 });
 
@@ -209,7 +210,7 @@ test('J.4 VIP residual pages stay ordinary-tier surfaces', () => {
 
 test('J.4 residual pages keep loading empty error retry, scroll and aria-labels', () => {
   const pages = [
-    '../app/support-console/page.tsx',
+    '../app/operator-console/page.tsx',
     '../app/business-accounts/page.tsx',
     '../app/business-positions/page.tsx',
     '../app/business-institutional/page.tsx',

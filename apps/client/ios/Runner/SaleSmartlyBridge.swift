@@ -37,7 +37,7 @@ final class SaleSmartlyBridge: NSObject, FlutterPlugin {
               userAgent: "India Trading iOS",
               navigatorLanguage: "en",
               beforeSourceURL: "",
-              guestUserId: arguments["userId"] as? String ?? UUID().uuidString
+              guestUserId: arguments["customerReference"] as? String ?? UUID().uuidString
             )
             try await SalesmartlyChat.initialize(
               scriptURL: scriptURL,
@@ -48,15 +48,15 @@ final class SaleSmartlyBridge: NSObject, FlutterPlugin {
 
           SalesmartlyChat.setLoginInfo(
             LoginInfo(
-              userId: arguments["userId"] as? String ?? "",
-              userName: arguments["userName"] as? String ?? "",
-              language: "en",
-              phone: arguments["phone"] as? String ?? "",
+              userId: arguments["customerReference"] as? String ?? "",
+              userName: arguments["displayName"] as? String ?? "",
+              language: "en-US",
+              phone: "",
               email: "",
-              description: "India Trading customer",
-              labelNames: ["hnw", "ios"],
+              description: "Customer support",
+              labelNames: ["ios"],
               customFieldsExt: [
-                "source": "india-trading-ios",
+                "source": "ios",
               ]
             )
           )

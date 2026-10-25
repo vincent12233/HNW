@@ -67,6 +67,10 @@
 - Create: `apps/client/test/goldens/trading_golden_test.dart`
 - Create: `apps/client/test/goldens/markets_portfolio_golden_test.dart`
 - Create: `apps/client/test/goldens/profile_support_golden_test.dart`
+- Create: `apps/client/lib/widgets/app_status_scene.dart`
+- Create: `apps/client/lib/widgets/app_status_timeline.dart`
+- Create: `apps/client/test/app_status_scene_test.dart`
+- Create: `apps/client/test/goldens/status_scenes_golden_test.dart`
 - Create: `apps/admin/tests/visual-layout-contracts.test.mjs`
 - Create: `scripts/capture-admin-visuals.mjs`
 - Modify: `apps/client/lib/theme/app_colors.dart`
@@ -83,6 +87,8 @@
 
 - [ ] Inventory every raw color/font/spacing/radius/shadow and map it to semantic tokens.
 - [ ] Define pixel acceptance: 8 px rhythm, typography hierarchy, 44/48 px touch targets, focus ring, contrast, table density, skeleton/error/empty states.
+- [ ] Inventory every loading/submitting/pending/processing/success/rejected/error/empty/offline/stale/unknown-result surface in Flutter, Web/PWA and Admin; map each to one semantic presentation contract.
+- [ ] Build shared enterprise status-scene and status-timeline components with title, explanation, status, freshness, next step and actions; eliminate oversized hourglasses, arbitrary standalone spinners and inconsistent result layouts as screens migrate.
 - [ ] Add failing Flutter goldens for English, Hindi, text scale 1.0/1.4, reduced motion, light/dark only where already supported.
 - [ ] Add Admin layout assertions and deterministic screenshot capture for all five roles.
 - [ ] Normalize tokens without changing navigation or business behavior.
@@ -120,6 +126,8 @@
 - Modify: `apps/client/lib/pages/login_page.dart`
 - Modify: `apps/client/lib/pages/forgot_password_page.dart`
 - Modify: `apps/client/lib/pages/deposit_page.dart`
+- Modify: `apps/client/lib/pages/kyc_upload_page_submission_section.dart`
+- Modify: `apps/client/lib/pages/account_settings_page_kyc_section.dart`
 - Modify: `apps/client/lib/widgets/onboarding_auth_widgets.dart`
 - Modify: `apps/client/lib/theme/auth_layout.dart`
 - Modify: `apps/client/test/auth_ui_phase_a_test.dart`
@@ -131,6 +139,7 @@
 
 - [ ] Add golden/semantic tests at every viewport and language before editing.
 - [ ] Improve spacing, input hierarchy, keyboard behavior, focus/error placement, button states, support explanations, and visual consistency.
+- [ ] Replace the KYC post-submit hourglass with the shared “documents received” result scene and Submitted → Manual review → Result timeline; show the real current status, review note when available, safe next action and support entry without inventing an ETA.
 - [ ] Keep every current field and reset/deposit support step.
 - [ ] Run protected gate, goldens, full Flutter suite, and real Android smoke.
 - [ ] Commit: `feat: polish protected authentication and support screens`.
@@ -181,6 +190,7 @@
 - [ ] Test loading, empty, denied, offline, timeout, partial, stale, retry, background/resume, old-request race, socket duplicate/gap/out-of-order.
 - [ ] Add freshness/request-generation metadata without converting failure to zero/empty.
 - [ ] Normalize card/table/list spacing, typography, skeletons, empty/error/stale banners, and responsive layouts.
+- [ ] Migrate order, deposit, withdrawal, IPO, KYC, support, security and portfolio state displays to the shared status system; distinguish business-pending, network-loading, unknown-result and terminal-failure semantics.
 - [ ] Ensure every price and P&L displays source time/quality and INR formatting.
 - [ ] Verify goldens, all Flutter tests, protected contracts, and low-end Android performance.
 - [ ] Commit: `feat: unify resilient customer journeys`.
@@ -243,6 +253,8 @@
 - Modify: `apps/admin/components/OpsToolbar.tsx`
 - Modify: `apps/admin/components/OpsModal.tsx`
 - Modify: `apps/admin/components/OpsErrorState.tsx`
+- Create: `apps/admin/components/OpsStatusScene.tsx`
+- Create: `apps/admin/components/OpsStatusTimeline.tsx`
 - Modify: `apps/admin/components/OpsOrderWorkspace.tsx`
 - Modify: `apps/admin/components/OpsTradeWorkspace.tsx`
 - Create: `apps/admin/components/OpsDataPage.tsx`
@@ -261,6 +273,7 @@
 - Modify: `apps/admin/tests/role-permissions.test.mjs`
 - Modify: `apps/admin/tests/g4-orders-trades.test.mjs`
 - Create: `apps/admin/tests/ops-failure-states.test.mjs`
+- Create: `apps/admin/tests/ops-status-scenes.test.mjs`
 - Create: `apps/admin/tests/ops-page-registry.test.mjs`
 - Create: `apps/admin/tests/ops-maintainability.test.mjs`
 - Create: `docs/admin/ADMIN_MODULE_MAINTENANCE.md`
@@ -272,6 +285,7 @@
 - [ ] Centralize every route, title, breadcrumb, menu item, required role, module owner, and API dependency in one typed registry.
 - [ ] Introduce one reusable server-paginated data-page contract and one audited mutation contract; remove duplicated page-local implementations as each page migrates.
 - [ ] Standardize grid, page width, sidebar, headers, filters, tables, drawers, confirmations, status tags, density, and responsive breakpoints.
+- [ ] Replace inconsistent Admin spinners, empty placeholders, success messages and pending/review displays with shared role-aware status scenes and timelines; preserve exact server state and never imply completion before the API confirms it.
 - [ ] Require current/new value, impact, reason, requestId, and explicit confirmation for writes.
 - [ ] Add governance, health, and read-only deployment views for audit, reconciliation, API/DB/Redis/market/worker health, current SHA/image/migration, recent release results, rollback readiness, and configuration provenance; never display secret values or expose a server shell.
 - [ ] Add maintainability tests that fail on unregistered routes, duplicated permission logic, direct raw fetch in migrated pages, unbounded lists, or missing loading/error/denied states.

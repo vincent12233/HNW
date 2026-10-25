@@ -70,3 +70,6 @@ artifacts/
 .mcp.json.backup.*
 .codex/config.toml
 .codex/config.toml.backup.*
+
+# Local isolated implementation worktrees
+.worktrees/

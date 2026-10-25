@@ -26,6 +26,19 @@ const hindi = <String, String>{
   'This order is no longer available.': 'यह ऑर्डर अब उपलब्ध नहीं है।',
   'This instrument is no longer available.':
       'यह इंस्ट्रूमेंट अब उपलब्ध नहीं है।',
+  'Documents received': 'दस्तावेज़ प्राप्त हुए',
+  'Your identity documents were submitted successfully and are waiting for manual review.':
+      'आपके पहचान दस्तावेज़ सफलतापूर्वक जमा हो गए हैं और मानवीय समीक्षा की प्रतीक्षा में हैं।',
+  'Submitted': 'जमा किया गया',
+  'You can continue using available features. The verified result will appear in your profile after review.':
+      'आप उपलब्ध सुविधाओं का उपयोग जारी रख सकते हैं। समीक्षा के बाद सत्यापित परिणाम आपकी प्रोफ़ाइल में दिखाई देगा।',
+  'Documents received securely': 'दस्तावेज़ सुरक्षित रूप से प्राप्त हुए',
+  'Manual review': 'मानवीय समीक्षा',
+  'The review team checks your submitted details':
+      'समीक्षा टीम आपके जमा किए गए विवरण की जाँच करती है',
+  'Result': 'परिणाम',
+  'Your profile will show the latest decision':
+      'आपकी प्रोफ़ाइल नवीनतम निर्णय दिखाएगी',
   'Enter a valid mobile number for the selected country':
       'चुने गए देश का मान्य मोबाइल नंबर दर्ज करें',
   'Enter your registered mobile number': 'अपना पंजीकृत मोबाइल नंबर दर्ज करें',

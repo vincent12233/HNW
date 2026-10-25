@@ -53,29 +53,11 @@ extension _KycUploadSubmissionSection on _KycUploadPageState {
 
       await showDialog<void>(
         context: context,
-        builder: (dialogContext) => AlertDialog(
-          icon: const Icon(
-            Icons.hourglass_top_rounded,
-            size: 56,
-            color: Color(0xFF2563EB),
+        builder: (dialogContext) => Dialog.fullscreen(
+          backgroundColor: AuthLayout.pageBackground,
+          child: KycSubmissionResult(
+            onDone: () => Navigator.pop(dialogContext),
           ),
-          content: const SizedBox(
-            width: 320,
-            child: AppText(
-              'Your application has been submitted.\nPlease wait for review.',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 16, height: 1.5),
-            ),
-          ),
-          actionsAlignment: MainAxisAlignment.center,
-          actions: [
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(dialogContext);
-              },
-              child: const AppText('OK'),
-            ),
-          ],
         ),
       );
 
@@ -152,4 +134,4 @@ extension _KycUploadSubmissionSection on _KycUploadPageState {
     );
     if (mounted && bankDetails != null) _goTo(5);
   }
-}
+}

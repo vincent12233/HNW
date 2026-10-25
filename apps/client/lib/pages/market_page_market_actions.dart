@@ -94,7 +94,7 @@ extension _MarketHomeMarketActions on _MarketHomePageState {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: const BoxDecoration(
-                color: Color(0xFFEF233C),
+                color: AppColors.loss,
                 shape: BoxShape.circle,
               ),
               child: AppText(
@@ -102,7 +102,7 @@ extension _MarketHomeMarketActions on _MarketHomePageState {
                     ? '9+'
                     : unreadNotificationCount.toString(),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textInverse,
                   fontSize: 9,
                   fontWeight: FontWeight.w800,
                 ),

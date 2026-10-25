@@ -52,7 +52,7 @@ class AppPageScaffold extends StatelessWidget {
                   border: Border(top: BorderSide(color: AppColors.border)),
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0x120F2942),
+                      color: AppColors.surfaceShadow,
                       blurRadius: 14,
                       offset: Offset(0, -3),
                     ),

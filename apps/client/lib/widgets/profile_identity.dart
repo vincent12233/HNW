@@ -157,7 +157,7 @@ class ProfileIdentityHeader extends StatelessWidget {
         borderRadius: AppRadius.borderMd,
         boxShadow: const [
           BoxShadow(
-            color: Color(0x262558D9),
+            color: AppColors.brandShadow,
             blurRadius: 16,
             offset: Offset(0, 8),
           ),
@@ -179,7 +179,7 @@ class ProfileIdentityHeader extends StatelessWidget {
                     child: Container(
                       padding: const EdgeInsets.all(2.5),
                       decoration: const BoxDecoration(
-                        color: Colors.white,
+                        color: AppColors.textInverse,
                         shape: BoxShape.circle,
                       ),
                       child: CircleAvatar(

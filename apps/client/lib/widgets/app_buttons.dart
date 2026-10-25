@@ -25,10 +25,7 @@ class AppPrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final labelWidget = AppText(
-      label,
-      textAlign: TextAlign.center,
-    );
+    final labelWidget = AppText(label, textAlign: TextAlign.center);
     final child = Row(
       mainAxisAlignment: MainAxisAlignment.center,
       mainAxisSize: expand ? MainAxisSize.max : MainAxisSize.min,
@@ -142,7 +139,7 @@ class AppBuyButton extends StatelessWidget {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppColors.textInverse,
             ),
           )
         : AppText(label, textAlign: TextAlign.center);
@@ -190,7 +187,7 @@ class AppSellButton extends StatelessWidget {
             height: 20,
             child: CircularProgressIndicator(
               strokeWidth: 2,
-              color: Colors.white,
+              color: AppColors.textInverse,
             ),
           )
         : AppText(label, textAlign: TextAlign.center);

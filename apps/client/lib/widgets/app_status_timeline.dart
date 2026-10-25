@@ -75,10 +75,14 @@ class _TimelineRow extends StatelessWidget {
                         ? const Icon(
                             Icons.check_rounded,
                             size: 16,
-                            color: Colors.white,
+                            color: AppColors.textInverse,
                           )
                         : active
-                        ? const Icon(Icons.circle, size: 8, color: Colors.white)
+                        ? const Icon(
+                            Icons.circle,
+                            size: 8,
+                            color: AppColors.textInverse,
+                          )
                         : null,
                   ),
                   if (showConnector)

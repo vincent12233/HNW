@@ -1,5 +1,31 @@
 // Hindi local fallback copy. Keep keys aligned with the English source text.
 const hindi = <String, String>{
+  'Request failed': 'अनुरोध पूरा नहीं हो सका',
+  'Reference': 'संदर्भ',
+  'Connection lost. Check your network and try again.':
+      'कनेक्शन टूट गया। अपना नेटवर्क जाँचें और फिर कोशिश करें।',
+  'The service returned an invalid response. Try again shortly.':
+      'सेवा से सही उत्तर नहीं मिला। थोड़ी देर बाद फिर कोशिश करें।',
+  'Part of your balance is currently reserved.':
+      'आपकी शेष राशि का एक भाग अभी आरक्षित है।',
+  'Your available balance is insufficient.':
+      'आपकी उपलब्ध शेष राशि पर्याप्त नहीं है।',
+  'The market is currently closed.': 'बाज़ार अभी बंद है।',
+  'Complete identity verification to continue.':
+      'जारी रखने के लिए पहचान सत्यापन पूरा करें।',
+  'Your identity verification is under review.':
+      'आपका पहचान सत्यापन समीक्षा में है।',
+  'Your session has expired. Please sign in again.':
+      'आपका सत्र समाप्त हो गया है। कृपया फिर से लॉगिन करें।',
+  'This action is not available for your account.':
+      'यह कार्रवाई आपके खाते के लिए उपलब्ध नहीं है।',
+  'Too many attempts. Wait a moment and try again.':
+      'बहुत अधिक प्रयास हुए। थोड़ी देर रुककर फिर कोशिश करें।',
+  'This request has already been received.':
+      'यह अनुरोध पहले ही प्राप्त हो चुका है।',
+  'This order is no longer available.': 'यह ऑर्डर अब उपलब्ध नहीं है।',
+  'This instrument is no longer available.':
+      'यह इंस्ट्रूमेंट अब उपलब्ध नहीं है।',
   'Enter a valid mobile number for the selected country':
       'चुने गए देश का मान्य मोबाइल नंबर दर्ज करें',
   'Enter your registered mobile number': 'अपना पंजीकृत मोबाइल नंबर दर्ज करें',

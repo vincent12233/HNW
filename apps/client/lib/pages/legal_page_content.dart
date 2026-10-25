@@ -9,11 +9,11 @@ class _LegalSection {
 const _privacySections = <_LegalSection>[
   _LegalSection(
     '1. Who we are',
-    'This policy explains how the operator of the India Trading application (India Trading, we, us or our) processes personal data when you register for, access or use the application, website, customer support and related services. The operator’s final legal name, registered address and grievance contact must be displayed in About Us before public release.',
+    'This policy explains how the operator of the India Trading application (India Trading, we, us or our) processes personal data when you register for, access or use the application, website, customer support and related services. Current operator and grievance contact details are available in About Us.',
   ),
   _LegalSection(
     '2. Data we collect',
-    'We may collect your name, Indian mobile number, email address, date of birth, address, tax and KYC identifiers and documents, profile image, bank-account details, account balances, orders, transactions, holdings and settlement records. We also collect device, IP address, login and security logs, notification preferences, customer-support messages and files you choose to send. If you link Google, we receive the verified email and account identifier needed for sign-in.',
+    'We may collect your name, Indian mobile number, email address, date of birth, address, tax and KYC identifiers and documents, profile image, bank-account details, account balances, orders, transactions, holdings and settlement records. We also collect device, IP address, login and security logs, notification preferences, customer-support messages and files you choose to send.',
   ),
   _LegalSection(
     '3. Biometrics',
@@ -29,7 +29,7 @@ const _privacySections = <_LegalSection>[
   ),
   _LegalSection(
     '6. Who receives data',
-    'We may share only the information reasonably necessary with cloud and security providers, authenticator and notification providers, Google authentication, market-data providers, banks and settlement service providers, the business or support team assigned to your account, professional advisers, and competent government, regulatory or law-enforcement authorities. We do not sell personal data for money.',
+    'We may share only the information reasonably necessary with contracted service providers, banks and settlement providers, the business or support team assigned to your account, professional advisers, and competent government, regulatory or law-enforcement authorities. We do not sell personal data for money.',
   ),
   _LegalSection(
     '7. Storage, transfer and retention',
@@ -49,7 +49,7 @@ const _privacySections = <_LegalSection>[
   ),
   _LegalSection(
     '11. Updates and contact',
-    'We may update this policy and will show the new effective date and provide any notice required by law. For privacy questions, rights requests or grievances, use Online Customer Service in the application. The operator must publish the designated grievance contact and formal service address in About Us before launch.',
+    'We may update this policy and will show the new effective date and provide any notice required by law. For privacy questions, rights requests or grievances, use Online Customer Service in the application or the current grievance contact shown in About Us.',
   ),
 ];
 
@@ -60,7 +60,7 @@ const _termsSections = <_LegalSection>[
   ),
   _LegalSection(
     '2. Account security',
-    'You are responsible for protecting your password, authenticator app code, recovery code, transaction key and registered device. Google and biometric quick login are optional. Device biometrics only unlock a stored quick-login credential; they do not replace transaction authorisation where a transaction key or another confirmation is required. Report suspected unauthorised access immediately.',
+    'You are responsible for protecting your password, authenticator app code, recovery code, transaction key and registered device. Device authentication, where available, only protects access on that device; it does not replace transaction authorisation where a transaction key or another confirmation is required. Report suspected unauthorised access immediately.',
   ),
   _LegalSection(
     '3. Services and product workflows',
@@ -96,7 +96,7 @@ const _termsSections = <_LegalSection>[
   ),
   _LegalSection(
     '11. Changes, complaints and governing terms',
-    'We may change these Terms prospectively and will show the effective date and provide required notice. Raise service or transaction complaints through Online Customer Service and keep the ticket reference. Before public release, the operator must insert its legal entity name, registered address, grievance officer, applicable licence or registration details (only if actually held), governing law, courts or arbitration venue, and escalation channels in About Us and the final version of these Terms.',
+    'We may change these Terms prospectively and will show the effective date and provide required notice. Raise service or transaction complaints through Online Customer Service and keep the ticket reference. Current operator, grievance and escalation details are available in About Us.',
   ),
 ];
 

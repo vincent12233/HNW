@@ -8,6 +8,7 @@ on:
       - 'scripts/flutter-architecture-baseline.json'
       - 'scripts/check-client-screen-inventory.mjs'
       - 'scripts/client-screen-inventory.json'
+      - 'scripts/check-client-information-boundary.mjs'
       - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
   push:
@@ -19,6 +20,7 @@ on:
       - 'scripts/flutter-architecture-baseline.json'
       - 'scripts/check-client-screen-inventory.mjs'
       - 'scripts/client-screen-inventory.json'
+      - 'scripts/check-client-information-boundary.mjs'
       - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
 
@@ -57,6 +59,10 @@ jobs:
       - name: Enforce client screen inventory
         working-directory: .
         run: node ./scripts/check-client-screen-inventory.mjs
+
+      - name: Enforce customer information boundary
+        working-directory: .
+        run: node ./scripts/check-client-information-boundary.mjs
 
       - name: Verify protected customer and trading flows
         working-directory: .

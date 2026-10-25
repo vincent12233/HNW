@@ -89,6 +89,17 @@ class ErrorTelemetry {
   String sanitize(String value) {
     var result = value;
     result = result.replaceAll(
+      RegExp(r'https?://[^\s,;)}\]]+', caseSensitive: false),
+      '[URL]',
+    );
+    result = result.replaceAll(
+      RegExp(
+        r'\b(?:redis|postgres(?:ql)?|mysql|mongodb)://[^\s]+',
+        caseSensitive: false,
+      ),
+      '[CONNECTION]',
+    );
+    result = result.replaceAll(
       RegExp(r'Bearer\s+[A-Za-z0-9._~+/-]+=*', caseSensitive: false),
       'Bearer [REDACTED]',
     );
@@ -119,11 +130,43 @@ class ErrorTelemetry {
     );
     result = result.replaceAll(RegExp(r'(?:\+?\d[\s-]?){10,15}'), '[PHONE]');
     result = result.replaceAll(
+      RegExp(r'\b[A-Z]{5}\d{4}[A-Z]\b', caseSensitive: false),
+      '[TAX_ID]',
+    );
+    result = result.replaceAll(
+      RegExp(r'\b\d{4}[ -]?\d{4}[ -]?\d{4}\b'),
+      '[IDENTITY_ID]',
+    );
+    result = result.replaceAll(
+      RegExp(r'\b[A-Z]{4}0[A-Z0-9]{6}\b', caseSensitive: false),
+      '[BANK_CODE]',
+    );
+    result = result.replaceAll(
+      RegExp(
+        r'(?i:(?:account|a/c|bank)[ _-]?(?:number|no)?\s*[:=]?\s*)\d{6,18}',
+      ),
+      '[BANK_ACCOUNT]',
+    );
+    result = result.replaceAll(
       RegExp(r'[A-Za-z]:\\Users\\[^\\\s]+', caseSensitive: false),
       '[USER_HOME]',
     );
     result = result.replaceAll(RegExp(r'/Users/[^/\s]+'), '[USER_HOME]');
     result = result.replaceAll(RegExp(r'/home/[^/\s]+'), '[USER_HOME]');
+    result = result.replaceAll(
+      RegExp(r'/(?:srv|var|opt|app|workspace)/[^\s,;)}\]]+'),
+      '[SERVER_PATH]',
+    );
+    result = result.replaceAll(
+      RegExp(
+        r'(?i:\b(?:body|payload|responseBody|requestBody)\s*[:=]\s*)(?:\{[^\n]*\}|\[[^\n]*\]|[^\s,;]+)',
+      ),
+      '[BODY]',
+    );
+    result = result.replaceAll(
+      RegExp(r'(?i:(?:pin|pan|aadhaar|aadhar)\s*[:=]?\s*)[^\s,;]+'),
+      '[IDENTITY_FIELD]',
+    );
     result = result.replaceAll(
       RegExp(r'\b[A-Za-z0-9+/]{160,}={0,2}\b'),
       '[ENCODED_DATA]',

@@ -18,9 +18,20 @@ test('supply-chain workflow is least privilege and produces commit-bound evidenc
   assert.match(workflow, /--severity HIGH,CRITICAL/);
   assert.match(workflow, /--exit-code 1/);
   assert.match(workflow, /aquasec\/trivy@sha256:[0-9a-f]{64}/);
+  assert.match(workflow, /category: trivy-filesystem/);
+  assert.match(workflow, /category: trivy-api-image/);
   assert.doesNotMatch(workflow, /pull-requests: write/);
   assert.doesNotMatch(workflow, /contents: write/);
   assert.doesNotMatch(workflow, /uses:\s*[^\s]+@(v\d|\d+\.\d)/);
+});
+
+test('production API image excludes package-manager tooling from the runtime', () => {
+  const dockerfile = read('docker/api.Dockerfile');
+  assert.match(
+    dockerfile,
+    /FROM base AS runner[\s\S]*rm -rf \/usr\/local\/lib\/node_modules\/npm/,
+  );
+  assert.match(dockerfile, /rm -f \/usr\/local\/bin\/npm \/usr\/local\/bin\/npx/);
 });
 
 test('security policy documents SBOM and vulnerability evidence handling', () => {

@@ -75,6 +75,21 @@ jobs:
       - name: Run tests with coverage
         run: flutter test --coverage
 
+      - name: Capture responsive visual evidence
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/flutter-visual-evidence"
+          flutter test test/ui_capture_test.dart --update-goldens --dart-define=UI_CAPTURE_DIR="$RUNNER_TEMP/flutter-visual-evidence"
+
+      - name: Upload Flutter visual evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: flutter-visual-evidence-${{ github.sha }}
+          path: ${{ runner.temp }}/flutter-visual-evidence
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Upload Flutter coverage
         if: always()
         uses: actions/upload-artifact@v7

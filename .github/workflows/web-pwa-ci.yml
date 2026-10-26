@@ -44,4 +44,12 @@ jobs:
         run: npx playwright install --with-deps chromium
       - working-directory: tests/web-pwa
         run: npm test
+      - name: Upload PWA visual evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: pwa-visual-evidence-${{ github.sha }}
+          path: tests/web-pwa/test-results
+          if-no-files-found: error
+          retention-days: 30
       - run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet

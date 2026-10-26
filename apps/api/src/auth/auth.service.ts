@@ -70,6 +70,7 @@ export class AuthService {
         role: user.role,
         version: user.authVersion,
         purpose: AuthService.REFRESH_PURPOSE,
+        jti: randomBytes(16).toString('hex'),
       },
       { expiresIn: SESSION_TTL.refresh.jwt },
     );

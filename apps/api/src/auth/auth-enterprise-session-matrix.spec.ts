@@ -14,6 +14,24 @@ describe('AuthService enterprise session matrix', () => {
     account: { id: 'account-1' },
   };
 
+  it('issues a unique token id for refresh tokens created in the same second', async () => {
+    const auth = Object.create(AuthService.prototype) as AuthService;
+    const payloads: Array<{ jti?: string }> = [];
+    (auth as any).jwtService = {
+      signAsync: jest.fn(async (payload: { jti?: string }) => {
+        payloads.push(payload);
+        return 'signed';
+      }),
+    };
+
+    await (auth as any).issueRefreshToken(user);
+    await (auth as any).issueRefreshToken(user);
+
+    expect(payloads[0].jti).toMatch(/^[0-9a-f]{32}$/);
+    expect(payloads[1].jti).toMatch(/^[0-9a-f]{32}$/);
+    expect(payloads[0].jti).not.toBe(payloads[1].jti);
+  });
+
   it('accepts a refresh token once and rejects replay without changing login credentials', async () => {
     const consumed = new Set<string>();
     const tx = {

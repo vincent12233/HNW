@@ -15,6 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 $startedAt = Get-Date
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+. (Join-Path $PSScriptRoot 'recovery-integrity.ps1')
 
 function Assert-PostgresUrl([string]$Value, [string]$Name) {
   if ($Value -notmatch '^postgres(?:ql)?://') {
@@ -116,8 +117,8 @@ $report = [ordered]@{
   sourceDatabase = Get-DatabaseName $SourceDatabaseUrl
   drillDatabase = Get-DatabaseName $DrillDatabaseUrl
   planOnly = [bool]$PlanOnly
-  database = [ordered]@{ backup = $databaseBackup; backupSha256 = $null; countsMatch = $null; sourceCounts = $null; restoredCounts = $null }
-  privateObjects = [ordered]@{ backup = $objectsBackup; backupSha256 = $null; filesMatch = $null; sourceFileCount = $null; restoredFileCount = $null }
+  database = [ordered]@{ backup = $databaseBackup; backupSha256 = $null; restoreInputSha256 = $null; checksumMatch = $null; countsMatch = $null; sourceCounts = $null; restoredCounts = $null }
+  privateObjects = [ordered]@{ backup = $objectsBackup; backupSha256 = $null; restoreInputSha256 = $null; checksumMatch = $null; filesMatch = $null; sourceFileCount = $null; restoredFileCount = $null }
   financialReconciliation = [ordered]@{ status = 'NOT_EXECUTED'; source = $null; restored = $null; matches = $null }
   externalEvidenceComplete = $false
   status = if ($PlanOnly) { 'PLANNED' } else { 'RUNNING' }
@@ -143,9 +144,11 @@ if (-not (Test-Path -LiteralPath $PrivateObjectRoot -PathType Container)) {
 
 try {
   & (Join-Path $root 'scripts/backup-postgres.ps1') -OutputPath $databaseBackup -DatabaseUrl $SourceDatabaseUrl
-  $report.database.backupSha256 = (Get-FileHash -LiteralPath $databaseBackup -Algorithm SHA256).Hash.ToLowerInvariant()
+  $report.database.backupSha256 = Get-RecoveryFileSha256 $databaseBackup
   $sourceCounts = Get-TableCounts $SourceDatabaseUrl
   $sourceFinancial = Get-FinancialSnapshot $SourceDatabaseUrl
+  $report.database.restoreInputSha256 = Assert-RecoveryFileChecksum $databaseBackup $report.database.backupSha256
+  $report.database.checksumMatch = $true
   & (Join-Path $root 'scripts/restore-postgres.ps1') -InputPath $databaseBackup -DatabaseUrl $DrillDatabaseUrl
   $restoredCounts = Get-TableCounts $DrillDatabaseUrl
   $restoredFinancial = Get-FinancialSnapshot $DrillDatabaseUrl
@@ -162,7 +165,9 @@ try {
   }
   New-Item -ItemType Directory -Force -Path $objectsRestore | Out-Null
   Invoke-Native 'tar' @('-C', (Split-Path -Parent $PrivateObjectRoot), '-czf', $objectsBackup, (Split-Path -Leaf $PrivateObjectRoot))
-  $report.privateObjects.backupSha256 = (Get-FileHash -LiteralPath $objectsBackup -Algorithm SHA256).Hash.ToLowerInvariant()
+  $report.privateObjects.backupSha256 = Get-RecoveryFileSha256 $objectsBackup
+  $report.privateObjects.restoreInputSha256 = Assert-RecoveryFileChecksum $objectsBackup $report.privateObjects.backupSha256
+  $report.privateObjects.checksumMatch = $true
   Invoke-Native 'tar' @('-C', $objectsRestore, '-xzf', $objectsBackup)
   $restoredObjectRoot = Join-Path $objectsRestore (Split-Path -Leaf $PrivateObjectRoot)
   $sourceManifest = Get-ObjectManifest $PrivateObjectRoot
@@ -171,7 +176,7 @@ try {
   $report.privateObjects.restoredFileCount = $restoredManifest.Count
   $report.privateObjects.filesMatch = (($sourceManifest | ConvertTo-Json -Compress) -eq ($restoredManifest | ConvertTo-Json -Compress))
 
-  if (-not $report.database.countsMatch -or -not $report.privateObjects.filesMatch -or -not $report.financialReconciliation.matches) {
+  if (-not $report.database.checksumMatch -or -not $report.privateObjects.checksumMatch -or -not $report.database.countsMatch -or -not $report.privateObjects.filesMatch -or -not $report.financialReconciliation.matches) {
     throw 'Recovery validation did not match the source snapshot'
   }
   $report.status = 'PASSED'

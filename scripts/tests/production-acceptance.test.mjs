@@ -86,6 +86,8 @@ test('CI preserves evidence and gates repository completion without claiming pro
   assert.match(workflow, /simulated:\s*false/);
   assert.match(workflow, /retention-days: 90/);
   assert.doesNotMatch(workflow, /--gate production/);
+  assert.doesNotMatch(workflow, /category: 'repository'.*supply-chain-scan/s);
+  assert.doesNotMatch(workflow, /category: 'repository'.*visual-contracts/s);
 
   for (const file of ['../verify-all.ps1', '../verify-all.sh']) {
     assert.match(

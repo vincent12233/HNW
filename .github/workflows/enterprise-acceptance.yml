@@ -48,7 +48,7 @@ jobs:
             source: process.env.ACCEPTANCE_SOURCE,
             observedAt: new Date().toISOString(),
           };
-          for (const name of ['acceptance-contracts', 'protected-flow-contracts', 'supply-chain-scan', 'visual-contracts']) {
+          for (const name of ['acceptance-contracts', 'protected-flow-contracts']) {
             writeFileSync(`acceptance-evidence/${name}.json`, JSON.stringify({ ...common, category: 'repository', name }));
           }
           NODE

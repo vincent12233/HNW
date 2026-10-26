@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
   [Parameter(Mandatory = $true)][ValidatePattern('^[^/]+/[^/]+$')][string]$Repository,
+  [Parameter(Mandatory = $true)][ValidatePattern('^[0-9a-f]{40}$')][string]$ExpectedSha,
   [string]$Branch = 'main',
   [string]$FixturePath,
   [string]$ReportPath = 'github-governance-report.json'
@@ -8,9 +9,9 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $requiredChecks = @(
-  'API CI', 'Admin CI', 'Flutter CI', 'Flutter Integration Tests',
-  'Web PWA CI', 'Docker CI', 'CodeQL', 'Production Readiness',
-  'Mobile Release Checks', 'Tooling CI'
+  'build-and-test', 'lint-and-build', 'analyze-and-test', 'build-and-contracts',
+  'analyze', 'repository-acceptance', 'dependency-review',
+  'sbom-and-secrets', 'container-vulnerabilities'
 )
 
 function Invoke-GhJson([string]$Path) {
@@ -74,6 +75,7 @@ $errors = [System.Collections.Generic.List[string]]::new()
 if ($state.repository -ne $Repository) { $errors.Add('Repository identity does not match the requested repository') }
 if ($state.defaultBranch -ne $Branch) { $errors.Add("Default branch must be $Branch") }
 if ($state.headSha -notmatch '^[0-9a-f]{40}$') { $errors.Add('Branch HEAD is not a full commit SHA') }
+if ($state.headSha -ne $ExpectedSha) { $errors.Add("Branch HEAD SHA mismatch: expected $ExpectedSha, received $($state.headSha)") }
 if (-not $state.branchProtection.enabled) { $errors.Add('Branch protection is not enabled') }
 if (-not $state.branchProtection.enforceAdmins) { $errors.Add('Branch protection does not enforce rules for administrators') }
 if ([int]$state.branchProtection.requiredApprovingReviewCount -lt 1) { $errors.Add('At least one approving review is required') }
@@ -97,6 +99,7 @@ $report = [ordered]@{
   repository = $Repository
   branch = $Branch
   sha = $state.headSha
+  expectedSha = $ExpectedSha
   branchProtection = $state.branchProtection
   requiredChecks = $requiredChecks
   securityAlerts = $state.securityAlerts

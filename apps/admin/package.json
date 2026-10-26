@@ -13,7 +13,8 @@
     "start:business": "next start -p 3006 -H 0.0.0.0",
     "start:support": "next start -p 3007 -H 0.0.0.0",
     "lint": "eslint",
-    "test": "node --experimental-strip-types --test tests/**/*.test.mjs"
+    "test": "node --experimental-strip-types --test tests/**/*.test.mjs",
+    "test:visual": "playwright test --config playwright.visual.config.ts"
   },
   "dependencies": {
     "@ant-design/icons": "^6.3.4",
@@ -25,6 +26,7 @@
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "1.56.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^24.19.2",
     "@types/react": "^19",

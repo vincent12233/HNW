@@ -8,10 +8,10 @@ export const DEFAULT_REQUIREMENTS = Object.freeze({
   repository: [
     'acceptance-contracts',
     'protected-flow-contracts',
-    'supply-chain-scan',
-    'visual-contracts',
   ],
   environment: [
+    'supply-chain-scan',
+    'visual-evidence',
     'github-governance',
     'production-smoke',
     'capacity-run',

@@ -64,3 +64,5 @@ node scripts/enterprise-capacity.mjs \
 ```
 
 脚本默认拒绝非本机目标，防止误压生产。只有经过正式变更审批时才可对非本机 HTTPS 测试环境增加 `--allow-non-local`。报告记录提交号、场景、并发、请求数、错误率、p50/p95/p99 和阈值结论；不得手工把模拟数字写成通过证据。
+
+`redis-degraded`、`database-degraded`、`outbox-backlog` 和 `financial-idempotency` 场景必须额外使用 `--evidenceFile <json>`。该 JSON 必须与目标 SHA 和场景完全一致，明确 `simulated: false`，并包含 `dependencyState`、`outboxBacklog` 和 `financialIdempotencyVerified: true`。故障注入由隔离环境的编排工具执行；本脚本不会主动关闭生产依赖，也不会伪造故障结果。超时会独立计数，非法并发、时长、阈值或非有限数字会直接拒绝。

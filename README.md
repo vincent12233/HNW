@@ -208,7 +208,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\verify-all.ps1
 
 PowerShell 验证脚本同样会在后台构建阶段使用 `HNW_BUILD_API_URL`；未设置时使用 HTTPS 占位地址。
 
-CI 还会生成与提交 SHA 绑定的 `enterprise-acceptance.json`。该报告把验收明确分为仓库、生产环境和外部机构三层：自动化代码检查通过只代表仓库层完成；KYC 服务商、授权行情、真实交易所/清算、法律合规和真机验收没有真实证据时，系统不会宣称已经生产就绪。生产证据聚合工具见 `scripts/production-acceptance.mjs`。
+CI 还会生成与提交 SHA 绑定的 `enterprise-acceptance.json`。该报告把验收明确分为仓库契约、运行/扫描环境和外部机构三层：仓库契约通过不等于供应链扫描、视觉产物或生产环境已通过；这些结果必须以各自工作流/环境的真实 artifact 再聚合。KYC 服务商、授权行情、真实交易所/清算、法律合规和真机验收没有真实证据时，系统不会宣称已经生产就绪。生产证据聚合工具见 `scripts/production-acceptance.mjs`。
 
 快速检查，不跑业务冒烟：
 

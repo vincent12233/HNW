@@ -13,6 +13,9 @@ test('Flutter visual capture covers narrow, phone, and tablet critical screens',
   const workflow = read('.github/workflows/flutter-ci.yml');
   assert.match(workflow, /UI_CAPTURE_DIR/);
   assert.match(workflow, /flutter-visual-evidence/);
+  const states = read('apps/client/test/enterprise_visual_states_test.dart');
+  for (const state of ['loading', 'empty', 'offline-error', 'kyc-pending']) assert.match(states, new RegExp(state));
+  assert.match(workflow, /enterprise_visual_states_test\.dart/);
   assert.match(workflow, /retention-days: 30/);
 });
 
@@ -31,4 +34,7 @@ test('Admin retains responsive and failure-state contracts', () => {
   assert.match(contract, /1440/);
   assert.match(contract, /loading|加载/);
   assert.match(contract, /error|错误/);
+  const workflow = read('.github/workflows/admin-ci.yml');
+  assert.match(workflow, /npm run test:visual/);
+  assert.match(workflow, /admin-visual-evidence/);
 });

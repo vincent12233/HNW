@@ -23,33 +23,54 @@ export function validateConfig(input) {
   const local = ['localhost', '127.0.0.1', '::1'].includes(target.hostname);
   if (!local && !input.allowNonLocal) throw new Error('non-local target requires --allow-non-local');
   if (!local && target.protocol !== 'https:') throw new Error('non-local target must use HTTPS');
+  const numeric = (name, value, { min = 0, max = Number.MAX_SAFE_INTEGER } = {}) => {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed <= min || parsed > max) throw new Error(`${name} must be finite, greater than ${min}, and at most ${max}`);
+    return parsed;
+  };
+  const rate = Number(input.maxErrorRate ?? 0.01);
+  if (!Number.isFinite(rate) || rate < 0 || rate > 1) throw new Error('maxErrorRate must be between 0 and 1');
+  const scenario = input.scenario ?? 'health-readiness';
+  const supported = ['health-readiness', 'redis-degraded', 'database-degraded', 'outbox-backlog', 'financial-idempotency'];
+  if (!supported.includes(scenario)) throw new Error(`unsupported scenario: ${scenario}`);
+  const scenarioEvidence = input.scenarioEvidence;
+  if (scenario !== 'health-readiness') {
+    if (!scenarioEvidence || scenarioEvidence.simulated !== false) throw new Error('non-health scenario requires real scenario evidence');
+    if (scenarioEvidence.sha !== input.sha) throw new Error('scenario evidence SHA does not match the requested SHA');
+    if (scenarioEvidence.scenario !== scenario) throw new Error('scenario evidence name does not match');
+    if (!scenarioEvidence.dependencyState || typeof scenarioEvidence.outboxBacklog !== 'number' || scenarioEvidence.financialIdempotencyVerified !== true) {
+      throw new Error('scenario evidence must include dependency state, outbox backlog, and financial idempotency result');
+    }
+  }
   return {
     sha: input.sha,
     baseUrl: target.origin,
     path: input.path ?? '/health/ready',
-    scenario: input.scenario ?? 'health-readiness',
-    durationSeconds: Number(input.durationSeconds ?? 15),
-    concurrency: Number(input.concurrency ?? 4),
-    timeoutMs: Number(input.timeoutMs ?? 3000),
+    scenario,
+    durationSeconds: numeric('durationSeconds', input.durationSeconds ?? 15),
+    concurrency: numeric('concurrency', input.concurrency ?? 4, { max: 100 }),
+    timeoutMs: numeric('timeoutMs', input.timeoutMs ?? 3000, { max: 60000 }),
+    scenarioEvidence: scenarioEvidence ?? null,
     thresholds: {
-      maxErrorRate: Number(input.maxErrorRate ?? 0.01),
-      maxP95Ms: Number(input.maxP95Ms ?? 500),
+      maxErrorRate: rate,
+      maxP95Ms: numeric('maxP95Ms', input.maxP95Ms ?? 500, { max: 60000 }),
     },
   };
 }
 
-async function run(config) {
-  const samples = { total: 0, failures: 0, durationsMs: [] };
+export async function runCapacity(config, request = fetch) {
+  const samples = { total: 0, failures: 0, timeouts: 0, durationsMs: [] };
   const deadline = Date.now() + config.durationSeconds * 1000;
   const worker = async () => {
     while (Date.now() < deadline) {
       const started = performance.now();
       samples.total += 1;
       try {
-        const response = await fetch(`${config.baseUrl}${config.path}`, { signal: AbortSignal.timeout(config.timeoutMs), cache: 'no-store' });
+        const response = await request(`${config.baseUrl}${config.path}`, { signal: AbortSignal.timeout(config.timeoutMs), cache: 'no-store' });
         if (!response.ok) samples.failures += 1;
-      } catch {
+      } catch (error) {
         samples.failures += 1;
+        if (error?.name === 'TimeoutError' || error?.name === 'AbortError') samples.timeouts += 1;
       } finally {
         samples.durationsMs.push(Number((performance.now() - started).toFixed(2)));
       }
@@ -67,6 +88,10 @@ async function run(config) {
     concurrency: config.concurrency,
     totalRequests: samples.total,
     failedRequests: samples.failures,
+    timeouts: samples.timeouts,
+    dependencyState: config.scenarioEvidence?.dependencyState ?? { status: 'unobserved' },
+    outboxBacklog: config.scenarioEvidence?.outboxBacklog ?? null,
+    financialIdempotencyVerified: config.scenarioEvidence?.financialIdempotencyVerified ?? null,
     thresholds: config.thresholds,
     ...evaluation,
   };
@@ -85,8 +110,9 @@ function parseArgs(argv) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   try {
     const args = parseArgs(process.argv.slice(2));
-    const config = validateConfig({ ...args, baseUrl: args.baseUrl ?? 'http://127.0.0.1:3100' });
-    const report = await run(config);
+    const scenarioEvidence = args.evidenceFile ? JSON.parse(await (await import('node:fs/promises')).readFile(args.evidenceFile, 'utf8')) : undefined;
+    const config = validateConfig({ ...args, scenarioEvidence, baseUrl: args.baseUrl ?? 'http://127.0.0.1:3100' });
+    const report = await runCapacity(config);
     writeFileSync(args.report ?? 'enterprise-capacity-report.json', `${JSON.stringify(report, null, 2)}\n`);
     console.log(`Capacity scenario ${report.scenario}: ${report.passed ? 'PASS' : 'FAIL'} (${report.totalRequests} requests, p95 ${report.p95Ms}ms)`);
     if (!report.passed) process.exitCode = 1;

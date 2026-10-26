@@ -3,9 +3,9 @@ $root = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $script = Join-Path $root 'scripts/verify-github-governance.ps1'
 $temp = Join-Path $root '.tmp-governance-test'
 $required = @(
-  'API CI', 'Admin CI', 'Flutter CI', 'Flutter Integration Tests',
-  'Web PWA CI', 'Docker CI', 'CodeQL', 'Production Readiness',
-  'Mobile Release Checks', 'Tooling CI'
+  'build-and-test', 'lint-and-build', 'analyze-and-test', 'build-and-contracts',
+  'analyze', 'repository-acceptance', 'dependency-review',
+  'sbom-and-secrets', 'container-vulnerabilities'
 )
 
 function Write-Fixture([string]$Name, [hashtable]$Overrides = @{}) {
@@ -30,9 +30,9 @@ function Write-Fixture([string]$Name, [hashtable]$Overrides = @{}) {
   return $path
 }
 
-function Invoke-Fixture([string]$Fixture, [string]$Report) {
+function Invoke-Fixture([string]$Fixture, [string]$Report, [string]$ExpectedSha = ('a' * 40)) {
   $process = Start-Process -FilePath 'powershell.exe' -WindowStyle Hidden -Wait -PassThru `
-    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$script`"", '-Repository', 'vincent12233/HNW', '-FixturePath', "`"$Fixture`"", '-ReportPath', "`"$Report`"")
+    -ArgumentList @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', "`"$script`"", '-Repository', 'vincent12233/HNW', '-ExpectedSha', $ExpectedSha, '-FixturePath', "`"$Fixture`"", '-ReportPath', "`"$Report`"")
   return $process.ExitCode
 }
 
@@ -46,6 +46,10 @@ try {
   $complete = Get-Content -LiteralPath $completeReport -Raw | ConvertFrom-Json
   if (-not $complete.complete -or $complete.sha -ne ('a' * 40)) {
     throw 'Complete governance report is not SHA-bound and complete'
+  }
+
+  if ((Invoke-Fixture (Write-Fixture 'stale-sha') (Join-Path $temp 'stale-sha-report.json') ('b' * 40)) -eq 0) {
+    throw 'Governance verifier accepted evidence for a different branch HEAD'
   }
 
   $unprotected = Write-Fixture 'unprotected' @{

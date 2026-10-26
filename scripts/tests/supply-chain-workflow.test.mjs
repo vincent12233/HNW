@@ -10,6 +10,8 @@ test('supply-chain workflow is least privilege and produces commit-bound evidenc
   assert.match(workflow, /security-events: write/);
   assert.match(workflow, /cyclonedx-npm/);
   assert.match(workflow, /gitleaks/);
+  assert.match(workflow, /dependency-review-action@[0-9a-f]{40}/);
+  assert.match(workflow, /scan-type: fs/);
   assert.match(workflow, /trivy/);
   assert.match(workflow, /GITHUB_SHA/);
   assert.match(workflow, /retention-days: 90/);
@@ -17,6 +19,7 @@ test('supply-chain workflow is least privilege and produces commit-bound evidenc
   assert.match(workflow, /exit-code: ['"]1['"]/);
   assert.doesNotMatch(workflow, /pull-requests: write/);
   assert.doesNotMatch(workflow, /contents: write/);
+  assert.doesNotMatch(workflow, /uses:\s*[^\s]+@(v\d|\d+\.\d)/);
 });
 
 test('security policy documents SBOM and vulnerability evidence handling', () => {

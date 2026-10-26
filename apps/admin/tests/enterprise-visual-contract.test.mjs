@@ -11,7 +11,9 @@ test('Admin shell keeps navigation usable from 320 through 1440 pixels', () => {
   assert.match(shell, /Drawer|Sider/);
   assert.match(styles, /@media/);
   assert.match(styles, /overflow/);
-  assert.ok(320 < 1440);
+  const rendered = read('playwright.visual.config.ts');
+  assert.match(rendered, /width: 320/);
+  assert.match(rendered, /width: 1440/);
 });
 
 test('Admin shared states distinguish loading, empty, and error output', () => {

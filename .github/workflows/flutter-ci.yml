@@ -2,27 +2,9 @@ name: Flutter CI
 
 on:
   pull_request:
-    paths:
-      - 'apps/client/**'
-      - 'scripts/check-flutter-architecture.mjs'
-      - 'scripts/flutter-architecture-baseline.json'
-      - 'scripts/check-client-screen-inventory.mjs'
-      - 'scripts/client-screen-inventory.json'
-      - 'scripts/check-client-information-boundary.mjs'
-      - 'AGENTS.md'
-      - '.github/workflows/flutter-ci.yml'
   push:
     branches:
       - main
-    paths:
-      - 'apps/client/**'
-      - 'scripts/check-flutter-architecture.mjs'
-      - 'scripts/flutter-architecture-baseline.json'
-      - 'scripts/check-client-screen-inventory.mjs'
-      - 'scripts/client-screen-inventory.json'
-      - 'scripts/check-client-information-boundary.mjs'
-      - 'AGENTS.md'
-      - '.github/workflows/flutter-ci.yml'
 
 permissions:
   contents: read
@@ -80,6 +62,7 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/flutter-visual-evidence"
           flutter test test/ui_capture_test.dart --update-goldens --dart-define=UI_CAPTURE_DIR="$RUNNER_TEMP/flutter-visual-evidence"
+          flutter test test/enterprise_visual_states_test.dart --update-goldens --dart-define=UI_CAPTURE_DIR="$RUNNER_TEMP/flutter-visual-evidence"
 
       - name: Upload Flutter visual evidence
         if: always()

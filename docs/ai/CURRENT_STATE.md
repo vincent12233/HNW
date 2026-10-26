@@ -2,10 +2,14 @@
 
 ## Verified delivery baseline
 
-Verified on 2026-10-23 against GitHub and the local checkout:
+Local production-hardening checkpoint on 2026-10-26:
 
 - Default branch: `main`
-- Verified `main` commit: `3bf7d49648c23452dfad59a51c42d247e287fc4a`
+- Production-hardening base commit: `6bad50399e30b604eae8f186937529cc23cafd5f`
+- Active delivery branch: `codex/hnw-production-hardening-2026-10-26`
+- Repository-controlled additions include fail-closed GitHub governance checks,
+  supply-chain evidence, SHA-bound capacity/recovery evidence, responsive visual
+  evidence, refresh-token replay protection, and a three-layer acceptance report.
 - PR #146 delivered staff authenticator enrollment/reset controls, security
   hardening, and the scoped UI/UX upgrade.
 - PR #147 consolidated the pending Admin/API dependency updates. Its PR checks
@@ -15,7 +19,8 @@ Verified on 2026-10-23 against GitHub and the local checkout:
 - The repository did not contain
   `.github/workflows/financial-runtime-verification.yml` at verification time.
 
-This is a dated checkpoint, not a permanent claim. Re-read GitHub and Git before
+The branch had not yet completed final PR/CI/merge verification when this
+checkpoint was written. This is not a production-readiness claim. Re-read GitHub and Git before
 using branch, PR, commit, or CI state in a later task.
 
 ## Preserved product boundaries

@@ -10,13 +10,7 @@ on:
         type: string
   push:
     branches: [main]
-    paths:
-      - 'apps/client/**'
-      - '.github/workflows/flutter-integration.yml'
   pull_request:
-    paths:
-      - 'apps/client/**'
-      - '.github/workflows/flutter-integration.yml'
 
 permissions:
   contents: read

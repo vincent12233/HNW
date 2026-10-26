@@ -10,7 +10,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
 import * as bcrypt from 'bcrypt';
-import { randomBytes } from 'crypto';
+import { createHash, randomBytes } from 'crypto';
 import axios from 'axios';
 
 import {
@@ -70,6 +70,7 @@ export class AuthService {
         role: user.role,
         version: user.authVersion,
         purpose: AuthService.REFRESH_PURPOSE,
+        jti: randomBytes(16).toString('hex'),
       },
       { expiresIn: SESSION_TTL.refresh.jwt },
     );
@@ -102,6 +103,7 @@ export class AuthService {
       sub?: string;
       version?: number;
       purpose?: string;
+      exp?: number;
     };
     try {
       payload = await this.jwtService.verifyAsync(token);
@@ -116,32 +118,54 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      include: { account: true },
-    });
-    if (
-      !user ||
-      user.deletedAt ||
-      user.status !== UserStatus.ACTIVE ||
-      user.authVersion !== payload.version
-    ) {
-      throw new UnauthorizedException('Refresh token has been revoked');
-    }
+    const tokenHash = createHash('sha256').update(token).digest('hex');
+    const expiresAt = new Date(Math.max(Date.now(), (payload.exp ?? 0) * 1000));
+    return this.prisma.$transaction(async (tx) => {
+      try {
+        await tx.$executeRaw`
+          WITH expired AS (
+            DELETE FROM consumed_refresh_tokens WHERE "expiresAt" < CURRENT_TIMESTAMP
+          )
+          INSERT INTO consumed_refresh_tokens ("tokenHash", "userId", "expiresAt")
+          VALUES (${tokenHash}, ${payload.sub}, ${expiresAt})
+        `;
+      } catch (error) {
+        const code =
+          (error as { code?: string; cause?: { code?: string } })?.code ??
+          (error as { cause?: { code?: string } })?.cause?.code;
+        if (code === '23505' || code === 'P2002') {
+          throw new UnauthorizedException('Refresh token replay detected');
+        }
+        throw error;
+      }
 
-    const tokens = await this.issueSessionTokens(user);
-    return {
-      message: 'Token refreshed',
-      ...tokens,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        phone: user.phone,
-        role: user.role,
-        status: user.status,
-      },
-      account: user.account,
-    };
+      const user = await tx.user.findUnique({
+        where: { id: payload.sub },
+        include: { account: true },
+      });
+      if (
+        !user ||
+        user.deletedAt ||
+        user.status !== UserStatus.ACTIVE ||
+        user.authVersion !== payload.version
+      ) {
+        throw new UnauthorizedException('Refresh token has been revoked');
+      }
+
+      const tokens = await this.issueSessionTokens(user);
+      return {
+        message: 'Token refreshed',
+        ...tokens,
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          phone: user.phone,
+          role: user.role,
+          status: user.status,
+        },
+        account: user.account,
+      };
+    });
   }
 
   async revokeSession(userId: string) {

@@ -46,3 +46,23 @@
 ## 附件与批准
 
 附上原始 k6 JSON、Prometheus/Grafana 截图、容器日志摘要、对账报告、恢复时间线和安全扫描报告。技术、交易、财务、安全负责人全部签字后才可推进发布。
+# 可执行容量基线
+
+模板本身不是容量证据。先在隔离测试环境启动完整服务，再对当前完整提交 SHA 执行：
+
+```bash
+node scripts/enterprise-capacity.mjs \
+  --sha "$(git rev-parse HEAD)" \
+  --baseUrl http://127.0.0.1:3100 \
+  --path /health/ready \
+  --scenario health-readiness \
+  --durationSeconds 60 \
+  --concurrency 16 \
+  --maxErrorRate 0.01 \
+  --maxP95Ms 500 \
+  --report enterprise-capacity-report.json
+```
+
+脚本默认拒绝非本机目标，防止误压生产。只有经过正式变更审批时才可对非本机 HTTPS 测试环境增加 `--allow-non-local`。报告记录提交号、场景、并发、请求数、错误率、p50/p95/p99 和阈值结论；不得手工把模拟数字写成通过证据。
+
+该 Node 工具只执行 `health-readiness`，不会接受手写 JSON 并把它重命名为 Redis、数据库、outbox 或资金幂等测试。依赖故障必须由 `tests/chaos/run-failure-matrix.ps1|sh` 在明确确认的一次性隔离环境实际停止/恢复对应容器；订单幂等必须运行 `tests/load/k6-order-idempotency.js`。两类原始输出、零差异对账与同 SHA 记录均须独立归档后才能作为环境层证据。超时会独立计数，非法并发、时长、阈值或非有限数字会直接拒绝。

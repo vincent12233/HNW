@@ -2,21 +2,9 @@ name: API CI
 
 on:
   pull_request:
-    paths:
-      - 'apps/api/**'
-      - '.nvmrc'
-      - 'scripts/verify-migration-upgrade.sh'
-      - 'scripts/smoke-auth-content.mjs'
-      - '.github/workflows/api-ci.yml'
   push:
     branches:
       - main
-    paths:
-      - 'apps/api/**'
-      - '.nvmrc'
-      - 'scripts/verify-migration-upgrade.sh'
-      - 'scripts/smoke-auth-content.mjs'
-      - '.github/workflows/api-ci.yml'
 
 permissions:
   contents: read

@@ -30,6 +30,7 @@ jobs:
           PRIVATE_OBJECT_ROOT: ${{ secrets.RECOVERY_PRIVATE_OBJECT_ROOT }}
         run: >-
           ./scripts/recovery-drill.ps1
+          -CommitSha $env:GITHUB_SHA
           -SourceDatabaseUrl $env:SOURCE_DATABASE_URL
           -DrillDatabaseUrl $env:DRILL_DATABASE_URL
           -PrivateObjectRoot $env:PRIVATE_OBJECT_ROOT
@@ -61,6 +62,7 @@ jobs:
         run: |
           $work = Join-Path $env:RUNNER_TEMP 'recovery-drill-plan'
           ./scripts/recovery-drill.ps1 `
+            -CommitSha $env:GITHUB_SHA `
             -SourceDatabaseUrl 'postgres://source-host/source_db' `
             -DrillDatabaseUrl 'postgres://drill-host/drill_db' `
             -PrivateObjectRoot (Join-Path $work 'private') `
@@ -69,4 +71,7 @@ jobs:
           $report = Get-Content (Join-Path $work 'recovery-report.json') | ConvertFrom-Json
           if ($report.status -ne 'PLANNED' -or -not $report.planOnly) {
             throw 'Recovery drill plan report is invalid.'
+          }
+          if ($report.commitSha -ne $env:GITHUB_SHA -or $report.externalEvidenceComplete) {
+            throw 'Recovery drill plan report is not commit-bound or overstates evidence.'
           }

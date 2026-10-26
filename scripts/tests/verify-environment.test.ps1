@@ -15,6 +15,9 @@ Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\verify-all.ps1') -Destinatio
 Set-Content -LiteralPath (Join-Path $testScriptTests 'recovery-drill.test.ps1') -Value 'Write-Host recovery-test-stub' -Encoding utf8
 Set-Content -LiteralPath (Join-Path $testScriptTests 'production-operations.test.mjs') -Value '// production operations test stub' -Encoding utf8
 Set-Content -LiteralPath (Join-Path $testScriptTests 'enterprise-operations.test.mjs') -Value '// enterprise operations test stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScriptTests 'production-acceptance.test.mjs') -Value '// production acceptance test stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScriptTests 'supply-chain-workflow.test.mjs') -Value '// supply chain test stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScriptTests 'visual-evidence.test.mjs') -Value '// visual evidence test stub' -Encoding utf8
 Set-Content -LiteralPath (Join-Path $testScripts 'verify-protected-flows.ps1') -Value 'Write-Host protected-flow-test-stub' -Encoding utf8
 Set-Content -LiteralPath (Join-Path $testScripts 'verify-release-config.ps1') -Value 'Write-Host release-config-test-stub' -Encoding utf8
 

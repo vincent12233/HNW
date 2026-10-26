@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,70 +59,90 @@ void main() {
       ),
     ),
   };
+  const criticalScreens = {
+    'login',
+    'register',
+    'kyc',
+    'home',
+    'trade',
+    'portfolio',
+  };
+  const responsiveSizes = <String, Size>{
+    'narrow-320': Size(320, 720),
+    'phone-390': Size(390, 844),
+    'tablet-768': Size(768, 1024),
+  };
   for (final entry in pages.entries) {
-    testWidgets('render ${entry.key} at mobile size', (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      FlutterSecureStorage.setMockInitialValues({});
-      tester.view.physicalSize = const Size(390, 844);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-      final font = File('C:/Windows/Fonts/arial.ttf');
-      if (font.existsSync()) {
-        for (final family in ['Roboto', 'Ahem']) {
-          final loader = FontLoader(family)
-            ..addFont(
-              Future.value(ByteData.sublistView(font.readAsBytesSync())),
-            );
-          await loader.load();
-        }
-      }
-      final icons = File(
-        'build/unit_test_assets/fonts/MaterialIcons-Regular.otf',
-      );
-      if (icons.existsSync()) {
-        await (FontLoader('MaterialIcons')..addFont(
-              Future.value(ByteData.sublistView(icons.readAsBytesSync())),
-            ))
-            .load();
-      }
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: const ValueKey('capture'),
-          child: MaterialApp(
-            theme: AppTheme.light(),
-            debugShowCheckedModeBanner: false,
-            home: entry.value,
-          ),
-        ),
-      );
-      if (entry.value is MarketHomePage) {
-        for (var i = 0; i < 12; i++) {
-          await tester.pump(const Duration(seconds: 10));
-        }
-        final index = [
-          'home',
-          'markets',
-          'trade',
-          'portfolio',
-          'profile',
-        ].indexOf(entry.key);
-        if (index > 0) {
-          await tester.tap(find.byType(NavigationDestination).at(index));
-          for (var i = 0; i < 4; i++) {
-            await tester.pump(const Duration(seconds: 10));
+    final sizes = criticalScreens.contains(entry.key)
+        ? responsiveSizes
+        : const {'phone-390': Size(390, 844)};
+    for (final sizeEntry in sizes.entries) {
+      testWidgets('render ${entry.key} at ${sizeEntry.key}', (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        FlutterSecureStorage.setMockInitialValues({});
+        tester.view.physicalSize = sizeEntry.value;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final font = File('C:/Windows/Fonts/arial.ttf');
+        if (font.existsSync()) {
+          for (final family in ['Roboto', 'Ahem']) {
+            final loader = FontLoader(family)
+              ..addFont(
+                Future.value(ByteData.sublistView(font.readAsBytesSync())),
+              );
+            await loader.load();
           }
         }
-      } else {
-        await tester.pumpAndSettle();
-      }
-      expect(tester.takeException(), isNull);
-      await expectLater(
-        find.byKey(const ValueKey('capture')),
-        matchesGoldenFile(Uri.file('$output/${entry.key}.png')),
-      );
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(const Duration(seconds: 30));
-    }, skip: output.isEmpty);
+        final icons = File(
+          'build/unit_test_assets/fonts/MaterialIcons-Regular.otf',
+        );
+        if (icons.existsSync()) {
+          await (FontLoader('MaterialIcons')..addFont(
+                Future.value(ByteData.sublistView(icons.readAsBytesSync())),
+              ))
+              .load();
+        }
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: const ValueKey('capture'),
+            child: MaterialApp(
+              theme: AppTheme.light(),
+              debugShowCheckedModeBanner: false,
+              home: entry.value,
+            ),
+          ),
+        );
+        if (entry.value is MarketHomePage) {
+          for (var i = 0; i < 12; i++) {
+            await tester.pump(const Duration(seconds: 10));
+          }
+          final index = [
+            'home',
+            'markets',
+            'trade',
+            'portfolio',
+            'profile',
+          ].indexOf(entry.key);
+          if (index > 0) {
+            await tester.tap(find.byType(NavigationDestination).at(index));
+            for (var i = 0; i < 4; i++) {
+              await tester.pump(const Duration(seconds: 10));
+            }
+          }
+        } else {
+          await tester.pumpAndSettle();
+        }
+        expect(tester.takeException(), isNull);
+        await expectLater(
+          find.byKey(const ValueKey('capture')),
+          matchesGoldenFile(
+            Uri.file('$output/${entry.key}-${sizeEntry.key}.png'),
+          ),
+        );
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(const Duration(seconds: 30));
+      }, skip: output.isEmpty);
+    }
   }
 }

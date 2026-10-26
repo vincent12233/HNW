@@ -1,0 +1,79 @@
+name: Enterprise Acceptance
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: enterprise-acceptance-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  repository-acceptance:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: npm ci
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        working-directory: apps/client
+        run: flutter pub get --enforce-lockfile
+      - name: Verify acceptance aggregator
+        run: node --test scripts/tests/production-acceptance.test.mjs
+      - name: Verify repository operation contracts
+        run: |
+          node --test scripts/tests/production-operations.test.mjs
+          node --test scripts/tests/enterprise-operations.test.mjs
+      - name: Verify supply-chain and visual contracts
+        run: |
+          node --test scripts/tests/supply-chain-workflow.test.mjs
+          node --test scripts/tests/visual-evidence.test.mjs
+      - name: Verify protected flows
+        run: bash scripts/verify-protected-flows.sh
+      - name: Record commit-bound repository evidence
+        env:
+          ACCEPTANCE_SHA: ${{ github.sha }}
+          ACCEPTANCE_SOURCE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          mkdir -p acceptance-evidence
+          node --input-type=module <<'NODE'
+          import { writeFileSync } from 'node:fs';
+          const common = {
+            sha: process.env.ACCEPTANCE_SHA,
+            passed: true,
+            simulated: false,
+            source: process.env.ACCEPTANCE_SOURCE,
+            observedAt: new Date().toISOString(),
+          };
+          for (const name of ['acceptance-contracts', 'protected-flow-contracts']) {
+            writeFileSync(`acceptance-evidence/${name}.json`, JSON.stringify({ ...common, category: 'repository', name }));
+          }
+          NODE
+      - name: Build repository acceptance manifest
+        run: node scripts/production-acceptance.mjs --sha "$GITHUB_SHA" --evidence-dir acceptance-evidence --gate repository --output enterprise-acceptance.json
+      - uses: actions/upload-artifact@v6
+        if: always()
+        with:
+          name: enterprise-acceptance-${{ github.sha }}
+          path: |
+            enterprise-acceptance.json
+            acceptance-evidence/*.json
+          retention-days: 90
+

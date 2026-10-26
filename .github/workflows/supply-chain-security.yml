@@ -1,0 +1,108 @@
+name: Supply Chain Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 3 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: supply-chain-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  dependency-review:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48 # v4.9.0
+        with:
+          fail-on-severity: high
+
+  sbom-and-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version-file: .nvmrc
+      - name: Generate CycloneDX SBOMs
+        run: |
+          mkdir -p supply-chain-evidence
+          npx --yes @cyclonedx/cyclonedx-npm@4.1.2 --package-lock-only --output-file supply-chain-evidence/api-sbom.json apps/api/package.json
+          npx --yes @cyclonedx/cyclonedx-npm@4.1.2 --package-lock-only --output-file supply-chain-evidence/admin-sbom.json apps/admin/package.json
+          printf '{"sha":"%s","runId":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > supply-chain-evidence/provenance.json
+      - name: Detect committed secrets with gitleaks
+        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: supply-chain-sbom-${{ github.sha }}
+          path: supply-chain-evidence
+          if-no-files-found: error
+          retention-days: 90
+
+  container-vulnerabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Scan repository filesystem with Trivy
+        id: filesystem_scan
+        continue-on-error: true
+        run: |
+          docker run --rm -v "$PWD:/workspace" \
+            aquasec/trivy@sha256:a22415a38938a56c379387a8163fcb0ce38b10ace73e593475d3658d578b2436 \
+            fs --format sarif --output /workspace/trivy-filesystem.sarif \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 /workspace
+      - name: Build production API image
+        if: always()
+        run: docker build -f docker/api.Dockerfile --target runner --build-arg GIT_COMMIT=$GITHUB_SHA --build-arg BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -t hnw-api-security:$GITHUB_SHA .
+      - name: Scan API image with trivy
+        id: image_scan
+        if: always()
+        continue-on-error: true
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$PWD:/workspace" \
+            aquasec/trivy@sha256:a22415a38938a56c379387a8163fcb0ce38b10ace73e593475d3658d578b2436 \
+            image --format sarif --output /workspace/trivy-api.sarif \
+            --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1 hnw-api-security:$GITHUB_SHA
+      - name: Upload filesystem vulnerability results
+        if: always() && hashFiles('trivy-filesystem.sarif') != ''
+        uses: github/codeql-action/upload-sarif@793b778da9c9275a0f276522b27cb5fc14bba279 # v4
+        with:
+          sarif_file: trivy-filesystem.sarif
+          category: trivy-filesystem
+      - name: Upload API image vulnerability results
+        if: always() && hashFiles('trivy-api.sarif') != ''
+        uses: github/codeql-action/upload-sarif@793b778da9c9275a0f276522b27cb5fc14bba279 # v4
+        with:
+          sarif_file: trivy-api.sarif
+          category: trivy-api-image
+      - name: Preserve scan evidence
+        if: always() && hashFiles('trivy-*.sarif') != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: container-scan-${{ github.sha }}
+          path: |
+            trivy-filesystem.sarif
+            trivy-api.sarif
+          if-no-files-found: error
+          retention-days: 90
+      - name: Enforce vulnerability gates
+        if: always()
+        env:
+          FILESYSTEM_SCAN: ${{ steps.filesystem_scan.outcome }}
+          IMAGE_SCAN: ${{ steps.image_scan.outcome }}
+        run: |
+          test "$FILESYSTEM_SCAN" = success
+          test "$IMAGE_SCAN" = success

@@ -4,17 +4,9 @@ name: Admin CI
 
 on:
   pull_request:
-    paths:
-      - 'apps/admin/**'
-      - '.nvmrc'
-      - '.github/workflows/admin-ci.yml'
   push:
     branches:
       - main
-    paths:
-      - 'apps/admin/**'
-      - '.nvmrc'
-      - '.github/workflows/admin-ci.yml'
 
 permissions:
   contents: read
@@ -60,3 +52,20 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://127.0.0.1:3000
+
+      - name: Install Chromium for rendered visual checks
+        run: npx playwright install --with-deps chromium
+
+      - name: Capture rendered Admin visual evidence
+        run: npm run test:visual
+        env:
+          NEXT_PUBLIC_API_URL: https://127.0.0.1:3000
+
+      - name: Upload Admin visual evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: admin-visual-evidence-${{ github.sha }}
+          path: apps/admin/test-results/visual
+          if-no-files-found: error
+          retention-days: 30

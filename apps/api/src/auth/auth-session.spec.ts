@@ -26,9 +26,11 @@ describe('AuthService session lifecycle', () => {
         .mockResolvedValueOnce('access-new')
         .mockResolvedValueOnce('refresh-new'),
     };
-    (auth as any).prisma = {
+    const tx = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
       user: { findUnique: jest.fn().mockResolvedValue(user) },
     };
+    (auth as any).prisma = { $transaction: (callback: any) => callback(tx) };
 
     const refreshed = await auth.refresh('refresh-old');
     expect(refreshed.accessToken).toBe('access-new');

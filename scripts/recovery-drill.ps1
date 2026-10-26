@@ -1,5 +1,7 @@
 param(
   [Parameter(Mandatory = $true)]
+  [string]$CommitSha,
+  [Parameter(Mandatory = $true)]
   [string]$SourceDatabaseUrl,
   [Parameter(Mandatory = $true)]
   [string]$DrillDatabaseUrl,
@@ -13,6 +15,7 @@ param(
 $ErrorActionPreference = "Stop"
 $startedAt = Get-Date
 $root = Resolve-Path (Join-Path $PSScriptRoot "..")
+. (Join-Path $PSScriptRoot 'recovery-integrity.ps1')
 
 function Assert-PostgresUrl([string]$Value, [string]$Name) {
   if ($Value -notmatch '^postgres(?:ql)?://') {
@@ -62,6 +65,18 @@ function Get-ObjectManifest([string]$Directory) {
   return @($manifest)
 }
 
+function Get-FinancialSnapshot([string]$DatabaseUrl) {
+  $accountExists = (& psql $DatabaseUrl -At -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.accounts') IS NOT NULL").Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'Could not inspect financial tables' }
+  if ($accountExists -ne 't') { return [ordered]@{ status = 'NO_FINANCIAL_TABLES' } }
+  $accounts = (& psql $DatabaseUrl -At -F '|' -v ON_ERROR_STOP=1 -c 'SELECT COUNT(*), COALESCE(SUM(balance),0), COALESCE(SUM("frozenBalance"),0) FROM accounts').Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'Could not calculate account reconciliation snapshot' }
+  $ledger = (& psql $DatabaseUrl -At -F '|' -v ON_ERROR_STOP=1 -c 'SELECT COUNT(*), COALESCE(SUM("balanceAfter" - "balanceBefore"),0) FROM account_transactions').Trim()
+  if ($LASTEXITCODE -ne 0) { throw 'Could not calculate ledger reconciliation snapshot' }
+  return [ordered]@{ status = 'CAPTURED'; accounts = $accounts; ledger = $ledger }
+}
+
+if ($CommitSha -notmatch '^[0-9a-f]{40}$') { throw 'CommitSha must be a full 40-character lowercase Git SHA' }
 Assert-PostgresUrl $SourceDatabaseUrl 'SourceDatabaseUrl'
 Assert-PostgresUrl $DrillDatabaseUrl 'DrillDatabaseUrl'
 if ($SourceDatabaseUrl.TrimEnd('/') -eq $DrillDatabaseUrl.TrimEnd('/')) {
@@ -95,14 +110,17 @@ if (-not $objectsRestoreFull.StartsWith(
 
 $report = [ordered]@{
   schemaVersion = 1
+  commitSha = $CommitSha
   startedAt = $startedAt.ToUniversalTime().ToString('o')
   completedAt = $null
   durationSeconds = $null
   sourceDatabase = Get-DatabaseName $SourceDatabaseUrl
   drillDatabase = Get-DatabaseName $DrillDatabaseUrl
   planOnly = [bool]$PlanOnly
-  database = [ordered]@{ backup = $databaseBackup; countsMatch = $null; sourceCounts = $null; restoredCounts = $null }
-  privateObjects = [ordered]@{ backup = $objectsBackup; filesMatch = $null; sourceFileCount = $null; restoredFileCount = $null }
+  database = [ordered]@{ backup = $databaseBackup; backupSha256 = $null; restoreInputSha256 = $null; checksumMatch = $null; countsMatch = $null; sourceCounts = $null; restoredCounts = $null }
+  privateObjects = [ordered]@{ backup = $objectsBackup; backupSha256 = $null; restoreInputSha256 = $null; checksumMatch = $null; filesMatch = $null; sourceFileCount = $null; restoredFileCount = $null }
+  financialReconciliation = [ordered]@{ status = 'NOT_EXECUTED'; source = $null; restored = $null; matches = $null }
+  externalEvidenceComplete = $false
   status = if ($PlanOnly) { 'PLANNED' } else { 'RUNNING' }
 }
 
@@ -126,18 +144,30 @@ if (-not (Test-Path -LiteralPath $PrivateObjectRoot -PathType Container)) {
 
 try {
   & (Join-Path $root 'scripts/backup-postgres.ps1') -OutputPath $databaseBackup -DatabaseUrl $SourceDatabaseUrl
+  $report.database.backupSha256 = Get-RecoveryFileSha256 $databaseBackup
   $sourceCounts = Get-TableCounts $SourceDatabaseUrl
+  $sourceFinancial = Get-FinancialSnapshot $SourceDatabaseUrl
+  $report.database.restoreInputSha256 = Assert-RecoveryFileChecksum $databaseBackup $report.database.backupSha256
+  $report.database.checksumMatch = $true
   & (Join-Path $root 'scripts/restore-postgres.ps1') -InputPath $databaseBackup -DatabaseUrl $DrillDatabaseUrl
   $restoredCounts = Get-TableCounts $DrillDatabaseUrl
+  $restoredFinancial = Get-FinancialSnapshot $DrillDatabaseUrl
   $report.database.sourceCounts = $sourceCounts
   $report.database.restoredCounts = $restoredCounts
   $report.database.countsMatch = (($sourceCounts | ConvertTo-Json -Compress) -eq ($restoredCounts | ConvertTo-Json -Compress))
+  $report.financialReconciliation.source = $sourceFinancial
+  $report.financialReconciliation.restored = $restoredFinancial
+  $report.financialReconciliation.matches = (($sourceFinancial | ConvertTo-Json -Compress) -eq ($restoredFinancial | ConvertTo-Json -Compress))
+  $report.financialReconciliation.status = if ($report.financialReconciliation.matches) { 'MATCHED' } else { 'MISMATCH' }
 
   if (Test-Path -LiteralPath $objectsRestore) {
     Remove-Item -LiteralPath $objectsRestore -Recurse -Force
   }
   New-Item -ItemType Directory -Force -Path $objectsRestore | Out-Null
   Invoke-Native 'tar' @('-C', (Split-Path -Parent $PrivateObjectRoot), '-czf', $objectsBackup, (Split-Path -Leaf $PrivateObjectRoot))
+  $report.privateObjects.backupSha256 = Get-RecoveryFileSha256 $objectsBackup
+  $report.privateObjects.restoreInputSha256 = Assert-RecoveryFileChecksum $objectsBackup $report.privateObjects.backupSha256
+  $report.privateObjects.checksumMatch = $true
   Invoke-Native 'tar' @('-C', $objectsRestore, '-xzf', $objectsBackup)
   $restoredObjectRoot = Join-Path $objectsRestore (Split-Path -Leaf $PrivateObjectRoot)
   $sourceManifest = Get-ObjectManifest $PrivateObjectRoot
@@ -146,7 +176,7 @@ try {
   $report.privateObjects.restoredFileCount = $restoredManifest.Count
   $report.privateObjects.filesMatch = (($sourceManifest | ConvertTo-Json -Compress) -eq ($restoredManifest | ConvertTo-Json -Compress))
 
-  if (-not $report.database.countsMatch -or -not $report.privateObjects.filesMatch) {
+  if (-not $report.database.checksumMatch -or -not $report.privateObjects.checksumMatch -or -not $report.database.countsMatch -or -not $report.privateObjects.filesMatch -or -not $report.financialReconciliation.matches) {
     throw 'Recovery validation did not match the source snapshot'
   }
   $report.status = 'PASSED'

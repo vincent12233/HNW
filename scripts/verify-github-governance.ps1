@@ -22,6 +22,10 @@ function Invoke-GhJson([string]$Path) {
   return $raw | ConvertFrom-Json
 }
 
+function Get-ApiItemCount($Value) {
+  return @($Value | Where-Object { $null -ne $_ }).Count
+}
+
 function Get-LiveState {
   $repo = Invoke-GhJson "/repos/$Repository"
   $branchInfo = Invoke-GhJson "/repos/$Repository/branches/$Branch"
@@ -31,9 +35,9 @@ function Get-LiveState {
   $environment = $null
   try { $environment = Invoke-GhJson "/repos/$Repository/environments/production" } catch { }
 
-  $dependabot = @(Invoke-GhJson "/repos/$Repository/dependabot/alerts?state=open&per_page=100").Count
-  $codeScanning = @(Invoke-GhJson "/repos/$Repository/code-scanning/alerts?state=open&per_page=100").Count
-  $secretScanning = @(Invoke-GhJson "/repos/$Repository/secret-scanning/alerts?state=open&per_page=100").Count
+  $dependabot = Get-ApiItemCount (Invoke-GhJson "/repos/$Repository/dependabot/alerts?state=open&per_page=100")
+  $codeScanning = Get-ApiItemCount (Invoke-GhJson "/repos/$Repository/code-scanning/alerts?state=open&per_page=100")
+  $secretScanning = Get-ApiItemCount (Invoke-GhJson "/repos/$Repository/secret-scanning/alerts?state=open&per_page=100")
   $contexts = @($protection.required_status_checks.contexts)
   if ($protection.required_status_checks.checks) {
     $contexts += @($protection.required_status_checks.checks | ForEach-Object { $_.context })

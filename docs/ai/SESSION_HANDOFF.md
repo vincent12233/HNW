@@ -2,13 +2,23 @@
 
 ## Checkpoint
 
-- Date: 2026-10-23 UTC
+- Date: 2026-10-26 UTC
 - Repository: `vincent12233/HNW`
-- Context delivery: PR #143
-- Verified base before final review:
-  `3bf7d49648c23452dfad59a51c42d247e287fc4a`
+- Production-hardening branch: `codex/hnw-production-hardening-2026-10-26`
+- Verified base before the hardening work:
+  `6bad50399e30b604eae8f186937529cc23cafd5f`
 
 ## Completed delivery context
+
+- The active branch adds repository governance verification, supply-chain
+  evidence, bounded capacity and recovery evidence, critical responsive visual
+  contracts, refresh-token replay protection, and commit-bound enterprise
+  acceptance aggregation.
+- Repository, environment, and external acceptance are deliberately separate.
+  Missing KYC, licensed market-data, exchange/clearing, legal, production, or
+  physical-device evidence must remain incomplete rather than simulated.
+- Final full-suite verification, PR creation, remote CI, merge, governance
+  enforcement, and safe worktree cleanup remained to be performed at this checkpoint.
 
 - PR #146 delivered the scoped staff-authenticator security controls and UI/UX
   work without changing trading rules, customer registration/login, or deposit

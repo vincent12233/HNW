@@ -115,6 +115,9 @@ Invoke-Step "Operational script tests" {
   & (Join-Path $root "scripts/tests/recovery-drill.test.ps1")
   Invoke-Native "node" @("--test", (Join-Path $root "scripts/tests/production-operations.test.mjs"))
   Invoke-Native "node" @("--test", (Join-Path $root "scripts/tests/enterprise-operations.test.mjs"))
+  Invoke-Native "node" @("--test", (Join-Path $root "scripts/tests/production-acceptance.test.mjs"))
+  Invoke-Native "node" @("--test", (Join-Path $root "scripts/tests/supply-chain-workflow.test.mjs"))
+  Invoke-Native "node" @("--test", (Join-Path $root "scripts/tests/visual-evidence.test.mjs"))
 }
 
 Invoke-Step "Protected flows and release configuration" {

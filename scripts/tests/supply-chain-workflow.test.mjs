@@ -11,12 +11,13 @@ test('supply-chain workflow is least privilege and produces commit-bound evidenc
   assert.match(workflow, /cyclonedx-npm/);
   assert.match(workflow, /gitleaks/);
   assert.match(workflow, /dependency-review-action@[0-9a-f]{40}/);
-  assert.match(workflow, /scan-type: fs/);
+  assert.match(workflow, /\bfs --format sarif/);
   assert.match(workflow, /trivy/);
   assert.match(workflow, /GITHUB_SHA/);
   assert.match(workflow, /retention-days: 90/);
   assert.match(workflow, /severity: ['"]HIGH,CRITICAL['"]/);
-  assert.match(workflow, /exit-code: ['"]1['"]/);
+  assert.match(workflow, /--exit-code 1/);
+  assert.match(workflow, /aquasec\/trivy@sha256:[0-9a-f]{64}/);
   assert.doesNotMatch(workflow, /pull-requests: write/);
   assert.doesNotMatch(workflow, /contents: write/);
   assert.doesNotMatch(workflow, /uses:\s*[^\s]+@(v\d|\d+\.\d)/);

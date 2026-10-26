@@ -1,0 +1,73 @@
+name: Supply Chain Security
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '41 3 * * 2'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: supply-chain-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  sbom-and-secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Generate CycloneDX SBOMs
+        run: |
+          mkdir -p supply-chain-evidence
+          npx --yes @cyclonedx/cyclonedx-npm@4.1.2 --package-lock-only --output-file supply-chain-evidence/api-sbom.json apps/api/package.json
+          npx --yes @cyclonedx/cyclonedx-npm@4.1.2 --package-lock-only --output-file supply-chain-evidence/admin-sbom.json apps/admin/package.json
+          printf '{"sha":"%s","runId":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > supply-chain-evidence/provenance.json
+      - name: Detect committed secrets with gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: supply-chain-sbom-${{ github.sha }}
+          path: supply-chain-evidence
+          if-no-files-found: error
+          retention-days: 90
+
+  container-vulnerabilities:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build production API image
+        run: docker build -f docker/api.Dockerfile --target runner --build-arg GIT_COMMIT=$GITHUB_SHA --build-arg BUILD_TIME=$(date -u +'%Y-%m-%dT%H:%M:%SZ') -t hnw-api-security:$GITHUB_SHA .
+      - name: Scan API image with trivy
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: hnw-api-security:${{ github.sha }}
+          format: sarif
+          output: trivy-api.sarif
+          severity: 'HIGH,CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+      - name: Upload vulnerability results
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy-api.sarif
+      - name: Preserve scan evidence
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: container-scan-${{ github.sha }}
+          path: trivy-api.sarif
+          if-no-files-found: error
+          retention-days: 90

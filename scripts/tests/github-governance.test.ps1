@@ -41,6 +41,13 @@ function Invoke-Fixture([string]$Fixture, [string]$Report, [string]$ExpectedSha 
 try {
   New-Item -ItemType Directory -Force -Path $temp | Out-Null
 
+  foreach ($workflowName in @('api-ci.yml', 'admin-ci.yml', 'flutter-ci.yml', 'flutter-integration.yml', 'web-pwa-ci.yml', 'codeql.yml', 'docker-ci.yml', 'production-readiness.yml', 'mobile-release-checks.yml', 'tooling-ci.yml', 'supply-chain-security.yml', 'enterprise-acceptance.yml')) {
+    $workflow = Get-Content -LiteralPath (Join-Path $root ".github/workflows/$workflowName") -Raw
+    if ($workflow -match '(?m)^\s+paths:\s*$') {
+      throw "Required workflow uses path filters and can deadlock branch protection: $workflowName"
+    }
+  }
+
   $completeReport = Join-Path $temp 'complete-report.json'
   if ((Invoke-Fixture (Write-Fixture 'complete') $completeReport) -ne 0) {
     throw 'Complete governance fixture was rejected'

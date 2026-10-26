@@ -85,6 +85,8 @@ test('CI preserves evidence and gates repository completion without claiming pro
   assert.match(workflow, /github\.sha/);
   assert.match(workflow, /simulated:\s*false/);
   assert.match(workflow, /retention-days: 90/);
+  assert.match(workflow, /working-directory: apps\/api\s+run: npm ci/);
+  assert.match(workflow, /flutter pub get --enforce-lockfile/);
   assert.doesNotMatch(workflow, /--gate production/);
   assert.doesNotMatch(workflow, /category: 'repository'.*supply-chain-scan/s);
   assert.doesNotMatch(workflow, /category: 'repository'.*visual-contracts/s);

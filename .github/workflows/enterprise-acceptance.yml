@@ -21,6 +21,20 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: apps/api/package-lock.json
+      - name: Install API dependencies
+        working-directory: apps/api
+        run: npm ci
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+      - name: Install Flutter dependencies
+        working-directory: apps/client
+        run: flutter pub get --enforce-lockfile
       - name: Verify acceptance aggregator
         run: node --test scripts/tests/production-acceptance.test.mjs
       - name: Verify repository operation contracts

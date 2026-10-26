@@ -31,7 +31,7 @@
 
 - 分支：`codex/hnw-production-hardening-2026-10-26`
 - 基线：`6bad50399e30b604eae8f186937529cc23cafd5f`
-- 已完成聚焦验证：认证模块 11 个测试套件 / 61 项测试、API lint/build、33 项 Node 运维契约、恢复演练脚本测试、GitHub 治理 fixture 测试、Admin 154 项测试、Flutter Web release 构建及 PWA 8 项浏览器测试。
+- 已完成本地完整验证：API 140 个测试套件 / 661 项通过、API lint/build、Admin 154 项测试及 lint/typecheck/build、Flutter analyze 与 501 项通过、32 项后端受保护流程测试、客户端受保护流程契约、33 项 Node 运维契约、恢复演练和 GitHub 治理 fixture；另完成 Admin 320/1440 浏览器截图、Flutter 12 张关键状态截图、Flutter Web release 构建及 PWA 8 项浏览器测试。
 - 最终完整验证、PR、远端 CI、合并及治理状态必须以本分支后续对应 SHA 的实际证据为准。
 
 ## 2026-10-23 交付记录

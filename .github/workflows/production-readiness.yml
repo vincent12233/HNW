@@ -2,26 +2,8 @@ name: Production Readiness
 
 on:
   pull_request:
-    paths:
-      - 'compose.production.yaml'
-      - '.env.production.example'
-      - 'docker/**'
-      - 'scripts/production-preflight.mjs'
-      - 'scripts/post-deploy-smoke.mjs'
-      - 'scripts/tests/production-operations.test.mjs'
-      - '.github/workflows/production-readiness.yml'
-      - 'docs/小白部署与运维手册.md'
   push:
     branches: [main]
-    paths:
-      - 'compose.production.yaml'
-      - '.env.production.example'
-      - 'docker/**'
-      - 'scripts/production-preflight.mjs'
-      - 'scripts/post-deploy-smoke.mjs'
-      - 'scripts/tests/production-operations.test.mjs'
-      - '.github/workflows/production-readiness.yml'
-      - 'docs/小白部署与运维手册.md'
   workflow_dispatch:
 
 permissions:

@@ -65,4 +65,4 @@ node scripts/enterprise-capacity.mjs \
 
 脚本默认拒绝非本机目标，防止误压生产。只有经过正式变更审批时才可对非本机 HTTPS 测试环境增加 `--allow-non-local`。报告记录提交号、场景、并发、请求数、错误率、p50/p95/p99 和阈值结论；不得手工把模拟数字写成通过证据。
 
-`redis-degraded`、`database-degraded`、`outbox-backlog` 和 `financial-idempotency` 场景必须额外使用 `--evidenceFile <json>`。该 JSON 必须与目标 SHA 和场景完全一致，明确 `simulated: false`，并包含 `dependencyState`、`outboxBacklog` 和 `financialIdempotencyVerified: true`。故障注入由隔离环境的编排工具执行；本脚本不会主动关闭生产依赖，也不会伪造故障结果。超时会独立计数，非法并发、时长、阈值或非有限数字会直接拒绝。
+该 Node 工具只执行 `health-readiness`，不会接受手写 JSON 并把它重命名为 Redis、数据库、outbox 或资金幂等测试。依赖故障必须由 `tests/chaos/run-failure-matrix.ps1|sh` 在明确确认的一次性隔离环境实际停止/恢复对应容器；订单幂等必须运行 `tests/load/k6-order-idempotency.js`。两类原始输出、零差异对账与同 SHA 记录均须独立归档后才能作为环境层证据。超时会独立计数，非法并发、时长、阈值或非有限数字会直接拒绝。

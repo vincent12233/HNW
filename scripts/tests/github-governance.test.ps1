@@ -5,7 +5,9 @@ $temp = Join-Path $root '.tmp-governance-test'
 $required = @(
   'build-and-test', 'lint-and-build', 'analyze-and-test', 'build-and-contracts',
   'analyze', 'repository-acceptance', 'dependency-review',
-  'sbom-and-secrets', 'container-vulnerabilities'
+  'sbom-and-secrets', 'container-vulnerabilities', 'ios-integration',
+  'build-images', 'validate-production-template', 'release-config',
+  'ios-release-build', 'android-setup-regression'
 )
 
 function Write-Fixture([string]$Name, [hashtable]$Overrides = @{}) {

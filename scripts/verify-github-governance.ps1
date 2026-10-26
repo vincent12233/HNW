@@ -11,7 +11,9 @@ $ErrorActionPreference = 'Stop'
 $requiredChecks = @(
   'build-and-test', 'lint-and-build', 'analyze-and-test', 'build-and-contracts',
   'analyze', 'repository-acceptance', 'dependency-review',
-  'sbom-and-secrets', 'container-vulnerabilities'
+  'sbom-and-secrets', 'container-vulnerabilities', 'ios-integration',
+  'build-images', 'validate-production-template', 'release-config',
+  'ios-release-build', 'android-setup-regression'
 )
 
 function Invoke-GhJson([string]$Path) {

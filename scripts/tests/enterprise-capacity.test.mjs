@@ -59,24 +59,12 @@ test('bounded runner records timeouts and dependency state', async () => {
   assert.equal(report.dependencyState.status, 'unobserved');
 });
 
-test('degradation scenarios require exact-SHA real scenario evidence', () => {
+test('does not relabel the HTTP loop as a degradation or financial scenario', () => {
   const base = {
     sha: 'a'.repeat(40),
     baseUrl: 'http://127.0.0.1:3100',
     scenario: 'redis-degraded',
   };
-  assert.throws(() => validateConfig(base), /scenario evidence/);
-  assert.throws(
-    () => validateConfig({ ...base, scenarioEvidence: { sha: 'b'.repeat(40), scenario: 'redis-degraded', simulated: false } }),
-    /evidence SHA/,
-  );
-  const config = validateConfig({
-    ...base,
-    scenarioEvidence: {
-      sha: 'a'.repeat(40), scenario: 'redis-degraded', simulated: false,
-      dependencyState: { redis: 'degraded', database: 'healthy' },
-      outboxBacklog: 0, financialIdempotencyVerified: true,
-    },
-  });
-  assert.equal(config.scenarioEvidence.dependencyState.redis, 'degraded');
+  assert.throws(() => validateConfig(base), /only executes health-readiness/);
+  assert.throws(() => validateConfig({ ...base, scenario: 'financial-idempotency' }), /isolated chaos and k6/);
 });

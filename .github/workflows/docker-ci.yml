@@ -2,22 +2,8 @@ name: Docker CI
 
 on:
   pull_request:
-    paths:
-      - 'docker/**'
-      - 'compose.local-test.yaml'
-      - 'apps/api/**'
-      - 'apps/admin/**'
-      - '.dockerignore'
-      - '.github/workflows/docker-ci.yml'
   push:
     branches: [main]
-    paths:
-      - 'docker/**'
-      - 'compose.local-test.yaml'
-      - 'apps/api/**'
-      - 'apps/admin/**'
-      - '.dockerignore'
-      - '.github/workflows/docker-ci.yml'
 
 permissions:
   contents: read

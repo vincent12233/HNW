@@ -31,17 +31,7 @@ export function validateConfig(input) {
   const rate = Number(input.maxErrorRate ?? 0.01);
   if (!Number.isFinite(rate) || rate < 0 || rate > 1) throw new Error('maxErrorRate must be between 0 and 1');
   const scenario = input.scenario ?? 'health-readiness';
-  const supported = ['health-readiness', 'redis-degraded', 'database-degraded', 'outbox-backlog', 'financial-idempotency'];
-  if (!supported.includes(scenario)) throw new Error(`unsupported scenario: ${scenario}`);
-  const scenarioEvidence = input.scenarioEvidence;
-  if (scenario !== 'health-readiness') {
-    if (!scenarioEvidence || scenarioEvidence.simulated !== false) throw new Error('non-health scenario requires real scenario evidence');
-    if (scenarioEvidence.sha !== input.sha) throw new Error('scenario evidence SHA does not match the requested SHA');
-    if (scenarioEvidence.scenario !== scenario) throw new Error('scenario evidence name does not match');
-    if (!scenarioEvidence.dependencyState || typeof scenarioEvidence.outboxBacklog !== 'number' || scenarioEvidence.financialIdempotencyVerified !== true) {
-      throw new Error('scenario evidence must include dependency state, outbox backlog, and financial idempotency result');
-    }
-  }
+  if (scenario !== 'health-readiness') throw new Error('enterprise-capacity only executes health-readiness; use the isolated chaos and k6 runners for degradation or financial scenarios');
   return {
     sha: input.sha,
     baseUrl: target.origin,
@@ -50,7 +40,6 @@ export function validateConfig(input) {
     durationSeconds: numeric('durationSeconds', input.durationSeconds ?? 15),
     concurrency: numeric('concurrency', input.concurrency ?? 4, { max: 100 }),
     timeoutMs: numeric('timeoutMs', input.timeoutMs ?? 3000, { max: 60000 }),
-    scenarioEvidence: scenarioEvidence ?? null,
     thresholds: {
       maxErrorRate: rate,
       maxP95Ms: numeric('maxP95Ms', input.maxP95Ms ?? 500, { max: 60000 }),
@@ -89,9 +78,9 @@ export async function runCapacity(config, request = fetch) {
     totalRequests: samples.total,
     failedRequests: samples.failures,
     timeouts: samples.timeouts,
-    dependencyState: config.scenarioEvidence?.dependencyState ?? { status: 'unobserved' },
-    outboxBacklog: config.scenarioEvidence?.outboxBacklog ?? null,
-    financialIdempotencyVerified: config.scenarioEvidence?.financialIdempotencyVerified ?? null,
+    dependencyState: { status: 'unobserved', note: 'Use the isolated chaos matrix for dependency degradation evidence.' },
+    outboxBacklog: null,
+    financialIdempotencyVerified: null,
     thresholds: config.thresholds,
     ...evaluation,
   };
@@ -110,8 +99,7 @@ function parseArgs(argv) {
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
   try {
     const args = parseArgs(process.argv.slice(2));
-    const scenarioEvidence = args.evidenceFile ? JSON.parse(await (await import('node:fs/promises')).readFile(args.evidenceFile, 'utf8')) : undefined;
-    const config = validateConfig({ ...args, scenarioEvidence, baseUrl: args.baseUrl ?? 'http://127.0.0.1:3100' });
+    const config = validateConfig({ ...args, baseUrl: args.baseUrl ?? 'http://127.0.0.1:3100' });
     const report = await runCapacity(config);
     writeFileSync(args.report ?? 'enterprise-capacity-report.json', `${JSON.stringify(report, null, 2)}\n`);
     console.log(`Capacity scenario ${report.scenario}: ${report.passed ? 'PASS' : 'FAIL'} (${report.totalRequests} requests, p95 ${report.p95Ms}ms)`);

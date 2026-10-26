@@ -2,22 +2,8 @@ name: Tooling CI
 
 on:
   pull_request:
-    paths:
-      - 'scripts/**'
-      - 'apps/client/lib/pages/**'
-      - 'apps/client/lib/services/**'
-      - 'apps/api/src/**'
-      - 'apps/admin/**'
-      - '.github/workflows/tooling-ci.yml'
   push:
     branches: [main]
-    paths:
-      - 'scripts/**'
-      - 'apps/client/lib/pages/**'
-      - 'apps/client/lib/services/**'
-      - 'apps/api/src/**'
-      - 'apps/admin/**'
-      - '.github/workflows/tooling-ci.yml'
 
 permissions:
   contents: read

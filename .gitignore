@@ -58,6 +58,8 @@ node_modules/
 dist/
 build/
 coverage/
+test-results/
+playwright-report/
 *.tsbuildinfo
 backups/
 
@@ -70,3 +72,7 @@ artifacts/
 .mcp.json.backup.*
 .codex/config.toml
 .codex/config.toml.backup.*
+
+# Local isolated implementation worktrees
+.worktrees/
+.superpowers/

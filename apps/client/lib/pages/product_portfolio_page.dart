@@ -50,7 +50,6 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
       const AsyncDataState.initial();
   String _period = '1M';
   bool _hidden = false;
-  int _request = 0;
   String _productView = 'HOLDINGS';
 
   Map<String, dynamic>? get _data => _loadState.data;
@@ -89,14 +88,15 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
 
   Future<void> _load([String? period]) async {
     if (_loading && (period == null || period == _period)) return;
-    final request = ++_request;
     final previousState = _loadState;
+    final request = previousState.requestGeneration + 1;
     final periodChanged = period != null && period != _period;
     setState(() {
       _period = period ?? _period;
       _loadState = AsyncDataState.loading(
         data: periodChanged ? null : previousState.data,
         updatedAt: periodChanged ? null : previousState.updatedAt,
+        requestGeneration: request,
       );
     });
     try {
@@ -104,20 +104,26 @@ class _ProductPortfolioPageState extends State<ProductPortfolioPage> {
           await (widget.loader ?? ClientAccountService().productPortfolio)(
             _period,
           );
-      if (mounted && request == _request) {
-        setState(() => _loadState = AsyncDataState.success(data));
+      if (mounted && _loadState.acceptsResponse(request)) {
+        setState(
+          () => _loadState = AsyncDataState.success(
+            data,
+            requestGeneration: request,
+          ),
+        );
       }
     } catch (error) {
-      if (mounted && request == _request) {
+      if (mounted && _loadState.acceptsResponse(request)) {
         final message = clientErrorMessage(error);
         setState(() {
           final previousData = _loadState.data;
           _loadState = previousData == null
-              ? AsyncDataState.error(message)
+              ? AsyncDataState.error(message, requestGeneration: request)
               : AsyncDataState.stale(
                   previousData,
                   updatedAt: _loadState.updatedAt ?? DateTime.now(),
                   message: message,
+                  requestGeneration: request,
                 );
         });
       }

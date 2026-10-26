@@ -1,9 +1,17 @@
-import { ConflictException, Injectable, Logger } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  Logger,
+  Optional,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { randomUUID } from 'crypto';
 import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
+import { runSerializableTransaction } from '../common/transaction-retry';
 import { Prisma } from '../generated/prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { assertOrderTransition } from '../trading/order-state-machine';
+import { OutboxService } from '../outbox/outbox.service';
 
 type MatchableOrder = Prisma.OrderGetPayload<{
   include: { account: true; instrument: { include: { quote: true } } };
@@ -19,6 +27,7 @@ export class MatchingService {
   constructor(
     private readonly prisma: PrismaService,
     config: ConfigService,
+    @Optional() private readonly outbox?: OutboxService,
   ) {
     this.batchSize = this.positiveInteger(
       config.get('MATCHING_BATCH_SIZE'),
@@ -52,9 +61,9 @@ export class MatchingService {
   }
 
   async matchOrder(orderId: string) {
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        return await this.prisma.$transaction(
+    return runSerializableTransaction(
+      () =>
+        this.prisma.$transaction(
           async (tx) => {
             const order = await tx.order.findUnique({
               where: { id: orderId },
@@ -125,20 +134,13 @@ export class MatchingService {
             });
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-        );
-      } catch (error: unknown) {
-        if (this.hasPrismaCode(error, 'P2034')) {
-          if (attempt < 3) continue;
-          throw new ConflictException(
+        ),
+      {
+        onExhausted: () =>
+          new ConflictException(
             'Concurrent order update detected; please retry',
-          );
-        }
-        throw error;
-      }
-    }
-
-    throw new ConflictException(
-      'Concurrent order update detected; please retry',
+          ),
+      },
     );
   }
 
@@ -301,10 +303,12 @@ export class MatchingService {
         netAmount,
       },
     });
+    const nextStatus = complete ? 'FILLED' : 'PARTIALLY_FILLED';
+    assertOrderTransition(order.status, nextStatus);
     await tx.order.update({
       where: { id: order.id },
       data: {
-        status: complete ? 'FILLED' : 'PARTIALLY_FILLED',
+        status: nextStatus,
         filledQuantity: newFilledQuantity,
         averageFillPrice,
         frozenAmount: frozenAmountAfter,
@@ -314,15 +318,27 @@ export class MatchingService {
     // Some transaction adapters (including focused unit-test doubles) do not
     // expose the optional notification delegate. Order settlement must remain
     // atomic and must not fail solely because a notification cannot be queued.
-    if (tx.notification?.create) {
+    const notification = {
+      userId: order.account.userId,
+      type: 'ORDER',
+      title: complete ? 'Order filled' : 'Order partially filled',
+      body: `${order.side} ${quantity} ${order.instrument.symbol} at ₹${price.toFixed(2)}.`,
+      referenceId: order.id,
+    };
+    if (this.outbox) {
+      await this.outbox.enqueue(tx, {
+        eventId: `order:${order.id}:fill:${newFilledQuantity}`,
+        type: 'notification.requested',
+        aggregateType: 'ORDER',
+        aggregateId: order.id,
+        aggregateVersion: newFilledQuantity,
+        occurredAt: new Date(),
+        correlationId: order.id,
+        payload: notification,
+      });
+    } else if (tx.notification?.create) {
       await tx.notification.create({
-        data: {
-          userId: order.account.userId,
-          type: 'ORDER',
-          title: complete ? 'Order filled' : 'Order partially filled',
-          body: `${order.side} ${quantity} ${order.instrument.symbol} at ₹${price.toFixed(2)}.`,
-          referenceId: order.id,
-        },
+        data: notification,
       });
     }
   }
@@ -401,6 +417,7 @@ export class MatchingService {
         data: { frozenQuantity: { decrement: remaining } },
       });
     }
+    assertOrderTransition(order.status, 'CANCELLED');
     await tx.order.update({
       where: { id: order.id },
       data: {
@@ -421,14 +438,5 @@ export class MatchingService {
   private positiveInteger(value: string | undefined, fallback: number): number {
     const parsed = Number(value);
     return Number.isInteger(parsed) && parsed > 0 ? parsed : fallback;
-  }
-
-  private hasPrismaCode(error: unknown, expectedCode: string): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      'code' in error &&
-      (error as { code?: unknown }).code === expectedCode
-    );
   }
 }

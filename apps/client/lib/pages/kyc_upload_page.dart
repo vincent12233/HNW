@@ -15,6 +15,7 @@ import '../widgets/kyc_signature_pad.dart';
 import '../widgets/aadhaar_mark.dart';
 import '../utils/client_error_message.dart';
 import '../widgets/onboarding_widgets.dart';
+import '../widgets/kyc_submission_result.dart';
 import 'bank_details_page.dart';
 import 'selfie_camera_page.dart';
 
@@ -253,7 +254,9 @@ class _KycUploadPageState extends State<KycUploadPage> {
           title: AppText(
             [
               'KYC Verification',
-              documentType == 'PAN' ? 'Upload PAN Card' : 'Aadhaar Verification',
+              documentType == 'PAN'
+                  ? 'Upload PAN Card'
+                  : 'Aadhaar Verification',
               'Selfie Verification',
               'Signature',
               'Bank Details',
@@ -293,7 +296,8 @@ class _KycUploadPageState extends State<KycUploadPage> {
                               KycFadeIn(
                                 switchKey: step,
                                 child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.stretch,
                                   children: [
                                     if (step == 1) ..._documentStep(),
                                     if (step == 2) ..._selfieStep(),

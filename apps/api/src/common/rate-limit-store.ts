@@ -56,12 +56,13 @@ export class RedisRateLimitStore implements RateLimitStore {
   static async connect(url: string) {
     const client = createClient({
       url,
+      commandsQueueMaxLength: 1000,
       socket: {
         connectTimeout: 5_000,
         reconnectStrategy: (retries) =>
           retries >= 5
             ? new Error('Redis reconnect limit reached')
-            : retries * 250,
+            : Math.min(2_000, retries * 250 + Math.floor(Math.random() * 200)),
       },
     });
     client.on('error', (error: Error) => {
@@ -80,10 +81,18 @@ export class RedisRateLimitStore implements RateLimitStore {
 
   async consume(key: string, windowMs: number): Promise<RateLimitEntry> {
     const keyHash = createHash('sha256').update(key).digest('hex');
-    const result = (await this.client.eval(CONSUME_SCRIPT, {
-      keys: [`hnw:rate-limit:${keyHash}`],
-      arguments: [String(windowMs)],
-    })) as [number, number];
+    const result = (await Promise.race([
+      this.client.eval(CONSUME_SCRIPT, {
+        keys: [`hnw:rate-limit:${keyHash}`],
+        arguments: [String(windowMs)],
+      }),
+      new Promise((_, reject) =>
+        setTimeout(
+          () => reject(new Error('Redis rate-limit deadline exceeded')),
+          2_000,
+        ),
+      ),
+    ])) as [number, number];
     const [count, ttl] = result.map(Number);
     return { count, resetAt: Date.now() + Math.max(0, ttl) };
   }
@@ -103,5 +112,8 @@ export function normalizeRateLimitPath(path: string) {
 export async function createRateLimitStore() {
   const redisUrl = process.env.RATE_LIMIT_REDIS_URL?.trim();
   if (redisUrl) return RedisRateLimitStore.connect(redisUrl);
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('RATE_LIMIT_REDIS_URL is required in production');
+  }
   return new MemoryRateLimitStore();
 }

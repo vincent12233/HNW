@@ -19,4 +19,10 @@ foreach ($privacyKey in @('NSFaceIDUsageDescription', 'NSCameraUsageDescription'
 }
 if ($pubspec -notmatch '(?m)^version:\s*[0-9]+\.[0-9]+\.[0-9]+\+[0-9]+') { throw 'Flutter release version must be semantic plus build number' }
 
+$compose = Get-Content (Join-Path $PSScriptRoot '../compose.production.yaml') -Raw
+foreach ($required in @('DATABASE_URL','RATE_LIMIT_REDIS_URL','JWT_SECRET','TWO_FACTOR_ENCRYPTION_KEY','OBJECT_SIGNING_SECRET','TRUST_PROXY_HOPS')) {
+  if ($compose -notmatch [regex]::Escape("`${$required:?")) { throw "Production Compose must require $required" }
+}
+if ($compose -notmatch 'read_only:\s*true' -or $compose -notmatch 'no-new-privileges:true') { throw 'Production containers require read-only/no-new-privileges controls' }
+
 Write-Host 'Release configuration checks passed.'

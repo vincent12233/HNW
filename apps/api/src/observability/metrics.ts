@@ -15,6 +15,22 @@ const businessFailures = new Map<string, number>();
 const businessEvents = new Map<string, number>();
 const operationalCounters = new Map<string, number>();
 const operationalGauges = new Map<string, number>();
+const JOURNEYS = [
+  'auth',
+  'market_read',
+  'order_submit',
+  'funding_review',
+  'reconciliation',
+] as const;
+const JOURNEY_BUCKETS_MS = [50, 100, 250, 500, 1000, 2500, 5000] as const;
+export type CoreJourney = (typeof JOURNEYS)[number];
+type JourneySnapshot = {
+  count: number;
+  errors: number;
+  sumMs: number;
+  buckets: number[];
+};
+const journeyMetrics = new Map<CoreJourney, JourneySnapshot>();
 
 export function recordHttpMetric(statusCode: number, durationMs: number): void {
   snapshot.requests += 1;
@@ -40,6 +56,33 @@ export function recordOperationalCounter(name: string, increment = 1): void {
 
 export function setOperationalGauge(name: string, value: number): void {
   operationalGauges.set(name, value);
+}
+
+export function recordJourneyMetric(
+  journey: CoreJourney,
+  durationMs: number,
+  success: boolean,
+): void {
+  if (!JOURNEYS.includes(journey)) {
+    throw new Error(`Unsupported journey metric: ${String(journey)}`);
+  }
+  const safeDuration = Math.max(
+    0,
+    Number.isFinite(durationMs) ? durationMs : 0,
+  );
+  const current = journeyMetrics.get(journey) ?? {
+    count: 0,
+    errors: 0,
+    sumMs: 0,
+    buckets: JOURNEY_BUCKETS_MS.map(() => 0),
+  };
+  current.count += 1;
+  current.sumMs += safeDuration;
+  if (!success) current.errors += 1;
+  JOURNEY_BUCKETS_MS.forEach((upperBound, index) => {
+    if (safeDuration <= upperBound) current.buckets[index] += 1;
+  });
+  journeyMetrics.set(journey, current);
 }
 
 export async function observeExternalCall<T>(
@@ -95,6 +138,18 @@ export function renderPrometheusMetrics(): string {
     ([metric, value]) =>
       `hnw_operational_gauge{metric="${prometheusLabel(metric)}"} ${value}`,
   );
+  const journeyLines = [...journeyMetrics.entries()].flatMap(
+    ([journey, metric]) => [
+      ...JOURNEY_BUCKETS_MS.map(
+        (upperBound, index) =>
+          `hnw_journey_duration_ms_bucket{journey="${journey}",le="${upperBound}"} ${metric.buckets[index]}`,
+      ),
+      `hnw_journey_duration_ms_bucket{journey="${journey}",le="+Inf"} ${metric.count}`,
+      `hnw_journey_duration_ms_count{journey="${journey}"} ${metric.count}`,
+      `hnw_journey_duration_ms_sum{journey="${journey}"} ${metric.sumMs}`,
+      `hnw_journey_errors_total{journey="${journey}"} ${metric.errors}`,
+    ],
+  );
   return [
     '# HELP hnw_process_uptime_seconds Process uptime in seconds.',
     '# TYPE hnw_process_uptime_seconds gauge',
@@ -124,6 +179,11 @@ export function renderPrometheusMetrics(): string {
     '# HELP hnw_operational_gauge Current operational gauges.',
     '# TYPE hnw_operational_gauge gauge',
     ...operationalGaugeLines,
+    '# HELP hnw_journey_duration_ms Core journey latency with bounded labels.',
+    '# TYPE hnw_journey_duration_ms histogram',
+    '# HELP hnw_journey_errors_total Failed core journeys with bounded labels.',
+    '# TYPE hnw_journey_errors_total counter',
+    ...journeyLines,
     '',
   ].join('\n');
 }

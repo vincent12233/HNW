@@ -1,0 +1,47 @@
+name: Web PWA CI
+
+on:
+  pull_request:
+    paths:
+      - "apps/client/**"
+      - "docker/client-web.*"
+      - "compose.production.yaml"
+      - ".github/workflows/web-pwa-ci.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/client/**"
+      - "docker/client-web.*"
+      - "compose.production.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-contracts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - working-directory: apps/client
+        run: flutter pub get
+      - working-directory: apps/client
+        run: flutter test test/web_manifest_contract_test.dart test/web_offline_policy_test.dart test/web_server_contract_test.dart
+      - working-directory: apps/client
+        run: flutter build web --release --pwa-strategy=none --dart-define=API_BASE_URL=/api
+      - name: Reject source maps and private hosts
+        shell: bash
+        run: |
+          ! find apps/client/build/web -type f -name '*.map' | grep .
+          ! grep -RIE 'https?://(localhost|127\.0\.0\.1)|postgresql://|redis://' apps/client/build/web
+      - working-directory: tests/web-pwa
+        run: npm ci
+      - working-directory: tests/web-pwa
+        run: npx playwright install --with-deps chromium
+      - working-directory: tests/web-pwa
+        run: npm test
+      - run: docker compose --env-file .env.production.example -f compose.production.yaml config --quiet

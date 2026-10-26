@@ -4,7 +4,6 @@ import '../widgets/app_page_scaffold.dart';
 import '../l10n/app_language.dart';
 import 'package:flutter/material.dart';
 
-import '../app_config.dart';
 import '../services/auth_service.dart';
 import '../services/client_account_service.dart';
 import '../theme/app_colors.dart';
@@ -18,6 +17,9 @@ import '../widgets/app_card.dart';
 import '../widgets/app_feedback.dart';
 import '../widgets/membership_tier_badge.dart';
 import '../widgets/profile_identity.dart';
+import '../widgets/app_status_scene.dart';
+import '../widgets/app_status_timeline.dart';
+import '../widgets/support_chat_launcher.dart';
 import 'kyc_upload_page.dart';
 import 'bank_details_page.dart';
 

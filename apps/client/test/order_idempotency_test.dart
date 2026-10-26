@@ -82,4 +82,16 @@ void main() {
     expect(withId.clientOrderId, 'APP-1');
     expect(changed.clientOrderId, 'APP-2');
   });
+
+  test('lost response lookup matches only the same clientOrderId', () {
+    final expected = draft(clientOrderId: 'APP-lost-NSE-RELIANCE');
+    final other = draft(clientOrderId: 'APP-other-NSE-RELIANCE');
+
+    expect(
+      orderByClientOrderId([other, expected], 'APP-lost-NSE-RELIANCE'),
+      same(expected),
+    );
+    expect(orderByClientOrderId([other], 'APP-lost-NSE-RELIANCE'), isNull);
+    expect(orderByClientOrderId([expected], ''), isNull);
+  });
 }

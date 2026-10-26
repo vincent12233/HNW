@@ -23,9 +23,28 @@ import {
   recordBusinessEvent,
   recordBusinessFailure,
   recordHttpMetric,
+  recordJourneyMetric,
+  type CoreJourney,
 } from './observability/metrics';
 
 const httpLogger = new Logger('HttpAudit');
+
+function coreJourneyFor(method: string, path: string): CoreJourney | null {
+  if (path.startsWith('/auth/')) return 'auth';
+  if (path.startsWith('/market') || path.startsWith('/stocks')) {
+    return 'market_read';
+  }
+  if (method === 'POST' && path.startsWith('/orders')) return 'order_submit';
+  if (
+    path.includes('/deposit') ||
+    path.includes('/withdrawal') ||
+    path.includes('/kyc')
+  ) {
+    return 'funding_review';
+  }
+  if (path.includes('/reconciliation')) return 'reconciliation';
+  return null;
+}
 
 function requestIdFrom(value?: string) {
   const candidate = value?.trim() ?? '';
@@ -175,6 +194,10 @@ function securityMiddleware(rateLimitStore: RateLimitStore) {
       const durationMs = Date.now() - startedAt;
       const timestamp = new Date().toISOString();
       recordHttpMetric(res.statusCode, durationMs);
+      const journey = coreJourneyFor(req.method, req.path);
+      if (journey) {
+        recordJourneyMetric(journey, durationMs, res.statusCode < 400);
+      }
 
       const payload = JSON.stringify({
         level:

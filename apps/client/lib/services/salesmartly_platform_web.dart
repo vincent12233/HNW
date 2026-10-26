@@ -4,7 +4,6 @@ import 'dart:js_interop_unsafe';
 
 import 'package:web/web.dart' as web;
 
-import '../models/auth_session.dart';
 import 'salesmartly_platform.dart';
 
 SaleSmartlyPlatform createSaleSmartlyPlatform() =>
@@ -35,7 +34,7 @@ final class _SaleSmartlyWebPlatform implements SaleSmartlyPlatform {
   @override
   Future<void> openChat({
     required String scriptUrl,
-    required AuthSession session,
+    required SaleSmartlyCustomerIdentity identity,
     String? initialMessage,
   }) async {
     if (scriptUrl.isEmpty) {
@@ -43,7 +42,7 @@ final class _SaleSmartlyWebPlatform implements SaleSmartlyPlatform {
     }
     try {
       await _ensureSdkLoaded(scriptUrl);
-      await _setLoginInfo(session);
+      await _setLoginInfo(identity);
       final status = await _pushCommand('chatOpen');
       if (status == 'failed') {
         throw const SaleSmartlyException(_unavailable);
@@ -51,7 +50,7 @@ final class _SaleSmartlyWebPlatform implements SaleSmartlyPlatform {
       // ignored = already open / duplicate — not fatal.
       final message = initialMessage?.trim() ?? '';
       if (message.isNotEmpty) {
-        final presetKey = '${session.userId}::$message';
+        final presetKey = '${identity.customerReference}::$message';
         if (_lastAutoPresetKey != presetKey) {
           await _pushCommand('sendTextMessage', payload: message.toJS);
           _lastAutoPresetKey = presetKey;
@@ -228,15 +227,15 @@ final class _SaleSmartlyWebPlatform implements SaleSmartlyPlatform {
     ssc.setProperty('setting'.toJS, setting);
   }
 
-  Future<void> _setLoginInfo(AuthSession session) async {
+  Future<void> _setLoginInfo(SaleSmartlyCustomerIdentity identity) async {
     final payload = JSObject()
-      ..setProperty('user_id'.toJS, session.userId.toJS)
-      ..setProperty('user_name'.toJS, session.fullName.toJS)
-      ..setProperty('language'.toJS, 'en'.toJS)
-      ..setProperty('phone'.toJS, session.phone.trim().toJS)
+      ..setProperty('user_id'.toJS, identity.customerReference.toJS)
+      ..setProperty('user_name'.toJS, identity.displayName.toJS)
+      ..setProperty('language'.toJS, 'en-US'.toJS)
+      ..setProperty('phone'.toJS, ''.toJS)
       ..setProperty('email'.toJS, ''.toJS)
-      ..setProperty('description'.toJS, 'India Trading customer'.toJS)
-      ..setProperty('label_names'.toJS, <JSAny?>['hnw'.toJS, 'web'.toJS].toJS);
+      ..setProperty('description'.toJS, 'Customer support'.toJS)
+      ..setProperty('label_names'.toJS, <JSAny?>['web'.toJS].toJS);
 
     final status = await _pushCommand('setLoginInfo', payload: payload);
     if (status == 'failed') {

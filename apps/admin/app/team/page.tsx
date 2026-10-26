@@ -16,6 +16,7 @@ import OpsStatusTag from "@/components/OpsStatusTag";
 import OpsToolbar from "@/components/OpsToolbar";
 import ScopedEditButton from "@/components/ScopedEditButton";
 import { api, getApiErrorMessage } from "@/lib/api";
+import { classifyOpsMutationFailure } from "@/lib/ops-mutation-contract";
 import {
   KYC_REVIEW_COPY,
   acquireReviewLock,
@@ -301,8 +302,11 @@ export default function TeamPage() {
       setKycPreviewError("");
       setRefreshNonce((value) => value + 1);
     } catch (failure: unknown) {
-      const detail = getApiErrorMessage(failure, "");
-      message.error(detail || KYC_REVIEW_COPY.reviewFailure);
+      const mutationFailure = classifyOpsMutationFailure(failure);
+      message.error(mutationFailure.message);
+      if (mutationFailure.refreshRequired) {
+        setRefreshNonce((value) => value + 1);
+      }
     } finally {
       releaseReviewLock(reviewLock);
       setReviewSaving(false);

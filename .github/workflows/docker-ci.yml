@@ -44,7 +44,15 @@ jobs:
       - name: Validate local Compose configuration
         env:
           HNW_E2E_DB_PASSWORD: ci-compose-password
+          HNW_E2E_TIMESERIES_PASSWORD: ci-timeseries-password
         run: docker compose -f compose.local-test.yaml config --quiet
+
+      - name: Validate Envoy edge configuration
+        run: >-
+          docker run --rm
+          -v "${PWD}/docker/gateway/envoy.yaml:/etc/envoy/envoy.yaml:ro"
+          envoyproxy/envoy:v1.31.2
+          --mode validate -c /etc/envoy/envoy.yaml
 
       - name: Build Admin image
         run: >-

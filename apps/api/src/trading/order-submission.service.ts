@@ -1,13 +1,10 @@
-import {
-  BadRequestException,
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { Prisma } from '../generated/prisma/client';
 import { MarketSessionService } from '../market-session/market-session.service';
 import { MatchingService } from '../matching/matching.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateOrderDto } from '../orders/dto/create-order.dto';
+import { runSerializableTransaction } from '../common/transaction-retry';
 import { LimitOrderService } from './limit-order.service';
 import { OrderPreparationService } from './order-preparation.service';
 import { TradingService } from './trading.service';
@@ -26,9 +23,9 @@ export class OrderSubmissionService {
   async submit(userId: string, dto: CreateOrderDto) {
     this.orderPreparation.validateOrderRequest(dto);
 
-    for (let attempt = 1; attempt <= 3; attempt += 1) {
-      try {
-        const result = await this.prisma.$transaction(
+    try {
+      const result = await runSerializableTransaction(() =>
+        this.prisma.$transaction(
           async (tx) => {
             const prepared = await this.orderPreparation.prepare(
               tx,
@@ -83,41 +80,33 @@ export class OrderSubmissionService {
             return { idempotentReplay: false, order };
           },
           { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+        ),
+      );
+
+      if (
+        !result.idempotentReplay &&
+        result.order.status === 'OPEN' &&
+        result.order.timeInForce !== 'DAY'
+      ) {
+        const matchedOrder = await this.matchingService.matchOrder(
+          result.order.id,
         );
 
-        if (
-          !result.idempotentReplay &&
-          result.order.status === 'OPEN' &&
-          result.order.timeInForce !== 'DAY'
-        ) {
-          const matchedOrder = await this.matchingService.matchOrder(
-            result.order.id,
-          );
-
-          return { ...result, order: matchedOrder ?? result.order };
-        }
-
-        return result;
-      } catch (error: unknown) {
-        if (this.hasPrismaCode(error, 'P2034') && attempt < 3) {
-          continue;
-        }
-
-        if (this.hasPrismaCode(error, 'P2002')) {
-          return this.orderPreparation.getIdempotentOrder(
-            this.prisma,
-            userId,
-            dto,
-          );
-        }
-
-        throw error;
+        return { ...result, order: matchedOrder ?? result.order };
       }
-    }
 
-    throw new ConflictException(
-      'Concurrent order update detected; please retry',
-    );
+      return result;
+    } catch (error: unknown) {
+      if (this.hasPrismaCode(error, 'P2002')) {
+        return this.orderPreparation.getIdempotentOrder(
+          this.prisma,
+          userId,
+          dto,
+        );
+      }
+
+      throw error;
+    }
   }
 
   private hasPrismaCode(error: unknown, expectedCode: string): boolean {

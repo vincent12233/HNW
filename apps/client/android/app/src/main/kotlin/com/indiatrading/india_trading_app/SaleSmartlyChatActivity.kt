@@ -199,15 +199,15 @@ class SaleSmartlyChatActivity : ComponentActivity() {
 
         SalesmartlyChat.setLoginInfo(
             LoginInfo(
-                user_id = intent.getStringExtra("userId").orEmpty(),
-                user_name = intent.getStringExtra("userName").orEmpty(),
-                language = "en",
-                phone = intent.getStringExtra("phone").orEmpty(),
+                user_id = intent.getStringExtra("customerReference").orEmpty(),
+                user_name = intent.getStringExtra("displayName").orEmpty(),
+                language = "en-US",
+                phone = "",
                 email = "",
-                description = "India Trading customer",
-                label_names = listOf("hnw", "android"),
+                description = "Customer support",
+                label_names = listOf("android"),
                 custom_fields_ext = mapOf(
-                    "source" to "india-trading-android",
+                    "source" to "android",
                 ),
             ),
         )

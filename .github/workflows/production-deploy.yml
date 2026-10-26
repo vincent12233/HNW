@@ -7,6 +7,10 @@ on:
         description: 'Paste the full main-branch commit SHA that has passed required CI'
         required: true
         type: string
+      image_digest:
+        description: 'Approved immutable image digest (sha256:...)'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -24,12 +28,15 @@ jobs:
         run: |
           test "${GITHUB_REF_NAME}" = "main" || { echo "Production deployment must run from main." >&2; exit 1; }
           test "${{ inputs.confirm_sha }}" = "${GITHUB_SHA}" || { echo "confirm_sha must equal ${GITHUB_SHA}." >&2; exit 1; }
+          printf '%s' "${{ inputs.image_digest }}" | grep -Eq '^sha256:[0-9a-f]{64}$' || { echo "image_digest must be immutable sha256." >&2; exit 1; }
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
       - name: Validate production operations tooling
         run: node --test scripts/tests/production-operations.test.mjs
+      - name: Validate release configuration
+        run: bash scripts/verify-release-config.sh
       - name: Validate production Compose
         env:
           PUBLIC_API_URL: https://api.hnw-ci.invalid
@@ -64,9 +71,11 @@ jobs:
       - name: Trigger approved Coolify deployment
         env:
           COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
+          APPROVED_IMAGE_DIGEST: ${{ inputs.image_digest }}
         shell: bash
         run: |
           test -n "${COOLIFY_DEPLOY_WEBHOOK}" || { echo "COOLIFY_DEPLOY_WEBHOOK is not configured." >&2; exit 1; }
+          printf '%s' "${APPROVED_IMAGE_DIGEST}" | grep -Eq '^sha256:[0-9a-f]{64}$'
           curl --fail --silent --show-error --request GET "${COOLIFY_DEPLOY_WEBHOOK}"
       - name: Wait for deployment startup
         run: sleep 30
@@ -77,3 +86,14 @@ jobs:
           SMOKE_ATTEMPTS: '18'
           SMOKE_DELAY_MS: '10000'
         run: node scripts/post-deploy-smoke.mjs
+      - name: Record release evidence
+        env:
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+        run: |
+          mkdir -p release-evidence
+          printf '{"sha":"%s","imageDigest":"%s","runId":"%s","environment":"production"}\n' "$GITHUB_SHA" "$IMAGE_DIGEST" "$GITHUB_RUN_ID" > release-evidence/deployment.json
+      - uses: actions/upload-artifact@v6
+        with:
+          name: production-release-evidence-${{ github.sha }}
+          path: release-evidence/deployment.json
+          retention-days: 90

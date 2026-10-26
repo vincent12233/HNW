@@ -9,58 +9,58 @@ datasource db {
 }
 
 model User {
-  id                         String                @id @default(uuid())
-  email                      String                @unique
-  passwordHash               String
-  clientTier                 String                @default("STANDARD")
-  avatarData                 String?
-  twoFactor                  TwoFactorCredential?
-  withdrawalPinHash          String?
-  withdrawalPinAttempts      Int                   @default(0)
-  withdrawalPinLockedUntil   DateTime?
-  transactionKeyHash        String?
-  googleSubject             String?               @unique
-  authVersion               Int                   @default(0)
-  fullName                   String
-  phone                      String?               @unique
-  customerNo                 String?               @unique
-  role                       UserRole              @default(CLIENT)
-  status                     UserStatus            @default(ACTIVE)
-  deletedAt                  DateTime?
-  createdAt                  DateTime              @default(now())
-  updatedAt                  DateTime              @updatedAt
-  assignedBusinessId         String?
-  createdBusinessUsers       User[]                @relation("BusinessCreators")
-  businessCreatorId          String?
-  businessCreator            User?                 @relation("BusinessCreators", fields: [businessCreatorId], references: [id])
-  createdAccountTransactions AccountTransaction[]  @relation("TransactionCreator")
-  account                    Account?
-  auditLogs                  AuditLog[]
-  businessProfile            BusinessProfile?
-  usedInviteCodeId           String?
-  usedInviteCode             InviteCode?           @relation("InviteCodeCustomers", fields: [usedInviteCodeId], references: [id])
-  loginAudits                LoginAudit[]
-  supportConversations       SupportConversation[]
-  supportMessages            SupportMessage[]
-  assignedBusiness           User?                 @relation("BusinessCustomers", fields: [assignedBusinessId], references: [id])
-  assignedCustomers          User[]                @relation("BusinessCustomers")
-  reviewedOtcOrders          OtcOrder[]             @relation("OtcReviewer")
-  bankAccounts               BankAccount[]
-  preferences                UserPreference?
-  notifications              Notification[]
-  devices                    UserDevice[]
-  passwordResetCodes         PasswordResetCode[]
-  requestedApprovals         ApprovalRequest[]     @relation("ApprovalRequester")
-  decidedApprovals           ApprovalRequest[]     @relation("ApprovalDecider")
-  insightArticlesCreated     InsightArticle[]      @relation("InsightArticleCreator")
-  insightArticlesUpdated     InsightArticle[]      @relation("InsightArticleUpdater")
-  announcementsCreated       Announcement[]        @relation("AnnouncementCreator")
-  announcementsUpdated       Announcement[]        @relation("AnnouncementUpdater")
-  appClientSettingsUpdated   AppClientSetting[]    @relation("AppClientSettingUpdater")
-  watchlistItems             UserWatchlistItem[]
-  vipTierConfigurationsUpdated VipTierConfiguration[] @relation("VipTierConfigUpdater")
-  vipTierChanges             VipTierHistory[]      @relation("VipTierSubject")
-  vipTierAdjustmentsMade     VipTierHistory[]      @relation("VipTierChanger")
+  id                            String                             @id @default(uuid())
+  email                         String                             @unique
+  passwordHash                  String
+  clientTier                    String                             @default("STANDARD")
+  avatarData                    String?
+  twoFactor                     TwoFactorCredential?
+  withdrawalPinHash             String?
+  withdrawalPinAttempts         Int                                @default(0)
+  withdrawalPinLockedUntil      DateTime?
+  transactionKeyHash            String?
+  googleSubject                 String?                            @unique
+  authVersion                   Int                                @default(0)
+  fullName                      String
+  phone                         String?                            @unique
+  customerNo                    String?                            @unique
+  role                          UserRole                           @default(CLIENT)
+  status                        UserStatus                         @default(ACTIVE)
+  deletedAt                     DateTime?
+  createdAt                     DateTime                           @default(now())
+  updatedAt                     DateTime                           @updatedAt
+  assignedBusinessId            String?
+  createdBusinessUsers          User[]                             @relation("BusinessCreators")
+  businessCreatorId             String?
+  businessCreator               User?                              @relation("BusinessCreators", fields: [businessCreatorId], references: [id])
+  createdAccountTransactions    AccountTransaction[]               @relation("TransactionCreator")
+  account                       Account?
+  auditLogs                     AuditLog[]
+  businessProfile               BusinessProfile?
+  usedInviteCodeId              String?
+  usedInviteCode                InviteCode?                        @relation("InviteCodeCustomers", fields: [usedInviteCodeId], references: [id])
+  loginAudits                   LoginAudit[]
+  supportConversations          SupportConversation[]
+  supportMessages               SupportMessage[]
+  assignedBusiness              User?                              @relation("BusinessCustomers", fields: [assignedBusinessId], references: [id])
+  assignedCustomers             User[]                             @relation("BusinessCustomers")
+  reviewedOtcOrders             OtcOrder[]                         @relation("OtcReviewer")
+  bankAccounts                  BankAccount[]
+  preferences                   UserPreference?
+  notifications                 Notification[]
+  devices                       UserDevice[]
+  passwordResetCodes            PasswordResetCode[]
+  requestedApprovals            ApprovalRequest[]                  @relation("ApprovalRequester")
+  decidedApprovals              ApprovalRequest[]                  @relation("ApprovalDecider")
+  insightArticlesCreated        InsightArticle[]                   @relation("InsightArticleCreator")
+  insightArticlesUpdated        InsightArticle[]                   @relation("InsightArticleUpdater")
+  announcementsCreated          Announcement[]                     @relation("AnnouncementCreator")
+  announcementsUpdated          Announcement[]                     @relation("AnnouncementUpdater")
+  appClientSettingsUpdated      AppClientSetting[]                 @relation("AppClientSettingUpdater")
+  watchlistItems                UserWatchlistItem[]
+  vipTierConfigurationsUpdated  VipTierConfiguration[]             @relation("VipTierConfigUpdater")
+  vipTierChanges                VipTierHistory[]                   @relation("VipTierSubject")
+  vipTierAdjustmentsMade        VipTierHistory[]                   @relation("VipTierChanger")
   assignmentHistoriesAsBusiness BusinessManagerAssignmentHistory[] @relation("AssignmentBusiness")
   assignmentHistoriesAsPrevious BusinessManagerAssignmentHistory[] @relation("AssignmentPreviousManager")
   assignmentHistoriesAsNew      BusinessManagerAssignmentHistory[] @relation("AssignmentNewManager")
@@ -73,16 +73,17 @@ model User {
 }
 
 model TwoFactorCredential {
-  userId String @id
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  secret String?
-  pendingSecret String?
+  userId           String    @id
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secret           String?
+  pendingSecret    String?
   pendingExpiresAt DateTime?
-  enabled Boolean @default(false)
-  lastStep Int @default(-1)
-  recoveryHashes String[] @default([])
-  attempts Int @default(0)
-  lockedUntil DateTime?
+  enabled          Boolean   @default(false)
+  lastStep         Int       @default(-1)
+  recoveryHashes   String[]  @default([])
+  attempts         Int       @default(0)
+  lockedUntil      DateTime?
+
   @@map("two_factor_credentials")
 }
 
@@ -125,7 +126,7 @@ model Account {
   cashBalance        Decimal              @default(0) @db.Decimal(18, 2)
   buyingPower        Decimal              @default(0) @db.Decimal(18, 2)
   currency           String               @default("INR")
-  isLive          Boolean              @default(true)
+  isLive             Boolean              @default(true)
   userId             String               @unique
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -133,7 +134,7 @@ model Account {
   depositRequests    DepositRequest[]
   ipoApplications    IpoApplication[]
   transactions       AccountTransaction[]
-  loanApplications    LoanApplication[]
+  loanApplications   LoanApplication[]
   user               User                 @relation(fields: [userId], references: [id], onDelete: Restrict)
   ipoDebts           IpoDebt[]
   orders             Order[]
@@ -193,33 +194,33 @@ model ApprovalRequest {
 }
 
 model Instrument {
-  id             String         @id @default(uuid())
-  symbol         String
-  exchange       Exchange
-  name           String
-  isin           String?
-  logoUrl        String?
-  category       String?
-  displayOrder   Int            @default(0)
+  id              String              @id @default(uuid())
+  symbol          String
+  exchange        Exchange
+  name            String
+  isin            String?
+  logoUrl         String?
+  category        String?
+  displayOrder    Int                 @default(0)
   /// Home surface featured flag (does not duplicate catalog data).
-  featuredHome   Boolean        @default(false)
+  featuredHome    Boolean             @default(false)
   /// Markets surface featured flag (does not duplicate catalog data).
-  featuredMarkets Boolean       @default(false)
-  type           InstrumentType @default(EQUITY)
-  currency       String         @default("INR")
-  lotSize        Int            @default(1)
-  tickSize       Decimal        @default(0.05) @db.Decimal(10, 2)
-  isActive       Boolean        @default(true)
-  createdAt      DateTime       @default(now())
-  updatedAt      DateTime       @updatedAt
-  quote          MarketQuote?
-  orders         Order[]
-  positions      Position[]
-  trades         Trade[]
-  otcOffer       OtcOffer?
-  otcOrders      OtcOrder[]
-  ipos           Ipo[]
-  watchlistItems UserWatchlistItem[]
+  featuredMarkets Boolean             @default(false)
+  type            InstrumentType      @default(EQUITY)
+  currency        String              @default("INR")
+  lotSize         Int                 @default(1)
+  tickSize        Decimal             @default(0.05) @db.Decimal(10, 2)
+  isActive        Boolean             @default(true)
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+  quote           MarketQuote?
+  orders          Order[]
+  positions       Position[]
+  trades          Trade[]
+  otcOffer        OtcOffer?
+  otcOrders       OtcOrder[]
+  ipos            Ipo[]
+  watchlistItems  UserWatchlistItem[]
 
   @@unique([exchange, symbol])
   @@index([symbol])
@@ -343,23 +344,86 @@ model AuditLog {
   @@map("audit_logs")
 }
 
+model ReconciliationRun {
+  id           String                @id @default(uuid())
+  status       String                @default("RUNNING")
+  startedAt    DateTime              @default(now())
+  completedAt  DateTime?
+  durationMs   Int?
+  issueCount   Int                   @default(0)
+  errorSummary String?
+  createdAt    DateTime              @default(now())
+  issues       ReconciliationIssue[]
+
+  @@index([startedAt])
+  @@index([status, startedAt])
+  @@map("reconciliation_runs")
+}
+
+model ReconciliationIssue {
+  id              String            @id @default(uuid())
+  runId           String
+  checkType       String
+  severity        String            @default("HIGH")
+  entityType      String
+  entityId        String?
+  summary         String
+  details         Json?
+  acknowledgedAt  DateTime?
+  acknowledgedBy  String?
+  acknowledgeNote String?
+  createdAt       DateTime          @default(now())
+  run             ReconciliationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+
+  @@index([runId, severity])
+  @@index([checkType, createdAt])
+  @@index([acknowledgedAt])
+  @@map("reconciliation_issues")
+}
+
+model OutboxEvent {
+  id               String    @id @default(uuid())
+  eventId          String    @unique
+  type             String
+  aggregateType    String
+  aggregateId      String
+  aggregateVersion Int
+  schemaVersion    Int       @default(1)
+  occurredAt       DateTime
+  correlationId    String?
+  payload          Json
+  status           String    @default("PENDING")
+  attempts         Int       @default(0)
+  availableAt      DateTime  @default(now())
+  leasedUntil      DateTime?
+  processedAt      DateTime?
+  lastError        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([status, availableAt, createdAt])
+  @@index([leasedUntil])
+  @@index([aggregateType, aggregateId, aggregateVersion])
+  @@map("outbox_events")
+}
+
 model BusinessManagerAssignmentHistory {
-  id                         String   @id @default(uuid())
-  businessUserId             String
-  previousManagerId          String?
-  newManagerId               String?
-  reason                     String
-  changedById                String
-  idempotencyKey             String   @unique
-  businessEmployeeNo         String?
-  previousManagerEmployeeNo  String?
-  newManagerEmployeeNo       String?
-  clientCountAtChange        Int      @default(0)
-  createdAt                  DateTime @default(now())
-  businessUser               User     @relation("AssignmentBusiness", fields: [businessUserId], references: [id], onDelete: Restrict)
-  previousManager            User?    @relation("AssignmentPreviousManager", fields: [previousManagerId], references: [id], onDelete: Restrict)
-  newManager                 User?    @relation("AssignmentNewManager", fields: [newManagerId], references: [id], onDelete: Restrict)
-  changedBy                  User     @relation("AssignmentChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
+  id                        String   @id @default(uuid())
+  businessUserId            String
+  previousManagerId         String?
+  newManagerId              String?
+  reason                    String
+  changedById               String
+  idempotencyKey            String   @unique
+  businessEmployeeNo        String?
+  previousManagerEmployeeNo String?
+  newManagerEmployeeNo      String?
+  clientCountAtChange       Int      @default(0)
+  createdAt                 DateTime @default(now())
+  businessUser              User     @relation("AssignmentBusiness", fields: [businessUserId], references: [id], onDelete: Restrict)
+  previousManager           User?    @relation("AssignmentPreviousManager", fields: [previousManagerId], references: [id], onDelete: Restrict)
+  newManager                User?    @relation("AssignmentNewManager", fields: [newManagerId], references: [id], onDelete: Restrict)
+  changedBy                 User     @relation("AssignmentChangedBy", fields: [changedById], references: [id], onDelete: Restrict)
 
   @@index([businessUserId, createdAt])
   @@index([previousManagerId, createdAt])
@@ -390,9 +454,9 @@ model Ipo {
 }
 
 model IpoApplication {
-  draftQuantity Int?
-  draftPrice Decimal? @db.Decimal(18, 2)
-  publishedAt DateTime?
+  draftQuantity     Int?
+  draftPrice        Decimal?             @db.Decimal(18, 2)
+  publishedAt       DateTime?
   id                String               @id @default(uuid())
   ipoId             String
   accountId         String
@@ -444,17 +508,17 @@ model LoginAudit {
 }
 
 model SupportConversation {
-  id          String           @id @default(uuid())
-  clientId    String
-  status      SupportStatus    @default(OPEN)
-  tags        String[]         @default([])
+  id           String           @id @default(uuid())
+  clientId     String
+  status       SupportStatus    @default(OPEN)
+  tags         String[]         @default([])
   internalNote String?
-  priority    String           @default("普通")
+  priority     String           @default("普通")
   assignedToId String?
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  client      User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  messages    SupportMessage[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  client       User             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  messages     SupportMessage[]
 
   @@index([clientId])
   @@index([status])
@@ -470,7 +534,7 @@ model SupportMessage {
   attachmentName String?
   attachmentUrl  String?
   attachmentType String?
-  readAt          DateTime?
+  readAt         DateTime?
   createdAt      DateTime            @default(now())
   conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User                @relation(fields: [senderId], references: [id])
@@ -500,78 +564,79 @@ model BankAccount {
 }
 
 model UserPreference {
-  id                 String   @id @default(uuid())
-  userId             String   @unique
-  orderNotifications Boolean  @default(true)
-  accountNotifications Boolean @default(true)
-  supportNotifications Boolean @default(true)
-  biometricEnabled   Boolean  @default(false)
-  language           String   @default("en")
-  theme              String   @default("light")
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
-  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                   String   @id @default(uuid())
+  userId               String   @unique
+  orderNotifications   Boolean  @default(true)
+  accountNotifications Boolean  @default(true)
+  supportNotifications Boolean  @default(true)
+  biometricEnabled     Boolean  @default(false)
+  language             String   @default("en")
+  theme                String   @default("light")
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_preferences")
 }
 
 model Notification {
-  id        String   @id @default(uuid())
-  userId    String
-  type      String
-  title     String
-  body      String
-  referenceId String?
-  readAt    DateTime?
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String    @id @default(uuid())
+  userId        String
+  type          String
+  title         String
+  body          String
+  referenceId   String?
+  outboxEventId String?   @unique
+  readAt        DateTime?
+  createdAt     DateTime  @default(now())
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt, createdAt])
   @@map("notifications")
 }
 
 model UserDevice {
-  id          String   @id @default(uuid())
-  userId      String
-  deviceName  String
-  platform    String
-  pushToken   String?
-  lastIp      String?
-  lastSeenAt  DateTime @default(now())
-  revokedAt   DateTime?
-  createdAt   DateTime @default(now())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id         String    @id @default(uuid())
+  userId     String
+  deviceName String
+  platform   String
+  pushToken  String?
+  lastIp     String?
+  lastSeenAt DateTime  @default(now())
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@map("user_devices")
 }
 
 model PortfolioSnapshot {
-  id          String   @id @default(uuid())
-  accountId   String
-  cashValue   Decimal  @db.Decimal(18, 2)
-  instValue   Decimal  @db.Decimal(18, 2)
-  otcValue    Decimal  @db.Decimal(18, 2)
-  ipoValue    Decimal  @db.Decimal(18, 2)
-  totalValue  Decimal  @db.Decimal(18, 2)
-  profitValue Decimal? @db.Decimal(18, 2)
+  id                 String   @id @default(uuid())
+  accountId          String
+  cashValue          Decimal  @db.Decimal(18, 2)
+  instValue          Decimal  @db.Decimal(18, 2)
+  otcValue           Decimal  @db.Decimal(18, 2)
+  ipoValue           Decimal  @db.Decimal(18, 2)
+  totalValue         Decimal  @db.Decimal(18, 2)
+  profitValue        Decimal? @db.Decimal(18, 2)
   productProfitValue Decimal? @db.Decimal(18, 2)
-  capturedAt  DateTime @default(now())
-  account     Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  capturedAt         DateTime @default(now())
+  account            Account  @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId, capturedAt])
   @@map("portfolio_snapshots")
 }
 
 model PasswordResetCode {
-  id        String   @id @default(uuid())
+  id        String    @id @default(uuid())
   userId    String
   codeHash  String
   expiresAt DateTime
   usedAt    DateTime?
-  attempts  Int      @default(0)
-  createdAt DateTime @default(now())
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  attempts  Int       @default(0)
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, expiresAt])
   @@map("password_reset_codes")
@@ -594,42 +659,42 @@ model DepositRequest {
 }
 
 model WithdrawalRequest {
-  id            String           @id @default(uuid())
-  orderNo       String?          @unique
+  id              String           @id @default(uuid())
+  orderNo         String?          @unique
   clientRequestId String?
-  accountId     String
-  amount        Decimal          @db.Decimal(18, 2)
-  frozenAmount  Decimal          @default(0) @db.Decimal(18, 2)
-  bankName      String?
-  accountNumber String?
-  ifscCode      String?
-  upiId         String?
-  note          String?
-  status        WithdrawalStatus @default(PENDING)
-  createdAt     DateTime         @default(now())
-  updatedAt     DateTime         @updatedAt
-  account       Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId       String
+  amount          Decimal          @db.Decimal(18, 2)
+  frozenAmount    Decimal          @default(0) @db.Decimal(18, 2)
+  bankName        String?
+  accountNumber   String?
+  ifscCode        String?
+  upiId           String?
+  note            String?
+  status          WithdrawalStatus @default(PENDING)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  account         Account          @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
+  @@unique([accountId, clientRequestId])
   @@index([accountId])
   @@index([status])
   @@index([orderNo])
-  @@unique([accountId, clientRequestId])
   @@map("withdrawal_requests")
 }
 
 model AdminWatchlistItem {
-  id        String   @id @default(uuid())
-  symbol    String
-  name      String
-  market    String   @default("NSE")
-  category  String
-  risk      String
-  status    String   @default("ACTIVE")
-  reason    String?
-  direction String   @default("UP")
+  id             String   @id @default(uuid())
+  symbol         String
+  name           String
+  market         String   @default("NSE")
+  category       String
+  risk           String
+  status         String   @default("ACTIVE")
+  reason         String?
+  direction      String   @default("UP")
   expectedReturn Decimal? @db.Decimal(8, 2)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@index([symbol])
   @@index([status])
@@ -637,25 +702,25 @@ model AdminWatchlistItem {
 }
 
 model OtcOffer {
-  id           String    @id @default(uuid())
-  instrumentId String    @unique
-    price        Decimal   @db.Decimal(18, 4)
-    priceTier2   Decimal?  @db.Decimal(18, 4)
-    priceTier3   Decimal?  @db.Decimal(18, 4)
-    profitTier1  Decimal?  @db.Decimal(8, 2)
-    profitTier2  Decimal?  @db.Decimal(8, 2)
-    profitTier3  Decimal?  @db.Decimal(8, 2)
-    keyHashTier1 String?
-    keyHashTier2 String?
-    keyHashTier3 String?
-    transactionKeyEncrypted String?
-  isActive     Boolean   @default(true)
-  validFrom    DateTime
-  validUntil   DateTime
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  instrument   Instrument @relation(fields: [instrumentId], references: [id])
-  orders       OtcOrder[]
+  id                      String     @id @default(uuid())
+  instrumentId            String     @unique
+  price                   Decimal    @db.Decimal(18, 4)
+  priceTier2              Decimal?   @db.Decimal(18, 4)
+  priceTier3              Decimal?   @db.Decimal(18, 4)
+  profitTier1             Decimal?   @db.Decimal(8, 2)
+  profitTier2             Decimal?   @db.Decimal(8, 2)
+  profitTier3             Decimal?   @db.Decimal(8, 2)
+  keyHashTier1            String?
+  keyHashTier2            String?
+  keyHashTier3            String?
+  transactionKeyEncrypted String?
+  isActive                Boolean    @default(true)
+  validFrom               DateTime
+  validUntil              DateTime
+  createdAt               DateTime   @default(now())
+  updatedAt               DateTime   @updatedAt
+  instrument              Instrument @relation(fields: [instrumentId], references: [id])
+  orders                  OtcOrder[]
 
   @@index([isActive, validFrom, validUntil])
   @@map("otc_offers")
@@ -668,8 +733,8 @@ model OtcOrder {
   offerId      String
   instrumentId String
   quantity     Int
-    price        Decimal        @db.Decimal(18, 4)
-    priceTier    Int            @default(1)
+  price        Decimal        @db.Decimal(18, 4)
+  priceTier    Int            @default(1)
   amount       Decimal        @db.Decimal(18, 2)
   status       OtcOrderStatus @default(PENDING)
   reviewNote   String?
@@ -688,17 +753,17 @@ model OtcOrder {
 }
 
 model AdminBlockTrade {
-  id          String   @id @default(uuid())
-  orderNo     String   @unique
-  symbol      String
-  side        String
-  quantity    Int
-  price       Decimal  @db.Decimal(18, 4)
-  minTicket   Decimal  @db.Decimal(18, 2)
-  status      String   @default("审核中")
-  note        String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(uuid())
+  orderNo   String   @unique
+  symbol    String
+  side      String
+  quantity  Int
+  price     Decimal  @db.Decimal(18, 4)
+  minTicket Decimal  @db.Decimal(18, 2)
+  status    String   @default("审核中")
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@index([symbol])
   @@index([status])
@@ -890,23 +955,23 @@ enum BankAccountStatus {
 }
 
 model LoanApplication {
-  id             String     @id @default(uuid())
-  orderNo        String     @unique
-  accountId      String
-  requestedAmount Decimal   @db.Decimal(18, 2)
-  approvedAmount  Decimal?  @db.Decimal(18, 2)
-  outstandingAmount Decimal @default(0) @db.Decimal(18, 2)
-  interestRate   Decimal    @default(0) @db.Decimal(8, 2)
-  dueDate        DateTime?
-  status         LoanStatus @default(PENDING)
-  note           String?
-  approvedById   String?
-  approvedAt     DateTime?
-  disbursedAt    DateTime?
-  closedAt       DateTime?
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
-  account        Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  id                String     @id @default(uuid())
+  orderNo           String     @unique
+  accountId         String
+  requestedAmount   Decimal    @db.Decimal(18, 2)
+  approvedAmount    Decimal?   @db.Decimal(18, 2)
+  outstandingAmount Decimal    @default(0) @db.Decimal(18, 2)
+  interestRate      Decimal    @default(0) @db.Decimal(8, 2)
+  dueDate           DateTime?
+  status            LoanStatus @default(PENDING)
+  note              String?
+  approvedById      String?
+  approvedAt        DateTime?
+  disbursedAt       DateTime?
+  closedAt          DateTime?
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  account           Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
   @@index([orderNo])
@@ -960,21 +1025,21 @@ enum AppContentModule {
 }
 
 model AppContentEntry {
-  id        String           @id @default(uuid())
-  module    AppContentModule
-  key       String
-  title     String?
-  body      String           @db.Text
-  locale    String           @default("en")
-  metadata  Json?
-  isActive  Boolean          @default(true)
+  id                String                      @id @default(uuid())
+  module            AppContentModule
+  key               String
+  title             String?
+  body              String                      @db.Text
+  locale            String                      @default("en")
+  metadata          Json?
+  isActive          Boolean                     @default(true)
   publicationStatus AppContentPublicationStatus @default(PUBLISHED)
-  publishAt DateTime?
-  expiresAt DateTime?
-  version Int @default(1)
-  sortOrder Int              @default(0)
-  createdAt DateTime         @default(now())
-  updatedAt DateTime         @updatedAt
+  publishAt         DateTime?
+  expiresAt         DateTime?
+  version           Int                         @default(1)
+  sortOrder         Int                         @default(0)
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
 
   @@unique([module, key, locale])
   @@index([module, isActive])
@@ -1070,30 +1135,30 @@ model AppClientSetting {
 /// Existing KYC table alignment (created by prior SQL migrations).
 /// Raw SQL KYC service paths may remain; this does not change KYC UX/flow.
 model KycSubmission {
-  id                String    @id @default(uuid())
-  userId            String
-  businessUserId    String
-  documentType      String
-  status            String    @default("PENDING")
-  fileName          String
-  filePath          String
-  mimeType          String?
-  recognizedType    String?
-  recognizedText    String?
-  reviewNote        String?
-  reviewedById      String?
-  reviewedAt        DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  backFileName      String?
-  backFilePath      String?
-  backMimeType      String?
-  selfieFilePath    String?
-  selfieMimeType    String?
-  signatureFilePath String?
-  fullName          String?
-  bankDetails       Json?
-  idempotencyKey    String?   @unique
+  id                 String    @id @default(uuid())
+  userId             String
+  businessUserId     String
+  documentType       String
+  status             String    @default("PENDING")
+  fileName           String
+  filePath           String
+  mimeType           String?
+  recognizedType     String?
+  recognizedText     String?
+  reviewNote         String?
+  reviewedById       String?
+  reviewedAt         DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  backFileName       String?
+  backFilePath       String?
+  backMimeType       String?
+  selfieFilePath     String?
+  selfieMimeType     String?
+  signatureFilePath  String?
+  fullName           String?
+  bankDetails        Json?
+  idempotencyKey     String?   @unique
   requestFingerprint String?
 
   @@index([userId])
@@ -1103,17 +1168,17 @@ model KycSubmission {
 
 /// Super-admin VIP display/recommendation thresholds. Never auto-writes User.clientTier.
 model VipTierConfiguration {
-  id                       String    @id @default(uuid())
-  tierCode                 String    @unique
+  id                       String   @id @default(uuid())
+  tierCode                 String   @unique
   displayName              String
-  description              String    @default("")
-  minimumCumulativeDeposit Decimal?  @db.Decimal(18, 2)
-  displayOrder             Int       @unique
-  isActive                 Boolean   @default(true)
-  createdAt                DateTime  @default(now())
-  updatedAt                DateTime  @updatedAt
+  description              String   @default("")
+  minimumCumulativeDeposit Decimal? @db.Decimal(18, 2)
+  displayOrder             Int      @unique
+  isActive                 Boolean  @default(true)
+  createdAt                DateTime @default(now())
+  updatedAt                DateTime @updatedAt
   updatedById              String?
-  updatedBy                User?     @relation("VipTierConfigUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
+  updatedBy                User?    @relation("VipTierConfigUpdater", fields: [updatedById], references: [id], onDelete: SetNull)
 
   @@map("vip_tier_configurations")
 }

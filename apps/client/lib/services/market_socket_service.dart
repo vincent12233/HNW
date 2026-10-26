@@ -11,6 +11,35 @@ import 'market_data_service.dart';
 typedef MarketQuoteListener = void Function(Map<String, dynamic> quote);
 typedef MarketConnectionListener = void Function(bool connected);
 
+class MarketQuoteFreshnessGate {
+  final Map<String, DateTime> _latest = <String, DateTime>{};
+  final Map<String, int> _sequences = <String, int>{};
+
+  bool accept(String key, DateTime updatedAt, [int? sequence]) {
+    final latestSequence = _sequences[key];
+    if (sequence != null &&
+        latestSequence != null &&
+        sequence <= latestSequence) {
+      return false;
+    }
+    final latest = _latest[key];
+    if (latest != null && !updatedAt.isAfter(latest)) return false;
+    _latest[key] = updatedAt;
+    if (sequence != null) _sequences[key] = sequence;
+    return true;
+  }
+
+  bool hasSequenceGap(String key, int? sequence) {
+    final latest = _sequences[key];
+    return sequence != null && latest != null && sequence > latest + 1;
+  }
+
+  void clear() {
+    _latest.clear();
+    _sequences.clear();
+  }
+}
+
 class MarketSocketService with WidgetsBindingObserver {
   factory MarketSocketService() => _instance;
 
@@ -25,7 +54,7 @@ class MarketSocketService with WidgetsBindingObserver {
   DateTime? _lastResumeAt;
   DateTime? _lastServerActivityAt;
   Timer? _connectionWatchdog;
-  final Map<String, DateTime> _latestQuoteAt = <String, DateTime>{};
+  final MarketQuoteFreshnessGate _quoteFreshness = MarketQuoteFreshnessGate();
   final Set<MarketQuoteListener> _quoteListeners = <MarketQuoteListener>{};
   final Set<MarketConnectionListener> _connectionListeners =
       <MarketConnectionListener>{};
@@ -100,6 +129,7 @@ class MarketSocketService with WidgetsBindingObserver {
 
     socket.onConnect((_) {
       _lastServerActivityAt = DateTime.now();
+      _quoteFreshness.clear();
       _startConnectionWatchdog();
       _debugLog('Market websocket connected');
       _emitConnection(true);
@@ -225,14 +255,16 @@ class MarketSocketService with WidgetsBindingObserver {
     final exchange = quote['exchange']?.toString().trim().toUpperCase() ?? '';
     final type = quote['type']?.toString().trim().toUpperCase() ?? 'STOCK';
     final updatedAt = DateTime.tryParse(quote['updatedAt']?.toString() ?? '');
+    final sequence = int.tryParse(quote['sequence']?.toString() ?? '');
     if (symbol.isEmpty || updatedAt == null) return;
     if (updatedAt.isAfter(DateTime.now().add(const Duration(minutes: 2)))) {
       return;
     }
     final key = '$type:$exchange:$symbol';
-    final latest = _latestQuoteAt[key];
-    if (latest != null && updatedAt.isBefore(latest)) return;
-    _latestQuoteAt[key] = updatedAt;
+    if (_quoteFreshness.hasSequenceGap(key, sequence)) {
+      unawaited(refreshSnapshot());
+    }
+    if (!_quoteFreshness.accept(key, updatedAt, sequence)) return;
 
     onQuoteUpdate?.call(quote);
     for (final listener in List<MarketQuoteListener>.from(_quoteListeners)) {
@@ -262,7 +294,7 @@ class MarketSocketService with WidgetsBindingObserver {
     _lastServerActivityAt = null;
     _connectionWatchdog?.cancel();
     _connectionWatchdog = null;
-    _latestQuoteAt.clear();
+    _quoteFreshness.clear();
     _removeLifecycleObserver();
   }
 

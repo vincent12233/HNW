@@ -6,6 +6,9 @@ on:
       - 'apps/client/**'
       - 'scripts/check-flutter-architecture.mjs'
       - 'scripts/flutter-architecture-baseline.json'
+      - 'scripts/check-client-screen-inventory.mjs'
+      - 'scripts/client-screen-inventory.json'
+      - 'scripts/check-client-information-boundary.mjs'
       - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
   push:
@@ -15,6 +18,9 @@ on:
       - 'apps/client/**'
       - 'scripts/check-flutter-architecture.mjs'
       - 'scripts/flutter-architecture-baseline.json'
+      - 'scripts/check-client-screen-inventory.mjs'
+      - 'scripts/client-screen-inventory.json'
+      - 'scripts/check-client-information-boundary.mjs'
       - 'AGENTS.md'
       - '.github/workflows/flutter-ci.yml'
 
@@ -39,7 +45,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.44.8'
+          flutter-version: '3.47.0'
           channel: stable
           cache: true
 
@@ -49,6 +55,18 @@ jobs:
       - name: Enforce Flutter architecture rules
         working-directory: .
         run: node ./scripts/check-flutter-architecture.mjs
+
+      - name: Enforce client screen inventory
+        working-directory: .
+        run: node ./scripts/check-client-screen-inventory.mjs
+
+      - name: Enforce customer information boundary
+        working-directory: .
+        run: node ./scripts/check-client-information-boundary.mjs
+
+      - name: Verify protected customer and trading flows
+        working-directory: .
+        run: bash ./scripts/verify-protected-flows.sh --flutter-only
 
       - name: Analyze
         # Errors and warnings block; infos stay non-fatal.

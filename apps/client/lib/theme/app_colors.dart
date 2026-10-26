@@ -61,6 +61,8 @@ abstract final class AppColors {
   // Overlays & disabled
   static const Color disabled = Color(0xFFE2E8F0);
   static const Color scrim = Color(0x66102A56);
+  static const Color surfaceShadow = Color(0x120F2942);
+  static const Color brandShadow = Color(0x262558D9);
 
   // Navigation
   static const Color navSelected = brandPrimary;

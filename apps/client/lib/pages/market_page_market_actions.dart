@@ -94,7 +94,7 @@ extension _MarketHomeMarketActions on _MarketHomePageState {
               padding: const EdgeInsets.symmetric(horizontal: 4),
               alignment: Alignment.center,
               decoration: const BoxDecoration(
-                color: Color(0xFFEF233C),
+                color: AppColors.loss,
                 shape: BoxShape.circle,
               ),
               child: AppText(
@@ -102,7 +102,7 @@ extension _MarketHomeMarketActions on _MarketHomePageState {
                     ? '9+'
                     : unreadNotificationCount.toString(),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppColors.textInverse,
                   fontSize: 9,
                   fontWeight: FontWeight.w800,
                 ),
@@ -216,6 +216,29 @@ extension _MarketHomeMarketActions on _MarketHomePageState {
       });
 
       return null;
+    } on TradingException catch (error) {
+      final clientOrderId = order.clientOrderId?.trim() ?? '';
+      if (clientOrderId.isNotEmpty &&
+          error.message.contains('Order confirmation is unavailable')) {
+        try {
+          final reconciled = await tradingService.findOrderByClientOrderId(
+            clientOrderId,
+          );
+          if (reconciled != null && mounted) {
+            final updatedOrders = mergeConfirmedOrder(reconciled, orders);
+            _updateState(() {
+              orders
+                ..clear()
+                ..addAll(updatedOrders);
+            });
+            return null;
+          }
+        } catch (_) {
+          // Keep the original uncertain result. The same clientOrderId is
+          // retained so any later retry remains idempotent.
+        }
+      }
+      return error.message;
     } catch (error) {
       return error.toString();
     }

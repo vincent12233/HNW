@@ -14,6 +14,9 @@ $testScript = Join-Path $testScripts 'verify-all.ps1'
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot '..\verify-all.ps1') -Destination $testScript
 Set-Content -LiteralPath (Join-Path $testScriptTests 'recovery-drill.test.ps1') -Value 'Write-Host recovery-test-stub' -Encoding utf8
 Set-Content -LiteralPath (Join-Path $testScriptTests 'production-operations.test.mjs') -Value '// production operations test stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScriptTests 'enterprise-operations.test.mjs') -Value '// enterprise operations test stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScripts 'verify-protected-flows.ps1') -Value 'Write-Host protected-flow-test-stub' -Encoding utf8
+Set-Content -LiteralPath (Join-Path $testScripts 'verify-release-config.ps1') -Value 'Write-Host release-config-test-stub' -Encoding utf8
 
 function Get-Command {
   [CmdletBinding()]

@@ -4,6 +4,19 @@
   --background: #eef3f8;
   --foreground: #102033;
   --brand: #1677ff;
+  --surface: #ffffff;
+  --surface-subtle: #f6f8fc;
+  --border: #dce3ee;
+  --text-secondary: #475569;
+  --focus-ring: #1677ff;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --radius-control: 8px;
+  --control-min-height: 44px;
   --role-accent: #1677ff;
   --role-accent-soft: #1677ff22;
   --sider-from: #061426;
@@ -405,7 +418,7 @@ body {
 .ops-layout :is(button, a, input, [tabindex="0"]):focus-visible,
 .ops-nav-drawer :is(button, a, [tabindex="0"]):focus-visible,
 .admin-login :is(button, a, input):focus-visible {
-  outline: 3px solid #1677ff;
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 

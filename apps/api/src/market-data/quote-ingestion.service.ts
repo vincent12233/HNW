@@ -1,18 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { Exchange } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import { MarketDataHealthService } from './market-data-health.service';
 import { MarketQuoteResult } from './providers/market-data-provider.interface';
 import { MarketDataGateway } from './websocket/market-data/market-data.gateway';
+import { MarketTimeseriesService } from '../market-timeseries/market-timeseries.service';
 
 @Injectable()
 export class QuoteIngestionService {
   private readonly latestIndices = new Map<string, Record<string, unknown>>();
+  private readonly sequences = new Map<string, number>();
 
   constructor(
     private readonly prisma: PrismaService,
     private readonly gateway: MarketDataGateway,
     private readonly health: MarketDataHealthService,
+    @Optional() private readonly timeseries?: MarketTimeseriesService,
   ) {}
 
   async ingest(
@@ -26,9 +29,15 @@ export class QuoteIngestionService {
     ) {
       return;
     }
-    const payload = this.toPayload(exchange, quote, type);
+    const sequenceKey = `${type}:${exchange.trim().toUpperCase()}:${quote.symbol.trim().toUpperCase()}`;
 
     if (type === 'INDEX') {
+      const payload = this.toPayload(
+        exchange,
+        quote,
+        type,
+        this.nextSequence(sequenceKey),
+      );
       this.latestIndices.set(quote.symbol, payload);
       this.health.recordQuote(quote.source, quote.updatedAt);
       this.gateway.emitQuoteUpdate(payload);
@@ -52,7 +61,7 @@ export class QuoteIngestionService {
       );
     }
 
-    if (instrument.quote && quote.updatedAt < instrument.quote.asOf) {
+    if (instrument.quote && quote.updatedAt <= instrument.quote.asOf) {
       return;
     }
 
@@ -86,6 +95,23 @@ export class QuoteIngestionService {
     });
 
     this.health.recordQuote(quote.source, quote.updatedAt);
+    const payload = this.toPayload(
+      exchange,
+      quote,
+      type,
+      this.nextSequence(sequenceKey),
+    );
+    this.timeseries?.appendTick({
+      instrumentId: instrument.id,
+      exchange: normalizedExchange,
+      symbol: quote.symbol,
+      sequence: payload.sequence,
+      price: payload.price,
+      volume: Number(quote.volume || 0),
+      sourceTimestamp: quote.updatedAt,
+      receivedAt: payload.receivedAt,
+      quality: payload.quality,
+    });
     this.gateway.emitQuoteUpdate(payload);
   }
 
@@ -97,7 +123,12 @@ export class QuoteIngestionService {
     exchange: string,
     quote: MarketQuoteResult,
     type: 'STOCK' | 'INDEX',
+    sequence: number,
   ) {
+    const receivedAt = new Date();
+    const ageMs = Math.max(0, receivedAt.getTime() - quote.updatedAt.getTime());
+    const quality: 'LIVE' | 'DELAYED' | 'STALE' =
+      ageMs > 60_000 ? 'STALE' : ageMs > 15_000 ? 'DELAYED' : 'LIVE';
     return {
       type,
       symbol: quote.symbol,
@@ -112,7 +143,17 @@ export class QuoteIngestionService {
       bidPrice: quote.bidPrice !== null ? Number(quote.bidPrice) : null,
       askPrice: quote.askPrice !== null ? Number(quote.askPrice) : null,
       updatedAt: quote.updatedAt,
+      sourceTimestamp: quote.updatedAt,
+      receivedAt,
+      sequence,
+      quality,
     };
+  }
+
+  private nextSequence(key: string): number {
+    const next = (this.sequences.get(key) ?? 0) + 1;
+    this.sequences.set(key, next);
+    return next;
   }
 
   private parseExchange(value: string): Exchange {

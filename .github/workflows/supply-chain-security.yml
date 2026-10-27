@@ -43,6 +43,8 @@ jobs:
           printf '{"sha":"%s","runId":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > supply-chain-evidence/provenance.json
       - name: Detect committed secrets with gitleaks
         uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        with:
+          args: detect --redact -v --gitleaks-ignore-path=.gitleaksignore
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

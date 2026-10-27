@@ -1,0 +1,16 @@
+# Reviewed synthetic test/example findings from the repository's complete history.
+# Keep these entries fingerprint-specific: new content and changed lines must fail.
+5de26bac81233144d2715cf1b6452ed7fdff5dac:scripts/tests/production-operations.test.mjs:generic-api-key:32
+04841ad8ec774c5cf26ae6d09048d65798bdb977:docs/superpowers/plans/2026-10-22-hnw-read-api-database-plan.md:generic-api-key:94
+0832e3a9e1ef0312620f91187c007b1885c8fcd5:.env.production.example:generic-api-key:9
+0832e3a9e1ef0312620f91187c007b1885c8fcd5:.env.production.example:generic-api-key:14
+0832e3a9e1ef0312620f91187c007b1885c8fcd5:.env.production.example:generic-api-key:15
+0832e3a9e1ef0312620f91187c007b1885c8fcd5:.env.production.example:generic-api-key:16
+0832e3a9e1ef0312620f91187c007b1885c8fcd5:.env.production.example:generic-api-key:17
+0832e3a9e1ef0312620f91187c007b1885c8fcd5:.env.production.example:generic-api-key:18
+23fc7b193a30f9c8fd4e45fe7ce2d357caa7d162:.github/workflows/api-ci.yml:generic-api-key:24
+23fc7b193a30f9c8fd4e45fe7ce2d357caa7d162:.github/workflows/api-ci.yml:generic-api-key:25
+23fc7b193a30f9c8fd4e45fe7ce2d357caa7d162:.github/workflows/api-ci.yml:generic-api-key:27
+f351711bb9c811f652756e1e3b4c43aea5b0627b:apps/admin/tests/g5-governance.test.mjs:generic-api-key:52
+de9823dbb46db176f731ff8d0651ed5e11694ca8:apps/api/TRUEDATA_LIVE_TESTING.md:generic-api-key:37
+c89993a15ec8d66b913634db4a7e2d4748e2f98f:apps/api/TRUEDATA_LIVE_TESTING.md:generic-api-key:37

@@ -41,3 +41,19 @@ test('security policy documents SBOM and vulnerability evidence handling', () =>
   assert.match(policy, /HIGH.*CRITICAL|High.*Critical/i);
   assert.match(policy, /false positive|误报/i);
 });
+
+test('gitleaks exceptions are reviewed historical fingerprints only', () => {
+  const ignored = read('.gitleaksignore')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+  assert.equal(ignored.length, 14);
+  assert.ok(ignored.every((line) => /^[0-9a-f]{40}:[^:]+:generic-api-key:\d+$/.test(line)));
+  assert.ok(ignored.every((line) => !line.includes('*')));
+  assert.ok(ignored.every((line) => line.split(':').length === 4));
+
+  const workflow = read('.github/workflows/supply-chain-security.yml');
+  assert.match(workflow, /fetch-depth:\s*0/);
+  assert.match(workflow, /--gitleaks-ignore-path[=\s]+\.gitleaksignore/);
+  assert.doesNotMatch(workflow, /continue-on-error:\s*true[\s\S]*gitleaks/);
+});

@@ -68,7 +68,7 @@ jobs:
           NODE
       - name: Build repository acceptance manifest
         run: node scripts/production-acceptance.mjs --sha "$GITHUB_SHA" --evidence-dir acceptance-evidence --gate repository --output enterprise-acceptance.json
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: enterprise-acceptance-${{ github.sha }}

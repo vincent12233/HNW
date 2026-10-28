@@ -92,7 +92,7 @@ jobs:
         run: |
           mkdir -p release-evidence
           printf '{"sha":"%s","imageDigest":"%s","runId":"%s","environment":"production"}\n' "$GITHUB_SHA" "$IMAGE_DIGEST" "$GITHUB_RUN_ID" > release-evidence/deployment.json
-      - uses: actions/upload-artifact@v6
+      - uses: actions/upload-artifact@v7
         with:
           name: production-release-evidence-${{ github.sha }}
           path: release-evidence/deployment.json

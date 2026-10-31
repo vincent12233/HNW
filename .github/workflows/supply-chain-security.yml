@@ -42,7 +42,7 @@ jobs:
           npx --yes @cyclonedx/cyclonedx-npm@4.1.2 --package-lock-only --output-file supply-chain-evidence/admin-sbom.json apps/admin/package.json
           printf '{"sha":"%s","runId":"%s"}\n' "$GITHUB_SHA" "$GITHUB_RUN_ID" > supply-chain-evidence/provenance.json
       - name: Detect committed secrets with gitleaks
-        uses: gitleaks/gitleaks-action@dcedce43c6f43de0b836d1fe38946645c9c638dc # v2
+        uses: gitleaks/gitleaks-action@ff98106e4c7b2bc287b24eaf42907196329070c7 # v2
         with:
           args: detect --redact -v --gitleaks-ignore-path=.gitleaksignore
         env:

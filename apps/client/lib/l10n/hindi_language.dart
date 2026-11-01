@@ -326,8 +326,8 @@ const hindi = <String, String>{
   'Application submitted. Allocation is pending relationship manager review.':
       'आवेदन जमा हुआ। आवंटन की समीक्षा लंबित है।',
   'Subscription completed': 'सदस्यता पूरी हुई',
-  'Contact support for payment details. After you pay, finance credits your account. Deposits are not submitted inside the app.':
-      'भुगतान की जानकारी के लिए सहायता से संपर्क करें। भुगतान के बाद वित्त टीम आपके खाते में राशि जमा करेगी। जमा अनुरोध ऐप के अंदर नहीं भेजे जाते।',
+  'Contact support to add funds. Payment is applied automatically after deposit.':
+      'राशि जोड़ने के लिए सहायता से संपर्क करें। जमा के बाद भुगतान अपने आप लागू होगा।',
   'No shares were allocated for this application.':
       'इस आवेदन में कोई शेयर आवंटित नहीं हुआ।',
   'This application was cancelled.': 'यह आवेदन रद्द किया गया।',

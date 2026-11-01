@@ -36,12 +36,12 @@ extension _AccountSettingsKycSection on _AccountSettingsPageState {
           message: reviewNote?.isNotEmpty == true
               ? reviewNote!
               : status == 'PENDING'
-              ? 'Your documents are being checked manually. No further action is required right now.'
+              ? 'Your documents are under review. No further action is required right now.'
               : status == 'APPROVED'
               ? 'Your identity verification is complete.'
               : status == 'REJECTED'
               ? 'Review the note and submit corrected documents when ready.'
-              : 'Submit the requested details for manual review.',
+              : 'Submit the requested details for identity review.',
           status: label,
           nextStep: status == 'APPROVED'
               ? 'No action is required. Keep your profile details current.'
@@ -59,7 +59,7 @@ extension _AccountSettingsKycSection on _AccountSettingsPageState {
                     : AppStatusStepState.current,
               ),
               AppStatusStep(
-                label: 'Manual review',
+                label: 'Identity review',
                 state: decided
                     ? AppStatusStepState.done
                     : status == 'PENDING'

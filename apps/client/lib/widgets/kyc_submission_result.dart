@@ -19,7 +19,7 @@ class KycSubmissionResult extends StatelessWidget {
           icon: Icons.fact_check_outlined,
           title: tr('Documents received'),
           message: tr(
-            'Your identity documents were submitted successfully and are waiting for manual review.',
+            'Your identity documents were submitted successfully and are now under review.',
           ),
           status: tr('Submitted'),
           nextStep: tr(
@@ -33,9 +33,9 @@ class KycSubmissionResult extends StatelessWidget {
                 state: AppStatusStepState.done,
               ),
               AppStatusStep(
-                label: tr('Manual review'),
+                label: tr('Identity review'),
                 description: tr(
-                  'The review team checks your submitted details',
+                  'Your submitted details are being reviewed',
                 ),
                 state: AppStatusStepState.current,
               ),

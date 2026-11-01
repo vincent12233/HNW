@@ -86,7 +86,7 @@ extension _KycUploadOverviewSection on _KycUploadPageState {
       else
         const VerificationBanner(
           tone: KycBannerTone.info,
-          title: 'Manual review required',
+          title: 'Identity review required',
           subtitle:
               'Complete each step below. Uploading files does not mean KYC is approved.',
         ),

@@ -127,7 +127,7 @@ class _OtcTabState extends State<OtcTab> {
                 'trading',
                 'otc.empty_subtitle',
                 fallback:
-                    'Backend-approved opportunities will appear here during the trading session.',
+                    'Available opportunities will appear here during the trading session.',
               ),
             ),
           ),
@@ -184,7 +184,7 @@ class _OtcTabState extends State<OtcTab> {
                   const AppText('Market quote (reference)'),
                   Text(formatPrice(item.marketPrice)),
                   const SizedBox(height: 8),
-                  const AppText('Discount settlement price'),
+                  const AppText('Offer price'),
                   Text(
                     formatPrice(item.price),
                     style: const TextStyle(
@@ -281,7 +281,7 @@ class _OtcTabState extends State<OtcTab> {
           rows: [
             ('Order', order.orderNo.isEmpty ? 'Unavailable' : order.orderNo),
             ('Quantity', '${order.quantity}'),
-            ('Discount settlement price', formatPrice(order.price)),
+            ('Offer price', formatPrice(order.price)),
             ('Status', label),
             ('Submitted', formatAppDateTime(order.createdAt)),
             (

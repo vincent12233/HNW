@@ -68,7 +68,7 @@ class FundsTab extends StatelessWidget {
           icon: Icons.receipt_long_outlined,
           title: 'No fund transactions',
           message:
-              'Deposits credited by finance and withdrawals you submit will appear here.',
+              'Your deposits and withdrawals will appear here when their status is available.',
           action: onRefresh == null
               ? null
               : OutlinedButton.icon(

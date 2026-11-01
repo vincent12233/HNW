@@ -56,7 +56,10 @@ void main() {
     await tester.pump();
 
     expect(find.textContaining('Contact customer support'), findsWidgets);
-    expect(find.textContaining('finance'), findsWidgets);
+    expect(
+      find.textContaining('For deposit assistance, contact support'),
+      findsOneWidget,
+    );
     expect(find.byType(TextFormField), findsNothing);
   });
 }

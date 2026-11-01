@@ -113,7 +113,7 @@ void main() {
     expect(find.text('Contact customer support'), findsWidgets);
     expect(find.text('Retry'), findsNothing);
     expect(
-      find.textContaining('Deposits are not submitted inside the app'),
+      find.textContaining('Confirmed deposits will appear here once available'),
       findsOneWidget,
     );
   });
@@ -206,7 +206,10 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Contact customer support'), findsWidgets);
-    expect(find.textContaining('finance credits your account'), findsOneWidget);
+    expect(
+      find.textContaining('For deposit assistance, contact support'),
+      findsOneWidget,
+    );
     expect(find.text('Submit deposit'), findsNothing);
     expect(find.text('Request deposit'), findsNothing);
     expect(tester.takeException(), isNull);

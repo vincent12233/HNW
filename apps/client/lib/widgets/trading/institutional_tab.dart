@@ -114,7 +114,7 @@ class InstitutionalTab extends StatelessWidget {
                               AppText('${stock.symbol} · ${stock.exchange}'),
                               const SizedBox(height: 16),
                               AppText(
-                                'Settlement price (live): ${formatPrice(settlementPrice)}',
+                                'Current price: ${formatPrice(settlementPrice)}',
                               ),
                               if (!live && settlementPrice <= 0)
                                 const AppText('Live quote unavailable'),

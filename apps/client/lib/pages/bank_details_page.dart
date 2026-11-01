@@ -131,7 +131,7 @@ class _BankDetailsPageState extends State<BankDetailsPage> {
                                   total: 6,
                                   title: 'Add Bank Account',
                                   subtitle:
-                                      'Enter the bank account that will be used for withdrawals after manual review.',
+                                      'Enter the bank account you want to use for withdrawals.',
                                 )
                               else ...[
                                 AppText(

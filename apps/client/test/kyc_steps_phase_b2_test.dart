@@ -282,7 +282,7 @@ void main() {
       await tester.tap(find.text('Capture Selfie'));
       await tester.pumpAndSettle();
       expect(find.text('Selfie captured'), findsOneWidget);
-      expect(find.text('Waiting for manual review'), findsOneWidget);
+      expect(find.text('Identity review in progress'), findsOneWidget);
       expect(find.text('Retake'), findsOneWidget);
       await tester.tap(find.text('Retake'));
       await tester.pumpAndSettle();
@@ -384,7 +384,7 @@ void main() {
         ),
       );
       expect(find.text('Signature saved'), findsOneWidget);
-      expect(find.text('Waiting for manual review'), findsOneWidget);
+      expect(find.text('Identity review in progress'), findsOneWidget);
       await tester.tap(find.text('Retake Signature'));
       await tester.pump();
       expect(find.byKey(const ValueKey('signature-canvas')), findsOneWidget);
@@ -666,7 +666,7 @@ void main() {
         ),
       );
       expect(find.text('Selfie captured'), findsOneWidget);
-      expect(find.text('Waiting for manual review'), findsOneWidget);
+      expect(find.text('Identity review in progress'), findsOneWidget);
       expect(
         find.descendant(
           of: find.byType(KycStatusSwitch),

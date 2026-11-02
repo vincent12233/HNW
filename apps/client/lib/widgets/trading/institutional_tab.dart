@@ -90,7 +90,7 @@ class InstitutionalTab extends StatelessWidget {
               type: 'Ins. Stock',
               marketPrice: settlementPrice,
               offerPrice: settlementPrice,
-              offerLabel: 'Live settlement',
+              offerLabel: 'Current offer',
               expectedReturn: stock.expectedReturn,
               actionLabel: onOpen == null ? 'View details' : 'Trade Now',
               onTrade: settlementPrice <= 0 && onOpen != null

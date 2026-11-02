@@ -191,7 +191,7 @@ class _KycUploadPageState extends State<KycUploadPage> {
     (
       icon: Icons.face_outlined,
       title: 'Selfie',
-      subtitle: 'A clear photo for manual review',
+      subtitle: 'A clear photo for identity review',
       complete: _reviewLocked || selfieFile != null,
     ),
     (

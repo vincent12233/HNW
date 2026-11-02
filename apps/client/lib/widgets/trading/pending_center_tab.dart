@@ -373,7 +373,7 @@ class _PendingCenterTabState extends State<PendingCenterTab> {
                             ? 'Your IPO allotment is confirmed. Add the required funds to complete your subscription. No further action is needed after funds arrive.'
                             : application.shouldMoveToHoldings
                             ? 'Your allocated shares have been added to your holdings.'
-                            : 'Allocation is recorded. Holdings will update when settlement is complete.',
+                            : 'Allocation is recorded. Holdings will update when the order is complete.',
                       ),
                     ],
                   ),

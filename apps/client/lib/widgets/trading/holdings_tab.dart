@@ -113,7 +113,7 @@ class _HoldingsTabState extends State<HoldingsTab> {
             child: positionList.isEmpty
                 ? _emptyState(
                     'No ${_categoryLabel(selectedCategory)} holdings',
-                    'Positions in this category will appear here after settlement.',
+                    'Positions in this category will appear here after the order is complete.',
                   )
                 : AppStatusSwitch(
                     switchKey:

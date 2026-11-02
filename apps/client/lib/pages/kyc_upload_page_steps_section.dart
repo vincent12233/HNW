@@ -9,8 +9,8 @@ extension _KycUploadStepsSection on _KycUploadPageState {
         total: 6,
         title: pan ? 'Upload PAN Card' : 'Aadhaar Verification',
         subtitle: pan
-            ? 'Upload a clear photo of the front of your PAN. Files are stored for manual review.'
-            : 'Upload clear photos of the front and back of your Aadhaar. Files are stored for manual review.',
+            ? 'Upload a clear photo of the front of your PAN for identity review.'
+            : 'Upload clear photos of the front and back of your Aadhaar for identity review.',
       ),
       const SizedBox(height: AuthLayout.fieldGap),
       AppText(
@@ -42,7 +42,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
       total: 6,
       title: 'Take a Clear Selfie',
       subtitle:
-          'Take a selfie in good lighting. Keep your face fully visible. This photo is stored for manual review.',
+          'Take a selfie in good lighting. Keep your face fully visible for identity review.',
     ),
     const SizedBox(height: AuthLayout.fieldGap),
     KycSelfieFrame(bytes: selfieFile?.bytes),
@@ -64,7 +64,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
                 ),
                 SizedBox(height: 4),
                 AppText(
-                  'Waiting for manual review',
+                  'Identity review in progress',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: AuthLayout.helperSize,
@@ -92,7 +92,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
     ),
     const SizedBox(height: 8),
     const AppText(
-      'Live camera capture only · Submitted for manual review',
+      'Live camera capture only · Submitted for identity review',
       style: TextStyle(
         fontSize: AuthLayout.helperSize,
         color: AppColors.textSecondary,
@@ -159,7 +159,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
                 ),
                 const SizedBox(height: 4),
                 const AppText(
-                  'Waiting for manual review',
+                  'Identity review in progress',
                   style: TextStyle(
                     fontSize: AuthLayout.helperSize,
                     color: AppColors.textSecondary,
@@ -196,7 +196,7 @@ extension _KycUploadStepsSection on _KycUploadPageState {
       const SizedBox(height: AuthLayout.fieldGap),
       const VerificationBanner(
         tone: KycBannerTone.info,
-        title: 'Waiting for manual review',
+        title: 'Identity review in progress',
         subtitle:
             'Your documents are protected and used only to complete identity verification.',
       ),

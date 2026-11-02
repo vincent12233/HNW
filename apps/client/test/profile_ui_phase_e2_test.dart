@@ -420,7 +420,7 @@ void main() {
     expect(find.text('REJECTED'), findsOneWidget);
     expect(find.text('Resubmit documents'), findsOneWidget);
     expect(find.text('Submitted'), findsOneWidget);
-    expect(find.text('Manual review'), findsOneWidget);
+    expect(find.text('Identity review'), findsOneWidget);
     expect(find.text('Result'), findsOneWidget);
     expect(find.text('Customer Support'), findsOneWidget);
     expect(find.text('Verified'), findsNothing);

@@ -222,7 +222,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
         SnackBar(
           content: AppText(
             'Withdrawal request ${request.orderNo ?? request.id} submitted. '
-            'Funds are frozen while finance reviews it.',
+            'Funds are temporarily held while your request is processed.',
           ),
         ),
       );
@@ -275,7 +275,7 @@ class _WithdrawalPageState extends State<WithdrawalPage> {
               _gateCard(
                 title: 'Set a withdrawal PIN',
                 message:
-                    'A 6-digit withdrawal PIN is required before finance can review a request.',
+            'A 6-digit withdrawal PIN is required before your request can be processed.',
                 action: 'Set withdrawal PIN',
                 onPressed: () async {
                   await Navigator.of(context).push(

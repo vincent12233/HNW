@@ -32,14 +32,14 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('submitted state explains real manual-review lifecycle', (
+  testWidgets('submitted state explains the identity review lifecycle', (
     tester,
   ) async {
     await pumpResult(tester, size: const Size(390, 844));
 
     expect(find.text('Documents received'), findsOneWidget);
     expect(find.text('Submitted'), findsWidgets);
-    expect(find.text('Manual review'), findsOneWidget);
+    expect(find.text('Identity review'), findsOneWidget);
     expect(find.text('Result'), findsOneWidget);
     expect(find.textContaining('estimated'), findsNothing);
     expect(find.byIcon(Icons.hourglass_top_rounded), findsNothing);

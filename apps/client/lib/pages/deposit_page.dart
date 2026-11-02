@@ -133,7 +133,7 @@ class _DepositPageState extends State<DepositPage> {
       'deposit',
       'instructions',
       fallback:
-          'Contact support for payment details. After you pay, finance credits your account. Deposits are not submitted inside the app.',
+          'For deposit assistance, contact support and keep your payment reference for your records.',
     );
     final ctaLabel = content.text(
       'deposit',
@@ -149,7 +149,7 @@ class _DepositPageState extends State<DepositPage> {
       'deposit',
       'terms',
       fallback:
-          '• Verify the beneficiary details with Online Customer Service before transferring.\n\n• Deposits are credited only after finance confirmation.\n\n• Keep your transfer receipt for settlement support.',
+          '• Review the displayed deposit instructions before transferring.\n\n• Deposit records may take time to appear after confirmation.\n\n• Keep your transfer receipt for support.',
     );
 
     return AppPageScaffold(
@@ -273,7 +273,7 @@ class _DepositPageState extends State<DepositPage> {
         compact: true,
         title: historyEmpty,
         message:
-            'Credited deposits appear here after finance confirms your payment.',
+            'Confirmed deposits will appear here once available.',
         icon: Icons.receipt_long_outlined,
       );
     }

@@ -49,7 +49,7 @@ dependencies:
   url_launcher: ^6.3.2
   country_picker: ^2.0.28
   phone_numbers_parser: ^9.0.28
-  camera: ^0.12.1
+  camera: ^0.12.2
   k_chart: ^0.7.1
   web: ^1.1.2
   package_info_plus: ^10.2.1

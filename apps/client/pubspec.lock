@@ -768,10 +768,10 @@ packages:
     dependency: "direct main"
     description:
       name: phone_numbers_parser
-      sha256: "911410b1b6e81a03b7052f2f5ddb838d85d50410295a42551ded7720f4ef4923"
+      sha256: "59ccb71840e41e6ec8e600b4bfd1d37cd171bb5e094b971b70831b7766c1e4a1"
       url: "https://pub.dev"
     source: hosted
-    version: "9.0.28"
+    version: "9.0.29"
   platform:
     dependency: transitive
     description:

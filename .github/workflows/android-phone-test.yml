@@ -1,0 +1,88 @@
+name: Android Phone Test APK
+
+on:
+  push:
+    branches:
+      - pre-release/android-phone-test
+  workflow_dispatch:
+    inputs:
+      api_base_url:
+        description: 'HTTPS URL of an isolated test API (leave empty for UI-only APK)'
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-phone-test-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  test-and-build:
+    name: Verify Flutter and package Android test APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact commit
+        uses: actions/checkout@v7
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.0'
+          channel: stable
+          cache: true
+
+      - name: Install locked dependencies
+        working-directory: apps/client
+        run: flutter pub get --enforce-lockfile
+
+      - name: Check release configuration
+        shell: pwsh
+        run: ./scripts/verify-release-config.ps1
+
+      - name: Analyze Flutter client
+        working-directory: apps/client
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run Flutter tests
+        working-directory: apps/client
+        run: flutter test --no-pub
+
+      - name: Select test endpoint
+        shell: bash
+        env:
+          INPUT_API_BASE_URL: ${{ inputs.api_base_url }}
+          REPOSITORY_TEST_API: ${{ vars.HNW_TEST_API_BASE_URL }}
+        run: |
+          set -euo pipefail
+          API_URL="${INPUT_API_BASE_URL:-${REPOSITORY_TEST_API:-}}"
+          if [[ -z "$API_URL" ]]; then
+            API_URL="https://staging.invalid"
+            echo "::warning::No HNW_TEST_API_BASE_URL supplied. This APK is install/UI-only; login and network features cannot work."
+          elif [[ ! "$API_URL" =~ ^https://[^[:space:]]+$ ]]; then
+            echo "::error::Phone test API must be an HTTPS URL."
+            exit 1
+          fi
+          echo "API_BASE_URL=$API_URL" >> "$GITHUB_ENV"
+
+      - name: Build installable debug-signed APK
+        working-directory: apps/client
+        run: flutter build apk --debug --dart-define=API_BASE_URL="$API_BASE_URL"
+
+      - name: Copy and checksum installable APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp apps/client/build/app/outputs/flutter-apk/app-debug.apk dist/HNW-Android-Phone-Test.apk
+          (cd dist && sha256sum HNW-Android-Phone-Test.apk > SHA256SUMS.txt)
+
+      - name: Upload Android phone-test ZIP artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: HNW-Android-Phone-Test-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

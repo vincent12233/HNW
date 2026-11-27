@@ -35,10 +35,15 @@ const CHECKS: ReadonlyArray<{
     checkType: 'FROZEN_CASH_BUY_ORDERS',
     entityType: 'ACCOUNT',
     query: Prisma.sql`
-      SELECT a.id AS "entityId", 'Frozen cash differs from active BUY orders' AS summary,
-        jsonb_build_object('frozenBalance', a."frozenBalance", 'orderFrozen', COALESCE(SUM(o."frozenAmount"), 0)) AS details
-      FROM accounts a LEFT JOIN orders o ON o."accountId" = a.id AND o.side = 'BUY' AND o.status IN ('OPEN', 'PARTIALLY_FILLED')
-      GROUP BY a.id HAVING a."frozenBalance" <> COALESCE(SUM(o."frozenAmount"), 0)`,
+      SELECT a.id AS "entityId", 'Frozen cash differs from active BUY orders and pending withdrawals' AS summary,
+        jsonb_build_object('currency', a.currency, 'frozenBalance', a."frozenBalance",
+          'orderFrozen', o.amount, 'withdrawalFrozen', w.amount) AS details
+      FROM accounts a
+      CROSS JOIN LATERAL (SELECT COALESCE(SUM("frozenAmount"), 0) AS amount FROM orders
+        WHERE "accountId" = a.id AND side = 'BUY' AND status IN ('OPEN', 'PARTIALLY_FILLED')) o
+      CROSS JOIN LATERAL (SELECT COALESCE(SUM("frozenAmount"), 0) AS amount FROM withdrawal_requests
+        WHERE "accountId" = a.id AND status = 'PENDING') w
+      WHERE a."frozenBalance" <> o.amount + w.amount`,
   },
   {
     checkType: 'FROZEN_POSITION_SELL_ORDERS',

@@ -12,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { fixedInviteCode } from '../common/fixed-invite';
+import { optionalIdempotencyKey } from '../common/idempotency-key';
 import { moneyDecimal } from '../common/money';
 
 @Injectable()
@@ -510,57 +511,99 @@ export class LoansService {
     role: UserRole,
     amount: number | string,
     note?: string,
+    requestIdInput?: string,
   ) {
+    const requestId = optionalIdempotencyKey(requestIdInput);
+    if (!requestId)
+      throw new BadRequestException(
+        'Idempotency-Key is required for repayment',
+      );
     const repayment = this.validateLoanAmount(amount);
-
-    const loan = await this.prisma.loanApplication.findUnique({
-      where: { id },
-      include: {
-        account: { include: { user: { include: { usedInviteCode: true } } } },
-      },
+    const normalizedNote = note?.trim() || null;
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM loan_applications WHERE id = ${id} FOR UPDATE`;
+      const loan = await tx.loanApplication.findUnique({
+        where: { id },
+        include: {
+          account: { include: { user: { include: { usedInviteCode: true } } } },
+        },
+      });
+      if (!loan) throw new NotFoundException('贷款申请不存在');
+      this.assertFinanceLoanVisible(
+        role,
+        loan.account.user.usedInviteCode?.code,
+      );
+      const existing = await tx.loanRepayment.findUnique({
+        where: { loanId_requestId: { loanId: id, requestId } },
+      });
+      if (existing) {
+        if (
+          !existing.amount.eq(repayment) ||
+          existing.note !== normalizedNote
+        ) {
+          throw new ConflictException(
+            'Idempotency-Key was already used for a different repayment',
+          );
+        }
+        return existing.response;
+      }
+      if (
+        ![
+          LoanStatus.DISBURSED,
+          LoanStatus.PARTIAL_REPAID,
+          LoanStatus.OVERDUE,
+        ].includes(loan.status as 'DISBURSED' | 'PARTIAL_REPAID' | 'OVERDUE')
+      ) {
+        throw new BadRequestException('当前贷款状态不能登记还款');
+      }
+      const outstanding = moneyDecimal(loan.outstandingAmount);
+      if (repayment.gt(outstanding))
+        throw new BadRequestException('Repayment exceeds outstanding amount');
+      const nextOutstanding = outstanding.sub(repayment);
+      const result = await tx.loanApplication.update({
+        where: { id },
+        data: {
+          outstandingAmount: nextOutstanding,
+          status: nextOutstanding.isZero()
+            ? LoanStatus.REPAID
+            : LoanStatus.PARTIAL_REPAID,
+          closedAt: nextOutstanding.isZero() ? new Date() : null,
+          note: normalizedNote || loan.note,
+          approvedById: operatorId,
+        },
+        include: this.includeCustomer(),
+      });
+      const response = JSON.parse(
+        JSON.stringify(result),
+      ) as Prisma.InputJsonValue;
+      await tx.loanRepayment.create({
+        data: {
+          loanId: id,
+          requestId,
+          amount: repayment,
+          note: normalizedNote,
+          actorId: operatorId,
+          response,
+        },
+      });
+      await this.auditService.createLog(
+        {
+          actorId: operatorId,
+          action: 'LOAN_REPAY_RECORD',
+          resource: 'loan',
+          resourceId: id,
+          description: `登记贷款还款 ${result.orderNo}`,
+          idempotencyKey: `LOAN_REPAY:${id}:${requestId}`,
+          metadata: {
+            orderNo: result.orderNo,
+            repayment: repayment.toFixed(2),
+            outstandingAmount: nextOutstanding.toFixed(2),
+          },
+        },
+        tx,
+      );
+      return response;
     });
-    if (!loan) throw new NotFoundException('贷款申请不存在');
-    this.assertFinanceLoanVisible(role, loan.account.user.usedInviteCode?.code);
-    if (
-      loan.status !== LoanStatus.DISBURSED &&
-      loan.status !== LoanStatus.PARTIAL_REPAID &&
-      loan.status !== LoanStatus.OVERDUE
-    ) {
-      throw new BadRequestException('当前贷款状态不能登记还款');
-    }
-
-    const outstanding = moneyDecimal(loan.outstandingAmount);
-    const remaining = outstanding.sub(repayment);
-    const nextOutstanding = remaining.gt(0) ? remaining : new Prisma.Decimal(0);
-
-    const result = await this.prisma.loanApplication.update({
-      where: { id },
-      data: {
-        outstandingAmount: nextOutstanding,
-        status: nextOutstanding.lte(0)
-          ? LoanStatus.REPAID
-          : LoanStatus.PARTIAL_REPAID,
-        closedAt: nextOutstanding.lte(0) ? new Date() : null,
-        note: note?.trim() || loan.note,
-        approvedById: operatorId,
-      },
-      include: this.includeCustomer(),
-    });
-
-    await this.auditService.createLog({
-      actorId: operatorId,
-      action: 'LOAN_REPAY_RECORD',
-      resource: 'loan',
-      resourceId: result.id,
-      description: `登记贷款还款 ${result.orderNo}`,
-      metadata: {
-        orderNo: result.orderNo,
-        repayment: repayment.toFixed(2),
-        outstandingAmount: nextOutstanding.toFixed(2),
-      },
-    });
-
-    return result;
   }
 
   async markOverdue(id: string, role: UserRole) {

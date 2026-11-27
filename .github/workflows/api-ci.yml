@@ -93,6 +93,7 @@ jobs:
       - name: Verify migration upgrade with existing account data
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/trading_ci_upgrade?schema=public
+          HNW_UPGRADE_BASELINE_MIGRATION: 20261026190000_refresh_token_replay_protection
         run: |
           PGPASSWORD=postgres psql -h 127.0.0.1 -U postgres -d postgres \
             -c 'CREATE DATABASE trading_ci_upgrade;'

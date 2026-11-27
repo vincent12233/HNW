@@ -19,6 +19,7 @@ describe('AuthService session lifecycle', () => {
       verifyAsync: jest.fn().mockResolvedValue({
         sub: 'user-1',
         purpose: 'REFRESH',
+        sid: 'device-1',
         version: 2,
       }),
       signAsync: jest
@@ -27,6 +28,10 @@ describe('AuthService session lifecycle', () => {
         .mockResolvedValueOnce('refresh-new'),
     };
     const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      userDevice: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'device-1' }),
+      },
       $executeRaw: jest.fn().mockResolvedValue(1),
       user: { findUnique: jest.fn().mockResolvedValue(user) },
     };
@@ -39,6 +44,7 @@ describe('AuthService session lifecycle', () => {
     (auth as any).jwtService.verifyAsync.mockResolvedValue({
       sub: 'user-1',
       purpose: 'REFRESH',
+      sid: 'device-1',
       version: 1,
     });
     await expect(auth.refresh('refresh-old')).rejects.toBeInstanceOf(

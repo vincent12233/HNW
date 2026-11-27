@@ -1,3 +1,4 @@
+import { requireDeviceSession } from '../auth/device-session';
 import { fixedInviteCode } from '../common/fixed-invite';
 import {
   BadRequestException,
@@ -84,11 +85,15 @@ export class ClientExperienceService {
 
   devices(userId: string) {
     return this.prisma.userDevice.findMany({
-      where: { userId, revokedAt: null },
+      where: { userId, revokedAt: null, sessionBound: true },
       orderBy: { lastSeenAt: 'desc' },
     });
   }
-  registerDevice(userId: string, body: Record<string, unknown>) {
+  async registerDevice(
+    userId: string,
+    body: Record<string, unknown>,
+    sessionId?: string,
+  ) {
     const deviceName =
       typeof body.deviceName === 'string' && body.deviceName.trim()
         ? body.deviceName
@@ -97,19 +102,23 @@ export class ClientExperienceService {
       typeof body.platform === 'string' && body.platform.trim()
         ? body.platform
         : 'mobile';
-    return this.prisma.userDevice.create({
-      data: {
-        userId,
-        deviceName: deviceName.slice(0, 80),
-        platform: platform.slice(0, 24),
-        pushToken: typeof body.pushToken === 'string' ? body.pushToken : null,
-        lastIp: typeof body.lastIp === 'string' ? body.lastIp : null,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      const device = await requireDeviceSession(tx, userId, sessionId, true);
+      return tx.userDevice.update({
+        where: { id: device.id },
+        data: {
+          deviceName: deviceName.slice(0, 80),
+          platform: platform.slice(0, 24),
+          pushToken: typeof body.pushToken === 'string' ? body.pushToken : null,
+          lastSeenAt: new Date(),
+        },
+      });
     });
   }
+
   async revokeDevice(userId: string, id: string) {
     const result = await this.prisma.userDevice.updateMany({
-      where: { id, userId, revokedAt: null },
+      where: { id, userId },
       data: { revokedAt: new Date() },
     });
     if (!result.count) throw new NotFoundException('Device not found');

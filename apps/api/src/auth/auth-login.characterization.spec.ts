@@ -189,7 +189,7 @@ describe('Current client login, refresh, and logout behavior', () => {
           count: jest.fn().mockResolvedValue(0),
           create: jest.fn(),
         },
-        userDevice: { create: jest.fn() },
+        userDevice: { create: jest.fn().mockResolvedValue({ id: 'device-1' }) },
         user: { findUnique: jest.fn(), update: jest.fn() },
         $queryRaw: jest.fn(),
       };

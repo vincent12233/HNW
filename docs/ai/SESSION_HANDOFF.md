@@ -68,3 +68,15 @@ git fetch --prune origin
 Do not treat this handoff as proof that a test, PR, workflow, or deployment is
 still current. Re-run the corresponding read-only check and update this file
 only when a durable checkpoint materially changes.
+
+
+## 2026-11-27 六项审计修复交付检查点
+
+本轮修复以 #191 head `8a347bfd68579a65adf84b617188c83fc1b6ffc4` 为基线，
+分支 `codex/fix-six-audit-findings-20261127`。完整实现、三个迁移、客户端契约、
+验证命令及部署权限限制见 `docs/AUDIT_FIX_DELIVERY_2026-11-27.md`。
+本地 API 700、后台 155、Flutter 503、脚本 50 项通过；Flutter 45 项既有条件跳过。
+空库与基线带数据升级通过。不得沿用 #191 CI 作为本轮证明，恢复任务时按最终 head 查询。
+生产合并、发布、回滚、数据迁移均未授权、未执行。实际 Coolify 配置读取 403，
+不可变目标部署适配器与真实测试环境验收仍待权限；缺少能力时流程失败关闭。
+AOCI 服务当前不可用，同步与 27 项中危依赖及外部联调按用户边界单独跟踪。

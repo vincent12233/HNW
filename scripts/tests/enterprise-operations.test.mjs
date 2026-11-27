@@ -30,7 +30,8 @@ test('production workflows serialize deploy and rollback with approvals', () => 
     assert.match(workflow, /group: hnw-production/);
     assert.match(workflow, /cancel-in-progress: false/);
     assert.match(workflow, /environment: production/);
-    assert.match(workflow, /sha256:/);
+    assert.match(workflow, /trusted-release-artifact\.mjs/);
+    assert.match(workflow, /DEPLOYMENT_ADAPTER_URL/);
   }
 });
 

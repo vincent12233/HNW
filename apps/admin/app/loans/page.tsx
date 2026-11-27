@@ -14,6 +14,7 @@ import OpsPageHeader from "@/components/OpsPageHeader";
 import OpsStatusTag from "@/components/OpsStatusTag";
 import OpsToolbar from "@/components/OpsToolbar";
 import { api } from "@/lib/api";
+import { repaymentOperation } from "@/lib/loan-repayment";
 import { getBackendRole } from "@/lib/backend-role";
 import { FUNDING_COPY } from "@/lib/ops-funding";
 import { filterLoadedRows, maskOpsPhone } from "@/lib/ops-directory";
@@ -140,28 +141,37 @@ export default function LoansPage() {
   }
 
   async function repay(record: LoanRecord) {
-    let amount = "";
-    let note = "";
+    const operation = repaymentOperation(sessionStorage, record.id);
+    const pending = operation.read();
+    let amount = pending?.amount ?? "";
+    let note = pending?.note ?? "";
     Modal.confirm({
       title: "登记还款",
       content: (
         <Space orientation="vertical" style={{ width: "100%" }}>
           <Text type="secondary">这里只登记客户还款，不会从客户交易账户扣款。</Text>
-          <InputNumber min={0.01} max={Number(record.outstandingAmount)} precision={2} style={{ width: "100%" }} placeholder="还款金额" onChange={(value) => { amount = String(value ?? ""); }} />
-          <Input placeholder="备注" onChange={(event) => { note = event.target.value; }} />
+          <InputNumber defaultValue={pending ? Number(pending.amount) : undefined} disabled={!!pending} min={0.01} max={pending ? undefined : Number(record.outstandingAmount)} precision={2} style={{ width: "100%" }} placeholder="还款金额" onChange={(value) => { amount = String(value ?? ""); }} />
+          <Input defaultValue={note} disabled={!!pending} placeholder="备注" onChange={(event) => { note = event.target.value; }} />
         </Space>
       ),
       okText: "登记",
       cancelText: "取消",
       async onOk() {
-        if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || Number(amount) > Number(record.outstandingAmount)) {
+        if (!Number.isFinite(Number(amount)) || Number(amount) <= 0 || (!pending && Number(amount) > Number(record.outstandingAmount))) {
           message.error("还款金额必须大于零且不能超过未还金额");
           throw new Error("Invalid repayment amount");
         }
-        await api.patch(`/loans/${record.id}/repay`, {
-          amount: Number(amount).toFixed(2),
-          note,
-        });
+        const submission = operation.begin(Number(amount).toFixed(2), note);
+        try {
+          await api.patch(`/loans/${record.id}/repay`, {
+            amount: submission.amount, note: submission.note,
+          }, { headers: { "Idempotency-Key": submission.requestId } });
+        } catch (error) {
+          // A validation rejection cannot have committed; ambiguous transport/5xx errors retain the key.
+          if (isAxiosError(error) && error.response?.status === 400) operation.complete();
+          throw error;
+        }
+        operation.complete();
         message.success("还款已登记");
         await loadItems();
       },
@@ -219,7 +229,7 @@ export default function LoansPage() {
               },
             });
           }}>拒绝</Button>
-          <Button size="small" disabled={!["DISBURSED", "PARTIAL_REPAID", "OVERDUE"].includes(record.status)} onClick={() => repay(record)}>还款</Button>
+          <Button size="small" disabled={!["DISBURSED", "PARTIAL_REPAID", "OVERDUE", "REPAID"].includes(record.status)} onClick={() => repay(record)}>还款</Button>
           <Button size="small" disabled={!["DISBURSED", "PARTIAL_REPAID"].includes(record.status)} aria-label="标记贷款逾期" onClick={() => {
             Modal.confirm({
               title: "确认标记逾期？",

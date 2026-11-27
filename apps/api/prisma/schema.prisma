@@ -454,6 +454,8 @@ model Ipo {
 }
 
 model IpoApplication {
+  requestId         String?
+  response          Json?
   draftQuantity     Int?
   draftPrice        Decimal?             @db.Decimal(18, 2)
   publishedAt       DateTime?
@@ -473,6 +475,7 @@ model IpoApplication {
   ipo               Ipo                  @relation(fields: [ipoId], references: [id])
   ipoDebt           IpoDebt?
 
+  @@unique([accountId, ipoId, requestId])
   @@map("IpoApplication")
 }
 
@@ -596,16 +599,17 @@ model Notification {
 }
 
 model UserDevice {
-  id         String    @id @default(uuid())
-  userId     String
-  deviceName String
-  platform   String
-  pushToken  String?
-  lastIp     String?
-  lastSeenAt DateTime  @default(now())
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionBound Boolean   @default(false)
+  id           String    @id @default(uuid())
+  userId       String
+  deviceName   String
+  platform     String
+  pushToken    String?
+  lastIp       String?
+  lastSeenAt   DateTime  @default(now())
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@map("user_devices")
@@ -955,23 +959,24 @@ enum BankAccountStatus {
 }
 
 model LoanApplication {
-  id                String     @id @default(uuid())
-  orderNo           String     @unique
+  repayments        LoanRepayment[]
+  id                String          @id @default(uuid())
+  orderNo           String          @unique
   accountId         String
-  requestedAmount   Decimal    @db.Decimal(18, 2)
-  approvedAmount    Decimal?   @db.Decimal(18, 2)
-  outstandingAmount Decimal    @default(0) @db.Decimal(18, 2)
-  interestRate      Decimal    @default(0) @db.Decimal(8, 2)
+  requestedAmount   Decimal         @db.Decimal(18, 2)
+  approvedAmount    Decimal?        @db.Decimal(18, 2)
+  outstandingAmount Decimal         @default(0) @db.Decimal(18, 2)
+  interestRate      Decimal         @default(0) @db.Decimal(8, 2)
   dueDate           DateTime?
-  status            LoanStatus @default(PENDING)
+  status            LoanStatus      @default(PENDING)
   note              String?
   approvedById      String?
   approvedAt        DateTime?
   disbursedAt       DateTime?
   closedAt          DateTime?
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
-  account           Account    @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+  account           Account         @relation(fields: [accountId], references: [id], onDelete: Cascade)
 
   @@index([accountId])
   @@index([orderNo])
@@ -1216,4 +1221,19 @@ model UserWatchlistItem {
   @@unique([userId, instrumentId])
   @@index([userId, createdAt])
   @@map("user_watchlist_items")
+}
+
+model LoanRepayment {
+  id        String          @id @default(uuid())
+  loanId    String
+  requestId String
+  amount    Decimal         @db.Decimal(18, 2)
+  note      String?
+  actorId   String
+  response  Json
+  createdAt DateTime        @default(now())
+  loan      LoanApplication @relation(fields: [loanId], references: [id], onDelete: Restrict)
+
+  @@unique([loanId, requestId])
+  @@map("loan_repayments")
 }

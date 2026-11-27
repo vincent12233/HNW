@@ -29,7 +29,12 @@ temporary_dir="$(mktemp -d)"
 trap 'rm -rf "$temporary_dir"' EXIT
 cp prisma/migrations/migration_lock.toml "$temporary_dir/"
 for migration in prisma/migrations/*/; do
-  [[ "${migration%/}" == "$latest" ]] || cp -R "$migration" "$temporary_dir/"
+  name="$(basename "$migration")"
+  if [[ -n "${HNW_UPGRADE_BASELINE_MIGRATION:-}" ]]; then
+    [[ "$name" > "$HNW_UPGRADE_BASELINE_MIGRATION" ]] || cp -R "$migration" "$temporary_dir/"
+  else
+    [[ "${migration%/}" == "$latest" ]] || cp -R "$migration" "$temporary_dir/"
+  fi
 done
 
 export HNW_UPGRADE_MIGRATIONS_PATH="$temporary_dir"
@@ -42,9 +47,13 @@ INSERT INTO accounts ("id", "accountNumber", "userId", "cashBalance", "buyingPow
 VALUES ('00000000-0000-4000-8000-000000000102', 'UPGRADE-CI-001', '00000000-0000-4000-8000-000000000101', 100, 100, now(), now());
 INSERT INTO account_transactions ("id", "accountId", "type", "status", "amount", "balanceBefore", "balanceAfter", "createdAt", "updatedAt")
 VALUES ('00000000-0000-4000-8000-000000000103', '00000000-0000-4000-8000-000000000102', 'DEPOSIT', 'COMPLETED', 100, 0, 100, now(), now());
+INSERT INTO loan_applications (id, "orderNo", "accountId", "requestedAmount", "outstandingAmount", status, "updatedAt")
+VALUES ('upgrade-loan', 'UPGRADE-LOAN-001', '00000000-0000-4000-8000-000000000102', 1000, 1000, 'DISBURSED', now());
+INSERT INTO user_devices (id, "userId", "deviceName", platform)
+VALUES ('upgrade-legacy-device', '00000000-0000-4000-8000-000000000101', 'Legacy device', 'test');
 SQL
 
-cp -R "$latest" "$temporary_dir/"
+cp -R prisma/migrations/*/ "$temporary_dir/"
 npx --no-install prisma migrate deploy --config prisma.upgrade-test.config.ts
 
 psql "$database_url" -v ON_ERROR_STOP=1 <<'SQL'
@@ -59,6 +68,13 @@ BEGIN
       AND t."amount" = 100 AND t."balanceAfter" = 100
   ) THEN
     RAISE EXCEPTION 'Upgrade changed seeded account data';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM loan_applications WHERE id = 'upgrade-loan' AND "outstandingAmount" = 1000)
+     OR EXISTS (SELECT 1 FROM loan_repayments WHERE "loanId" = 'upgrade-loan') THEN
+    RAISE EXCEPTION 'Upgrade changed legacy loan or invented repayment history';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM user_devices WHERE id = 'upgrade-legacy-device' AND "sessionBound" = false AND "revokedAt" IS NOT NULL) THEN
+    RAISE EXCEPTION 'Legacy device migration failed closed requirement';
   END IF;
 END $$;
 SQL

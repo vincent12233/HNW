@@ -129,7 +129,11 @@ export class ClientExperienceController {
     @Req() req: AuthenticatedRequest,
     @Body() body: Record<string, unknown>,
   ) {
-    return this.service.registerDevice(req.user.userId, body);
+    return this.service.registerDevice(
+      req.user.userId,
+      body,
+      req.user.sessionId,
+    );
   }
   @Delete('client/security/devices/:id') @Roles(UserRole.CLIENT) revokeDevice(
     @Req() req: AuthenticatedRequest,

@@ -1,3 +1,5 @@
+import { emitToDeviceSessions } from '../../../auth/device-socket-broadcast';
+import { requireDeviceSession } from '../../../auth/device-session';
 import {
   OnGatewayInit,
   WebSocketGateway,
@@ -58,6 +60,7 @@ export class MarketDataGateway
       );
       const payload = await this.jwt.verifyAsync<{
         sub: string;
+        sid?: string;
         version?: number;
         purpose?: string;
       }>(token);
@@ -72,6 +75,7 @@ export class MarketDataGateway
         payload.version !== user.authVersion
       )
         throw new Error('Unauthorized');
+      await requireDeviceSession(this.prisma, payload.sub, payload.sid);
       const count = this.connections.get(payload.sub) ?? 0;
       if (count >= this.maxConnectionsPerUser)
         throw new Error('Connection limit exceeded');
@@ -81,7 +85,17 @@ export class MarketDataGateway
         'websocket_active_connections',
         this.activeConnectionCount(),
       );
-      (socket.data as { userId?: string }).userId = payload.sub;
+      (socket.data as { userId?: string; sessionId?: string }).userId =
+        payload.sub;
+      (socket.data as { sessionId?: string }).sessionId = payload.sid;
+      socket.use((_packet, done) => {
+        void requireDeviceSession(this.prisma, payload.sub, payload.sid)
+          .then(() => done())
+          .catch(() => {
+            socket.disconnect(true);
+            done(new Error('Device session revoked'));
+          });
+      });
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();
     } catch {
@@ -123,7 +137,16 @@ export class MarketDataGateway
       return;
     }
 
-    this.server.emit('market-update', data);
+    void emitToDeviceSessions(
+      this.prisma,
+      this.server,
+      'market-update',
+      data,
+    ).catch(() => {
+      this.logger.warn(
+        'Device session verification failed; quote broadcast withheld',
+      );
+    });
     recordOperationalCounter('websocket_quote_broadcast');
 
     this.logger.log(`Broadcast ${data.symbol} ${data.price}`);

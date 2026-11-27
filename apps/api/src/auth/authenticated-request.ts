@@ -4,6 +4,7 @@ import type { UserRole } from '../generated/prisma/enums';
 
 export type AuthUser = {
   userId: string;
+  sessionId?: string;
   phone?: string | null;
   role: UserRole;
   onboarding?: boolean;

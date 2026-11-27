@@ -51,7 +51,12 @@ describe('SaleSmartly account-recovery handoff', () => {
   it('rejects issuance without a safe external interaction reference', async () => {
     const { service, prisma } = subject();
     await expect(
-      service.issue(session.id, 'support-1', true, '../../token=secret'),
+      service.issue(
+        session.id,
+        { userId: 'support-1', role: 'SUPPORT' },
+        true,
+        '../../token=secret',
+      ),
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
@@ -60,7 +65,7 @@ describe('SaleSmartly account-recovery handoff', () => {
     const { service, tx } = subject();
     const result = await service.issue(
       session.id,
-      'support-1',
+      { userId: 'support-1', role: 'SUPPORT' },
       true,
       'ss-conversation-42',
     );

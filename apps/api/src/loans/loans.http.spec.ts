@@ -93,4 +93,26 @@ describe('Current loan HTTP role boundary', () => {
     );
     await app.close();
   });
+  it('passes the repayment operation key from the HTTP header to the transaction service', async () => {
+    const app = await build(UserRole.FINANCE);
+    prisma.user.findUnique.mockResolvedValue({
+      role: UserRole.FINANCE,
+      status: UserStatus.ACTIVE,
+    });
+    loans.repay.mockResolvedValue({ outstandingAmount: '900.00' });
+    await request(app.getHttpServer())
+      .patch('/loans/loan-1/repay')
+      .set('Idempotency-Key', 'repayment-operation-1')
+      .send({ amount: '100.00', note: 'cash' })
+      .expect(200);
+    expect(loans.repay).toHaveBeenCalledWith(
+      'loan-1',
+      'finance-1',
+      UserRole.FINANCE,
+      '100.00',
+      'cash',
+      'repayment-operation-1',
+    );
+    await app.close();
+  });
 });

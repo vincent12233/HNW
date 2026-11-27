@@ -43,17 +43,21 @@ export class AccountRecoveryController {
 @Roles(UserRole.SUPPORT, UserRole.ADMIN)
 export class StaffRecoveryController {
   constructor(private readonly service: AccountRecoveryService) {}
-  @Get() list() {
-    return this.service.list();
+  @Get() list(@Req() req: AuthenticatedRequest) {
+    return this.service.list(req.user);
   }
-  @Get(':id/messages') messages(@Param('id') id: string) {
-    return this.service.staffMessages(id);
+  @Get(':id/messages') messages(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.service.staffMessages(id, req.user);
   }
   @Post(':id/messages') send(
+    @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: { content: string },
   ) {
-    return this.service.staffSend(id, body.content);
+    return this.service.staffSend(id, body.content, req.user);
   }
   @Post(':id/issue') issue(
     @Param('id') id: string,
@@ -62,7 +66,7 @@ export class StaffRecoveryController {
   ) {
     return this.service.issue(
       id,
-      req.user.userId,
+      req.user,
       body.identityVerified,
       body.interactionRef,
     );

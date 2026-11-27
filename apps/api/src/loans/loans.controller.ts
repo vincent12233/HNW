@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  Headers,
   Param,
   Patch,
   Post,
@@ -101,6 +102,7 @@ export class LoansController {
     @Req() req: AuthenticatedRequest,
     @Param('id') id: string,
     @Body() body: RepayLoanDto,
+    @Headers('idempotency-key') requestId?: string,
   ) {
     return this.loansService.repay(
       id,
@@ -108,6 +110,7 @@ export class LoansController {
       req.user.role,
       body.amount,
       body.note,
+      requestId,
     );
   }
 

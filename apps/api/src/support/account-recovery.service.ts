@@ -8,6 +8,12 @@ import {
 import { createHash, randomBytes, randomUUID } from 'crypto';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma, UserRole } from '../generated/prisma/client';
+import {
+  assertRecoveryScope,
+  recoveryScope,
+  RecoveryActor,
+} from './recovery-scope';
 import { normalizePhone } from '../auth/phone-number';
 
 type RecoverySession = {
@@ -20,6 +26,7 @@ type RecoverySession = {
   codeUsedAt: Date | null;
   codeAttempts: number;
   issuedUserId: string | null;
+  issuedById: string | null;
 };
 
 @Injectable()
@@ -75,47 +82,62 @@ export class AccountRecoveryService {
     return this.insertMessage(session.id, 'CLIENT', content);
   }
 
-  async list() {
-    return this.prisma
-      .$queryRaw`SELECT id, phone, status, "createdAt", "updatedAt", "issuedById" FROM account_recovery_sessions WHERE "expiresAt" > CURRENT_TIMESTAMP ORDER BY "updatedAt" DESC LIMIT 200`;
+  async list(actor: RecoveryActor) {
+    return this.prisma.$queryRaw(Prisma.sql`
+      SELECT r.id, r.phone, r.status, r."createdAt", r."updatedAt", r."issuedById"
+      FROM account_recovery_sessions r WHERE r."expiresAt" > CURRENT_TIMESTAMP
+        AND ${recoveryScope(actor)} ORDER BY r."updatedAt" DESC LIMIT 200`);
   }
-  async staffMessages(id: string) {
+  async staffMessages(id: string, actor: RecoveryActor) {
     this.validateId(id);
-    return this.prisma
-      .$queryRaw`SELECT id, sender, content, "createdAt" FROM account_recovery_messages WHERE "sessionId" = ${id}::uuid ORDER BY "createdAt", id`;
+    return this.prisma.$transaction(async (tx) => {
+      await assertRecoveryScope(tx, id, actor);
+      return tx.$queryRaw`SELECT id, sender, content, "createdAt" FROM account_recovery_messages WHERE "sessionId" = ${id}::uuid ORDER BY "createdAt", id`;
+    });
   }
-  async staffSend(id: string, content: string) {
+  async staffSend(id: string, content: string, actor: RecoveryActor) {
     this.validateId(id);
-    const rows = await this.prisma.$queryRaw<
-      { id: string }[]
-    >`SELECT id FROM account_recovery_sessions WHERE id = ${id}::uuid AND status = 'OPEN' AND "expiresAt" > CURRENT_TIMESTAMP`;
-    if (!rows.length)
-      throw new NotFoundException('Open support request not found');
-    return this.insertMessage(id, 'SUPPORT', content);
+    return this.prisma.$transaction(async (tx) => {
+      await assertRecoveryScope(tx, id, actor);
+      const rows = await tx.$queryRaw<
+        { id: string }[]
+      >`SELECT id FROM account_recovery_sessions WHERE id = ${id}::uuid AND status = 'OPEN' AND "expiresAt" > CURRENT_TIMESTAMP FOR UPDATE`;
+      if (!rows.length)
+        throw new NotFoundException('Open support request not found');
+      return this.insertMessage(id, 'SUPPORT', content, tx);
+    });
   }
   private validateId(id: string) {
     if (typeof id !== 'string' || !/^[a-f0-9-]{36}$/i.test(id))
       throw new BadRequestException('Invalid request ID');
   }
-  private async insertMessage(id: string, sender: string, value: string) {
+  private async insertMessage(
+    id: string,
+    sender: string,
+    value: string,
+    transaction?: Prisma.TransactionClient,
+  ) {
     const content = typeof value === 'string' ? value.trim() : '';
     if (!content || content.length > 2000)
       throw new BadRequestException(
         'Message must contain 1 to 2000 characters',
       );
-    await this.prisma.$transaction(async (tx) => {
+    const write = async (tx: Prisma.TransactionClient) => {
       await tx.$executeRaw`INSERT INTO account_recovery_messages (id, "sessionId", sender, content) VALUES (${randomUUID()}::uuid, ${id}::uuid, ${sender}, ${content})`;
       await tx.$executeRaw`UPDATE account_recovery_sessions SET "updatedAt" = CURRENT_TIMESTAMP WHERE id = ${id}::uuid`;
-    });
+    };
+    if (transaction) await write(transaction);
+    else await this.prisma.$transaction(write);
     return { sent: true };
   }
 
   async issue(
     id: string,
-    actorId: string,
+    actor: RecoveryActor,
     verified: boolean,
     interactionRefValue: string,
   ) {
+    const actorId = actor.userId;
     this.validateId(id);
     if (verified !== true)
       throw new BadRequestException(
@@ -130,6 +152,7 @@ export class AccountRecoveryService {
     const code = randomBytes(6).toString('hex').toUpperCase();
     const codeHash = await bcrypt.hash(code, 12);
     await this.prisma.$transaction(async (tx) => {
+      await assertRecoveryScope(tx, id, actor);
       const rows = await tx.$queryRaw<
         RecoverySession[]
       >`SELECT * FROM account_recovery_sessions WHERE id = ${id}::uuid AND status = 'OPEN' AND "expiresAt" > CURRENT_TIMESTAMP FOR UPDATE`;
@@ -184,11 +207,34 @@ export class AccountRecoveryService {
       );
     const passwordHash = await bcrypt.hash(newPassword, 12);
     const changed = await this.prisma.$transaction(async (tx) => {
+      if (!session.issuedById) return false;
+      const issuer = await tx.user.findUnique({
+        where: { id: session.issuedById },
+        select: { id: true, role: true },
+      });
+      if (
+        !issuer ||
+        ![UserRole.ADMIN, UserRole.SUPPORT].includes(
+          issuer.role as 'ADMIN' | 'SUPPORT',
+        )
+      )
+        return false;
+      try {
+        await assertRecoveryScope(tx, session.id, {
+          userId: issuer.id,
+          role: issuer.role,
+        });
+      } catch (error) {
+        if (error instanceof NotFoundException) return false;
+        throw error;
+      }
       const [current] = await tx.$queryRaw<
         RecoverySession[]
       >`SELECT * FROM account_recovery_sessions WHERE id = ${session.id}::uuid FOR UPDATE`;
       if (
         !current ||
+        current.issuedById !== session.issuedById ||
+        current.expiresAt <= new Date() ||
         current.status !== 'OPEN' ||
         !current.codeHash ||
         !current.issuedUserId ||

@@ -26,6 +26,7 @@ export async function withBlockedWriters<T>(
   values: string[],
   queryFragment: string,
   operations: () => Promise<T>[],
+  beforeRelease?: () => Promise<void>,
 ): Promise<T[]> {
   const holder = new pg.Client({ connectionString: databaseUrl });
   const observer = new pg.Client({ connectionString: databaseUrl });
@@ -52,6 +53,7 @@ export async function withBlockedWriters<T>(
         break;
       }
     }
+    if (blocked && beforeRelease) await beforeRelease();
     await holder.query('COMMIT');
     const settled = await results;
     if (!blocked)

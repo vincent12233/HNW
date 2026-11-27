@@ -6,6 +6,7 @@ import '../app_config.dart';
 import '../models/ipo.dart';
 import 'auth_service.dart';
 import 'local_data_cache.dart';
+import 'pending_ipo_operation.dart';
 import 'session_expiry_service.dart';
 
 class IpoService {
@@ -96,12 +97,23 @@ class IpoService {
       throw const IpoException('Please sign in again');
     }
 
-    final response = await http
+    late http.Response response;
+    try {
+    final requestId = await PendingIpoOperation.begin(session.accountId, ipoId);
+    response = await http
         .post(
           Uri.parse('${AppConfig.apiBaseUrl}/ipo/$ipoId/apply'),
-          headers: {'Authorization': 'Bearer ${session.accessToken}'},
+          headers: {
+            'Authorization': 'Bearer ${session.accessToken}',
+            'Idempotency-Key': requestId,
+          },
         )
         .timeout(const Duration(seconds: 10));
+
+    } catch (_) {
+      // Keep the persisted operation key when the server result is unknown.
+      throw const IpoException('IPO application failed. Please try again.');
+    }
 
     if (_sessionExpiry.isUnauthorized(response.statusCode)) {
       await _sessionExpiry.expire();
@@ -113,11 +125,12 @@ class IpoService {
       throw IpoException(_apiMessage(decoded, 'IPO application failed'));
     }
 
+    await PendingIpoOperation.complete(session.accountId, ipoId);
     if (decoded is Map && decoded['canApply'] == false) {
       throw const IpoException('Maximum IPO applications reached');
     }
 
-    await fetchMyApplications();
+    // A failed display refresh must not turn a confirmed submission into a retry.
     return null;
   }
 }

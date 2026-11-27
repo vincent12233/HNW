@@ -1,4 +1,12 @@
-import { Controller, Get, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Headers,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { Roles } from '../auth/roles.decorator';
 import { RolesGuard } from '../auth/roles.guard';
@@ -18,8 +26,12 @@ export class ClientIpoController {
   }
 
   @Post(':ipoId/apply')
-  apply(@Req() request: AuthenticatedRequest, @Param('ipoId') ipoId: string) {
-    return this.ipoService.apply(request.user.userId, ipoId);
+  apply(
+    @Req() request: AuthenticatedRequest,
+    @Param('ipoId') ipoId: string,
+    @Headers('idempotency-key') requestId?: string,
+  ) {
+    return this.ipoService.apply(request.user.userId, ipoId, requestId);
   }
 
   @Get('applications/me')

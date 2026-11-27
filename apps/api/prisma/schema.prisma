@@ -454,6 +454,8 @@ model Ipo {
 }
 
 model IpoApplication {
+  requestId         String?
+  response          Json?
   draftQuantity     Int?
   draftPrice        Decimal?             @db.Decimal(18, 2)
   publishedAt       DateTime?
@@ -473,6 +475,7 @@ model IpoApplication {
   ipo               Ipo                  @relation(fields: [ipoId], references: [id])
   ipoDebt           IpoDebt?
 
+  @@unique([accountId, ipoId, requestId])
   @@map("IpoApplication")
 }
 

@@ -12,6 +12,7 @@ import { UserRole } from '../generated/prisma/enums';
 import { settleIpoHoldings, SettleIpoInput } from '../common/ipo-debt-repay';
 import { createLedgerEntryIdempotent } from '../common/ledger-idempotency';
 import { availableCash, moneyDecimal } from '../common/money';
+import { applyIpo } from './ipo-application';
 
 import { CreateIpoDto } from './dto/create-ipo.dto';
 import { UpdateIpoPricingDto } from './dto/update-ipo-pricing.dto';
@@ -544,132 +545,8 @@ export class IpoService {
     };
   }
 
-  async apply(userId: string, ipoId: string) {
-    const now = new Date();
-
-    const account = await this.prisma.account.findUnique({
-      where: {
-        userId,
-      },
-
-      select: {
-        id: true,
-
-        accountNumber: true,
-      },
-    });
-
-    if (!account) {
-      throw new NotFoundException('Trading account not found');
-    }
-
-    const ipo = await this.prisma.ipo.findUnique({
-      where: {
-        id: ipoId,
-      },
-
-      select: {
-        id: true,
-
-        symbol: true,
-
-        companyName: true,
-
-        exchange: true,
-
-        issuePrice: true,
-
-        openDate: true,
-
-        closeDate: true,
-
-        status: true,
-      },
-    });
-
-    if (!ipo) {
-      throw new NotFoundException('IPO not found');
-    }
-
-    if (ipo.status !== 'PUBLISHED' && ipo.status !== 'OPEN') {
-      throw new BadRequestException('IPO is not published for applications');
-    }
-
-    if (now < ipo.openDate || now > ipo.closeDate) {
-      throw new BadRequestException('IPO application period is not active');
-    }
-
-    const appliedCount = await this.prisma.ipoApplication.count({
-      where: {
-        accountId: account.id,
-
-        ipoId: ipo.id,
-      },
-    });
-
-    // 达到5次，不报错，只返回不可申请状态
-
-    if (appliedCount >= 5) {
-      return {
-        message: 'Maximum IPO applications reached',
-
-        canApply: false,
-
-        appliedCount,
-
-        maxApplyCount: 5,
-      };
-    }
-
-    const application = await this.prisma.ipoApplication.create({
-      data: {
-        ipoId: ipo.id,
-
-        accountId: account.id,
-
-        quantity: 1,
-
-        amount: ipo.issuePrice,
-
-        status: 'PENDING',
-
-        paymentStatus: 'PENDING',
-      },
-    });
-
-    return {
-      message: 'IPO application submitted successfully',
-
-      canApply: true,
-
-      appliedCount: appliedCount + 1,
-
-      maxApplyCount: 5,
-
-      application: {
-        id: application.id,
-
-        status: application.status,
-
-        paymentStatus: application.paymentStatus,
-
-        createdAt: application.createdAt,
-
-        accountNumber: account.accountNumber,
-
-        ipo: {
-          id: ipo.id,
-
-          symbol: ipo.symbol,
-
-          companyName: ipo.companyName,
-
-          exchange: ipo.exchange,
-
-          issuePrice: ipo.issuePrice.toFixed(2),
-        },
-      },
-    };
+  apply(userId: string, ipoId: string, requestId?: string) {
+    return applyIpo(this.prisma, userId, ipoId, requestId);
   }
 
   async listMyApplications(userId: string) {

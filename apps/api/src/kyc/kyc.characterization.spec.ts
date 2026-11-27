@@ -193,7 +193,12 @@ describe('Current KYC HTTP and review behavior', () => {
 
   describe('KycAccessGuard current token rules', () => {
     const jwt = { verifyAsync: jest.fn() };
-    const prisma = { user: { findUnique: jest.fn() } };
+    const prisma = {
+      user: { findUnique: jest.fn() },
+      userDevice: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'device-1' }),
+      },
+    };
     const guard = new KycAccessGuard(jwt as never, prisma as never);
 
     function context(authorization?: string) {
@@ -233,7 +238,11 @@ describe('Current KYC HTTP and review behavior', () => {
     });
 
     it('accepts a normal session token only when the client is ACTIVE', async () => {
-      jwt.verifyAsync.mockResolvedValue({ sub: 'u1', version: 1 });
+      jwt.verifyAsync.mockResolvedValue({
+        sub: 'u1',
+        version: 1,
+        sid: 'device-1',
+      });
       prisma.user.findUnique.mockResolvedValue({
         id: 'u1',
         role: UserRole.CLIENT,
@@ -246,7 +255,11 @@ describe('Current KYC HTTP and review behavior', () => {
     });
 
     it('rejects a session token when the client is still SUSPENDED', async () => {
-      jwt.verifyAsync.mockResolvedValue({ sub: 'u1', version: 1 });
+      jwt.verifyAsync.mockResolvedValue({
+        sub: 'u1',
+        version: 1,
+        sid: 'device-1',
+      });
       prisma.user.findUnique.mockResolvedValue({
         id: 'u1',
         role: UserRole.CLIENT,

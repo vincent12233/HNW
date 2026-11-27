@@ -1,4 +1,4 @@
-﻿import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
@@ -7,12 +7,14 @@ import type { Request } from 'express';
 import { UserRole, UserStatus } from '../generated/prisma/enums';
 import { PrismaService } from '../prisma/prisma.service';
 import type { AuthUser } from './authenticated-request';
+import { requireDeviceSession } from './device-session';
 
 interface JwtPayload {
   sub: string;
   role: string;
   version?: number;
   purpose?: string;
+  sid?: string;
 }
 
 const backendRoles = new Set([
@@ -96,7 +98,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       throw new UnauthorizedException('Business account has been disabled');
     }
 
+    await requireDeviceSession(this.prisma, user.id, payload.sid);
     return {
+      sessionId: payload.sid,
       userId: user.id,
       role: user.role,
     };

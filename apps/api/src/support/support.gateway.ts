@@ -1,3 +1,5 @@
+import { emitToDeviceSessions } from '../auth/device-socket-broadcast';
+import { requireDeviceSession } from '../auth/device-session';
 import {
   OnGatewayInit,
   WebSocketGateway,
@@ -46,6 +48,7 @@ export class SupportGateway implements OnGatewayInit {
       );
       const payload = await this.jwt.verifyAsync<{
         sub: string;
+        sid?: string;
         version?: number;
         purpose?: string;
       }>(token);
@@ -60,11 +63,22 @@ export class SupportGateway implements OnGatewayInit {
         payload.version !== user.authVersion
       )
         throw new Error('Unauthorized');
+      await requireDeviceSession(this.prisma, payload.sub, payload.sid);
       const count = this.connections.get(payload.sub) ?? 0;
       if (count >= this.maxConnectionsPerUser)
         throw new Error('Connection limit exceeded');
       this.connections.set(payload.sub, count + 1);
-      (socket.data as { userId?: string }).userId = payload.sub;
+      (socket.data as { userId?: string; sessionId?: string }).userId =
+        payload.sub;
+      (socket.data as { sessionId?: string }).sessionId = payload.sid;
+      socket.use((_packet, done) => {
+        void requireDeviceSession(this.prisma, payload.sub, payload.sid)
+          .then(() => done())
+          .catch(() => {
+            socket.disconnect(true);
+            done(new Error('Device session revoked'));
+          });
+      });
       await socket.join(`user:${payload.sub}`);
       socket.once('disconnect', () => this.releaseConnection(payload.sub));
       next();
@@ -92,9 +106,13 @@ export class SupportGateway implements OnGatewayInit {
       if (conversation.assignedToId) {
         rooms.add(`user:${conversation.assignedToId}`);
       }
-      for (const room of rooms) {
-        this.server.to(room).emit('support-update', payload);
-      }
+      await emitToDeviceSessions(
+        this.prisma,
+        this.server,
+        'support-update',
+        payload,
+        [...rooms],
+      );
     } catch {
       // Best-effort fanout; callers intentionally do not await.
     }

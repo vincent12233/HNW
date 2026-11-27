@@ -157,7 +157,10 @@ export class AuthController {
   @Post('biometric/token')
   @UseGuards(JwtAuthGuard)
   biometricToken(@Req() req: AuthenticatedRequest) {
-    return this.authService.createBiometricToken(req.user.userId);
+    return this.authService.createBiometricToken(
+      req.user.userId,
+      req.user.sessionId,
+    );
   }
 
   @Post('biometric/login')

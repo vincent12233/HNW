@@ -27,6 +27,7 @@ import { normalizePhone, internationalPhone } from './phone-number';
 import { TwoFactorService } from './two-factor.service';
 import { fixedInviteCode } from '../common/fixed-invite';
 import { SESSION_TTL } from './session-policy';
+import { requireDeviceSession } from './device-session';
 import { observeExternalCall } from '../observability/metrics';
 @Injectable()
 export class AuthService {
@@ -40,15 +41,21 @@ export class AuthService {
     private readonly twoFactor: TwoFactorService,
   ) {}
 
-  private async issueAccessToken(user: {
-    id: string;
-    phone: string | null;
-    role: UserRole;
-    authVersion: number;
-  }) {
+  private async issueAccessToken(
+    user: {
+      id: string;
+      phone: string | null;
+      role: UserRole;
+      authVersion: number;
+    },
+    sessionId: string,
+  ) {
+    if (!sessionId)
+      throw new UnauthorizedException('Device session is required');
     return this.jwtService.signAsync(
       {
         sub: user.id,
+        sid: sessionId,
         phone: user.phone,
         role: user.role,
         version: user.authVersion,
@@ -57,15 +64,21 @@ export class AuthService {
     );
   }
 
-  private async issueRefreshToken(user: {
-    id: string;
-    phone: string | null;
-    role: UserRole;
-    authVersion: number;
-  }) {
+  private async issueRefreshToken(
+    user: {
+      id: string;
+      phone: string | null;
+      role: UserRole;
+      authVersion: number;
+    },
+    sessionId: string,
+  ) {
+    if (!sessionId)
+      throw new UnauthorizedException('Device session is required');
     return this.jwtService.signAsync(
       {
         sub: user.id,
+        sid: sessionId,
         phone: user.phone,
         role: user.role,
         version: user.authVersion,
@@ -76,15 +89,18 @@ export class AuthService {
     );
   }
 
-  private async issueSessionTokens(user: {
-    id: string;
-    phone: string | null;
-    role: UserRole;
-    authVersion: number;
-  }) {
+  private async issueSessionTokens(
+    user: {
+      id: string;
+      phone: string | null;
+      role: UserRole;
+      authVersion: number;
+    },
+    sessionId: string,
+  ) {
     const [accessToken, refreshToken] = await Promise.all([
-      this.issueAccessToken(user),
-      this.issueRefreshToken(user),
+      this.issueAccessToken(user, sessionId),
+      this.issueRefreshToken(user, sessionId),
     ]);
     return {
       accessToken,
@@ -104,6 +120,7 @@ export class AuthService {
       version?: number;
       purpose?: string;
       exp?: number;
+      sid?: string;
     };
     try {
       payload = await this.jwtService.verifyAsync(token);
@@ -121,6 +138,12 @@ export class AuthService {
     const tokenHash = createHash('sha256').update(token).digest('hex');
     const expiresAt = new Date(Math.max(Date.now(), (payload.exp ?? 0) * 1000));
     return this.prisma.$transaction(async (tx) => {
+      const device = await requireDeviceSession(
+        tx,
+        payload.sub!,
+        payload.sid,
+        true,
+      );
       try {
         await tx.$executeRaw`
           WITH expired AS (
@@ -152,7 +175,7 @@ export class AuthService {
         throw new UnauthorizedException('Refresh token has been revoked');
       }
 
-      const tokens = await this.issueSessionTokens(user);
+      const tokens = await this.issueSessionTokens(user, device.id);
       return {
         message: 'Token refreshed',
         ...tokens,
@@ -181,8 +204,10 @@ export class AuthService {
       const payload = await this.jwtService.verifyAsync<{
         sub?: string;
         purpose?: string;
+        sid?: string;
       }>(accessToken);
       if (payload.sub && !payload.purpose) {
+        await requireDeviceSession(this.prisma, payload.sub, payload.sid);
         await this.revokeSession(payload.sub);
       }
     } catch {
@@ -474,16 +499,17 @@ export class AuthService {
       },
     });
 
-    await this.prisma.userDevice.create({
+    const device = await this.prisma.userDevice.create({
       data: {
         userId: user.id,
+        sessionBound: true,
         deviceName: (context?.userAgent || 'Mobile device').slice(0, 80),
         platform: this.devicePlatform(context?.userAgent),
         lastIp: context?.ipAddress || null,
       },
     });
 
-    const tokens = await this.issueSessionTokens(user);
+    const tokens = await this.issueSessionTokens(user, device.id);
 
     return {
       message: 'Login successful',
@@ -530,7 +556,15 @@ export class AuthService {
       throw new UnauthorizedException(
         'Use password sign in with your authenticator code',
       );
-    const tokens = await this.issueSessionTokens(user);
+    const device = await this.prisma.userDevice.create({
+      data: {
+        userId: user.id,
+        deviceName: 'Google sign in',
+        platform: 'mobile',
+        sessionBound: true,
+      },
+    });
+    const tokens = await this.issueSessionTokens(user, device.id);
     return {
       message: 'Login successful',
       ...tokens,
@@ -606,17 +640,25 @@ export class AuthService {
     return { subject, email };
   }
 
-  async createBiometricToken(userId: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-      select: { authVersion: true },
+  async createBiometricToken(userId: string, sessionId?: string) {
+    return this.prisma.$transaction(async (tx) => {
+      const device = await requireDeviceSession(tx, userId, sessionId, true);
+      const user = await tx.user.findUnique({
+        where: { id: userId },
+        select: { authVersion: true },
+      });
+      if (!user) throw new UnauthorizedException('Account not found');
+      const token = await this.jwtService.signAsync(
+        {
+          sub: userId,
+          sid: device.id,
+          purpose: 'BIOMETRIC_LOGIN',
+          version: user.authVersion,
+        },
+        { expiresIn: '30d' },
+      );
+      return { biometricToken: token, expiresIn: 2592000 };
     });
-    if (!user) throw new UnauthorizedException('Account not found');
-    const token = await this.jwtService.signAsync(
-      { sub: userId, purpose: 'BIOMETRIC_LOGIN', version: user.authVersion },
-      { expiresIn: '30d' },
-    );
-    return { biometricToken: token, expiresIn: 2592000 };
   }
 
   async biometricLogin(token: string) {
@@ -624,6 +666,7 @@ export class AuthService {
       sub?: string;
       purpose?: string;
       version?: number;
+      sid?: string;
     };
     let payload: BiometricPayload;
     try {
@@ -633,35 +676,44 @@ export class AuthService {
     }
     if (payload.purpose !== 'BIOMETRIC_LOGIN' || !payload.sub)
       throw new UnauthorizedException('Invalid biometric quick login');
-    const user = await this.prisma.user.findUnique({
-      where: { id: payload.sub },
-      include: { account: true },
+    return this.prisma.$transaction(async (tx) => {
+      const device = await requireDeviceSession(
+        tx,
+        payload.sub!,
+        payload.sid,
+        true,
+      );
+      const user = await tx.user.findUnique({
+        where: { id: payload.sub },
+        include: { account: true },
+      });
+      if (
+        !user ||
+        user.deletedAt ||
+        user.status !== UserStatus.ACTIVE ||
+        payload.version !== user.authVersion
+      )
+        throw new UnauthorizedException(
+          'Biometric quick login must be enabled again',
+        );
+      if ((await this.twoFactor.status(user.id)).enabled)
+        throw new UnauthorizedException(
+          'Use password sign in with your authenticator code',
+        );
+      const tokens = await this.issueSessionTokens(user, device.id);
+      return {
+        message: 'Login successful',
+        ...tokens,
+        user: {
+          id: user.id,
+          fullName: user.fullName,
+          phone: user.phone,
+          role: user.role,
+          status: user.status,
+        },
+        account: user.account,
+      };
     });
-    if (
-      !user ||
-      user.status !== UserStatus.ACTIVE ||
-      payload.version !== user.authVersion
-    )
-      throw new UnauthorizedException(
-        'Biometric quick login must be enabled again',
-      );
-    if ((await this.twoFactor.status(user.id)).enabled)
-      throw new UnauthorizedException(
-        'Use password sign in with your authenticator code',
-      );
-    const tokens = await this.issueSessionTokens(user);
-    return {
-      message: 'Login successful',
-      ...tokens,
-      user: {
-        id: user.id,
-        fullName: user.fullName,
-        phone: user.phone,
-        role: user.role,
-        status: user.status,
-      },
-      account: user.account,
-    };
   }
 
   private generateAccountNumber(): string {

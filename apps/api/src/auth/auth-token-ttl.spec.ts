@@ -17,12 +17,15 @@ describe('AuthService access token TTL', () => {
       const auth = Object.create(AuthService.prototype) as AuthService;
       (auth as any).jwtService = { signAsync } as unknown as JwtService;
 
-      const tokens = await (auth as any).issueSessionTokens({
-        id: 'c1',
-        phone: '9876543210',
-        role,
-        authVersion: 1,
-      });
+      const tokens = await (auth as any).issueSessionTokens(
+        {
+          id: 'c1',
+          phone: '9876543210',
+          role,
+          authVersion: 1,
+        },
+        'device-1',
+      );
 
       expect(tokens.accessToken).toBe('token:access:24h');
       expect(tokens.refreshToken).toBe('token:REFRESH:30d');

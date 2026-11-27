@@ -599,16 +599,17 @@ model Notification {
 }
 
 model UserDevice {
-  id         String    @id @default(uuid())
-  userId     String
-  deviceName String
-  platform   String
-  pushToken  String?
-  lastIp     String?
-  lastSeenAt DateTime  @default(now())
-  revokedAt  DateTime?
-  createdAt  DateTime  @default(now())
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionBound Boolean   @default(false)
+  id           String    @id @default(uuid())
+  userId       String
+  deviceName   String
+  platform     String
+  pushToken    String?
+  lastIp       String?
+  lastSeenAt   DateTime  @default(now())
+  revokedAt    DateTime?
+  createdAt    DateTime  @default(now())
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, revokedAt])
   @@map("user_devices")

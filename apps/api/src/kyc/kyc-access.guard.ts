@@ -1,3 +1,4 @@
+import { requireDeviceSession } from '../auth/device-session';
 import {
   CanActivate,
   ExecutionContext,
@@ -11,6 +12,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 type KycAccessPayload = {
   sub?: string;
+  sid?: string;
   version?: number;
   purpose?: string;
 };
@@ -53,7 +55,14 @@ export class KycAccessGuard implements CanActivate {
     if (!onboarding && user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException('User account is not active');
     }
-    request.user = { userId: user.id, role: user.role, onboarding };
+    if (!onboarding)
+      await requireDeviceSession(this.prisma, user.id, payload.sid);
+    request.user = {
+      userId: user.id,
+      role: user.role,
+      onboarding,
+      sessionId: payload.sid,
+    };
     return true;
   }
 }

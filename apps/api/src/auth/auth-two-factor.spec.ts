@@ -17,16 +17,22 @@ describe('Authentication second-factor enforcement', () => {
         sub: 'client',
         version: 2,
         purpose: 'BIOMETRIC_LOGIN',
+        sid: 'device-1',
       }),
     };
-    const prisma = {
+    const prisma: any = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
       user: {
         findUnique: jest.fn().mockResolvedValue(user),
         findFirst: jest.fn().mockResolvedValue(user),
       },
       loginAudit: { count: jest.fn().mockResolvedValue(0), create: jest.fn() },
-      userDevice: { create: jest.fn() },
+      userDevice: {
+        create: jest.fn().mockResolvedValue({ id: 'device-1' }),
+        findFirst: jest.fn().mockResolvedValue({ id: 'device-1' }),
+      },
     };
+    prisma.$transaction = (callback: any) => callback(prisma);
     const twoFactor = {
       status: jest.fn().mockResolvedValue({ enabled: true }),
       verifyLogin: jest

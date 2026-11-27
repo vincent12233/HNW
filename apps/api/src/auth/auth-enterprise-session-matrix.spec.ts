@@ -24,8 +24,8 @@ describe('AuthService enterprise session matrix', () => {
       }),
     };
 
-    await (auth as any).issueRefreshToken(user);
-    await (auth as any).issueRefreshToken(user);
+    await (auth as any).issueRefreshToken(user, 'device-1');
+    await (auth as any).issueRefreshToken(user, 'device-1');
 
     expect(payloads[0].jti).toMatch(/^[0-9a-f]{32}$/);
     expect(payloads[1].jti).toMatch(/^[0-9a-f]{32}$/);
@@ -35,6 +35,10 @@ describe('AuthService enterprise session matrix', () => {
   it('accepts a refresh token once and rejects replay without changing login credentials', async () => {
     const consumed = new Set<string>();
     const tx = {
+      $queryRaw: jest.fn().mockResolvedValue([]),
+      userDevice: {
+        findFirst: jest.fn().mockResolvedValue({ id: 'device-1' }),
+      },
       $executeRaw: jest.fn(
         async (parts: TemplateStringsArray, tokenHash: string) => {
           if (consumed.has(tokenHash)) {
@@ -53,14 +57,13 @@ describe('AuthService enterprise session matrix', () => {
     const auth = Object.create(AuthService.prototype) as AuthService;
     (auth as any).prisma = { $transaction: (callback: any) => callback(tx) };
     (auth as any).jwtService = {
-      verifyAsync: jest
-        .fn()
-        .mockResolvedValue({
-          sub: user.id,
-          purpose: 'REFRESH',
-          version: 4,
-          exp: 2000000000,
-        }),
+      verifyAsync: jest.fn().mockResolvedValue({
+        sub: user.id,
+        purpose: 'REFRESH',
+        sid: 'device-1',
+        version: 4,
+        exp: 2000000000,
+      }),
       signAsync: jest
         .fn()
         .mockResolvedValueOnce('access-new')
@@ -86,19 +89,22 @@ describe('AuthService enterprise session matrix', () => {
       (auth as any).prisma = {
         $transaction: (callback: any) =>
           callback({
+            $queryRaw: jest.fn().mockResolvedValue([]),
+            userDevice: {
+              findFirst: jest.fn().mockResolvedValue({ id: 'device-1' }),
+            },
             $executeRaw: jest.fn().mockResolvedValue(1),
             user: { findUnique: jest.fn().mockResolvedValue(blocked) },
           }),
       };
       (auth as any).jwtService = {
-        verifyAsync: jest
-          .fn()
-          .mockResolvedValue({
-            sub: user.id,
-            purpose: 'REFRESH',
-            version: 4,
-            exp: 2000000000,
-          }),
+        verifyAsync: jest.fn().mockResolvedValue({
+          sub: user.id,
+          purpose: 'REFRESH',
+          sid: 'device-1',
+          version: 4,
+          exp: 2000000000,
+        }),
         signAsync: jest.fn(),
       };
       await expect(auth.refresh('refresh-old')).rejects.toBeInstanceOf(

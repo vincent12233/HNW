@@ -3,7 +3,7 @@
 ## 2026-11-27 security audit checkpoint
 
 - Base commit `cbee77c2c2f20ae1c4f744a06a9a479aeb0a5069`.
-- Updated effect to 3.22.1 for CVE-2026-121707 and clarified deposit operator scope in README.
+- Updated effect to 3.22.1 for CVE-2026-121707, updated API image PAM packages for CVE-2025-6020, and clarified deposit operator scope in README.
 - API lint/build and all 679 tests passed using isolated PostgreSQL 17 and Redis 7. Admin 154 tests, lint/typecheck, and 39 tooling tests passed.
 - Findings and verification limits are recorded in `docs/AUDIT_2026-11-27.md`. Newly identified business defects remain open.
 - Repository Trivy scan including development dependencies passed with zero fixable HIGH/CRITICAL findings.

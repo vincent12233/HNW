@@ -48,7 +48,9 @@ test('production deployment requires manual dispatch and protected environment',
   assert.match(workflow, /workflow_dispatch:/);
   assert.match(workflow, /environment: production/);
   assert.match(workflow, /confirm_sha/);
-  assert.match(workflow, /COOLIFY_DEPLOY_WEBHOOK/);
+  assert.match(workflow, /DEPLOYMENT_ADAPTER_URL/);
+  assert.doesNotMatch(workflow, /COOLIFY_DEPLOY_WEBHOOK|sleep 30/);
+  assert.match(workflow, /trusted-release-artifact/);
   assert.match(workflow, /post-deploy-smoke\.mjs/);
   assert.doesNotMatch(workflow, /^\s*push:/m);
 });

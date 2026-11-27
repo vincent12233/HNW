@@ -22,7 +22,7 @@ jobs:
         with:
           node-version-file: .nvmrc
       - name: Run production operation tests
-        run: node --test scripts/tests/production-operations.test.mjs
+        run: node --test scripts/tests/production-operations.test.mjs scripts/tests/release-verification.test.mjs
       - name: Validate production Compose structure
         env:
           PUBLIC_API_URL: https://api.hnw-ci.invalid

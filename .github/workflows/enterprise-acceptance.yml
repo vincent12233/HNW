@@ -39,7 +39,7 @@ jobs:
         run: node --test scripts/tests/production-acceptance.test.mjs
       - name: Verify repository operation contracts
         run: |
-          node --test scripts/tests/production-operations.test.mjs
+          node --test scripts/tests/production-operations.test.mjs scripts/tests/release-verification.test.mjs
           node --test scripts/tests/enterprise-operations.test.mjs
       - name: Verify supply-chain and visual contracts
         run: |

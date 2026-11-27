@@ -7,13 +7,14 @@ on:
         description: 'Paste the full main-branch commit SHA that has passed required CI'
         required: true
         type: string
-      image_digest:
-        description: 'Approved immutable image digest (sha256:...)'
+      build_run_id:
+        description: 'Successful main Build Immutable API Release run ID'
         required: true
         type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: hnw-production
@@ -24,11 +25,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Require main branch and exact commit confirmation
+        env:
+          CONFIRM_SHA: ${{ inputs.confirm_sha }}
         shell: bash
         run: |
           test "${GITHUB_REF_NAME}" = "main" || { echo "Production deployment must run from main." >&2; exit 1; }
-          test "${{ inputs.confirm_sha }}" = "${GITHUB_SHA}" || { echo "confirm_sha must equal ${GITHUB_SHA}." >&2; exit 1; }
-          printf '%s' "${{ inputs.image_digest }}" | grep -Eq '^sha256:[0-9a-f]{64}$' || { echo "image_digest must be immutable sha256." >&2; exit 1; }
+          test "$CONFIRM_SHA" = "${GITHUB_SHA}" || { echo "confirm_sha must equal ${GITHUB_SHA}." >&2; exit 1; }
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
@@ -68,32 +70,41 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
-      - name: Trigger approved Coolify deployment
+      - name: Authenticate trusted build run
+        id: source
         env:
-          COOLIFY_DEPLOY_WEBHOOK: ${{ secrets.COOLIFY_DEPLOY_WEBHOOK }}
-          APPROVED_IMAGE_DIGEST: ${{ inputs.image_digest }}
-        shell: bash
-        run: |
-          test -n "${COOLIFY_DEPLOY_WEBHOOK}" || { echo "COOLIFY_DEPLOY_WEBHOOK is not configured." >&2; exit 1; }
-          printf '%s' "${APPROVED_IMAGE_DIGEST}" | grep -Eq '^sha256:[0-9a-f]{64}$'
-          curl --fail --silent --show-error --request GET "${COOLIFY_DEPLOY_WEBHOOK}"
-      - name: Wait for deployment startup
-        run: sleep 30
-      - name: Verify production endpoints
+          SOURCE_RUN_ID: ${{ inputs.build_run_id }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/trusted-release-artifact.mjs
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ steps.source.outputs.artifact_name }}
+          run-id: ${{ inputs.build_run_id }}
+          github-token: ${{ github.token }}
+          path: source-artifact
+      - name: Verify build commit and artifact provenance
+        env:
+          SOURCE_RUN_ID: ${{ inputs.build_run_id }}
+          EXPECTED_COMMIT: ${{ inputs.confirm_sha }}
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/trusted-release-artifact.mjs --verify-content
+      - name: Deploy immutable target and verify all active API replicas
         env:
           PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
           PRODUCTION_ADMIN_URLS: ${{ vars.PRODUCTION_ADMIN_URLS }}
-          SMOKE_ATTEMPTS: '18'
-          SMOKE_DELAY_MS: '10000'
+          BUILD_RECORD_PATH: trusted-build.json
+          EXPECTED_COMMIT: ${{ inputs.confirm_sha }}
+          DEPLOY_ENVIRONMENT: production
+          DEPLOYMENT_ADAPTER_URL: ${{ vars.DEPLOYMENT_ADAPTER_URL }}
+          DEPLOYMENT_ADAPTER_TOKEN: ${{ secrets.DEPLOYMENT_ADAPTER_TOKEN }}
         run: node scripts/post-deploy-smoke.mjs
-      - name: Record release evidence
-        env:
-          IMAGE_DIGEST: ${{ inputs.image_digest }}
-        run: |
-          mkdir -p release-evidence
-          printf '{"sha":"%s","imageDigest":"%s","runId":"%s","environment":"production"}\n' "$GITHUB_SHA" "$IMAGE_DIGEST" "$GITHUB_RUN_ID" > release-evidence/deployment.json
+      - name: Record pre-deployment validation failure
+        if: failure()
+        run: node scripts/record-release-failure.mjs
       - uses: actions/upload-artifact@v7
+        if: always()
         with:
-          name: production-release-evidence-${{ github.sha }}
-          path: release-evidence/deployment.json
+          name: verified-production-release
+          path: release-evidence/
+          if-no-files-found: warn
           retention-days: 90

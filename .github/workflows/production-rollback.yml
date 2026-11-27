@@ -1,10 +1,13 @@
 name: Rollback Production
-
 on:
   workflow_dispatch:
     inputs:
-      target_image_digest:
-        description: 'Previously approved immutable image digest'
+      verified_run_id:
+        description: 'Successful historical production deployment/rollback run with verified evidence'
+        required: true
+        type: string
+      confirm_sha:
+        description: 'Full commit SHA from that verified release'
         required: true
         type: string
       incident_reference:
@@ -15,40 +18,61 @@ on:
         description: 'Type ROLLBACK_PRODUCTION'
         required: true
         type: string
-
 permissions:
   contents: read
-
+  actions: read
 concurrency:
   group: hnw-production
   cancel-in-progress: false
-
 jobs:
   rollback:
     runs-on: ubuntu-latest
     environment: production
+    env:
+      RELEASE_OPERATION: rollback
+      SOURCE_RUN_ID: ${{ inputs.verified_run_id }}
+      EXPECTED_COMMIT: ${{ inputs.confirm_sha }}
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v7
-      - name: Validate immutable rollback target
-        shell: bash
-        run: |
-          test "${{ inputs.confirm }}" = 'ROLLBACK_PRODUCTION'
-          printf '%s' "${{ inputs.target_image_digest }}" | grep -Eq '^sha256:[0-9a-f]{64}$'
-          test -n "${{ inputs.incident_reference }}"
-      - name: Trigger approved non-destructive image rollback
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+      - name: Require explicit main-branch rollback approval
         env:
-          ROLLBACK_WEBHOOK: ${{ secrets.COOLIFY_ROLLBACK_WEBHOOK }}
-          TARGET_IMAGE_DIGEST: ${{ inputs.target_image_digest }}
+          CONFIRM: ${{ inputs.confirm }}
+          INCIDENT_REFERENCE: ${{ inputs.incident_reference }}
         run: |
-          test -n "$ROLLBACK_WEBHOOK" || { echo 'Rollback webhook is not configured.' >&2; exit 1; }
-          curl --fail --silent --show-error --request POST \
-            --header 'content-type: application/json' \
-            --data "{\"imageDigest\":\"$TARGET_IMAGE_DIGEST\"}" \
-            "$ROLLBACK_WEBHOOK"
-      - name: Verify service recovery
+          test "$GITHUB_REF_NAME" = main
+          test "$CONFIRM" = ROLLBACK_PRODUCTION
+          test -n "$INCIDENT_REFERENCE"
+      - name: Authenticate historical verified release
+        id: source
+        run: node scripts/trusted-release-artifact.mjs
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ steps.source.outputs.artifact_name }}
+          run-id: ${{ inputs.verified_run_id }}
+          github-token: ${{ github.token }}
+          path: source-artifact
+      - name: Validate historical image and commit
+        run: node scripts/trusted-release-artifact.mjs --verify-content
+      - name: Deploy historical immutable image and verify all active API replicas
         env:
           PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
           PRODUCTION_ADMIN_URLS: ${{ vars.PRODUCTION_ADMIN_URLS }}
-          SMOKE_ATTEMPTS: '18'
-          SMOKE_DELAY_MS: '10000'
+          BUILD_RECORD_PATH: trusted-build.json
+          DEPLOY_ENVIRONMENT: production
+          DEPLOYMENT_ADAPTER_URL: ${{ vars.DEPLOYMENT_ADAPTER_URL }}
+          DEPLOYMENT_ADAPTER_TOKEN: ${{ secrets.DEPLOYMENT_ADAPTER_TOKEN }}
         run: node scripts/post-deploy-smoke.mjs
+      - name: Record pre-deployment validation failure
+        if: failure()
+        run: node scripts/record-release-failure.mjs
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: verified-production-release
+          path: release-evidence/
+          if-no-files-found: warn
+          retention-days: 90

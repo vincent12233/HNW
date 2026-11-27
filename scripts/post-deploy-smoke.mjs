@@ -7,10 +7,20 @@ const ciRunId = process.env.GITHUB_RUN_ID;
 let deploymentId = null;
 try {
   const build = validateBuild(
-    JSON.parse(await readFile(process.env.BUILD_RECORD_PATH, "utf8")),
+    JSON.parse(await readFile("trusted-build.json", "utf8")),
   );
-  if (build.commit !== process.env.EXPECTED_COMMIT)
+  const approvedCommit = process.env.EXPECTED_COMMIT;
+  const approvedDigest = process.env.APPROVED_IMAGE_DIGEST;
+  if (
+    !/^[a-f0-9]{40}$/.test(approvedCommit ?? "") ||
+    build.commit !== approvedCommit
+  )
     throw new Error("Build commit confirmation mismatch");
+  if (
+    !/^sha256:[a-f0-9]{64}$/.test(approvedDigest ?? "") ||
+    build.digest !== approvedDigest
+  )
+    throw new Error("Build digest confirmation mismatch");
   const adapter = new URL(process.env.DEPLOYMENT_ADAPTER_URL ?? "");
   if (
     adapter.protocol !== "https:" ||
@@ -48,8 +58,10 @@ try {
   const created = await call("/v1/deployments", {
     environment,
     service: "hnw-api",
-    image: `${build.image}@${build.digest}`,
-    commit: build.commit,
+    // Egress is restricted to the explicit target approved by the provenance step.
+    // The file is corroborating evidence, never an arbitrary outgoing request payload.
+    image: `ghcr.io/vincent12233/hnw-api@${approvedDigest}`,
+    commit: approvedCommit,
     operation: process.env.RELEASE_OPERATION ?? "deploy",
     requestId: `${ciRunId}:${process.env.GITHUB_RUN_ATTEMPT ?? "1"}`,
   });
@@ -97,6 +109,7 @@ try {
   await mkdir("release-evidence", { recursive: true });
   const safe = new Set([
     "Build commit confirmation mismatch",
+    "Build digest confirmation mismatch",
     "Verified version-bound deployment adapter is not configured",
     "Deployment adapter lacks required capabilities",
     "Invalid deployment identity",

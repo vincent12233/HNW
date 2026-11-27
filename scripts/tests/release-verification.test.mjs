@@ -139,7 +139,10 @@ test("deployment CLI fails closed without a configured platform adapter and prod
   const { spawnSync } = await import("node:child_process");
   const directory = await mkdtemp(join(tmpdir(), "hnw-release-test-"));
   try {
-    await writeFile(join(directory, "build.json"), JSON.stringify(build));
+    await writeFile(
+      join(directory, "trusted-build.json"),
+      JSON.stringify(build),
+    );
     const result = spawnSync(
       process.execPath,
       [resolve("scripts/post-deploy-smoke.mjs")],
@@ -147,7 +150,7 @@ test("deployment CLI fails closed without a configured platform adapter and prod
         cwd: directory,
         encoding: "utf8",
         env: {
-          BUILD_RECORD_PATH: "build.json",
+          APPROVED_IMAGE_DIGEST: build.digest,
           EXPECTED_COMMIT: build.commit,
           GITHUB_RUN_ID: "456",
         },
@@ -165,6 +168,73 @@ test("deployment CLI fails closed without a configured platform adapter and prod
     );
     await assert.rejects(
       access(join(directory, "release-evidence/deployment.json")),
+    );
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("failure evidence creation is atomic and preserves existing detailed diagnostics", async () => {
+  const { mkdtemp, readFile, writeFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join, resolve } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const directory = await mkdtemp(join(tmpdir(), "hnw-failure-test-"));
+  try {
+    const run = () =>
+      spawnSync(
+        process.execPath,
+        [resolve("scripts/record-release-failure.mjs")],
+        { cwd: directory, env: { GITHUB_RUN_ID: "456" } },
+      );
+    assert.equal(run().status, 0);
+    const path = join(directory, "release-evidence/failure.json");
+    assert.equal(JSON.parse(await readFile(path, "utf8")).status, "FAILED");
+    const specific = JSON.stringify({
+      status: "FAILED",
+      summary: "Specific platform failure",
+    });
+    await writeFile(path, specific);
+    assert.equal(run().status, 0);
+    assert.equal(await readFile(path, "utf8"), specific);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+test("deployment CLI rejects a manifest that differs from the approved digest before any platform call", async () => {
+  const { mkdtemp, writeFile, readFile, rm } = await import("node:fs/promises");
+  const { tmpdir } = await import("node:os");
+  const { join, resolve } = await import("node:path");
+  const { spawnSync } = await import("node:child_process");
+  const directory = await mkdtemp(join(tmpdir(), "hnw-target-test-"));
+  try {
+    await writeFile(
+      join(directory, "trusted-build.json"),
+      JSON.stringify(build),
+    );
+    const result = spawnSync(
+      process.execPath,
+      [resolve("scripts/post-deploy-smoke.mjs")],
+      {
+        cwd: directory,
+        encoding: "utf8",
+        env: {
+          EXPECTED_COMMIT: build.commit,
+          APPROVED_IMAGE_DIGEST: d("9"),
+          GITHUB_RUN_ID: "456",
+        },
+      },
+    );
+    assert.equal(result.status, 1);
+    assert.equal(
+      JSON.parse(
+        await readFile(
+          join(directory, "release-evidence/failure.json"),
+          "utf8",
+        ),
+      ).summary,
+      "Build digest confirmation mismatch",
     );
   } finally {
     await rm(directory, { recursive: true, force: true });

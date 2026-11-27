@@ -83,6 +83,7 @@ jobs:
           github-token: ${{ github.token }}
           path: source-artifact
       - name: Verify build commit and artifact provenance
+        id: target
         env:
           SOURCE_RUN_ID: ${{ inputs.build_run_id }}
           EXPECTED_COMMIT: ${{ inputs.confirm_sha }}
@@ -92,7 +93,7 @@ jobs:
         env:
           PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
           PRODUCTION_ADMIN_URLS: ${{ vars.PRODUCTION_ADMIN_URLS }}
-          BUILD_RECORD_PATH: trusted-build.json
+          APPROVED_IMAGE_DIGEST: ${{ steps.target.outputs.image_digest }}
           EXPECTED_COMMIT: ${{ inputs.confirm_sha }}
           DEPLOY_ENVIRONMENT: production
           DEPLOYMENT_ADAPTER_URL: ${{ vars.DEPLOYMENT_ADAPTER_URL }}

@@ -96,9 +96,15 @@ JWT、正常 KYC 访问、WebSocket 认证及消息入口、refresh、biometricL
 | Flutter 3.47.0 `flutter analyze --no-fatal-infos` | 无问题 |
 | Flutter `flutter test --no-pub` | 503 通过，45 条既有条件跳过（截图/可视化输出路径等） |
 | Flutter `flutter build web --no-pub --dart-define=API_BASE_URL=https://build.invalid` | 通过；Wasm dry-run 提示第三方库兼容性，不影响 JS Web 构建 |
-| `node --test scripts/tests/*.test.mjs` | 48 通过，0 跳过 |
+| `node --test scripts/tests/*.test.mjs` | 50 通过，0 跳过 |
 | 空库全量迁移 | 独立 `hnw_six_fresh_test` 通过 |
 | 基线 schema 带数据升级 | 独立 `hnw_six_upgrade_test`，从 `20261026190000_refresh_token_replay_protection` 到三项新迁移，通过 |
 | 保护流程、架构/源码大小/客户端信息边界与页面清单、发布配置、`git diff --check` | 通过 |
 
-本地合计 1,406 项通过，45 项条件跳过，未将迁移/构建/静态检查计作单元测试。iOS 模拟器仅由本轮 GitHub Actions 执行，Linux 本地未执行；远端结果以 Draft PR 的最终提交检查为准。
+本地合计 1,408 项通过，45 项条件跳过，未将迁移/构建/静态检查计作单元测试。iOS 模拟器仅由本轮 GitHub Actions 执行，Linux 本地未执行；远端结果以 Draft PR 的最终提交检查为准。
+
+
+### 发布脚本 CodeQL 验证
+
+CodeQL CLI 2.27.6 在独立的修复前工作树 `a70c5975c3141af9e4e65338e87426a0c539a2a9` 的 scripts 数据库复现 `js/file-system-race`、`js/file-access-to-http` 各一项；修复后同两条规则结果为零。未关闭规则或压制告警。
+失败证据改为 `wx` 原子创建；部署请求仅发送来源验证步骤显式批准的 commit/digest（并与固定路径的可信构建记录交叉核对），不直接把文件对象传入网络请求。新增两项回归，脚本测试总数更新为 50。本轮其余应用代码未因该修正改变；完整远端 CodeQL 仍以最终 head 为准。

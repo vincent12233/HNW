@@ -56,12 +56,13 @@ jobs:
           github-token: ${{ github.token }}
           path: source-artifact
       - name: Validate historical image and commit
+        id: target
         run: node scripts/trusted-release-artifact.mjs --verify-content
       - name: Deploy historical immutable image and verify all active API replicas
         env:
           PRODUCTION_API_URL: ${{ vars.PRODUCTION_API_URL }}
           PRODUCTION_ADMIN_URLS: ${{ vars.PRODUCTION_ADMIN_URLS }}
-          BUILD_RECORD_PATH: trusted-build.json
+          APPROVED_IMAGE_DIGEST: ${{ steps.target.outputs.image_digest }}
           DEPLOY_ENVIRONMENT: production
           DEPLOYMENT_ADAPTER_URL: ${{ vars.DEPLOYMENT_ADAPTER_URL }}
           DEPLOYMENT_ADAPTER_TOKEN: ${{ secrets.DEPLOYMENT_ADAPTER_TOKEN }}

@@ -64,6 +64,7 @@ if (process.argv.includes("--verify-content")) {
   if (build.commit !== process.env.EXPECTED_COMMIT)
     throw new Error("Expected commit differs from trusted artifact");
   await writeFile("trusted-build.json", JSON.stringify(build));
+  await appendFile(process.env.GITHUB_OUTPUT, `image_digest=${build.digest}\n`);
 } else {
   await appendFile(
     process.env.GITHUB_OUTPUT,
